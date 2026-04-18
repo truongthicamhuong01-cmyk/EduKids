@@ -469,6 +469,8 @@ input, select, button {
   header {
     font-size: 18px;
     padding: 12px;
+    flex-direction: column; /* xếp xuống */
+    gap: 8px;
   }
 
   .container {
@@ -493,6 +495,9 @@ input, select, button {
 
   button {
     padding: 14px;
+  }
+  .user-section {
+    justify-content: center;
   }
 }
 
