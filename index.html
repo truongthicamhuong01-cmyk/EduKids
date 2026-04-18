@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <link rel="stylesheet" href="style.css" />
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduKids</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body>
+    <header>
+      🎒 EduKids
+      <div id="userBox"></div>
+    </header>
+
+    <div class="container">
+      <!-- AUTH MODAL -->
+      <div
+        id="authModal"
+        class="hidden"
+        style="
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.4);
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        "
+      >
+        <div class="card" style="width: 90%; max-width: 350px">
+          <!-- LOGIN -->
+          <div id="loginBox">
+            <h2>🔐 Login</h2>
+
+            <input id="loginUser" placeholder="Tên đăng nhập" />
+            <input id="loginPass" type="password" placeholder="Mật khẩu" />
+
+            <button onclick="handleLogin()">Login</button>
+            <button onclick="showRegister()">
+              Chưa có tài khoản? Tạo tài khoản
+            </button>
+            <button onclick="closeAuth()">Đóng</button>
+          </div>
+
+          <!-- REGISTER -->
+          <div id="registerBox" class="hidden">
+            <h2>📝 Register</h2>
+
+            <input id="regUser" placeholder="Tên đăng nhập" />
+            <input id="regPass" type="password" placeholder="Mật khẩu" />
+            <input
+              id="regConfirm"
+              type="password"
+              placeholder="Xác nhận mật khẩu"
+            />
+
+            <button onclick="handleRegister()">Tạo tài khoản</button>
+            <button onclick="showLogin()">Đã có tài khoản? Đăng nhập</button>
+            <button onclick="closeAuth()">Đóng</button>
+          </div>
+        </div>
+      </div>
+      <!-- INTRO -->
+      <div id="intro" class="card">
+        <h1>👋 Chào mừng đến với EduKids</h1>
+        <p>
+          Ứng dụng học tập thông minh dành cho học sinh Tiểu học:
+          <br />✔ Làm quiz Toán, Tiếng Anh <br />✔ Làm lại các câu sai để cải
+          thiện <br />✔ Kiểm tra và theo dõi tiến bộ học tập <br />✔ Hệ thống
+          EXP & Level 🎮 <br />✔ Pomodoro Timer ⏱️ <br />✔ Todo quản lý việc học
+          <br />✔ Streak học tập 🔥
+        </p>
+
+        <p>
+          Dành cho giáo viên:
+          <br />✔ Tạo quiz thủ công cho học sinh làm bài <br />✔ Quản lý và giao
+          bài tập dễ dàng
+        </p>
+        <button onclick="startApp()">Bắt đầu học</button>
+        <h2>Nhóm Tác Giả:</h2>
+        <p>Phạm Trương Anh Vỹ - Nguyễn Hồng Minh Khang</p>
+        <p2>THCS Lê Cơ, Xã Sơn Cẩm Hà</p2>
+      </div>
+
+      <div id="app" class="hidden">
+        <button
+          onclick="openTeacherModal()"
+          style="
+            background: #8b5cf6;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            margin-top: 10px;
+          "
+        >
+          👨‍🏫 Dành cho Giáo viên (Tạo mã)
+        </button>
+
+        <div id="teacherModal" class="modal">
+          <div class="modal-content">
+            <span
+              onclick="closeTeacherModal()"
+              style="float: right; cursor: pointer; font-size: 28px"
+              >&times;</span
+            >
+            <h2>🛠️ Tạo bài tập thủ công</h2>
+
+            <div
+              style="
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+                margin-bottom: 15px;
+              "
+            >
+              <div>
+                <label>👨‍🏫 Tên giáo viên:</label>
+                <input
+                  type="text"
+                  id="gvName"
+                  style="width: 100%; padding: 8px"
+                  placeholder="Thầy/Cô..."
+                />
+              </div>
+              <div>
+                <label>🏫 Lớp:</label>
+                <select id="gvGrade" style="width: 100%; padding: 8px">
+                  <option value="1">Lớp 1</option>
+                  <option value="2">Lớp 2</option>
+                  <option value="3">Lớp 3</option>
+                  <option value="4">Lớp 4</option>
+                  <option value="5">Lớp 5</option>
+                </select>
+              </div>
+              <div>
+                <label>📚 Môn:</label>
+                <select id="gvSubject" style="width: 100%; padding: 8px">
+                  <option value="math">Toán</option>
+                  <option value="english">Tiếng Anh</option>
+                </select>
+              </div>
+            </div>
+
+            <label>📝 Nhập danh sách câu hỏi:</label>
+            <textarea
+              id="manualText"
+              style="width: 100%; height: 100px"
+              placeholder="Câu hỏi | Đáp án đúng | Sai 1 | Sai 2 | Sai 3"
+            ></textarea>
+
+            <button onclick="previewManual()" style="background: #f59e0b">
+              👀 Xem trước đề
+            </button>
+
+            <button onclick="saveManualToCloud()" style="background: #22c55e">
+              🚀 Lưu & Tạo mã
+            </button>
+
+            <div id="parsePreview" style="margin-top: 10px"></div>
+
+            <div
+              id="previewBox"
+              style="
+                margin-top: 15px;
+                max-height: 250px;
+                overflow-y: auto;
+                border: 2px dashed #60a5fa;
+                border-radius: 10px;
+                padding: 10px;
+                background: #f0f9ff;
+                display: none;
+              "
+            ></div>
+            <div
+              id="codeBox"
+              style="
+                display: none;
+                margin-top: 15px;
+                padding: 12px;
+                background: #ecfeff;
+                border: 2px dashed #06b6d4;
+                border-radius: 10px;
+                text-align: center;
+              "
+            >
+              <p>🎉 Mã bài tập:</p>
+              <h2 id="assignmentCodeText"></h2>
+
+              <button onclick="copyCode()" style="background: #22c55e">
+                📋 Sao chép mã
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px; border: 2px solid #60a5fa">
+          <h3>📝 Làm bài theo mã</h3>
+          <input
+            id="assignmentInput"
+            placeholder="Nhập mã bài tập (VD: BT1234)"
+          />
+          <button onclick="loadAssignment()" style="background: #60a5fa">
+            Vào làm bài
+          </button>
+        </div>
+
+        <div class="card">
+          <h3>🎓 Chọn lớp tự do</h3>
+          <select id="grade">
+            <option value="1">Lớp 1-2</option>
+            <option value="3">Lớp 3-5</option>
+          </select>
+
+          <h3>📚 Chọn môn</h3>
+          <select id="subject">
+            <option value="math">Toán</option>
+            <option value="english">Tiếng Anh</option>
+          </select>
+
+          <button onclick="startQuiz()">🚀 Làm quiz</button>
+        </div>
+
+        <!-- QUIZ -->
+        <div id="assignmentInfo" class="card" style="display: none"></div>
+        <div id="quiz"></div>
+        <p id="progress">Đã làm: 0/0</p>
+        <button onclick="submitQuiz()">📊 Nộp bài</button>
+        <button onclick="retryWrong()">🔥 Luyện lại lỗi sai</button>
+        <p id="result"></p>
+
+        <!-- AI LEVEL -->
+        <div class="card">
+          <h3>🧠 Trình độ</h3>
+          <p id="levelText"></p>
+        </div>
+
+        <!-- EXP -->
+        <div class="card">
+          <h3>🎮 EXP & Level</h3>
+          <div id="expContainer">
+            <div id="expBar"></div>
+          </div>
+          <p id="expText"></p>
+          <div id="badge"></div>
+        </div>
+
+        <!-- TODO -->
+        <div class="card">
+          <h3>✅ Todo</h3>
+          <input id="todoInput" placeholder="Việc cần làm" />
+          <button onclick="addTodo()">Thêm</button>
+          <div id="todoList"></div>
+        </div>
+
+        <!-- TIMER -->
+        <div class="card">
+          <h3>⏱ Pomodoro</h3>
+          <input id="minutesInput" type="number" placeholder="Phút" />
+          <h2 id="timer">25:00</h2>
+          <button onclick="startTimer()">▶️ Bắt đầu</button>
+          <button onclick="pauseTimer()">⏸ Dừng</button>
+          <button onclick="resetTimer()">🔄 Đặt lại</button>
+        </div>
+
+        <!-- STREAK -->
+        <div class="card">
+          <h3>🔥 Streak</h3>
+          <p id="streakText"></p>
+          <button onclick="checkStudy()">Học hôm nay</button>
+        </div>
+        <div class="card">
+          <h3>📊 Tiến trình</h3>
+          <div id="chart"></div>
+          <div id="progressStatus"></div>
+        </div>
+      </div>
+    </div>
+    <script src="script.js"></script>
+    <div id="mascot">
+      <div id="mascotFace">🐻</div>
+      <div id="mascotSpeech">Cùng học nào! 📚</div>
+    </div>
+  </body>
+</html>
