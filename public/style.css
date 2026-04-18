@@ -432,6 +432,7 @@ html, body {
 
 /* header không bị bể */
 header {
+
   flex-wrap: wrap;
   text-align: center;
   font-size: 20px;
@@ -460,6 +461,7 @@ input, select, button {
   right: 10px;
   transform: scale(0.9);
 }
+
 
 /* ===== MOBILE ===== */
 @media (max-width: 768px) {
@@ -512,4 +514,23 @@ input, select, button {
   input {
     font-size: 14px;
   }
+}
+header {
+  display: flex;
+  justify-content: space-between; /* đẩy 2 bên */
+  align-items: center;
+  padding: 15px 20px;
+}
+
+/* logo */
+.logo {
+  font-weight: bold;
+  font-size: 20px;
+}
+
+/* user + logout */
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* tạo khoảng cách */
 }
