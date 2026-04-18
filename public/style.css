@@ -21,21 +21,19 @@ body {
 
 /* HEADER */
 header {
-  position: relative; /* 🔥 QUAN TRỌNG NHẤT */
-
-  padding: 18px;
-  font-size: 24px;
-  font-weight: bold;
+  display: flex;
+  justify-content: space-between; /* logo trái - user phải */
+  align-items: center;
+  padding: 15px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 
   background: linear-gradient(135deg, #f472b6, #60a5fa);
   color: white;
 
   border-bottom-left-radius: 20px;
   border-bottom-right-radius: 20px;
-
-  display: flex; /* 🔥 dùng flex thay vì text-align */
-  align-items: center; /* căn giữa theo chiều dọc */
-  justify-content: center; /* chữ ở giữa */
 }
 
 /* CONTAINER */
@@ -288,10 +286,6 @@ button:active {
   border: 2px solid #f472b6;
 }
 #userBox {
-  position: absolute;
-  top: 12px;
-  right: 15px;
-
   display: flex;
   align-items: center;
   gap: 10px;
