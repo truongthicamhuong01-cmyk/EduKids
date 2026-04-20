@@ -462,12 +462,12 @@ function genEng() {
     let question, correct, options;
 
     if (Math.random() > 0.5) {
-      // 👉 Anh → Việt
+      // Anh → Việt
       question = `🌈 " ${x[0]} " nghĩa là gì?`;
       correct = x[1];
       options = shuffle([x[1], ...wrong.map((w) => w[1])]);
     } else {
-      // 👉 Việt → Anh
+      // Việt → Anh
       question = `👉 Từ nào nghĩa là " ${x[1]} " ?`;
       correct = x[0];
       options = shuffle([x[0], ...wrong.map((w) => w[0])]);
@@ -489,7 +489,7 @@ function retryWrong() {
 
   isRetryMode = true;
 
-  // 🔥 clone sâu tránh bị mất dữ liệu
+  // clone sâu tránh bị mất dữ liệu
   quizData = JSON.parse(JSON.stringify(wrongQuestions));
 
   render();
@@ -513,30 +513,43 @@ let history = [];
 
 function render() {
   quiz.innerHTML = "";
+
   quizData.forEach((q, i) => {
     let div = document.createElement("div");
-    div.className = "card";
+
+    // thêm class "question" để submit xử lý
+    div.className = "card question";
+
     div.innerHTML = `<p>${i + 1}. ${q.q}</p>`;
+
     q.opts.forEach((o) => {
       let btn = document.createElement("div");
       btn.className = "option";
       btn.innerText = o;
+
       btn.onclick = () => {
+        // lưu đáp án user
         q.user = o;
+
         updateProgress();
 
+        // xóa selected của các option khác
         div
           .querySelectorAll(".option")
           .forEach((x) => x.classList.remove("selected"));
+
+        // thêm selected cho option hiện tại
         btn.classList.add("selected");
 
-        // 🔊 phát âm nếu là tiếng Anh
+        // phát âm nếu là tiếng Anh
         if (/^[a-zA-Z ]+$/.test(o)) {
           speak(o);
         }
       };
+
       div.appendChild(btn);
     });
+
     quiz.appendChild(div);
   });
 }
@@ -545,6 +558,7 @@ function submitQuiz() {
   let s = 0;
   wrongQuestions = [];
 
+  // kiểm tra đã làm hết chưa
   for (let q of quizData) {
     if (!q.user) {
       alert("❗ Bạn chưa làm hết!");
@@ -552,6 +566,7 @@ function submitQuiz() {
     }
   }
 
+  // ✅ chấm điểm
   for (let q of quizData) {
     if (String(q.user).trim() === String(q.correct).trim()) s++;
     else wrongQuestions.push(q);
@@ -559,22 +574,33 @@ function submitQuiz() {
 
   result.innerText = `🔥 ${s}/${quizData.length}`;
   updateAI(s);
-  if (!isRetryMode) {
-    history.push({
-      score: s,
-      date: new Date().toLocaleDateString(),
-    });
-    let user = localStorage.getItem("user");
 
-    db.collection("users").doc(user).set(
-      {
-        history: history,
-      },
-      { merge: true },
-    );
-    updateHistory();
-  }
-}
+  // 🔥 HIỂN THỊ ĐÚNG SAI + KHÓA CLICK
+  document.querySelectorAll(".question").forEach((qDiv, i) => {
+    let q = quizData[i];
+    let options = qDiv.querySelectorAll(".option");
+
+    options.forEach((opt) => {
+      let text = opt.innerText;
+
+      // ✅ đáp án đúng → xanh
+      if (String(text).trim() === String(q.correct).trim()) {
+        opt.classList.add("correct");
+      }
+
+      // ❌ đáp án user chọn sai → đỏ
+      if (
+        String(text).trim() === String(q.user).trim() &&
+        String(q.user).trim() !== String(q.correct).trim()
+      ) {
+        opt.classList.add("wrong");
+      }
+
+      // 🔒 khóa không cho click nữa
+      opt.onclick = null;
+    });
+  });
+
 function updateHistory() {
   let chart = document.getElementById("chart");
   chart.innerHTML = "";
