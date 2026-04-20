@@ -160,6 +160,19 @@ button:active {
   display: none;
 }
 
+.teacher-only,
+.student-only {
+  display: none;
+}
+
+#assignmentList {
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 14px;
+  border: 1px solid #bfdbfe;
+  margin-top: 10px;
+}
+
 /* TODO */
 #todoList div {
   display: flex;
@@ -306,6 +319,27 @@ button:active {
   padding: 6px 14px;
   border-radius: 999px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.student-score-table-wrapper {
+  overflow-x: auto;
+}
+
+.student-score-table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.student-score-table-wrapper th,
+.student-score-table-wrapper td {
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.student-score-table-wrapper th {
+  background: #e0f2fe;
 }
 
 /* AVATAR */
