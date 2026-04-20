@@ -462,12 +462,12 @@ function genEng() {
     let question, correct, options;
 
     if (Math.random() > 0.5) {
-      // Anh → Việt
+      // 👉 Anh → Việt
       question = `🌈 " ${x[0]} " nghĩa là gì?`;
       correct = x[1];
       options = shuffle([x[1], ...wrong.map((w) => w[1])]);
     } else {
-      // Việt → Anh
+      // 👉 Việt → Anh
       question = `👉 Từ nào nghĩa là " ${x[1]} " ?`;
       correct = x[0];
       options = shuffle([x[0], ...wrong.map((w) => w[0])]);
@@ -489,7 +489,7 @@ function retryWrong() {
 
   isRetryMode = true;
 
-  // clone sâu tránh bị mất dữ liệu
+  // 🔥 clone sâu tránh bị mất dữ liệu
   quizData = JSON.parse(JSON.stringify(wrongQuestions));
 
   render();
@@ -517,7 +517,7 @@ function render() {
   quizData.forEach((q, i) => {
     let div = document.createElement("div");
 
-    // thêm class "question" để submit xử lý
+    // 🔥 thêm class "question" để submit xử lý
     div.className = "card question";
 
     div.innerHTML = `<p>${i + 1}. ${q.q}</p>`;
@@ -533,15 +533,15 @@ function render() {
 
         updateProgress();
 
-        // xóa selected của các option khác
+        // ❗ xóa selected của các option khác
         div
           .querySelectorAll(".option")
           .forEach((x) => x.classList.remove("selected"));
 
-        // thêm selected cho option hiện tại
+        // ✅ thêm selected cho option hiện tại
         btn.classList.add("selected");
 
-        // phát âm nếu là tiếng Anh
+        // 🔊 phát âm nếu là tiếng Anh
         if (/^[a-zA-Z ]+$/.test(o)) {
           speak(o);
         }
@@ -558,7 +558,7 @@ function submitQuiz() {
   let s = 0;
   wrongQuestions = [];
 
-  // kiểm tra đã làm hết chưa
+  // ❗ kiểm tra đã làm hết chưa
   for (let q of quizData) {
     if (!q.user) {
       alert("❗ Bạn chưa làm hết!");
@@ -600,6 +600,26 @@ function submitQuiz() {
       opt.onclick = null;
     });
   });
+
+  // lưu history như cũ
+  if (!isRetryMode) {
+    history.push({
+      score: s,
+      date: new Date().toLocaleDateString(),
+    });
+
+    let user = localStorage.getItem("user");
+
+    db.collection("users").doc(user).set(
+      {
+        history: history,
+      },
+      { merge: true },
+    );
+
+    updateHistory();
+  }
+}
 
 function updateHistory() {
   let chart = document.getElementById("chart");
