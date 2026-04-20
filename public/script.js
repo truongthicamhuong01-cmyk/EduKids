@@ -29,9 +29,43 @@ let intro,
   historyText,
   levelText,
   expText,
+  totalExpText,
   streakText;
 let wrongQuestions = [];
 let isRetryMode = false;
+let userRole = "student";
+let teacherAssignments = [];
+
+function getSubjectLabel(subject) {
+  if (subject === "math") return "Toán";
+  if (subject === "english") return "Tiếng Anh";
+  return subject || "Không rõ";
+}
+
+// ===== LEVEL SYSTEM =====
+// Level càng cao cần càng nhiều EXP (cấp số nhân)
+function calculateLevel(exp) {
+  // Đảm bảo exp không âm
+  exp = Math.max(0, exp);
+
+  // Giải phương trình bậc 2: n*(n+1)/2 * 100 = exp
+  // n ≈ (-1 + sqrt(1 + 8*exp/100))/2
+  if (exp <= 0) return 0;
+  const discriminant = 1 + (8 * exp) / 100;
+  const level = Math.floor((-1 + Math.sqrt(discriminant)) / 2);
+  return Math.max(0, level); // Đảm bảo level không âm
+}
+
+function getExpForLevel(level) {
+  // Tổng EXP cần để đạt level: sum_{i=1 to level} i*100 = 100 * level*(level+1)/2
+  level = Math.max(0, Math.floor(level));
+  return (100 * level * (level + 1)) / 2;
+}
+
+function getExpForNextLevel(currentLevel) {
+  // Tổng EXP cần cho level tiếp theo
+  return getExpForLevel(currentLevel + 1);
+}
 
 // ===== INTRO =====
 async function startApp() {
@@ -120,6 +154,9 @@ async function loadAssignment() {
     if (doc.exists) {
       const data = doc.data();
       quizData = data.questions; // Gán dữ liệu câu hỏi từ mã vào quizData
+      currentAssignmentCode = code;
+      currentAssignmentTeacher = data.teacherName || data.teacher;
+      currentAssignmentTeacherId = data.teacherId || data.teacher;
 
       let infoBox = document.getElementById("assignmentInfo");
 
@@ -127,8 +164,9 @@ async function loadAssignment() {
 
       infoBox.innerHTML = `
   <h3>📘 Thông tin bài tập</h3>
-  <p>📚 Môn: <b>${data.subject}</b></p>
-  <p>👨‍🏫 Giáo viên: <b>${data.teacher}</b></p>
+  <p>🏷️ Tên bài tập: <b>${data.title || data.assignmentName || "Không có tên"}</b></p>
+  <p>📚 Môn: <b>${getSubjectLabel(data.subject)}</b></p>
+  <p>👨‍🏫 Giáo viên: <b>${currentAssignmentTeacher || data.teacher}</b></p>
   <p>🏫 Lớp: <b>${data.grade || "Không rõ"}</b></p>
   <p>📝 Số câu: <b>${data.questions.length}</b></p>
 `;
@@ -137,8 +175,13 @@ async function loadAssignment() {
       render();
       updateProgress();
 
-      // Cuộn xuống phần bài tập
-      document.getElementById("quiz").scrollIntoView({ behavior: "smooth" });
+      // Scroll tới câu hỏi đầu tiên
+      setTimeout(() => {
+        const firstQuestion = document.querySelector("#quiz .question");
+        if (firstQuestion) {
+          firstQuestion.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
     } else {
       alert("❌ Mã bài tập không tồn tại!");
     }
@@ -149,20 +192,185 @@ async function loadAssignment() {
 }
 
 async function showMyAssignments() {
+  await loadTeacherAssignments();
+}
+
+async function loadTeacherAssignments() {
   const user = localStorage.getItem("user");
   const snapshot = await db
     .collection("assignments")
-    .where("teacher", "==", user)
+    .where("teacherId", "==", user)
     .get();
 
+  teacherAssignments = [];
   let html = "<h3>Kho mã bài tập của bạn:</h3>";
+
   snapshot.forEach((doc) => {
     const data = doc.data();
-    html += `<p>Mã: <b>${doc.id}</b> - Môn: ${data.subject} (${data.questions.length} câu)</p>`;
+    teacherAssignments.push({ id: doc.id, ...data });
   });
 
-  // Hiển thị html này vào một Modal hoặc một Div trống trên trang web
+  if (teacherAssignments.length === 0) {
+    html += "<p>Chưa có bài tập nào.</p>";
+    document.getElementById("assignmentList").innerHTML = html;
+    document.getElementById("assignmentDetails").innerHTML = "";
+    document.getElementById("studentScoreSelection").style.display = "none";
+    document.getElementById("studentScores").innerHTML = "";
+    return;
+  }
+
+  html += `<div style="display: grid; gap: 10px;">`;
+  teacherAssignments.forEach((assignment) => {
+    html += `
+      <div style="padding: 12px; border-radius: 16px; background: #eef2ff; border: 1px solid #c7d2fe;">
+        <strong>${assignment.id}</strong>
+        <p style="margin: 6px 0;">Tên: ${assignment.title || assignment.assignmentName || "Chưa đặt tên"}</p>
+        <p style="margin: 6px 0;">Môn: ${getSubjectLabel(assignment.subject)} • Lớp: ${assignment.grade || "?"} • ${assignment.questions.length} câu</p>
+        <button onclick="viewTeacherAssignment('${assignment.id}')" style="width: auto; padding: 8px 14px; font-size: 14px;">
+          Xem bài tập
+        </button>
+      </div>
+    `;
+  });
+  html += `</div>`;
+
   document.getElementById("assignmentList").innerHTML = html;
+  document.getElementById("studentScoreSelection").style.display = "none";
+  document.getElementById("studentScores").innerHTML = "";
+  document.getElementById("assignmentDetails").innerHTML = "";
+}
+
+function viewTeacherAssignment(code) {
+  const assignment = teacherAssignments.find((item) => item.id === code);
+  const detailsBox = document.getElementById("assignmentDetails");
+
+  if (!assignment) {
+    detailsBox.innerHTML = "<p>Không tìm thấy bài tập.</p>";
+    return;
+  }
+
+  let html = `
+    <h4>Chi tiết bài tập ${assignment.id}</h4>
+    <p>Tên bài tập: <strong>${assignment.title || assignment.assignmentName || "Không có tên"}</strong></p>
+    <p>Môn: <strong>${getSubjectLabel(assignment.subject)}</strong></p>
+    <p>Lớp: <strong>${assignment.grade || "Không rõ"}</strong></p>
+    <p>Số câu: <strong>${assignment.questions.length}</strong></p>
+    <div style="margin-top: 10px; max-height: 220px; overflow-y: auto; padding: 10px; background: #f8fafc; border-radius: 14px; border: 1px solid #dbeafe;">
+  `;
+
+  assignment.questions.forEach((q, idx) => {
+    html += `
+      <div style="margin-bottom: 12px;">
+        <div><strong>${idx + 1}. ${q.q}</strong></div>
+        <div style="margin-top: 6px;">Đáp án đúng: <strong>${q.correct}</strong></div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+  detailsBox.innerHTML = html;
+}
+
+async function showStudentScores() {
+  await loadTeacherAssignments();
+  if (teacherAssignments.length === 0) {
+    document.getElementById("studentScores").innerHTML = "";
+    return;
+  }
+
+  // Ẩn kho mã bài tập
+  document.getElementById("assignmentList").innerHTML = "";
+  document.getElementById("assignmentDetails").innerHTML = "";
+
+  const select = document.getElementById("assignmentFilterSelect");
+  select.innerHTML = "";
+  teacherAssignments.forEach((assignment) => {
+    const option = document.createElement("option");
+    option.value = assignment.id;
+    option.innerText = `${assignment.id} - ${assignment.title || assignment.assignmentName || "Chưa đặt tên"} (${getSubjectLabel(assignment.subject)})`;
+    select.appendChild(option);
+  });
+
+  document.getElementById("studentScoreSelection").style.display = "block";
+  showStudentScoresByAssignment();
+}
+
+async function showStudentScoresByAssignment() {
+  const assignmentCode = document.getElementById(
+    "assignmentFilterSelect",
+  ).value;
+  const scoresBox = document.getElementById("studentScores");
+
+  if (!assignmentCode) {
+    scoresBox.innerHTML = "Chưa chọn bài tập.";
+    return;
+  }
+
+  // Tìm bài tập để lấy số câu hỏi
+  const assignment = teacherAssignments.find((a) => a.id === assignmentCode);
+  const totalQuestions = assignment ? assignment.questions.length : 10;
+
+  scoresBox.innerHTML = "Đang tải điểm học sinh...";
+
+  try {
+    const snapshot = await db.collection("users").get();
+    let rows = "";
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.role && data.role !== "student") return;
+
+      const studentAttempts = (data.history || []).filter(
+        (item) => item.assignmentCode === assignmentCode,
+      );
+      if (studentAttempts.length === 0) return;
+
+      const lastScore = studentAttempts.slice(-1)[0];
+      const attemptsText =
+        studentAttempts.length > 1 ? `${studentAttempts.length} lần` : "1 lần";
+
+      rows += `
+        <tr>
+          <td>${doc.id}</td>
+          <td>${data.exp || 0}</td>
+          <td>${data.streak || 0}</td>
+          <td>${lastScore.score}/${totalQuestions}</td>
+          <td>${attemptsText}</td>
+        </tr>
+      `;
+    });
+
+    if (!rows) {
+      scoresBox.innerHTML = `
+        <h3>📊 Điểm học sinh</h3>
+        <p>Chưa có học sinh nào làm bài tập ${assignmentCode}.</p>
+      `;
+      return;
+    }
+
+    scoresBox.innerHTML = `
+      <h3>📊 Điểm học sinh - Bài tập ${assignmentCode}</h3>
+      <div class="student-score-table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Học sinh</th>
+              <th>EXP</th>
+              <th>Streak</th>
+              <th>Điểm</th>
+              <th>Lần làm</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    console.error(e);
+    scoresBox.innerHTML = "Không thể tải điểm học sinh.";
+  }
 }
 
 // 1. Đóng/Mở cửa sổ
@@ -219,43 +427,35 @@ function previewManual() {
 
 // Hàm chuyển văn bản thô thành mảng câu hỏi
 function parseManualInput() {
-  const text = document.getElementById("manualText").value.trim();
+  const question = document.getElementById("questionText").value.trim();
+  const correct = document.getElementById("optionCorrect").value.trim();
+  const wrong1 = document.getElementById("optionWrong1").value.trim();
+  const wrong2 = document.getElementById("optionWrong2").value.trim();
+  const wrong3 = document.getElementById("optionWrong3").value.trim();
   const previewArea = document.getElementById("parsePreview");
 
-  if (!text) {
-    alert("Vui lòng nhập câu hỏi!");
+  if (!question || !correct || !wrong1 || !wrong2 || !wrong3) {
+    alert("Vui lòng nhập đầy đủ câu hỏi và 4 lựa chọn.");
     return null;
   }
 
-  const lines = text.split("\n");
-  let tempQuiz = [];
+  let tempQuiz = [
+    {
+      q: question,
+      correct: correct,
+      opts: shuffle([correct, wrong1, wrong2, wrong3]),
+    },
+  ];
 
-  lines.forEach((line) => {
-    const parts = line.split("|").map((p) => p.trim());
-
-    // Kiểm tra nếu đủ 5 thành phần (Câu hỏi + 1 đúng + 3 sai)
-    if (parts.length >= 5) {
-      tempQuiz.push({
-        q: parts[0],
-        correct: parts[1],
-        opts: shuffle([parts[1], parts[2], parts[3], parts[4]]), // Trộn đáp án
-      });
-    }
-  });
-
-  if (tempQuiz.length > 0) {
-    previewArea.style.display = "block";
-    previewArea.innerHTML = `✅ Đã nhận diện được ${tempQuiz.length} câu hỏi hợp lệ.`;
-    return tempQuiz;
-  } else {
-    alert("Sai định dạng! Hãy kiểm tra lại dấu gạch đứng |");
-    return null;
-  }
+  previewArea.style.display = "block";
+  previewArea.innerHTML = `✅ Đã tạo 1 câu hỏi với 4 lựa chọn.`;
+  return tempQuiz;
 }
 
 // Hàm lưu vào Firebase
 async function saveManualToCloud() {
   const gvName = document.getElementById("gvName").value.trim();
+  const gvTitle = document.getElementById("gvTitle").value.trim();
   const gvGrade = document.getElementById("gvGrade").value;
   const questions = parseManualInput(); // Lấy dữ liệu đã xử lý
   const gvSubject = document.getElementById("gvSubject").value;
@@ -265,24 +465,39 @@ async function saveManualToCloud() {
     return;
   }
 
+  if (!gvTitle) {
+    alert("Vui lòng đặt tên bài tập!");
+    return;
+  }
+
   if (!questions) return;
 
   const assignmentCode = await generateCode();
 
   try {
-    await db.collection("assignments").doc(assignmentCode).set({
-      teacher: gvName,
-      grade: gvGrade,
-      subject: gvSubject,
-      questions: questions,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
+    await db
+      .collection("assignments")
+      .doc(assignmentCode)
+      .set({
+        teacher: gvName,
+        teacherId: localStorage.getItem("user"),
+        teacherName: gvName,
+        title: gvTitle,
+        grade: gvGrade,
+        subject: gvSubject,
+        questions: questions,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
 
     document.getElementById("assignmentCodeText").innerText = assignmentCode;
     document.getElementById("codeBox").style.display = "block";
 
     // Reset form
-    document.getElementById("manualText").value = "";
+    document.getElementById("questionText").value = "";
+    document.getElementById("optionCorrect").value = "";
+    document.getElementById("optionWrong1").value = "";
+    document.getElementById("optionWrong2").value = "";
+    document.getElementById("optionWrong3").value = "";
   } catch (e) {
     console.error(e);
     alert("Lỗi khi kết nối Firebase!");
@@ -305,15 +520,15 @@ function copyCode() {
 // ===== AI QUIZ =====
 async function genAIQuiz() {
   try {
-    let res = await fetch("/ai", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        prompt: `Tạo 10 câu hỏi trắc nghiệm toán cho học sinh tiểu học.
+    let level = grade.value; // lấy lớp
+    let promptText;
+
+    if (level == "1") {
+      // Lớp 1-2: toán cơ bản
+      promptText = `Tạo 10 câu hỏi trắc nghiệm toán đơn giản cho học sinh lớp 1-2.
 
 YÊU CẦU:
+- Chủ đề: cộng, trừ, nhân cơ bản (số nhỏ hơn 20)
 - Mỗi câu có: question, options (4 đáp án), correct_answer
 - correct_answer phải nằm trong options
 - KHÔNG markdown
@@ -321,7 +536,30 @@ YÊU CẦU:
 - CHỈ JSON
 - options phải là string
 - correct_answer phải là string
-`,
+`;
+    } else {
+      // Lớp 3-5: toán nâng cao
+      promptText = `Tạo 10 câu hỏi trắc nghiệm toán cho học sinh lớp 3-5.
+
+YÊU CẦU:
+- Chủ đề: nhân, chia, phân số, hình học cơ bản, bài toán có lời
+- Mỗi câu có: question, options (4 đáp án), correct_answer
+- correct_answer phải nằm trong options
+- KHÔNG markdown
+- KHÔNG \`\`\`json
+- CHỈ JSON
+- options phải là string
+- correct_answer phải là string
+`;
+    }
+
+    let res = await fetch("/ai", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: promptText,
       }),
     });
 
@@ -360,6 +598,7 @@ YÊU CẦU:
       opts: q.options.map((o) => String(o).trim()),
     }));
 
+    console.log("✅ AI quiz generated:", quiz.length, "questions");
     return quiz;
   } catch (e) {
     console.error(e);
@@ -489,24 +728,40 @@ function retryWrong() {
 
   isRetryMode = true;
 
-  // 🔥 clone sâu tránh bị mất dữ liệu
+  // clone sâu tránh bị mất dữ liệu
   quizData = JSON.parse(JSON.stringify(wrongQuestions));
 
   render();
   updateProgress();
+  // Scroll tới câu hỏi đầu tiên
+  setTimeout(() => {
+    const firstQuestion = document.querySelector("#quiz .question");
+    if (firstQuestion) {
+      firstQuestion.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, 100);
 }
 
 async function startQuiz() {
   isRetryMode = false;
 
   if (subject.value == "math") {
+    console.log("🎯 Starting AI math quiz");
     quizData = await genAIQuiz();
+    console.log("📚 Quiz data set:", quizData.length, "questions");
   } else {
     quizData = genEng();
   }
 
   render();
   updateProgress();
+  // Scroll tới câu hỏi đầu tiên
+  setTimeout(() => {
+    const firstQuestion = document.querySelector("#quiz .question");
+    if (firstQuestion) {
+      firstQuestion.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, 100);
 }
 
 let history = [];
@@ -606,6 +861,9 @@ function submitQuiz() {
     history.push({
       score: s,
       date: new Date().toLocaleDateString(),
+      assignmentCode: currentAssignmentCode,
+      teacher: currentAssignmentTeacher,
+      teacherId: currentAssignmentTeacherId,
     });
 
     let user = localStorage.getItem("user");
@@ -631,8 +889,9 @@ function updateHistory() {
   }
 
   let max = 10;
+  let recentHistory = history.slice(-4);
 
-  history.forEach((item) => {
+  recentHistory.forEach((item) => {
     let bar = document.createElement("div");
     bar.className = "bar";
 
@@ -705,6 +964,7 @@ function updateAI(score) {
     levelText.innerText = "Yếu";
   }
   exp += score * 10;
+  exp = Math.max(0, exp); // Đảm bảo EXP không âm
   let user = localStorage.getItem("user");
 
   db.collection("users").doc(user).set(
@@ -713,10 +973,14 @@ function updateAI(score) {
     },
     { merge: true },
   );
-  let level = Math.floor(exp / 100);
-  let current = exp % 100;
+  let level = calculateLevel(exp);
+  let expForCurrentLevel = getExpForLevel(level);
+  let expForNextLevel = getExpForNextLevel(level);
+  let current = exp - expForCurrentLevel;
+  let needed = expForNextLevel - expForCurrentLevel;
 
-  expText.innerText = `Level ${level} (${current}/100 EXP)`;
+  expText.innerText = `Level ${level} (${current}/${needed} EXP)`;
+  totalExpText.innerText = `Tổng EXP: ${exp}`;
 
   // cập nhật thanh
   let bar = document.getElementById("expBar");
@@ -905,11 +1169,13 @@ document.addEventListener("DOMContentLoaded", async function () {
   historyText = document.getElementById("historyText");
   levelText = document.getElementById("levelText");
   expText = document.getElementById("expText");
+  totalExpText = document.getElementById("totalExpText");
   streakText = document.getElementById("streakText");
   intro = document.getElementById("intro");
   app = document.getElementById("app");
 
   let currentUser = localStorage.getItem("user");
+  userRole = localStorage.getItem("role") || "student";
 
   // load dữ liệu
   if (currentUser) {
@@ -918,6 +1184,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
   updateHistory();
   updateUserUI();
+  applyRoleUI();
 });
 
 // mở modal (mặc định login)
@@ -960,7 +1227,9 @@ async function handleLogin() {
     let doc = await db.collection("users").doc(user).get();
 
     if (doc.exists && doc.data().password === pass) {
+      userRole = doc.data().role || "student";
       localStorage.setItem("user", user);
+      localStorage.setItem("role", userRole);
 
       console.log("USER:", localStorage.getItem("user"));
       alert("✅ Đăng nhập thành công!");
@@ -1014,6 +1283,8 @@ async function handleRegister() {
     return;
   }
 
+  const role = document.getElementById("regRole")?.value || "student";
+
   try {
     await db.collection("users").doc(user).set({
       password: pass,
@@ -1022,6 +1293,7 @@ async function handleRegister() {
       todo: [],
       streak: 0,
       lastStudy: "",
+      role,
     });
 
     alert("🎉 Tạo tài khoản thành công!");
@@ -1032,17 +1304,34 @@ async function handleRegister() {
   }
 }
 
+function applyRoleUI() {
+  document.querySelectorAll(".teacher-only").forEach((el) => {
+    el.style.display = userRole === "teacher" ? "block" : "none";
+  });
+  document.querySelectorAll(".student-only").forEach((el) => {
+    el.style.display = userRole === "student" ? "block" : "none";
+  });
+}
+
 function updateUserUI() {
   let user = localStorage.getItem("user");
   let box = document.getElementById("userBox");
 
   if (user) {
-    let subjectValue = document.getElementById("subject")?.value || "math";
-    let avatar = subjectValue === "math" ? "🐻" : "🐱";
+    let avatar =
+      userRole === "teacher"
+        ? "👩‍🏫"
+        : document.getElementById("subject")?.value === "math"
+          ? "🐻"
+          : "🐱";
+    let roleTag = userRole === "teacher" ? "Giáo viên" : "Học sinh";
 
     box.innerHTML = `
       <div class="user-avatar">${avatar}</div>
-      <div class="user-name">${user}</div>
+      <div>
+        <div class="user-name">${user}</div>
+        <div style="font-size: 12px; color: #475569">${roleTag}</div>
+      </div>
       <button class="logout-btn" onclick="logout()">🚪</button>
     `;
   } else {
@@ -1050,10 +1339,18 @@ function updateUserUI() {
       <button onclick="openAuth()" class="login-btn">🔐</button>
     `;
   }
+  applyRoleUI();
+  const startAppButton = document.getElementById("startAppButton");
+  if (startAppButton) {
+    startAppButton.innerText =
+      userRole === "teacher" ? "Bắt đầu" : "Bắt đầu học";
+  }
 }
 
 function logout() {
   localStorage.removeItem("user");
+  localStorage.removeItem("role");
+  userRole = "student";
   alert("👋 Đã đăng xuất");
   updateUserUI();
 
@@ -1065,6 +1362,7 @@ function logout() {
   quizData = [];
 
   document.getElementById("expText").innerText = "";
+  document.getElementById("totalExpText").innerText = "";
   document.getElementById("expBar").style.width = "0%";
   document.getElementById("streakText").innerText = "";
   document.getElementById("chart").innerHTML = "";
@@ -1087,18 +1385,32 @@ async function loadUserData() {
     let data = doc.data();
 
     exp = data.exp || 0;
+    exp = Math.max(0, exp); // Đảm bảo EXP không âm
     history = data.history || [];
     streak = data.streak || 0;
     lastStudy = data.lastStudy || "";
+    userRole = data.role || "student";
+    localStorage.setItem("role", userRole);
+
+    const startAppButton = document.getElementById("startAppButton");
+    if (startAppButton) {
+      startAppButton.innerText =
+        userRole === "teacher" ? "Bắt đầu" : "Bắt đầu học";
+    }
 
     // 🔥 update UI ngay
     updateHistory();
 
-    let level = Math.floor(exp / 100);
-    let current = exp % 100;
+    let level = calculateLevel(exp);
+    let expForCurrentLevel = getExpForLevel(level);
+    let expForNextLevel = getExpForNextLevel(level);
+    let current = exp - expForCurrentLevel;
+    let needed = expForNextLevel - expForCurrentLevel;
 
-    expText.innerText = `Level ${level} (${current}/100 EXP)`;
-    document.getElementById("expBar").style.width = current + "%";
+    expText.innerText = `Level ${level} (${current}/${needed} EXP)`;
+    totalExpText.innerText = `Tổng EXP: ${exp}`;
+    document.getElementById("expBar").style.width =
+      needed > 0 ? (current / needed) * 100 + "%" : "100%";
 
     streakText.innerText = "🔥 " + streak;
 
