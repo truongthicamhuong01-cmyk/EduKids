@@ -34,7 +34,8 @@ let intro,
   levelText,
   expText,
   totalExpText,
-  streakText;
+  streakText,
+  mascotGuideModal;
 let wrongQuestions = []; // Mảng lưu câu hỏi trả lời sai để luyện lại
 let isRetryMode = false; // Cờ kiểm tra có đang luyện lại không
 let userRole = "student"; // Vai trò: student hoặc teacher
@@ -1264,6 +1265,64 @@ function speak(word) {
   speechSynthesis.speak(msg);
 }
 // ===== KHỞI TẠO KHI TRANG LOAD =====
+// Mở cửa sổ hướng dẫn khi người dùng bấm vào mascot
+function openMascotGuide() {
+  if (!mascotGuideModal) return;
+  mascotGuideModal.classList.add("show");
+  mascotGuideModal.setAttribute("aria-hidden", "false");
+}
+
+// Đóng cửa sổ hướng dẫn và trả modal về trạng thái ẩn
+function closeMascotGuide() {
+  if (!mascotGuideModal) return;
+  mascotGuideModal.classList.remove("show");
+  mascotGuideModal.setAttribute("aria-hidden", "true");
+}
+
+// Gắn các sự kiện mở/đóng cho mascot và modal hướng dẫn
+function setupMascotGuide() {
+  const mascot = document.getElementById("mascot");
+  const mascotSpeech = document.getElementById("mascotSpeech");
+  mascotGuideModal = document.getElementById("mascotGuideModal");
+  const closeGuideButton = document.getElementById("closeGuideButton");
+
+  if (!mascot || !mascotGuideModal) return;
+
+  // Cập nhật lời thoại để người dùng biết mascot có thể bấm được
+  if (mascotSpeech) {
+    mascotSpeech.innerText = "Bấm mình để xem hướng dẫn nhé!";
+  }
+
+  // Mở bằng chuột hoặc cảm ứng
+  mascot.addEventListener("click", openMascotGuide);
+  mascot.addEventListener("keydown", function (event) {
+    // Hỗ trợ bàn phím để tăng khả năng truy cập
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openMascotGuide();
+    }
+  });
+
+  mascotGuideModal.addEventListener("click", function (event) {
+    // Chỉ đóng khi người dùng bấm vào lớp nền mờ bên ngoài
+    if (event.target.dataset.closeGuide === "true") {
+      closeMascotGuide();
+    }
+  });
+
+  if (closeGuideButton) {
+    // Nút đóng trong modal
+    closeGuideButton.addEventListener("click", closeMascotGuide);
+  }
+
+  document.addEventListener("keydown", function (event) {
+    // Cho phép nhấn Esc để đóng nhanh modal
+    if (event.key === "Escape") {
+      closeMascotGuide();
+    }
+  });
+}
+
 document.addEventListener("DOMContentLoaded", async function () {
   // lấy phần tử
   todoInput = document.getElementById("todoInput");
@@ -1282,6 +1341,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   streakText = document.getElementById("streakText");
   intro = document.getElementById("intro");
   app = document.getElementById("app");
+  setupMascotGuide(); // Khởi tạo tính năng hướng dẫn của mascot
 
   let currentUser = localStorage.getItem("user");
   userRole = localStorage.getItem("role") || "student";
