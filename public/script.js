@@ -1459,7 +1459,15 @@ async function handleRegister() {
   const role = document.getElementById("regRole")?.value || "student";
 
   try {
-    await db.collection("users").doc(user).set({
+    const userRef = db.collection("users").doc(user);
+    const existingUser = await userRef.get();
+
+    if (existingUser.exists) {
+      alert("❌ Tên tài khoản này đã tồn tại, hãy chọn tên khác!");
+      return;
+    }
+
+    await userRef.set({
       password: pass,
       exp: 0,
       history: [],
