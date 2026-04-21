@@ -287,6 +287,84 @@ button:active {
 #authModal.show {
   display: flex;
 }
+
+/* Khung modal phủ toàn màn hình, mặc định ẩn đi */
+.guide-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1200;
+}
+
+/* Khi thêm class show thì modal mới hiện ra */
+.guide-modal.show {
+  display: flex;
+}
+
+/* Nền tối phía sau nội dung hướng dẫn */
+.guide-modal__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+/* Hộp nội dung chính của phần hướng dẫn */
+.guide-modal__content {
+  position: relative;
+  width: min(100%, 460px);
+  background: #fffdf5;
+  border-radius: 24px;
+  padding: 24px 22px 20px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.24);
+  border: 3px solid #f59e0b;
+  z-index: 1;
+}
+
+.guide-modal__content h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #92400e;
+}
+
+/* Nút đóng tròn ở góc trên bên phải */
+.guide-modal__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: #fde68a;
+  color: #78350f;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Danh sách các bước sử dụng ứng dụng */
+.guide-steps {
+  margin: 14px 0;
+  padding-left: 22px;
+  color: #334155;
+}
+
+.guide-steps li {
+  margin-bottom: 8px;
+}
+
+/* Khối mẹo nhỏ ở cuối hướng dẫn */
+.guide-tip {
+  margin-bottom: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 700;
+}
 /* ===== MASCOT ===== */
 #mascot {
   position: fixed; /* Cố định vị trí */
