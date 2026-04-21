@@ -1237,9 +1237,11 @@ async function checkStudy() {
 
     if (dayDiff === null) {
       s = 1;
-    } else if (dayDiff >= 2) {
+    } else if (dayDiff >= 3) {
+      // Chỉ reset khi người dùng đã bỏ học trọn 2 ngày hoặc hơn
       s = 1;
     } else {
+      // Cùng ngày kế tiếp hoặc mới nghỉ 1 ngày thì vẫn tiếp tục cộng streak
       s++;
     }
 
