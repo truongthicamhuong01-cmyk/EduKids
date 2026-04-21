@@ -1,7 +1,10 @@
+// ===== BIẾN TOÀN CỤC =====
+// Streak: số ngày học liên tiếp
 let streak = 0;
-let lastStudy = "";
+let lastStudy = ""; // Ngày học gần nhất (để tính streak)
 
-// ===== FIREBASE INIT =====
+// ===== KHỞI TẠO FIREBASE =====
+// Firebase config để kết nối với Firestore database
 const firebaseConfig = {
   apiKey: "AIzaSyD-0_f1wEUCNRj4DwDBkMHhzVVYaueuYdM",
   authDomain: "edukids-fd099.firebaseapp.com",
@@ -15,6 +18,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+// Biến lưu trữ dữ liệu người dùng và trạng thái app
 let intro,
   app,
   todoInput,
@@ -31,19 +35,47 @@ let intro,
   expText,
   totalExpText,
   streakText;
-let wrongQuestions = [];
-let isRetryMode = false;
-let userRole = "student";
-let teacherAssignments = [];
+let wrongQuestions = []; // Mảng lưu câu hỏi trả lời sai để luyện lại
+let isRetryMode = false; // Cờ kiểm tra có đang luyện lại không
+let userRole = "student"; // Vai trò: student hoặc teacher
+let teacherAssignments = []; // Danh sách bài tập của giáo viên
 
+// Biến cho bài tập hiện tại (khi học sinh làm bài theo mã)
+let currentAssignmentCode = ""; // Mã bài tập đang làm
+let currentAssignmentTeacher = ""; // Tên giáo viên tạo bài
+let currentAssignmentTeacherId = ""; // ID giáo viên tạo bài
+
+// ===== HÀM HỖ TRỢ =====
+// Hàm trả về tên môn học bằng tiếng Việt
 function getSubjectLabel(subject) {
   if (subject === "math") return "Toán";
   if (subject === "english") return "Tiếng Anh";
   return subject || "Không rõ";
 }
 
-// ===== LEVEL SYSTEM =====
+function normalizeStudyDate(dateValue) {
+  if (!dateValue) return null;
+
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return null;
+
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function getDayDiff(fromDate, toDate) {
+  const start = normalizeStudyDate(fromDate);
+  const end = normalizeStudyDate(toDate);
+
+  if (!start || !end) return null;
+
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.round((end - start) / msPerDay);
+}
+
+// ===== HỆ THỐNG LEVEL =====
 // Level càng cao cần càng nhiều EXP (cấp số nhân)
+// Tính level dựa trên tổng EXP (giải phương trình bậc 2)
 function calculateLevel(exp) {
   // Đảm bảo exp không âm
   exp = Math.max(0, exp);
@@ -56,18 +88,21 @@ function calculateLevel(exp) {
   return Math.max(0, level); // Đảm bảo level không âm
 }
 
+// Tính tổng EXP cần để đạt level nhất định
 function getExpForLevel(level) {
   // Tổng EXP cần để đạt level: sum_{i=1 to level} i*100 = 100 * level*(level+1)/2
   level = Math.max(0, Math.floor(level));
   return (100 * level * (level + 1)) / 2;
 }
 
+// Tính EXP cần cho level tiếp theo
 function getExpForNextLevel(currentLevel) {
   // Tổng EXP cần cho level tiếp theo
   return getExpForLevel(currentLevel + 1);
 }
 
-// ===== INTRO =====
+// ===== PHẦN INTRO (MÀN HÌNH CHÀO) =====
+// Hàm bắt đầu app sau khi đăng nhập
 async function startApp() {
   let user = localStorage.getItem("user");
 
@@ -85,13 +120,16 @@ async function startApp() {
   await loadUserData();
 }
 
-// ===== QUIZ =====
-let quizData = [];
-let exp = 0;
+// ===== PHẦN QUIZ =====
+let quizData = []; // Mảng chứa dữ liệu câu hỏi hiện tại
+let exp = 0; // Điểm kinh nghiệm của người dùng
 
+// Hàm sinh số ngẫu nhiên
 function rand(a, b) {
   return Math.floor(Math.random() * (b - a + 1)) + a;
 }
+
+// Hàm xáo trộn mảng
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
     let j = Math.floor(Math.random() * (i + 1));
@@ -99,7 +137,7 @@ function shuffle(array) {
   }
   return array;
 }
-// Tạo mã BT
+// Tạo mã bài tập duy nhất (BT-xxxxxx)
 async function generateCode() {
   let code;
   let exists = true;
@@ -141,6 +179,7 @@ async function shareAssignment() {
   }
 }
 
+// Hàm học sinh tải bài tập từ mã
 async function loadAssignment() {
   const code = document
     .getElementById("assignmentInput")
@@ -191,10 +230,12 @@ async function loadAssignment() {
   }
 }
 
+// Hiển thị danh sách bài tập của giáo viên
 async function showMyAssignments() {
   await loadTeacherAssignments();
 }
 
+// Tải danh sách bài tập của giáo viên từ Firebase
 async function loadTeacherAssignments() {
   const user = localStorage.getItem("user");
   const snapshot = await db
@@ -240,6 +281,7 @@ async function loadTeacherAssignments() {
   document.getElementById("assignmentDetails").innerHTML = "";
 }
 
+// Xem chi tiết bài tập của giáo viên
 function viewTeacherAssignment(code) {
   const assignment = teacherAssignments.find((item) => item.id === code);
   const detailsBox = document.getElementById("assignmentDetails");
@@ -271,6 +313,7 @@ function viewTeacherAssignment(code) {
   detailsBox.innerHTML = html;
 }
 
+// Hiển thị điểm số học sinh
 async function showStudentScores() {
   await loadTeacherAssignments();
   if (teacherAssignments.length === 0) {
@@ -295,6 +338,7 @@ async function showStudentScores() {
   showStudentScoresByAssignment();
 }
 
+// Hiển thị điểm số học sinh theo bài tập cụ thể
 async function showStudentScoresByAssignment() {
   const assignmentCode = document.getElementById(
     "assignmentFilterSelect",
@@ -373,7 +417,8 @@ async function showStudentScoresByAssignment() {
   }
 }
 
-// 1. Đóng/Mở cửa sổ
+// ===== HÀM MODAL GIÁO VIÊN =====
+// 1. Đóng/Mở cửa sổ tạo bài tập
 function openTeacherModal() {
   document.getElementById("teacherModal").style.display = "block";
 }
@@ -387,6 +432,7 @@ function closeTeacherModal() {
   document.getElementById("codeBox").style.display = "none";
 }
 
+// Xem trước bài tập thủ công
 function previewManual() {
   const questions = parseManualInput();
   const box = document.getElementById("previewBox");
@@ -452,7 +498,7 @@ function parseManualInput() {
   return tempQuiz;
 }
 
-// Hàm lưu vào Firebase
+// Hàm lưu bài tập thủ công vào Firebase
 async function saveManualToCloud() {
   const gvName = document.getElementById("gvName").value.trim();
   const gvTitle = document.getElementById("gvTitle").value.trim();
@@ -504,6 +550,7 @@ async function saveManualToCloud() {
   }
 }
 
+// Sao chép mã bài tập vào clipboard
 function copyCode() {
   const code = document.getElementById("assignmentCodeText").innerText;
 
@@ -518,17 +565,48 @@ function copyCode() {
 }
 
 // ===== AI QUIZ =====
-async function genAIQuiz() {
+// Tạo quiz bằng AI (Gemini)
+async function genAIQuiz(subjectType = "math") {
   try {
     let level = grade.value; // lấy lớp
     let promptText;
 
-    if (level == "1") {
+    if (subjectType === "english") {
+      if (level == "1") {
+        promptText = `Tạo 10 câu hỏi trắc nghiệm tiếng Anh đơn giản cho học sinh lớp 1-2.
+
+YÊU CẦU:
+- Chủ đề: từ vựng cơ bản về con vật, đồ vật, màu sắc, chào hỏi
+- Dạng câu hỏi: chọn nghĩa đúng hoặc chọn từ tiếng Anh đúng, điền từ vào chỗ trống đơn giản
+- Mỗi câu có: question, options (4 đáp án), correct_answer
+- correct_answer phải nằm trong options
+- KHÔNG markdown
+- KHÔNG \`\`\`json
+- CHỈ JSON
+- options phải là string
+- correct_answer phải là string
+`;
+      } else {
+        promptText = `Tạo 10 câu hỏi trắc nghiệm tiếng Anh cho học sinh lớp 3-5.
+
+YÊU CẦU:
+- Chủ đề: từ vựng trường học, gia đình, nghề nghiệp, đồ ăn, câu giao tiếp cơ bản
+- Dạng câu hỏi: chọn nghĩa đúng, chọn từ đúng, hoặc điền từ đơn giản theo ngữ cảnh ngắn
+- Mỗi câu có: question, options (4 đáp án), correct_answer
+- correct_answer phải nằm trong options
+- KHÔNG markdown
+- KHÔNG \`\`\`json
+- CHỈ JSON
+- options phải là string
+- correct_answer phải là string
+`;
+      }
+    } else if (level == "1") {
       // Lớp 1-2: toán cơ bản
       promptText = `Tạo 10 câu hỏi trắc nghiệm toán đơn giản cho học sinh lớp 1-2.
 
 YÊU CẦU:
-- Chủ đề: cộng, trừ, nhân cơ bản (số nhỏ hơn 20)
+- Chủ đề: cộng, trừ, nhân cơ bản (số nhỏ hơn 20), hình học cơ bản (hình vuông, hình tròn, hình tam giác)
 - Mỗi câu có: question, options (4 đáp án), correct_answer
 - correct_answer phải nằm trong options
 - KHÔNG markdown
@@ -542,7 +620,7 @@ YÊU CẦU:
       promptText = `Tạo 10 câu hỏi trắc nghiệm toán cho học sinh lớp 3-5.
 
 YÊU CẦU:
-- Chủ đề: nhân, chia, phân số, hình học cơ bản, bài toán có lời
+- Chủ đề: nhân, chia, phân số, hình học cơ bản, bài toán có lời, tìm x đơn giản 
 - Mỗi câu có: question, options (4 đáp án), correct_answer
 - correct_answer phải nằm trong options
 - KHÔNG markdown
@@ -567,7 +645,7 @@ YÊU CẦU:
 
     if (!data.text) {
       console.log("❌ AI LỖI", data);
-      return genMath();
+      return subjectType === "english" ? genEng() : genMath();
     }
 
     let text = data.text;
@@ -580,7 +658,7 @@ YÊU CẦU:
 
     // CẮT JSON CHUẨN
     const match = text.match(/\[[\s\S]*\]/);
-    if (!match) return genMath();
+    if (!match) return subjectType === "english" ? genEng() : genMath();
 
     let quiz;
 
@@ -588,7 +666,7 @@ YÊU CẦU:
       quiz = JSON.parse(match[0]);
     } catch (e) {
       console.log("❌ JSON lỗi:", text);
-      return genMath();
+      return subjectType === "english" ? genEng() : genMath();
     }
 
     // FORMAT + VALIDATE
@@ -602,7 +680,7 @@ YÊU CẦU:
     return quiz;
   } catch (e) {
     console.error(e);
-    return genMath();
+    return subjectType === "english" ? genEng() : genMath();
   }
 }
 
@@ -621,6 +699,7 @@ async function callGeminiWithRetry(fn, retries = 3) {
   throw new Error("Gemini quá tải, thử lại sau");
 }
 
+// Tạo quiz toán thủ công (fallback khi AI lỗi)
 function genMath() {
   let res = [];
   let level = grade.value; // lấy lớp
@@ -662,6 +741,7 @@ function genMath() {
   return res;
 }
 
+// Tạo quiz tiếng Anh thủ công (fallback khi AI lỗi)
 function genEng() {
   let level = grade.value;
 
@@ -687,6 +767,8 @@ function genEng() {
     ["restaurant", "nhà hàng"],
     ["difficult", "khó"],
     ["important", "quan trọng"],
+    ["elephant", "con voi"],
+    ["friend", "bạn bè"],
   ];
 
   let data = level == "1" ? easy : easy.concat(hard);
@@ -720,6 +802,7 @@ function genEng() {
   });
 }
 
+// Luyện lại các câu trả lời sai
 function retryWrong() {
   if (!wrongQuestions || wrongQuestions.length === 0) {
     alert("Không có lỗi sai!");
@@ -742,16 +825,14 @@ function retryWrong() {
   }, 100);
 }
 
+// Bắt đầu làm quiz
 async function startQuiz() {
   isRetryMode = false;
 
-  if (subject.value == "math") {
-    console.log("🎯 Starting AI math quiz");
-    quizData = await genAIQuiz();
-    console.log("📚 Quiz data set:", quizData.length, "questions");
-  } else {
-    quizData = genEng();
-  }
+  const subjectType = subject.value;
+  console.log("Starting AI quiz:", subjectType);
+  quizData = await genAIQuiz(subjectType);
+  console.log("Quiz data set:", quizData.length, "questions");
 
   render();
   updateProgress();
@@ -764,7 +845,8 @@ async function startQuiz() {
   }, 100);
 }
 
-let history = [];
+// Render giao diện quiz
+let history = []; // Lịch sử làm bài
 
 function render() {
   quiz.innerHTML = "";
@@ -772,7 +854,7 @@ function render() {
   quizData.forEach((q, i) => {
     let div = document.createElement("div");
 
-    // 🔥 thêm class "question" để submit xử lý
+    // thêm class "question" để submit xử lý
     div.className = "card question";
 
     div.innerHTML = `<p>${i + 1}. ${q.q}</p>`;
@@ -809,6 +891,7 @@ function render() {
   });
 }
 
+// Nộp bài và chấm điểm
 function submitQuiz() {
   let s = 0;
   wrongQuestions = [];
@@ -879,6 +962,7 @@ function submitQuiz() {
   }
 }
 
+// Cập nhật biểu đồ lịch sử
 function updateHistory() {
   let chart = document.getElementById("chart");
   chart.innerHTML = "";
@@ -902,7 +986,7 @@ function updateHistory() {
     let height = (score / max) * 100;
     bar.style.height = height + "%";
 
-    // 🎨 màu theo điểm
+    // màu theo điểm
     if (score >= 8) {
       bar.style.background = "#22c55e"; // xanh
     } else if (score >= 5) {
@@ -911,11 +995,11 @@ function updateHistory() {
       bar.style.background = "#ef4444"; // đỏ
     }
 
-    // ⭐ nếu điểm cao
+    // nếu điểm cao
     let label = document.createElement("span");
     label.innerText = score >= 8 ? "⭐" : score;
 
-    // 📅 ngày
+    // ngày
     let dateText = document.createElement("div");
     dateText.innerText = date;
     dateText.style.fontSize = "10px";
@@ -947,11 +1031,13 @@ function updateHistory() {
   }
 }
 
+// Cập nhật tiến trình làm bài
 function updateProgress() {
   let done = quizData.filter((q) => q.user).length;
   progress.innerText = `Đã làm: ${done}/${quizData.length}`;
 }
 
+// Cập nhật EXP và level sau khi làm bài
 function updateAI(score) {
   let total = quizData.length;
   let percent = (score / total) * 100;
@@ -999,7 +1085,8 @@ function updateAI(score) {
   }
 }
 
-// ===== TODO =====
+// ===== PHẦN TODO =====
+// Thêm công việc vào danh sách
 async function addTodo() {
   let todoInput = document.getElementById("todoInput");
   let t = todoInput.value;
@@ -1030,6 +1117,8 @@ async function addTodo() {
 
   todoInput.value = "";
 }
+
+// Render danh sách todo
 async function renderTodo() {
   let todoList = document.getElementById("todoList");
   let user = localStorage.getItem("user");
@@ -1088,14 +1177,18 @@ async function renderTodo() {
   });
 }
 
-// ===== TIMER =====
-let time = 1500,
-  intv;
+// ===== PHẦN TIMER (POMODORO) =====
+let time = 1500, // Thời gian mặc định 25 phút
+  intv; // Interval cho timer
+
+// Định dạng thời gian thành mm:ss
 function format(t) {
   let m = Math.floor(t / 60),
     s = t % 60;
   return `${m}:${s < 10 ? "0" : ""}${s}`;
 }
+
+// Bắt đầu timer
 function startTimer() {
   let minutesInput = document.getElementById("minutesInput");
   let timer = document.getElementById("timer");
@@ -1114,16 +1207,21 @@ function startTimer() {
     }
   }, 1000);
 }
+
+// Dừng timer
 function pauseTimer() {
   clearInterval(intv);
 }
+
+// Đặt lại timer
 function resetTimer() {
   clearInterval(intv);
   time = 1500;
   timer.innerText = "25:00";
 }
 
-// ===== STREAK =====
+// ===== PHẦN STREAK =====
+// Kiểm tra và cập nhật streak học tập
 async function checkStudy() {
   let t = new Date().toDateString();
   let user = localStorage.getItem("user");
@@ -1132,8 +1230,18 @@ async function checkStudy() {
   let data = doc.data();
   let last = data.lastStudy || "";
   let s = data.streak || 0;
-  if (last != t) {
-    s++;
+
+  if (last !== t) {
+    const dayDiff = getDayDiff(last, t);
+
+    if (dayDiff === null) {
+      s = 1;
+    } else if (dayDiff >= 2) {
+      s = 1;
+    } else {
+      s++;
+    }
+
     await db.collection("users").doc(user).set(
       {
         streak: s,
@@ -1145,9 +1253,9 @@ async function checkStudy() {
   streakText.innerText = "🔥 " + s;
 }
 
-// Đọc Tiếng Anh
+// Phát âm từ tiếng Anh
 function speak(word) {
-  speechSynthesis.cancel(); // 🔥 DỌN HÀNG ĐỢI (quan trọng)
+  speechSynthesis.cancel(); // DỌN HÀNG ĐỢI (quan trọng)
 
   let msg = new SpeechSynthesisUtterance(word);
   msg.lang = "en-US";
@@ -1155,6 +1263,7 @@ function speak(word) {
 
   speechSynthesis.speak(msg);
 }
+// ===== KHỞI TẠO KHI TRANG LOAD =====
 document.addEventListener("DOMContentLoaded", async function () {
   // lấy phần tử
   todoInput = document.getElementById("todoInput");
@@ -1187,6 +1296,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   applyRoleUI();
 });
 
+// ===== HÀM MODAL AUTH =====
 // mở modal (mặc định login)
 function openAuth() {
   document.getElementById("authModal").classList.add("show");
@@ -1209,9 +1319,9 @@ function showLogin() {
   document.getElementById("loginBox").classList.remove("hidden");
 }
 
-// ===== LOGIN =====
+// ===== XỬ LÝ ĐĂNG NHẬP =====
 async function handleLogin() {
-  // 🔥 reset sạch UI
+  // reset sạch UI
   quiz.innerHTML = "";
   result.innerText = "";
   progress.innerText = "Đã làm: 0/0";
@@ -1236,7 +1346,7 @@ async function handleLogin() {
       closeAuth();
       updateUserUI();
 
-      // 🔥 LOAD LẠI DATA THEO USER
+      // LOAD LẠI DATA THEO USER
       // ===== RESET STATE =====
       exp = 0;
       history = [];
@@ -1267,7 +1377,8 @@ async function handleLogin() {
     console.error(e);
   }
 }
-// ===== REGISTER =====
+
+// ===== XỬ LÝ ĐĂNG KÝ =====
 async function handleRegister() {
   let user = document.getElementById("regUser").value.trim();
   let pass = document.getElementById("regPass").value.trim();
@@ -1304,6 +1415,8 @@ async function handleRegister() {
   }
 }
 
+// ===== HÀM GIAO DIỆN =====
+// Áp dụng UI theo vai trò (teacher/student)
 function applyRoleUI() {
   document.querySelectorAll(".teacher-only").forEach((el) => {
     el.style.display = userRole === "teacher" ? "block" : "none";
@@ -1313,6 +1426,7 @@ function applyRoleUI() {
   });
 }
 
+// Cập nhật thông tin user trên header
 function updateUserUI() {
   let user = localStorage.getItem("user");
   let box = document.getElementById("userBox");
@@ -1347,6 +1461,7 @@ function updateUserUI() {
   }
 }
 
+// Đăng xuất
 function logout() {
   localStorage.removeItem("user");
   localStorage.removeItem("role");
@@ -1371,10 +1486,14 @@ function logout() {
   document.getElementById("app").classList.add("hidden");
   document.getElementById("intro").classList.remove("hidden");
 }
+
+// Lấy key cho localStorage theo user
 function getUserKey(key) {
   let user = localStorage.getItem("user");
   return key + "_" + user;
 }
+
+// Tải dữ liệu user từ Firebase
 async function loadUserData() {
   let user = localStorage.getItem("user");
   if (!user) return;
