@@ -1,16 +1,26 @@
 <!doctype html>
+<!-- HTML5 doctype declaration - đảm bảo rendering chuẩn -->
 <html lang="vi">
+  <!-- lang="vi" - ngôn ngữ tiếng Việt cho accessibility -->
+
   <head>
+    <!-- External CSS stylesheet -->
     <link rel="stylesheet" href="style.css" />
+
+    <!-- Favicon và Apple touch icon -->
     <link rel="icon" type="image/png" sizes="32x32" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
 
+    <!-- Meta tags cho responsive và encoding -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EduKids</title>
+
+    <!-- Firebase SDK cho database và authentication -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
+    <!-- Google Fonts - Nunito font family -->
     <link
       href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap"
       rel="stylesheet"
@@ -18,13 +28,15 @@
   </head>
 
   <body>
+    <!-- Header với logo và user section -->
     <header>
       <div class="logo">🎒 EduKids</div>
       <div class="user-section" id="userBox"></div>
     </header>
 
+    <!-- Container chính chứa toàn bộ nội dung -->
     <div class="container">
-      <!-- AUTH MODAL -->
+      <!-- Modal đăng nhập/đăng ký -->
       <div
         id="authModal"
         class="hidden"
@@ -41,7 +53,7 @@
         "
       >
         <div class="card" style="width: 90%; max-width: 350px">
-          <!-- LOGIN -->
+          <!-- Form đăng nhập -->
           <div id="loginBox">
             <h2>🔐 Login</h2>
 
@@ -55,7 +67,7 @@
             <button onclick="closeAuth()">Đóng</button>
           </div>
 
-          <!-- REGISTER -->
+          <!-- Form đăng ký -->
           <div id="registerBox" class="hidden">
             <h2>📝 Register</h2>
 
@@ -77,7 +89,8 @@
           </div>
         </div>
       </div>
-      <!-- INTRO -->
+
+      <!-- Phần giới thiệu ứng dụng -->
       <div id="intro" class="card">
         <h1>👋 Chào mừng đến với EduKids</h1>
         <p>
@@ -99,7 +112,9 @@
         <p2>THCS Lê Cơ, Xã Sơn Cẩm Hà</p2>
       </div>
 
+      <!-- Phần chính của ứng dụng sau khi đăng nhập -->
       <div id="app" class="hidden">
+        <!-- Panel dành cho giáo viên -->
         <div id="teacherPanel" class="card hidden teacher-only">
           <h3>👩‍🏫 Bảng giáo viên</h3>
           <button onclick="openTeacherModal()">🚀 Tạo bài tập</button>
@@ -108,6 +123,8 @@
 
           <div id="assignmentList" style="margin-top: 15px"></div>
           <div id="assignmentDetails" style="margin-top: 15px"></div>
+
+          <!-- Bộ lọc để xem điểm học sinh theo bài tập -->
           <div
             id="studentScoreSelection"
             style="margin-top: 15px; display: none"
@@ -128,6 +145,7 @@
           <div id="studentScores" style="margin-top: 15px"></div>
         </div>
 
+        <!-- Modal tạo bài tập cho giáo viên -->
         <div id="teacherModal" class="modal">
           <div class="modal-content">
             <span
@@ -137,6 +155,7 @@
             >
             <h2>🛠️ Tạo bài tập thủ công</h2>
 
+            <!-- Form nhập thông tin bài tập -->
             <div
               style="
                 display: grid;
@@ -155,7 +174,7 @@
                 />
               </div>
               <div>
-                <label>�️ Tên bài tập:</label>
+                <label>📝 Tên bài tập:</label>
                 <input
                   type="text"
                   id="gvTitle"
@@ -164,7 +183,7 @@
                 />
               </div>
               <div>
-                <label>�🏫 Lớp:</label>
+                <label>🏫 Lớp:</label>
                 <select id="gvGrade" style="width: 100%; padding: 8px">
                   <option value="1">Lớp 1</option>
                   <option value="2">Lớp 2</option>
@@ -216,6 +235,7 @@
               />
             </div>
 
+            <!-- Nút xem trước và lưu bài tập -->
             <button onclick="previewManual()" style="background: #f59e0b">
               👀 Xem trước đề
             </button>
@@ -226,6 +246,8 @@
 
             <div id="parsePreview" style="margin-top: 10px"></div>
 
+            <!-- Khu vực preview bài tập -->
+            <!-- Khu vực hiển thị preview bài tập -->
             <div
               id="previewBox"
               style="
@@ -239,6 +261,8 @@
                 display: none;
               "
             ></div>
+
+            <!-- Khu vực hiển thị mã bài tập sau khi tạo -->
             <div
               id="codeBox"
               style="
@@ -261,7 +285,9 @@
           </div>
         </div>
 
+        <!-- Panel dành cho học sinh -->
         <div id="studentPanel" class="student-only">
+          <!-- Card nhập mã bài tập -->
           <div class="card" style="margin-top: 20px; border: 2px solid #60a5fa">
             <h3>📝 Làm bài theo mã</h3>
             <input
@@ -273,6 +299,7 @@
             </button>
           </div>
 
+          <!-- Card chọn lớp để làm quiz tự do -->
           <div class="card">
             <h3>🎓 Chọn lớp tự do</h3>
             <select id="grade">
@@ -289,21 +316,23 @@
             <button onclick="startQuiz()">🚀 Làm quiz</button>
           </div>
 
-          <!-- QUIZ -->
+          <!-- Thông tin bài tập được giao -->
           <div id="assignmentInfo" class="card" style="display: none"></div>
+
+          <!-- Khu vực hiển thị quiz -->
           <div id="quiz"></div>
           <p id="progress">Đã làm: 0/0</p>
           <button onclick="submitQuiz()">📊 Nộp bài</button>
           <button onclick="retryWrong()">🔥 Luyện lại lỗi sai</button>
           <p id="result"></p>
 
-          <!-- AI LEVEL -->
+          <!-- Hiển thị trình độ AI -->
           <div class="card">
             <h3>🧠 Trình độ</h3>
             <p id="levelText"></p>
           </div>
 
-          <!-- EXP -->
+          <!-- Hệ thống EXP và Level -->
           <div class="card">
             <h3>🎮 EXP & Level</h3>
             <div id="expContainer">
@@ -314,7 +343,7 @@
             <div id="badge"></div>
           </div>
 
-          <!-- TODO -->
+          <!-- Danh sách công việc cần làm -->
           <div class="card">
             <h3>✅ Todo</h3>
             <input id="todoInput" placeholder="Việc cần làm" />
@@ -322,7 +351,7 @@
             <div id="todoList"></div>
           </div>
 
-          <!-- TIMER -->
+          <!-- Timer Pomodoro để tập trung học -->
           <div class="card">
             <h3>⏱ Pomodoro</h3>
             <input id="minutesInput" type="number" placeholder="Phút" />
@@ -332,12 +361,14 @@
             <button onclick="resetTimer()">🔄 Đặt lại</button>
           </div>
 
-          <!-- STREAK -->
+          <!-- Hệ thống streak học tập -->
           <div class="card">
             <h3>🔥 Streak</h3>
             <p id="streakText"></p>
             <button onclick="checkStudy()">Học hôm nay</button>
           </div>
+
+          <!-- Biểu đồ tiến trình học tập -->
           <div class="card">
             <h3>📊 Tiến trình</h3>
             <div id="chart"></div>
@@ -346,7 +377,11 @@
         </div>
       </div>
     </div>
+
+    <!-- File JavaScript chính -->
     <script src="script.js"></script>
+
+    <!-- Mascot gấu để tương tác với người dùng -->
     <div id="mascot">
       <div id="mascotFace">🐻</div>
       <div id="mascotSpeech">Cùng học nào! 📚</div>
