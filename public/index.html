@@ -382,9 +382,46 @@
     <script src="script.js"></script>
 
     <!-- Mascot gấu để tương tác với người dùng -->
-    <div id="mascot">
+    <!-- Mascot góc phải, dùng để mở phần hướng dẫn sử dụng -->
+    <div id="mascot" role="button" tabindex="0" aria-label="Mở hướng dẫn sử dụng">
       <div id="mascotFace">🐻</div>
       <div id="mascotSpeech">Cùng học nào! 📚</div>
+    </div>
+    <!-- Modal hướng dẫn, xuất hiện khi người dùng bấm vào mascot -->
+    <div id="mascotGuideModal" class="guide-modal" aria-hidden="true">
+      <!-- Vùng nền mờ để người dùng bấm ra ngoài và đóng modal -->
+      <div class="guide-modal__overlay" data-close-guide="true"></div>
+      <div
+        class="guide-modal__content"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="guideTitle"
+      >
+        <button
+          type="button"
+          class="guide-modal__close"
+          id="closeGuideButton"
+          aria-label="Đóng hướng dẫn"
+        >
+          ×
+        </button>
+        <h2 id="guideTitle">Hướng dẫn sử dụng EduKids</h2>
+        <p>
+          Chào bạn! Mình là gấu hướng dẫn. Đây là cách sử dụng ứng dụng thật
+          nhanh:
+        </p>
+        <ol class="guide-steps">
+          <li>Nhấn Bắt đầu học để vào ứng dụng.</li>
+          <li>Đăng nhập hoặc tạo tài khoản nếu bạn chưa có.</li>
+          <li>Chọn môn học và lớp để bắt đầu làm quiz.</li>
+          <li>Làm bài và xem kết quả, lịch sử, EXP, level và streak.</li>
+          <li>Dùng Todo và Pomodoro để quản lý thời gian học tốt hơn.</li>
+          <li>Nếu là giáo viên, bạn có thể tạo và giao bài tập cho học sinh.</li>
+        </ol>
+        <p class="guide-tip">
+          Mẹo: Bạn có thể bấm lại vào chú gấu bất cứ lúc nào để xem hướng dẫn.
+        </p>
+      </div>
     </div>
   </body>
 </html>
