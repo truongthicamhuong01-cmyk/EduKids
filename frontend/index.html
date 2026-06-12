@@ -1,0 +1,2032 @@
+﻿<!doctype html>
+<html lang="vi">
+  <head>
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EduKids</title>
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <link rel="manifest" href="/manifest.json" />
+    <link
+      rel="icon"
+      href="/assets/edukids-icon-192.png"
+      type="image/png"
+      sizes="192x192"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="/assets/edukids-icon-192.png"
+      sizes="192x192"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body>
+    <div id="auth-root"></div>
+
+    <div class="app" id="app-shell" hidden>
+      <header class="app-mobile-header" aria-label="Thanh điều hướng di động">
+        <div class="app-mobile-brand">
+          <img src="/assets/edukids-icon-192.png" alt="" aria-hidden="true" />
+          <div class="app-mobile-brand-copy">
+            <strong>EduKids</strong>
+            <span>Học tập mỗi ngày</span>
+          </div>
+        </div>
+
+        <button
+          class="mobile-menu-toggle"
+          type="button"
+          data-mobile-menu-toggle
+          aria-controls="app-sidebar"
+          aria-expanded="false"
+          aria-label="Mở menu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </header>
+
+      <aside class="sidebar" id="app-sidebar" aria-label="Điều hướng chính">
+        <div class="sidebar-brand">
+          <div class="sidebar-brand-icon" aria-hidden="true">
+            <img src="/assets/edukids-icon-512.png" alt="" />
+          </div>
+
+          <div class="sidebar-brand-copy">
+            <strong class="sidebar-brand-title">
+              <span class="sidebar-brand-edu">Edu</span>
+              <span class="sidebar-brand-kids">Kids</span>
+            </strong>
+            <span class="sidebar-brand-tagline">AI học tập thông minh</span>
+          </div>
+        </div>
+
+        <nav>
+          <div class="menu-item active" data-page="student-home">
+            🏠 Trang chủ
+          </div>
+
+          <div class="menu-item" data-page="ai-coach">🤖 AI Coach</div>
+
+          <div class="menu-item" data-page="subjects">📚 Học theo chủ đề</div>
+
+          <div class="menu-item" data-page="assignments">📝 Bài tập</div>
+
+          <div class="menu-item" data-page="missions">🏆 Nhiệm vụ</div>
+
+          <div class="menu-item" data-page="progress">📈 Tiến độ</div>
+
+          <div class="menu-item" data-page="profile">👤 Hồ sơ</div>
+
+          <div class="menu-item" data-page="teacher-dashboard">
+            🎓 Tổng quan
+          </div>
+
+          <div class="menu-item" data-page="classroom">🏫 Lớp học</div>
+
+          <div class="menu-item" data-page="create-assignment">
+            ✨ Tạo bài tập
+          </div>
+          <div class="menu-item" data-page="manage">📋 Bài tập đã giao</div>
+
+          <div class="menu-item" data-page="stats">📊 Thống kê</div>
+
+          <div class="menu-item" data-page="teacher-profile">👩🏻‍🏫 Hồ sơ</div>
+
+          <div
+            class="student-card"
+            data-sidebar-card="student"
+            data-sidebar-role="student"
+            aria-busy="true"
+          >
+            <img
+              data-sidebar-avatar
+              src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+              alt=""
+            />
+
+            <div class="student-card-info">
+              <h4 data-sidebar-name>Đang tải...</h4>
+              <p data-sidebar-role-label>Học sinh</p>
+            </div>
+          </div>
+          <div
+            class="teacher-card"
+            data-sidebar-card="teacher"
+            data-sidebar-role="teacher"
+            aria-busy="true"
+          >
+            <img
+              data-sidebar-avatar
+              src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+              alt=""
+            />
+
+            <div class="teacher-card-info">
+              <h4 data-sidebar-name>Đang tải...</h4>
+              <p data-sidebar-role-label>Giáo viên</p>
+            </div>
+          </div>
+        </nav>
+      </aside>
+
+      <div
+        class="sidebar-backdrop"
+        data-sidebar-backdrop
+        aria-hidden="true"
+      ></div>
+
+      <main class="content">
+        <!-- HOME -->
+
+        <section id="student-home" class="page active">
+          <div class="welcome-header">
+            <div>
+              <h1>Xin chào, Anh Vỹ! 👋</h1>
+              <p>Cùng cố gắng học tập mỗi ngày nhé!</p>
+            </div>
+
+            <div class="top-stats">
+              <div class="mini-stat">
+                <span>🔥</span>
+                <div>
+                  <small>Streak</small>
+                  <h3>12 ngày</h3>
+                </div>
+              </div>
+
+              <div class="mini-stat">
+                <span>⭐</span>
+                <div>
+                  <small>Level</small>
+                  <h3>8</h3>
+                </div>
+              </div>
+
+              <div class="mini-stat exp-card">
+                <small>EXP</small>
+                <h3>1540 / 2000</h3>
+
+                <div class="progress">
+                  <div class="progress-fill" style="width: 77%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="home-grid">
+            <div class="card">
+              <h3>🤖 Hôm nay nên học gì?</h3>
+
+              <div class="task-item">
+                <span>1</span>
+                <p>Luyện Tỉ số (10 câu)</p>
+                <label class="tag-red">Yếu</label>
+              </div>
+
+              <div class="task-item">
+                <span>2</span>
+                <p>Ôn tập Phân số</p>
+                <label class="tag-blue">Ôn lại</label>
+              </div>
+
+              <div class="task-item">
+                <span>3</span>
+                <p>5 câu Tiếng Anh</p>
+                <label class="tag-green">Bài mới</label>
+              </div>
+
+              <button class="btn-primary">Bắt đầu học</button>
+            </div>
+
+            <div class="card">
+              <h3>📊 Tiến độ tuần này</h3>
+
+              <div class="stat-row">
+                <span>Thời gian học</span>
+                <b>145 phút</b>
+              </div>
+
+              <div class="stat-row">
+                <span>Số câu đã làm</span>
+                <b>73 câu</b>
+              </div>
+
+              <div class="stat-row">
+                <span>Điểm trung bình</span>
+                <b>8.2 / 10</b>
+              </div>
+
+              <button class="btn-outline">Xem chi tiết</button>
+            </div>
+
+            <div class="card">
+              <h3>🎯 Điểm mạnh & Cần cải thiện</h3>
+
+              <p><b>Điểm mạnh</b></p>
+
+              <div class="skill-tags">
+                <span class="green-tag">Phân số</span>
+                <span class="green-tag">Hình học</span>
+              </div>
+
+              <p><b>Cần cải thiện</b></p>
+
+              <div class="skill-tags">
+                <span class="red-tag">Tỉ số</span>
+                <span class="red-tag">Đo lường</span>
+              </div>
+
+              <button class="btn-outline">Xem phân tích</button>
+            </div>
+          </div>
+
+          <div class="bottom-grid">
+            <div class="card">
+              <div class="card-header">
+                <h3>📚 Bài giáo viên giao</h3>
+                <a href="#">Xem tất cả</a>
+              </div>
+
+              <div class="home-assignment-list">
+                <div class="home-assignment-item">
+                  <h4>Ôn tập Anh</h4>
+
+                  <span class="tag-orange"> Chưa làm </span>
+                </div>
+
+                <div class="home-assignment-item">
+                  <h4>Luyện tập Toán</h4>
+
+                  <span class="tag-green"> Đã làm </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card mistake-card">
+              <div class="mistake-top">
+                <h3>❌ Câu sai gần đây</h3>
+                <h2>7 câu</h2>
+              </div>
+
+              <p>Luyện lại để ghi nhớ tốt hơn nhé!</p>
+
+              <button class="btn-danger">Luyện lại ngay</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="ai-coach" class="page">
+          <div class="ai-coach-page">
+            <div class="coach-header">
+              <div class="coach-header-left">
+                <h1>🤖 AI Coach</h1>
+
+                <p>
+                  AI sẽ phân tích kết quả học tập của bạn và đưa ra nhận xét chi
+                  tiết.
+                </p>
+              </div>
+
+              <img src="/assets/AICoach.png" alt="" class="coach-robot" />
+            </div>
+
+            <div class="analysis-box">
+              <div class="analysis-icon">🧠</div>
+
+              <h2>Phân tích</h2>
+
+              <p>
+                Nhấn nút bên dưới để AI phân tích kết quả học tập mới nhất của
+                bạn!
+              </p>
+
+              <button class="ai-analyze-btn" onclick="askAI()">
+                ✨ AI phân tích
+              </button>
+            </div>
+
+            <div class="strength-weakness-card">
+              <div class="section-title strong-title">👍 Điểm mạnh</div>
+
+              <div class="skill-line">
+                <span>Phân số</span>
+
+                <div class="skill-track">
+                  <div class="skill-fill green" style="width: 85%"></div>
+                </div>
+
+                <b>85% đúng</b>
+              </div>
+
+              <div class="skill-line">
+                <span>Hình học</span>
+
+                <div class="skill-track">
+                  <div class="skill-fill green" style="width: 75%"></div>
+                </div>
+
+                <b>75% đúng</b>
+              </div>
+
+              <hr />
+
+              <div class="section-title weak-title">⚠️ Điểm yếu</div>
+
+              <div class="skill-line">
+                <span>Tỉ số và tỉ lệ</span>
+
+                <div class="skill-track">
+                  <div class="skill-fill red" style="width: 45%"></div>
+                </div>
+
+                <b>45% đúng</b>
+              </div>
+
+              <div class="skill-line">
+                <span>Đo lường</span>
+
+                <div class="skill-track">
+                  <div class="skill-fill red" style="width: 40%"></div>
+                </div>
+
+                <b>40% đúng</b>
+              </div>
+            </div>
+          </div>
+        </section>
+        <!-- SUBJECT -->
+
+        <section id="subjects" class="page">
+          <div class="quiz-page-hero">
+            <div>
+              <h1>Học theo chủ đề</h1>
+              <p class="subtitle">
+                Chọn khối lớp, môn học và chủ đề để mở quiz đã được tạo sẵn.
+              </p>
+            </div>
+          </div>
+
+          <div class="quiz-toolbar">
+            <label class="quiz-filter">
+              <span>Khối lớp</span>
+              <select id="quiz-grade-select">
+                <option value="1">Lớp 1</option>
+                <option value="2">Lớp 2</option>
+                <option value="3">Lớp 3</option>
+                <option value="4">Lớp 4</option>
+                <option value="5">Lớp 5</option>
+              </select>
+            </label>
+
+            <label class="quiz-filter">
+              <span>Môn học</span>
+              <select id="quiz-subject-select">
+                <option value="math">Toán</option>
+                <option value="english">Tiếng Anh</option>
+              </select>
+            </label>
+
+            <button
+              type="button"
+              class="quiz-load-btn"
+              id="quiz-load-topics-btn"
+            >
+              Tải chủ đề
+            </button>
+          </div>
+
+          <div class="topic-grid" id="student-topic-grid"></div>
+          <div id="student-topic-empty" class="quiz-empty hidden"></div>
+
+          <section id="student-quiz-screen" class="quiz-panel hidden"></section>
+          <section
+            id="student-result-screen"
+            class="quiz-result hidden"
+          ></section>
+          <section
+            id="student-wrong-review-screen"
+            class="quiz-review hidden"
+          ></section>
+        </section>
+        <!-- ASSIGNMENT -->
+
+        <section id="assignments" class="page">
+          <h1>Bài tập giáo viên giao</h1>
+
+          <div class="assignments-toolbar">
+            <div class="student-class-switcher" id="student-class-switcher">
+              <button type="button" class="student-class-switcher-btn" disabled>
+                Đang tải lớp...
+              </button>
+            </div>
+
+            <button
+              type="button"
+              class="join-class-btn"
+              id="join-class-action-btn"
+            >
+              Tham gia lớp học
+            </button>
+          </div>
+
+          <div class="assignment-tabs">
+            <button
+              class="assignment-tab-btn active"
+              onclick="showAssignmentTab('pending', this)"
+            >
+              Chưa làm
+            </button>
+
+            <button
+              class="assignment-tab-btn"
+              onclick="showAssignmentTab('doing', this)"
+            >
+              Đang làm
+            </button>
+
+            <button
+              class="assignment-tab-btn"
+              onclick="showAssignmentTab('done', this)"
+            >
+              Đã hoàn thành
+            </button>
+          </div>
+
+          <!-- CHƯA LÀM -->
+
+          <div
+            id="pending"
+            class="assignment-tab active"
+            data-assignment-status="pending"
+          >
+            <div class="assignment-list">
+              <div class="assignment-item">
+                <div class="assignment-left">
+                  <div class="subject-icon math">➗</div>
+
+                  <div class="assignment-info">
+                    <h3>Ôn tập phân số</h3>
+                    <p>Toán • Cô Phương</p>
+                    <small>Hạn nộp: 25/05/2026</small>
+                  </div>
+                </div>
+
+                <div class="assignment-right">
+                  <span class="status pending">Chưa làm</span>
+                  <button class="action-btn">Làm bài</button>
+                </div>
+              </div>
+
+              <div class="assignment-item">
+                <div class="assignment-left">
+                  <div class="subject-icon english">ABC</div>
+
+                  <div class="assignment-info">
+                    <h3>Tiếng Anh Unit 5</h3>
+                    <p>Tiếng Anh • Thầy Nam</p>
+                    <small>Hạn nộp: 27/05/2026</small>
+                  </div>
+                </div>
+
+                <div class="assignment-right">
+                  <span class="status pending">Chưa làm</span>
+                  <button class="action-btn">Làm bài</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ĐANG LÀM -->
+
+          <div id="doing" class="assignment-tab" data-assignment-status="doing">
+            <div class="assignment-list">
+              <div class="assignment-item">
+                <div class="assignment-left">
+                  <div class="subject-icon math">➗</div>
+
+                  <div class="assignment-info">
+                    <h3>Luyện tập tỉ số</h3>
+                    <p>Toán • Cô Phương</p>
+                    <small>Hạn nộp: 30/05/2026</small>
+                  </div>
+                </div>
+
+                <div class="assignment-right">
+                  <span class="status doing">Đang làm</span>
+                  <button class="action-btn">Tiếp tục</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ĐÃ LÀM -->
+
+          <div id="done" class="assignment-tab" data-assignment-status="done">
+            <div class="assignment-list">
+              <div class="assignment-item">
+                <div class="assignment-left">
+                  <div class="subject-icon english">ABC</div>
+
+                  <div class="assignment-info">
+                    <h3>Kiểm tra giữa kỳ</h3>
+                    <p>Tiếng Anh • Thầy Nam</p>
+                    <small>Đã hoàn thành</small>
+                  </div>
+                </div>
+
+                <div class="assignment-right">
+                  <span class="status done">Hoàn thành</span>
+                  <button class="action-btn">Xem lại</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PROGRESS -->
+
+        <section id="progress" class="page">
+          <h1>Tiến độ học tập</h1>
+          <p class="progress-subtitle">Theo dõi sự tiến bộ của bạn</p>
+
+          <div class="progress-layout">
+            <!-- TỔNG QUAN -->
+            <div class="progress-summary-card">
+              <h3>Tổng quan</h3>
+
+              <div class="overview-item">
+                <span>🕒</span>
+                <div>
+                  <small>Thời gian học</small>
+                  <h4>15 giờ 30 phút</h4>
+                </div>
+              </div>
+
+              <div class="overview-item">
+                <span>✅</span>
+                <div>
+                  <small>Bài đã hoàn thành</small>
+                  <h4>68 bài</h4>
+                </div>
+              </div>
+
+              <div class="overview-item">
+                <span>⭐</span>
+                <div>
+                  <small>Điểm trung bình</small>
+                  <h4>7.6 / 10</h4>
+                </div>
+              </div>
+
+              <div class="overview-item">
+                <span>🔥</span>
+                <div>
+                  <small>Chuỗi ngày học</small>
+                  <h4>12 ngày</h4>
+                </div>
+              </div>
+            </div>
+
+            <!-- BIỂU ĐỒ CỘT -->
+            <div class="progress-chart-card">
+              <div class="chart-header">
+                <h3>Biểu đồ tiến bộ</h3>
+              </div>
+
+              <div class="bar-chart">
+                <div class="bar-item">
+                  <div class="bar" style="height: 45%"></div>
+                  <span>18/05</span>
+                </div>
+
+                <div class="bar-item">
+                  <div class="bar" style="height: 55%"></div>
+                  <span>19/05</span>
+                </div>
+
+                <div class="bar-item">
+                  <div class="bar" style="height: 70%"></div>
+                  <span>20/05</span>
+                </div>
+
+                <div class="bar-item">
+                  <div class="bar" style="height: 65%"></div>
+                  <span>21/05</span>
+                </div>
+
+                <div class="bar-item">
+                  <div class="bar" style="height: 85%"></div>
+                  <span>22/05</span>
+                </div>
+
+                <div class="bar-item">
+                  <div class="bar" style="height: 80%"></div>
+                  <span>23/05</span>
+                </div>
+
+                <div class="bar-item">
+                  <div class="bar" style="height: 100%"></div>
+                  <span>24/05</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <!-- PROFILE -->
+
+        <section id="profile" class="page">
+          <div class="student-profile-page" data-profile-page="student">
+            <header class="student-profile-topbar">
+              <div class="student-profile-heading">
+                <span class="student-profile-heading-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" role="presentation">
+                    <path
+                      d="M20 21v-1.6c0-2.4-1.9-4.4-4.3-4.4H8.3C5.9 15 4 17 4 19.4V21"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                    />
+                    <circle
+                      cx="12"
+                      cy="8"
+                      r="3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                    />
+                  </svg>
+                </span>
+                <h1>Hồ sơ học sinh</h1>
+              </div>
+
+              <div class="student-profile-actions">
+                <button class="student-profile-edit-btn" type="button">
+                  <span aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="presentation">
+                      <path
+                        d="M4 17.25V20h2.75L18.8 7.95a1.8 1.8 0 0 0 0-2.55l-.2-.2a1.8 1.8 0 0 0-2.55 0L4 17.25Z"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M13.5 6.25l4.25 4.25"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  </span>
+                  Chỉnh sửa hồ sơ
+                </button>
+
+                <button
+                  class="student-profile-logout-btn"
+                  type="button"
+                  data-logout-button
+                >
+                  <span aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="presentation">
+                      <path
+                        d="M10 17v1.8A2.2 2.2 0 0 0 12.2 21h4.3A2.2 2.2 0 0 0 18.7 18.8V5.2A2.2 2.2 0 0 0 16.5 3h-4.3A2.2 2.2 0 0 0 10 5.2V7"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M3.5 12h9M6.8 8.7 3.5 12l3.3 3.3"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  Đăng xuất
+                </button>
+              </div>
+            </header>
+
+            <section class="student-profile-hero">
+              <div class="student-profile-avatar-wrap">
+                <div class="student-profile-avatar">
+                  <img
+                    src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                    alt="Ảnh đại diện học sinh"
+                    id="student-profile-avatar"
+                  />
+                </div>
+              </div>
+
+              <div class="student-profile-hero-content">
+                <h2 id="student-profile-name">Đang tải...</h2>
+
+                <span class="student-profile-role" id="student-profile-role"
+                  >Học sinh</span
+                >
+
+                <ul class="student-profile-meta-list">
+                  <li>
+                    <span class="student-profile-meta-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" role="presentation">
+                        <circle
+                          cx="12"
+                          cy="8"
+                          r="3.2"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                        />
+                        <path
+                          d="M5 20.5c1.4-3.1 4-4.9 7-4.9s5.6 1.8 7 4.9"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                        />
+                      </svg>
+                    </span>
+                    <span
+                      >Mã học sinh:
+                      <strong id="student-profile-code">--</strong></span
+                    >
+                  </li>
+                  <li>
+                    <span class="student-profile-meta-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" role="presentation">
+                        <path
+                          d="M6 8.5 12 5l6 3.5v7L12 19l-6-3.5v-7Z"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M12 5v14"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                        />
+                      </svg>
+                    </span>
+                    <span
+                      >Lớp: <strong id="student-profile-class">--</strong></span
+                    >
+                  </li>
+                  <li>
+                    <span class="student-profile-meta-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" role="presentation">
+                        <rect
+                          x="4.5"
+                          y="5.5"
+                          width="15"
+                          height="14"
+                          rx="2.2"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                        />
+                        <path
+                          d="M8 3.75v3.5M16 3.75v3.5M4.5 10.5h15"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                        />
+                      </svg>
+                    </span>
+                    <span
+                      >Ngày tạo tài khoản:
+                      <strong id="student-profile-created-at">--</strong></span
+                    >
+                  </li>
+                </ul>
+              </div>
+            </section>
+
+            <section class="student-profile-stats">
+              <article class="student-profile-stat-card">
+                <span
+                  class="student-profile-stat-icon is-gold"
+                  aria-hidden="true"
+                >
+                  <svg viewBox="0 0 24 24" role="presentation">
+                    <path
+                      d="M12 3.5l2.55 5.16 5.7.83-4.13 4.02.98 5.67L12 16.52 6.9 19.18l.98-5.67-4.13-4.02 5.7-.83L12 3.5Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                </span>
+                <strong>Level</strong>
+                <div
+                  class="student-profile-stat-value"
+                  id="student-profile-level"
+                >
+                  --
+                </div>
+              </article>
+
+              <article class="student-profile-stat-card">
+                <span
+                  class="student-profile-stat-icon is-orange"
+                  aria-hidden="true"
+                >
+                  <svg viewBox="0 0 24 24" role="presentation">
+                    <path
+                      d="M12 3.5c1.3 2.7 4.2 4.3 4.2 8.1 0 2.9-2 5-4.2 5s-4.2-2.1-4.2-5c0-3.8 2.9-5.4 4.2-8.1Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                </span>
+                <strong>Streak</strong>
+                <div
+                  class="student-profile-stat-value"
+                  id="student-profile-streak"
+                >
+                  -- <span>ngày</span>
+                </div>
+              </article>
+
+              <article class="student-profile-stat-card">
+                <span
+                  class="student-profile-stat-icon is-blue"
+                  aria-hidden="true"
+                >
+                  <svg viewBox="0 0 24 24" role="presentation">
+                    <path
+                      d="M4 5.5h6.5v13H4zM13.5 5.5H20v13h-6.5z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M7.2 8.2h2.1M7.2 11h2.1M16.5 8.2h2.1M16.5 11h2.1"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </span>
+                <strong>Đã làm</strong>
+                <div
+                  class="student-profile-stat-value"
+                  id="student-profile-completed"
+                >
+                  -- <span>câu hỏi</span>
+                </div>
+              </article>
+
+              <article class="student-profile-stat-card">
+                <span
+                  class="student-profile-stat-icon is-cyan"
+                  aria-hidden="true"
+                >
+                  <svg viewBox="0 0 24 24" role="presentation">
+                    <path
+                      d="M12 4.25V9"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                    />
+                    <path
+                      d="M7.5 19.5h9"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                    />
+                    <path
+                      d="M6.75 9h10.5l-1.2 6.2A3 3 0 0 1 13.1 17h-2.2a3 3 0 0 1-2.95-1.8L6.75 9Z"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+                <strong>Thời gian học</strong>
+                <div
+                  class="student-profile-stat-value"
+                  id="student-profile-study-minutes"
+                >
+                  -- <span>phút</span>
+                </div>
+              </article>
+            </section>
+
+            <section class="student-profile-grid">
+              <article class="student-profile-panel">
+                <h3>Thông tin cá nhân</h3>
+
+                <div class="student-profile-details">
+                  <div class="student-profile-detail-row">
+                    <span>Họ và tên</span>
+                    <strong id="student-profile-full-name">--</strong>
+                  </div>
+                  <div class="student-profile-detail-row">
+                    <span>Tên đăng nhập</span>
+                    <strong id="student-profile-username">--</strong>
+                  </div>
+                  <div class="student-profile-detail-row">
+                    <span>Giới tính</span>
+                    <strong id="student-profile-gender">--</strong>
+                  </div>
+                  <div class="student-profile-detail-row">
+                    <span>Vai trò</span>
+                    <strong id="student-profile-role-detail">--</strong>
+                  </div>
+                </div>
+              </article>
+
+              <article class="student-profile-panel">
+                <h3>Thành tích theo chủ đề</h3>
+
+                <div class="student-profile-subject-list">
+                  <div class="student-profile-subject-row">
+                    <span class="student-profile-subject-name">Phân số</span>
+                    <div class="student-profile-subject-track">
+                      <div
+                        class="student-profile-subject-fill is-green"
+                        style="width: 0%"
+                        data-student-subject="Phân số"
+                      ></div>
+                    </div>
+                    <strong
+                      class="student-profile-subject-percent is-green"
+                      data-student-subject-percent="Phân số"
+                      >0%</strong
+                    >
+                  </div>
+
+                  <div class="student-profile-subject-row">
+                    <span class="student-profile-subject-name">Tỉ số</span>
+                    <div class="student-profile-subject-track">
+                      <div
+                        class="student-profile-subject-fill is-blue"
+                        style="width: 0%"
+                        data-student-subject="Tỉ số"
+                      ></div>
+                    </div>
+                    <strong
+                      class="student-profile-subject-percent is-blue"
+                      data-student-subject-percent="Tỉ số"
+                      >0%</strong
+                    >
+                  </div>
+
+                  <div class="student-profile-subject-row">
+                    <span class="student-profile-subject-name">Hình học</span>
+                    <div class="student-profile-subject-track">
+                      <div
+                        class="student-profile-subject-fill is-purple"
+                        style="width: 0%"
+                        data-student-subject="Hình học"
+                      ></div>
+                    </div>
+                    <strong
+                      class="student-profile-subject-percent is-purple"
+                      data-student-subject-percent="Hình học"
+                      >0%</strong
+                    >
+                  </div>
+
+                  <div class="student-profile-subject-row">
+                    <span class="student-profile-subject-name">Đo lường</span>
+                    <div class="student-profile-subject-track">
+                      <div
+                        class="student-profile-subject-fill is-orange"
+                        style="width: 0%"
+                        data-student-subject="Đo lường"
+                      ></div>
+                    </div>
+                    <strong
+                      class="student-profile-subject-percent is-orange"
+                      data-student-subject-percent="Đo lường"
+                      >0%</strong
+                    >
+                  </div>
+                </div>
+              </article>
+            </section>
+
+            <section class="student-profile-panel student-profile-extra">
+              <h3>Thông tin khác</h3>
+
+              <div class="student-profile-extra-list">
+                <div class="student-profile-extra-row">
+                  <span>Trường</span>
+                  <strong id="student-profile-school">--</strong>
+                </div>
+                <div class="student-profile-extra-row">
+                  <span>Lớp</span>
+                  <strong id="student-profile-class-extra">--</strong>
+                </div>
+                <div class="student-profile-extra-row">
+                  <span>Sở thích</span>
+                  <strong id="student-profile-hobby">--</strong>
+                </div>
+                <div class="student-profile-extra-row">
+                  <span>Ước mơ</span>
+                  <strong id="student-profile-dream">--</strong>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- TEACHER -->
+
+        <section id="teacher-dashboard" class="page">
+          <div class="teacher-dashboard-page">
+            <header class="teacher-dashboard-header">
+              <div class="teacher-dashboard-heading">
+                <h1>Xin chào, Cô Lan 👋</h1>
+              </div>
+
+              <div class="teacher-dashboard-actions">
+                <img
+                  class="teacher-dashboard-avatar"
+                    src="/assets/userAvatar/femaleteacher.png"
+                  alt="Cô Lan"
+                />
+              </div>
+            </header>
+
+            <div class="teacher-dashboard-stats">
+              <article class="teacher-stat-card teacher-stat-card-purple">
+                <div class="teacher-stat-icon">👥</div>
+                <strong>32</strong>
+                <span>Học sinh</span>
+              </article>
+
+              <article class="teacher-stat-card teacher-stat-card-blue">
+                <div class="teacher-stat-icon">🎓</div>
+                <strong>4</strong>
+                <span>Lớp học</span>
+              </article>
+
+              <article class="teacher-stat-card teacher-stat-card-pink">
+                <div class="teacher-stat-icon">📄</div>
+                <strong>8</strong>
+                <span>Bài tập</span>
+              </article>
+
+              <article class="teacher-stat-card teacher-stat-card-sky">
+                <div class="teacher-stat-icon">✓</div>
+                <strong>78%</strong>
+                <span>Hoàn thành</span>
+              </article>
+            </div>
+
+            <div class="teacher-dashboard-grid">
+              <section class="teacher-dashboard-panel teacher-activity-panel">
+                <h2>Hoạt động gần đây</h2>
+
+                <div class="teacher-activity-list">
+                  <article class="teacher-activity-item">
+                    <img src="/assets/userAvatar/femaleteacher.png" alt="" />
+                    <div>
+                      <p>Vy đã hoàn thành bài "Phân số"</p>
+                      <span>12 phút trước</span>
+                    </div>
+                  </article>
+
+                  <article class="teacher-activity-item">
+                    <img src="/assets/userAvatar/boy.png" alt="" />
+                    <div>
+                      <p>Minh đã nộp bài "Grammar"</p>
+                      <span>13 phút trước</span>
+                    </div>
+                  </article>
+
+                  <article class="teacher-activity-item">
+                    <img src="/assets/userAvatar/femaleteacher.png" alt="" />
+                    <div>
+                      <p>Bạn vừa tạo bài "Ôn tập Tỉ số"</p>
+                      <span>19 phút trước</span>
+                    </div>
+                  </article>
+                </div>
+              </section>
+
+              <section class="teacher-dashboard-panel teacher-attention-panel">
+                <h2>Bài tập cần chú ý</h2>
+
+                <div class="teacher-attention-list">
+                  <article class="attention-card">
+                    <div class="attention-card-head">
+                      <h3>Ôn tập Phân số</h3>
+                      <p>16/30 học sinh hoàn thành</p>
+                    </div>
+
+                    <div class="attention-progress">
+                      <div
+                        class="attention-progress-fill"
+                        style="width: 53%"
+                      ></div>
+                    </div>
+
+                    <span>16 học sinh hoàn thành</span>
+                  </article>
+
+                  <article class="attention-card">
+                    <div class="attention-card-head">
+                      <h3>Grammar Unit 1</h3>
+                      <p>12/30 học sinh hoàn thành</p>
+                    </div>
+
+                    <div class="attention-progress">
+                      <div
+                        class="attention-progress-fill"
+                        style="width: 40%"
+                      ></div>
+                    </div>
+
+                    <span>12 học sinh hoàn thành</span>
+                  </article>
+
+                  <article class="attention-card attention-card-compact">
+                    <div class="attention-card-head">
+                      <h3>Ôn tập Tỉ số</h3>
+                      <p>9/30 học sinh hoàn thành</p>
+                    </div>
+
+                    <div class="attention-progress">
+                      <div
+                        class="attention-progress-fill"
+                        style="width: 30%"
+                      ></div>
+                    </div>
+
+                    <span>9 học sinh hoàn thành</span>
+                  </article>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
+
+        <section id="classroom" class="page">
+          <div class="classroom-page">
+            <div class="classroom-topbar">
+              <div>
+                <h1>Quản lý lớp học</h1>
+              </div>
+
+              <div class="classroom-actions">
+                <button class="classroom-create-btn" type="button">
+                  <span>+</span>
+                  <span>Tạo lớp</span>
+                </button>
+
+                <div class="classroom-join-wrapper">
+                  <button
+                    class="classroom-toggle-btn"
+                    type="button"
+                    aria-expanded="false"
+                    aria-label="Mở danh sách lớp"
+                  >
+                    ▾
+                  </button>
+
+                  <div class="classroom-dropdown" aria-hidden="true">
+                    <div class="classroom-dropdown-block">
+                      <h3>Lớp học đang tham gia</h3>
+
+                      <div id="joined-class-list" class="joined-class-list">
+                        <div class="joined-class-empty">
+                          Đang tải danh sách lớp...
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="classroom-dropdown-block">
+                      <h3>Tham gia lớp</h3>
+
+                      <div class="classroom-join-form">
+                        <input
+                          id="join-class-code"
+                          type="text"
+                          placeholder="Nhập mã lớp"
+                        />
+                        <button id="join-class-btn" type="button">
+                          Tham gia
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="classroom-layout">
+              <div id="classroom-list-panel" class="classroom-list-panel">
+                <div class="classroom-empty-state">
+                  <h3>Đang tải lớp học...</h3>
+                  <p>Hệ thống sẽ đồng bộ lớp học thật từ Firestore.</p>
+                </div>
+              </div>
+
+              <div class="classroom-detail-panel">
+                <div class="classroom-detail-header">
+                  <div>
+                    <h2 id="classroom-detail-name">Chưa có lớp nào</h2>
+                    <p id="classroom-detail-code">Mã lớp: --</p>
+                  </div>
+
+                  <button class="classroom-copy-btn" type="button">
+                    <span>📄</span>
+                    <span>Sao chép mã lớp</span>
+                  </button>
+                </div>
+
+                <div class="classroom-students-section">
+                  <h3>Danh sách học sinh</h3>
+
+                  <div
+                    id="classroom-student-list"
+                    class="classroom-student-list"
+                  >
+                    <div
+                      class="classroom-empty-state classroom-empty-state-compact"
+                    >
+                      <h3>Chưa có dữ liệu học sinh</h3>
+                      <p>Chọn hoặc tạo một lớp để xem danh sách học sinh.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="classroom-stats-section">
+                  <h3>Thống kê lớp</h3>
+
+                  <div class="classroom-stats-list">
+                    <div class="classroom-stat-row">
+                      <span>Sĩ số</span>
+                      <strong id="classroom-stat-size">28</strong>
+                    </div>
+
+                    <div class="classroom-stat-row">
+                      <span>Điểm TB</span>
+                      <strong id="classroom-stat-average">76%</strong>
+                    </div>
+
+                    <div class="classroom-stat-row">
+                      <span>Tỷ lệ hoàn thành</span>
+                      <strong id="classroom-stat-completion">82%</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="create-assignment" class="page">
+          <div class="create-assignment-page" data-manual-assignment-root></div>
+        </section>
+
+        <section id="create-ai" class="page">
+          <button class="back-btn" onclick="goBackPage()">← Quay lại</button>
+          <h1>Tạo bài tập bằng AI</h1>
+
+          <div class="card">
+            <input placeholder="Chủ đề" />
+
+            <select>
+              <option>Dễ</option>
+              <option>Trung bình</option>
+              <option>Khó</option>
+            </select>
+
+            <textarea placeholder="Mô tả bài tập"></textarea>
+
+            <button class="btn-primary">Tạo bài tập</button>
+          </div>
+        </section>
+
+        <section id="create-manual" class="page">
+          <h1>Tạo bài tập thủ công</h1>
+
+          <div class="card">
+            <input placeholder="Câu hỏi" />
+
+            <input placeholder="Đáp án A" />
+            <input placeholder="Đáp án B" />
+            <input placeholder="Đáp án C" />
+            <input placeholder="Đáp án D" />
+
+            <button class="btn-primary">Lưu bài tập</button>
+          </div>
+        </section>
+
+        <section id="missions" class="page">
+          <div class="missions-page">
+            <div class="missions-hero">
+              <div class="missions-hero-copy">
+                <div class="mission-title-row">
+                  <div class="mission-title-icon trophy">🏆</div>
+                  <div>
+                    <h1>Nhiệm vụ</h1>
+                    <p>Hoàn thành nhiệm vụ để nhận exp và xu nhé!</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="missions-score-card">
+                <div class="score-item">
+                  <div class="score-label">
+                    <span class="score-icon exp">⭐</span>
+                    <span>EXP</span>
+                  </div>
+                  <strong>523</strong>
+                </div>
+
+                <div class="score-plus">+</div>
+
+                <div class="score-item">
+                  <div class="score-label">
+                    <span class="score-icon coin">S</span>
+                    <span>Xu</span>
+                  </div>
+                  <strong>120</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="missions-section">
+              <div class="missions-section-title">
+                <span class="section-emoji">📅</span>
+                <h2>Nhiệm vụ hôm nay</h2>
+              </div>
+
+              <div class="mission-list">
+                <article class="mission-item">
+                  <div class="mission-icon mission-blue">
+                    <span>🕑</span>
+                  </div>
+
+                  <div class="mission-info">
+                    <h3>Học siêng năng</h3>
+                    <p>Học liên tục trong 15 phút</p>
+
+                    <div class="mission-progress-row">
+                      <div class="mission-progress">
+                        <div
+                          class="mission-progress-fill"
+                          style="width: 68%"
+                        ></div>
+                      </div>
+                      <span>10 / 15 phút;</span>
+                    </div>
+                  </div>
+
+                  <div class="mission-divider"></div>
+
+                  <div class="mission-rewards">
+                    <div class="reward-line">
+                      <span class="reward-star">⭐</span>
+                      <span>+ 20 EXP</span>
+                    </div>
+                    <div class="reward-line">
+                      <span class="reward-coin">S</span>
+                      <span>+ 10 Xu</span>
+                    </div>
+                  </div>
+
+                  <button class="mission-action">Làm ngay</button>
+                </article>
+
+                <article class="mission-item">
+                  <div class="mission-icon mission-green">
+                    <span>📗</span>
+                  </div>
+
+                  <div class="mission-info">
+                    <h3>Hoàn thành 1 bài bất kỳ</h3>
+                    <p>Hoàn thành bất kỳ 1 bài học nào</p>
+
+                    <div class="mission-progress-row">
+                      <div class="mission-progress">
+                        <div
+                          class="mission-progress-fill"
+                          style="width: 0%"
+                        ></div>
+                      </div>
+                      <span>0 / 1 bài</span>
+                    </div>
+                  </div>
+
+                  <div class="mission-divider"></div>
+
+                  <div class="mission-rewards">
+                    <div class="reward-line">
+                      <span class="reward-star">⭐</span>
+                      <span>+ 25 EXP</span>
+                    </div>
+                    <div class="reward-line">
+                      <span class="reward-coin">S</span>
+                      <span>+ 15 Xu</span>
+                    </div>
+                  </div>
+
+                  <button class="mission-action">Làm ngay</button>
+                </article>
+
+                <article class="mission-item">
+                  <div class="mission-icon mission-red">
+                    <span>🎯</span>
+                  </div>
+
+                  <div class="mission-info">
+                    <h3>Trả lời đúng 10 câu liên tiếp</h3>
+                    <p>Trả lời đúng liên tiếp 10 câu</p>
+
+                    <div class="mission-progress-row">
+                      <div class="mission-progress">
+                        <div
+                          class="mission-progress-fill"
+                          style="width: 0%"
+                        ></div>
+                      </div>
+                      <span>0 / 10 câu</span>
+                    </div>
+                  </div>
+
+                  <div class="mission-divider"></div>
+
+                  <div class="mission-rewards">
+                    <div class="reward-line">
+                      <span class="reward-star">⭐</span>
+                      <span>+ 30 EXP</span>
+                    </div>
+                    <div class="reward-line">
+                      <span class="reward-coin">S</span>
+                      <span>+ 15 Xu</span>
+                    </div>
+                  </div>
+
+                  <button class="mission-action">Làm ngay</button>
+                </article>
+
+                <article class="mission-item">
+                  <div class="mission-icon mission-purple">
+                    <span>📋</span>
+                  </div>
+
+                  <div class="mission-info">
+                    <h3>Hoàn thành bài giáo viên giao</h3>
+                    <p>Hoàn thành 1 bài tập giáo viên đã giao</p>
+
+                    <div class="mission-progress-row">
+                      <div class="mission-progress">
+                        <div
+                          class="mission-progress-fill"
+                          style="width: 0%"
+                        ></div>
+                      </div>
+                      <span>0 / 1 bài</span>
+                    </div>
+                  </div>
+
+                  <div class="mission-divider"></div>
+
+                  <div class="mission-rewards">
+                    <div class="reward-line">
+                      <span class="reward-star">⭐</span>
+                      <span>+ 40 EXP</span>
+                    </div>
+                    <div class="reward-line">
+                      <span class="reward-coin">S</span>
+                      <span>+ 20 Xu</span>
+                    </div>
+                  </div>
+
+                  <button class="mission-action">Làm ngay</button>
+                </article>
+              </div>
+            </div>
+
+            <div class="missions-section streak-section">
+              <div class="missions-section-header">
+                <div class="missions-section-title">
+                  <span class="section-emoji">🔥</span>
+                  <div>
+                    <h2>Chuỗi ngày học tập</h2>
+                    <p>Hãy duy trì thói quen học tập mỗi ngày nhé!</p>
+                  </div>
+                </div>
+
+                <div class="streak-box">
+                  <span>Chuỗi hiện tại</span>
+                  <strong>12</strong>
+                  <p>ngày</p>
+                </div>
+              </div>
+
+              <div class="streak-timeline">
+                <div class="streak-days">
+                  <div class="streak-day done">
+                    <div class="day-circle">✓</div>
+                    <span>T2</span>
+                  </div>
+
+                  <div class="streak-day done">
+                    <div class="day-circle">✓</div>
+                    <span>T3</span>
+                  </div>
+
+                  <div class="streak-day done">
+                    <div class="day-circle">✓</div>
+                    <span>T4</span>
+                  </div>
+
+                  <div class="streak-day current">
+                    <div class="day-circle">T5</div>
+                    <span>T5</span>
+                  </div>
+
+                  <div class="streak-day">
+                    <div class="day-circle"></div>
+                    <span>T6</span>
+                  </div>
+
+                  <div class="streak-day">
+                    <div class="day-circle"></div>
+                    <span>T7</span>
+                  </div>
+
+                  <div class="streak-day">
+                    <div class="day-circle"></div>
+                    <span>CN</span>
+                  </div>
+                </div>
+
+                <div class="streak-track">
+                  <div class="streak-track-fill"></div>
+                  <div class="streak-markers">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="manage" class="page">
+          <div class="manage-page">
+            <header class="manage-header">
+              <div>
+                <h2>Bài tập đã giao</h2>
+              </div>
+
+              <div class="manage-toolbar">
+                <label class="manage-search">
+                  <span class="manage-search-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="presentation">
+                      <circle
+                        cx="11"
+                        cy="11"
+                        r="6.5"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                      />
+                      <path
+                        d="M16 16l4 4"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  </span>
+                  <input type="text" placeholder="Tìm kiếm bài tập..." />
+                </label>
+
+                <label class="manage-filter">
+                  <select>
+                    <option>Tất cả lớp</option>
+                    <option>Lớp 4A</option>
+                    <option>Lớp 4B</option>
+                  </select>
+                </label>
+              </div>
+            </header>
+
+            <div class="manage-list"></div>
+          </div>
+        </section>
+
+        <section id="stats" class="page">
+          <div class="teacher-stats-page">
+            <h1>Thống kê</h1>
+
+            <section class="teacher-stats-card teacher-stats-topics-card">
+              <h2>
+                Chủ đề yếu nhất của lớp
+                <span>(Trung bình tỉ lệ đúng)</span>
+              </h2>
+
+              <div class="teacher-stats-bars">
+                <div class="teacher-stats-bar-row">
+                  <span class="teacher-stats-bar-label">Phân số</span>
+                  <div class="teacher-stats-bar-track">
+                    <div
+                      class="teacher-stats-bar-fill teacher-stats-bar-fill-green"
+                      style="width: 90%"
+                    ></div>
+                  </div>
+                  <span
+                    class="teacher-stats-bar-value teacher-stats-bar-value-green"
+                    >90%</span
+                  >
+                </div>
+
+                <div class="teacher-stats-bar-row">
+                  <span class="teacher-stats-bar-label">Tỉ số</span>
+                  <div class="teacher-stats-bar-track">
+                    <div
+                      class="teacher-stats-bar-fill teacher-stats-bar-fill-red"
+                      style="width: 40%"
+                    ></div>
+                  </div>
+                  <span
+                    class="teacher-stats-bar-value teacher-stats-bar-value-red"
+                    >40%</span
+                  >
+                </div>
+
+                <div class="teacher-stats-bar-row">
+                  <span class="teacher-stats-bar-label">Hình học</span>
+                  <div class="teacher-stats-bar-track">
+                    <div
+                      class="teacher-stats-bar-fill teacher-stats-bar-fill-orange"
+                      style="width: 70%"
+                    ></div>
+                  </div>
+                  <span
+                    class="teacher-stats-bar-value teacher-stats-bar-value-orange"
+                    >70%</span
+                  >
+                </div>
+
+                <div class="teacher-stats-bar-row">
+                  <span class="teacher-stats-bar-label">Đo lường</span>
+                  <div class="teacher-stats-bar-track">
+                    <div
+                      class="teacher-stats-bar-fill teacher-stats-bar-fill-yellow"
+                      style="width: 60%"
+                    ></div>
+                  </div>
+                  <span
+                    class="teacher-stats-bar-value teacher-stats-bar-value-yellow"
+                    >60%</span
+                  >
+                </div>
+              </div>
+            </section>
+
+            <section class="teacher-stats-card teacher-stats-questions-card">
+              <h2>Những câu hỏi nhiều học sinh sai</h2>
+
+              <div class="teacher-stats-table">
+                <div class="teacher-stats-table-head">
+                  <span>Câu hỏi</span>
+                  <span>Chủ đề</span>
+                  <span>Tỉ lệ sai</span>
+                </div>
+
+                <div class="teacher-stats-table-row">
+                  <span>Câu 12</span>
+                  <span>Tỉ số</span>
+                  <span
+                    ><strong class="teacher-stats-badge teacher-stats-badge-red"
+                      >80%</strong
+                    ></span
+                  >
+                </div>
+
+                <div class="teacher-stats-table-row">
+                  <span>Câu 18</span>
+                  <span>Hình học</span>
+                  <span
+                    ><strong
+                      class="teacher-stats-badge teacher-stats-badge-orange"
+                      >65%</strong
+                    ></span
+                  >
+                </div>
+
+                <div class="teacher-stats-table-row">
+                  <span>Câu 7</span>
+                  <span>Đo lường</span>
+                  <span
+                    ><strong
+                      class="teacher-stats-badge teacher-stats-badge-yellow"
+                      >55%</strong
+                    ></span
+                  >
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+        <section id="teacher-profile" class="page">
+          <div class="teacher-profile-page" data-profile-page="teacher">
+            <header class="teacher-profile-topbar">
+              <div class="teacher-profile-heading">
+                <span class="teacher-profile-heading-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" role="presentation">
+                    <path
+                      d="M20 21v-1.6c0-2.4-1.9-4.4-4.3-4.4H8.3C5.9 15 4 17 4 19.4V21"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                    />
+                    <circle
+                      cx="12"
+                      cy="8"
+                      r="3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                    />
+                  </svg>
+                </span>
+                <h1>Hồ sơ giáo viên</h1>
+              </div>
+
+              <div class="teacher-profile-actions">
+                <button class="teacher-profile-edit-btn" type="button">
+                  <span aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="presentation">
+                      <path
+                        d="M4 17.25V20h2.75L18.8 7.95a1.8 1.8 0 0 0 0-2.55l-.2-.2a1.8 1.8 0 0 0-2.55 0L4 17.25Z"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M13.5 6.25l4.25 4.25"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  </span>
+                  Chỉnh sửa hồ sơ
+                </button>
+
+                <button
+                  class="teacher-profile-logout-btn"
+                  type="button"
+                  data-logout-button
+                >
+                  <span aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="presentation">
+                      <path
+                        d="M10 17v1.8A2.2 2.2 0 0 0 12.2 21h4.3A2.2 2.2 0 0 0 18.7 18.8V5.2A2.2 2.2 0 0 0 16.5 3h-4.3A2.2 2.2 0 0 0 10 5.2V7"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M3.5 12h9M6.8 8.7 3.5 12l3.3 3.3"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  Đăng xuất
+                </button>
+              </div>
+            </header>
+
+            <section class="teacher-profile-hero">
+              <div class="teacher-profile-avatar-wrap">
+                <div class="teacher-profile-avatar">
+                  <img
+                    src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+                    alt="Ảnh đại diện giáo viên"
+                    id="teacher-profile-avatar"
+                  />
+                </div>
+              </div>
+
+              <div class="teacher-profile-hero-content">
+                <h2 id="teacher-profile-name">Đang tải...</h2>
+
+                <span class="teacher-profile-role" id="teacher-profile-role"
+                  >Giáo viên</span
+                >
+
+                <ul class="teacher-profile-meta-list">
+                  <li>
+                    <span class="teacher-profile-meta-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" role="presentation">
+                        <circle
+                          cx="12"
+                          cy="8"
+                          r="3.2"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                        />
+                        <path
+                          d="M5 20.5c1.4-3.1 4-4.9 7-4.9s5.6 1.8 7 4.9"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                        />
+                      </svg>
+                    </span>
+                    <span
+                      >Mã giáo viên:
+                      <strong id="teacher-profile-code">--</strong></span
+                    >
+                  </li>
+                  <li>
+                    <span class="teacher-profile-meta-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" role="presentation">
+                        <path
+                          d="M4 10l8-5 8 5-8 5-8-5Z"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M8 12v4.5c0 1.2 1.8 2.2 4 2.2s4-1 4-2.2V12"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                        />
+                      </svg>
+                    </span>
+                    <span
+                      >Trường:
+                      <strong id="teacher-profile-school">--</strong></span
+                    >
+                  </li>
+                  <li>
+                    <span class="teacher-profile-meta-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" role="presentation">
+                        <rect
+                          x="4.5"
+                          y="5.5"
+                          width="15"
+                          height="14"
+                          rx="2.2"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                        />
+                        <path
+                          d="M8 3.75v3.5M16 3.75v3.5M4.5 10.5h15"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                        />
+                      </svg>
+                    </span>
+                    <span
+                      >Ngày tạo tài khoản:
+                      <strong id="teacher-profile-created-at">--</strong></span
+                    >
+                  </li>
+                </ul>
+              </div>
+            </section>
+
+            <section class="teacher-profile-grid">
+              <article class="teacher-profile-panel teacher-profile-info-panel">
+                <h3>Thông tin cá nhân</h3>
+
+                <div class="teacher-profile-details">
+                  <div class="teacher-profile-detail-row">
+                    <span>Họ và tên</span>
+                    <strong id="teacher-profile-full-name">--</strong>
+                  </div>
+                  <div class="teacher-profile-detail-row">
+                    <span>Tên đăng nhập</span>
+                    <strong id="teacher-profile-username">--</strong>
+                  </div>
+                  <div class="teacher-profile-detail-row">
+                    <span>Giới tính</span>
+                    <strong id="teacher-profile-gender">--</strong>
+                  </div>
+                  <div class="teacher-profile-detail-row">
+                    <span>Vai trò</span>
+                    <strong id="teacher-profile-role-detail">--</strong>
+                  </div>
+
+                  <div class="teacher-profile-detail-row">
+                    <span>Lớp đang chủ nhiệm</span>
+                    <div class="teacher-profile-class-tags">
+                      <span
+                        class="teacher-profile-class-tag"
+                        data-teacher-class-tag
+                        >--</span
+                      >
+                    </div>
+                  </div>
+                  <div class="teacher-profile-detail-row">
+                    <span>Điện thoại</span>
+                    <strong id="teacher-profile-phone">--</strong>
+                  </div>
+                  <div class="teacher-profile-detail-row">
+                    <span>Địa chỉ</span>
+                    <strong id="teacher-profile-address">--</strong>
+                  </div>
+                  <div class="teacher-profile-detail-row">
+                    <span>Ghi chú</span>
+                    <strong id="teacher-profile-note">--</strong>
+                  </div>
+                </div>
+              </article>
+
+              <article
+                class="teacher-profile-panel teacher-profile-achievement-panel"
+              >
+                <h3>Thành tích</h3>
+
+                <div class="teacher-profile-achievement-grid">
+                  <div class="teacher-profile-achievement-card is-blue">
+                    <span class="teacher-profile-achievement-icon">👥</span>
+                    <small>Tổng số lớp</small>
+                    <strong id="teacher-profile-total-classes">--</strong>
+                    <span>lớp</span>
+                  </div>
+
+                  <div class="teacher-profile-achievement-card is-green">
+                    <span class="teacher-profile-achievement-icon">📗</span>
+                    <small>Bài tập đã tạo</small>
+                    <strong id="teacher-profile-assignments-created">--</strong>
+                    <span>bài</span>
+                  </div>
+
+                  <div class="teacher-profile-achievement-card is-orange">
+                    <span class="teacher-profile-achievement-icon">👨‍🎓</span>
+                    <small>Học sinh quản lý</small>
+                    <strong id="teacher-profile-students-managed">--</strong>
+                    <span>học sinh</span>
+                  </div>
+
+                  <div class="teacher-profile-achievement-card is-cyan">
+                    <span class="teacher-profile-achievement-icon">🏆</span>
+                    <small>Điểm trung bình lớp</small>
+                    <strong id="teacher-profile-average-score">--</strong>
+                    <span>/10</span>
+                  </div>
+                </div>
+              </article>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <button type="button" class="install-app-fab" data-install-app-btn hidden>
+        Cài đặt ứng dụng
+      </button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

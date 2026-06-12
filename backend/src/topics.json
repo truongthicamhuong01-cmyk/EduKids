@@ -1,0 +1,246 @@
+[
+  {
+    "topicId": "p1-numbers-0-to-20",
+    "grade": "1",
+    "subject": "math",
+    "title": "Các số từ 0 - 20",
+    "image": "assets/mathTopic/toan1/cacsotu0den20.png",
+    "description": "Nhận biết, đọc, viết và đếm các số từ 0 đến 20."
+  },
+  {
+    "topicId": "p1-numbers-0-to-100",
+    "grade": "1",
+    "subject": "math",
+    "title": "Các số từ 0 - 100",
+    "image": "assets/mathTopic/toan1/cacsotu0den100.png",
+    "description": "Đọc, viết, so sánh và sắp xếp các số trong phạm vi 100."
+  },
+  {
+    "topicId": "p1-addition-and-subtraction-within-10",
+    "grade": "1",
+    "subject": "math",
+    "title": "Cộng trừ trong phạm vi 10",
+    "image": "assets/mathTopic/toan1/congtruphamvi10.png",
+    "description": "Thực hiện phép cộng và phép trừ trong phạm vi 10."
+  },
+  {
+    "topicId": "p1-addition-and-subtraction-within-100",
+    "grade": "1",
+    "subject": "math",
+    "title": "Cộng trừ trong phạm vi 100",
+    "image": "assets/mathTopic/toan1/congtruphamvi100.png",
+    "description": "Thực hiện phép cộng và phép trừ trong phạm vi 100."
+  },
+  {
+    "topicId": "p1-basic-measurement",
+    "grade": "1",
+    "subject": "math",
+    "title": "Đo lường đơn giản",
+    "image": "assets/mathTopic/toan1/doluongdongian.png",
+    "description": "Làm quen với độ dài, thời gian và các đơn vị đo cơ bản."
+  },
+  {
+    "topicId": "p1-shapes-and-geometry",
+    "grade": "1",
+    "subject": "math",
+    "title": "Hình học cơ bản",
+    "image": "assets/mathTopic/toan1/hinhhoccoban.png",
+    "description": "Nhận biết các hình học cơ bản và vị trí trong không gian."
+  },
+
+  {
+    "topicId": "p2-numbers-up-to-1000",
+    "grade": "2",
+    "subject": "math",
+    "title": "Các số đến 1000",
+    "image": "assets/mathTopic/toan2/cacsoden1000.png",
+    "description": "Đọc, viết, so sánh các số trong phạm vi 1000."
+  },
+  {
+    "topicId": "p2-addition-and-subtraction-within-1000",
+    "grade": "2",
+    "subject": "math",
+    "title": "Cộng trừ trong phạm vi 1000",
+    "image": "assets/mathTopic/toan2/congtruphamvi1000.png",
+    "description": "Thực hiện các phép cộng và trừ trong phạm vi 1000."
+  },
+  {
+    "topicId": "p2-multiplication",
+    "grade": "2",
+    "subject": "math",
+    "title": "Phép nhân",
+    "image": "assets/mathTopic/toan2/phepnhan.png",
+    "description": "Làm quen và thực hành các bảng nhân cơ bản."
+  },
+  {
+    "topicId": "p2-division",
+    "grade": "2",
+    "subject": "math",
+    "title": "Phép chia",
+    "image": "assets/mathTopic/toan2/phepchia.png",
+    "description": "Làm quen và thực hành các bảng chia cơ bản."
+  },
+  {
+    "topicId": "p2-measurement",
+    "grade": "2",
+    "subject": "math",
+    "title": "Đo lường",
+    "image": "assets/mathTopic/toan2/doluong.png",
+    "description": "Độ dài, khối lượng, dung tích và thời gian."
+  },
+  {
+    "topicId": "p2-geometry",
+    "grade": "2",
+    "subject": "math",
+    "title": "Hình học",
+    "image": "assets/mathTopic/toan2/hinhhoc.png",
+    "description": "Nhận biết và vận dụng các hình học cơ bản."
+  },
+
+  {
+    "topicId": "p3-numbers-up-to-100000",
+    "grade": "3",
+    "subject": "math",
+    "title": "Các số đến 100000",
+    "image": "assets/mathTopic/toan3/cacsoden100000.png",
+    "description": "Đọc, viết và so sánh các số trong phạm vi 100000."
+  },
+  {
+    "topicId": "p3-addition-and-subtraction",
+    "grade": "3",
+    "subject": "math",
+    "title": "Phép cộng và phép trừ",
+    "image": "assets/mathTopic/toan3/phepcongvapheptru.png",
+    "description": "Thực hiện các phép cộng và trừ với số tự nhiên."
+  },
+  {
+    "topicId": "p3-multiplication-and-division",
+    "grade": "3",
+    "subject": "math",
+    "title": "Phép nhân và phép chia",
+    "image": "assets/mathTopic/toan3/phepnhanvaphepchia.png",
+    "description": "Thực hiện các phép nhân và chia với số tự nhiên."
+  },
+  {
+    "topicId": "p3-measurement",
+    "grade": "3",
+    "subject": "math",
+    "title": "Đo lường",
+    "image": "assets/mathTopic/toan3/doluong.png",
+    "description": "Vận dụng các đơn vị đo trong thực tế."
+  },
+  {
+    "topicId": "p3-geometry",
+    "grade": "3",
+    "subject": "math",
+    "title": "Hình học",
+    "image": "assets/mathTopic/toan3/hinhhoc.png",
+    "description": "Các hình phẳng và bài toán hình học cơ bản."
+  },
+  {
+    "topicId": "p3-statistics",
+    "grade": "3",
+    "subject": "math",
+    "title": "Thống kê",
+    "image": "assets/mathTopic/toan3/thongke.png",
+    "description": "Thu thập, đọc và phân tích dữ liệu đơn giản."
+  },
+
+  {
+    "topicId": "p4-natural-numbers",
+    "grade": "4",
+    "subject": "math",
+    "title": "Số tự nhiên",
+    "image": "assets/mathTopic/toan4/sotunhien.png",
+    "description": "Ôn tập và mở rộng kiến thức về số tự nhiên."
+  },
+  {
+    "topicId": "p4-natural-number-operations",
+    "grade": "4",
+    "subject": "math",
+    "title": "Các phép tính với số tự nhiên",
+    "image": "assets/mathTopic/toan4/cacpheptinhvoisotunhien.png",
+    "description": "Thực hiện thành thạo các phép tính với số tự nhiên."
+  },
+  {
+    "topicId": "p4-fractions",
+    "grade": "4",
+    "subject": "math",
+    "title": "Phân số",
+    "image": "assets/mathTopic/toan4/phanso.png",
+    "description": "Khái niệm, so sánh và các phép tính với phân số."
+  },
+  {
+    "topicId": "p4-measurement",
+    "grade": "4",
+    "subject": "math",
+    "title": "Đo lường",
+    "image": "assets/mathTopic/toan4/doluong.png",
+    "description": "Các đại lượng và đơn vị đo thông dụng."
+  },
+  {
+    "topicId": "p4-geometry",
+    "grade": "4",
+    "subject": "math",
+    "title": "Hình học",
+    "image": "assets/mathTopic/toan4/hinhhoc.png",
+    "description": "Góc, đường thẳng và các hình hình học."
+  },
+  {
+    "topicId": "p4-statistics",
+    "grade": "4",
+    "subject": "math",
+    "title": "Thống kê",
+    "image": "assets/mathTopic/toan4/thongke.png",
+    "description": "Biểu đồ và xử lý dữ liệu đơn giản."
+  },
+
+  {
+    "topicId": "p5-decimals",
+    "grade": "5",
+    "subject": "math",
+    "title": "Số thập phân",
+    "image": "assets/mathTopic/toan5/sothapphan.png",
+    "description": "Khái niệm và cách biểu diễn số thập phân."
+  },
+  {
+    "topicId": "p5-decimal-operations",
+    "grade": "5",
+    "subject": "math",
+    "title": "Các phép tính với số thập phân",
+    "image": "assets/mathTopic/toan5/cacpheptinhvoisothapphan.png",
+    "description": "Thực hiện các phép cộng, trừ, nhân, chia số thập phân."
+  },
+  {
+    "topicId": "p5-percentages",
+    "grade": "5",
+    "subject": "math",
+    "title": "Tỉ số phần trăm",
+    "image": "assets/mathTopic/toan5/tisophantram.png",
+    "description": "Tính toán và vận dụng tỉ số phần trăm."
+  },
+  {
+    "topicId": "p5-measurement",
+    "grade": "5",
+    "subject": "math",
+    "title": "Đo lường",
+    "image": "assets/mathTopic/toan5/doluong.png",
+    "description": "Chuyển đổi và vận dụng các đơn vị đo."
+  },
+  {
+    "topicId": "p5-geometry",
+    "grade": "5",
+    "subject": "math",
+    "title": "Hình học",
+    "image": "assets/mathTopic/toan5/hinhhoc.png",
+    "description": "Chu vi, diện tích và thể tích các hình cơ bản."
+  },
+  {
+    "topicId": "p5-statistics-and-probability",
+    "grade": "5",
+    "subject": "math",
+    "title": "Thống kê và xác suất đơn giản",
+    "image": "assets/mathTopic/toan5/thongkevaxacsuat.png",
+    "description": "Đọc dữ liệu, biểu đồ và các tình huống xác suất cơ bản."
+  }
+]
