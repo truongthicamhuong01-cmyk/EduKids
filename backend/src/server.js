@@ -59,7 +59,7 @@ app.use((err, req, res, next) => {
 
 app.listen(port, () => {
   console.log(`EduKids API running on port ${port}`);
-  void dumpFirestoreStructure();
+  dumpFirestoreStructure();
 });
 
 async function dumpFirestoreCollection(name) {
@@ -69,16 +69,19 @@ async function dumpFirestoreCollection(name) {
   snapshot.docs.forEach((doc) => {
     const data = doc.data() || {};
 
-    console.log(`[EduKids][firestore] ${name}/${doc.id}`, JSON.stringify({
-      id: doc.id,
-      classId: data.classId || "",
-      teacherId: data.teacherId || "",
-      studentIds: data.studentIds || data.students || data.members || [],
-      assignmentIds: data.assignmentIds || [],
-      createdAt: data.createdAt || "",
-      updatedAt: data.updatedAt || "",
-      ...data,
-    }));
+    console.log(
+      `[EduKids][firestore] ${name}/${doc.id}`,
+      JSON.stringify({
+        id: doc.id,
+        classId: data.classId || "",
+        teacherId: data.teacherId || "",
+        studentIds: data.studentIds || data.students || data.members || [],
+        assignmentIds: data.assignmentIds || [],
+        createdAt: data.createdAt || "",
+        updatedAt: data.updatedAt || "",
+        ...data,
+      }),
+    );
   });
 }
 
@@ -88,6 +91,9 @@ async function dumpFirestoreStructure() {
     await dumpFirestoreCollection("assignments");
     await dumpFirestoreCollection("users");
   } catch (error) {
-    console.warn("[EduKids][firestore] Unable to dump firestore structure:", error);
+    console.warn(
+      "[EduKids][firestore] Unable to dump firestore structure:",
+      error,
+    );
   }
 }
