@@ -1,6 +1,7 @@
 const ApiError = require("../utils/apiError");
 const { GoogleGenAI } = require("@google/genai");
-const { buildQuizPrompt, findTopicById, safeJsonParse, validateQuizPayload } = require("./aiService");
+const { buildQuizPrompt } = require("./aiPrompt");
+const { findTopicById, safeJsonParse, validateQuizPayload } = require("./aiService");
 const {
   listQuizVersions,
   getNextVersionNumber,
