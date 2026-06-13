@@ -1,4 +1,4 @@
-import "./config.js";
+﻿import { API_BASE_URL } from "./config.js";
 import "./firebase-init.js";
 import "./services/profileService.js";
 import "./services/assignmentService.js";
@@ -8,13 +8,213 @@ const bootstrapState = (window.__EDUKIDS_BOOTSTRAP__ ||= {
   appBound: false,
   authRootBound: false,
   authMode: "login",
-  pendingRegisterFlow: false,
   currentUser: null,
   initializedUid: null,
-  listenerReady: false,
 });
 
-const AUTH_EMAIL_DOMAIN = "edukids.local";
+const AUTH_SESSION_KEY = "edukids-current-user";
+const AUTH_ACCOUNTS_KEY = "edukids-mock-accounts";
+const AUTH_CLEAR_KEYS = [
+  "token",
+  "authToken",
+  "user",
+  "currentUser",
+  AUTH_SESSION_KEY,
+];
+
+function apiRequest(path, payload) {
+  return fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: payload ? JSON.stringify(payload) : undefined,
+  }).then(async (response) => {
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || data.success === false) {
+      throw new Error(data.message || `Request failed: ${response.status}`);
+    }
+
+    return data;
+  });
+}
+
+function apiRequestWithAuth(path, options = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+
+  const token =
+    localStorage.getItem("authToken") || localStorage.getItem("token") || "";
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return fetch(`${API_BASE_URL}${path}`, {
+    method: options.method || "GET",
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  }).then(async (response) => {
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || data.success === false) {
+      throw new Error(data.message || `Request failed: ${response.status}`);
+    }
+
+    return data;
+  });
+}
+
+function readJsonStorage(key) {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function decodeJwtPayload(token) {
+  if (typeof token !== "string") {
+    return null;
+  }
+
+  const parts = token.split(".");
+
+  if (parts.length < 2) {
+    return null;
+  }
+
+  try {
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(
+      base64.length + ((4 - (base64.length % 4)) % 4),
+      "=",
+    );
+    return JSON.parse(atob(padded));
+  } catch (error) {
+    return null;
+  }
+}
+
+function setSessionUser(user) {
+  localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(user));
+}
+
+function loadSessionUser() {
+  return readJsonStorage(AUTH_SESSION_KEY);
+}
+
+function clearSessionUser() {
+  localStorage.removeItem(AUTH_SESSION_KEY);
+}
+
+function clearStoredAuthKeys() {
+  AUTH_CLEAR_KEYS.forEach((key) => {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  });
+}
+
+function saveAuthSession(user, token) {
+  if (token) {
+    localStorage.setItem("token", token);
+    localStorage.setItem("authToken", token);
+  }
+
+  if (user) {
+    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem("currentUser", JSON.stringify(user));
+    setSessionUser(user);
+  }
+}
+
+function normalizeRole(role) {
+  return role === "teacher" ? "teacher" : "student";
+}
+
+function getCurrentAuthUser() {
+  const storedKeys = [AUTH_SESSION_KEY, "currentUser", "user"];
+
+  for (const key of storedKeys) {
+    const storedUser = readJsonStorage(key);
+
+    if (
+      storedUser &&
+      typeof storedUser === "object" &&
+      normalizeRole(storedUser.role)
+    ) {
+      return storedUser;
+    }
+  }
+
+  const token =
+    localStorage.getItem("authToken") || localStorage.getItem("token");
+  const payload = decodeJwtPayload(token);
+
+  if (payload && typeof payload === "object" && normalizeRole(payload.role)) {
+    if (
+      payload.user &&
+      typeof payload.user === "object" &&
+      normalizeRole(payload.user.role)
+    ) {
+      return payload.user;
+    }
+
+    return payload;
+  }
+
+  return loadSessionUser();
+}
+
+function getCurrentRole() {
+  return normalizeRole(getCurrentAuthUser()?.role);
+}
+
+function getDefaultPageForRole(role) {
+  return role === "teacher" ? "teacher-dashboard" : "student-home";
+}
+
+function getAuthContainer() {
+  return getAuthRoot();
+}
+
+function setAuthMode(isAuthMode) {
+  document.body.classList.toggle("auth-mode", isAuthMode);
+
+  const appShell = getAppShell();
+  const authRoot = getAuthContainer();
+
+  if (appShell) {
+    appShell.hidden = isAuthMode;
+  }
+
+  if (authRoot) {
+    authRoot.hidden = !isAuthMode;
+  }
+}
+
+function handleLogout() {
+  clearStoredAuthKeys();
+  clearSessionUser();
+  window.EduKidsCurrentUser = null;
+
+  const authRoot = getAuthContainer();
+
+  if (authRoot) {
+    authRoot.removeAttribute("data-rendered-mode");
+    authRoot.innerHTML = "";
+  }
+
+  bootstrapState.currentUser = null;
+  bootstrapState.initializedUid = null;
+  bootstrapState.authMode = "login";
+  setAuthMode(true);
+  renderAuthScreen("login");
+}
 
 function whenDomReady() {
   if (document.readyState !== "loading") {
@@ -34,19 +234,6 @@ function getAuthRoot() {
   return document.getElementById("auth-root");
 }
 
-function getFirebaseAuth() {
-  if (typeof window.firebase?.auth !== "function") {
-    return null;
-  }
-
-  try {
-    return window.firebase.auth();
-  } catch (error) {
-    console.warn("[EduKids] Unable to access Firebase auth:", error);
-    return null;
-  }
-}
-
 function setAuthFeedback(message, kind = "error") {
   const feedback = getAuthRoot()?.querySelector("[data-auth-feedback]");
 
@@ -59,202 +246,6 @@ function setAuthFeedback(message, kind = "error") {
   feedback.classList.toggle("is-error", kind === "error");
   feedback.classList.toggle("is-success", kind === "success");
 }
-
-function renderAuthViewLegacy() {
-  const authRoot = getAuthRoot();
-
-  if (!authRoot) {
-    return;
-  }
-
-  const isLoginMode = bootstrapState.authMode === "login";
-  const renderKey = bootstrapState.authMode;
-
-  if (authRoot.dataset.renderedMode === renderKey) {
-    return;
-  }
-
-  authRoot.innerHTML = `
-    <section class="auth-shell" aria-label="Đăng nhập EduKids">
-      <div class="auth-stage">
-        <span class="auth-badge">EduKids</span>
-        <div class="auth-card">
-          <div class="auth-brand">
-            <img
-              class="auth-brand-icon"
-              src="/assets/edukids-icon-192.png"
-              alt=""
-              aria-hidden="true"
-            />
-            <div class="auth-brand-name">EduKids</div>
-          </div>
-
-          <h1 class="auth-title">
-            ${isLoginMode ? "Chào mừng trở lại" : "Tạo tài khoản"}
-          </h1>
-
-          <form class="auth-form" data-auth-form>
-            <label class="auth-field">
-              <span class="auth-field-label">Email</span>
-              <div class="auth-input-wrap">
-                <input
-                  class="auth-input"
-                  name="email"
-                  type="email"
-                  autocomplete="email"
-                  placeholder="teacher@edukids.vn"
-                  required
-                />
-              </div>
-              <div class="auth-field-error" data-auth-error-for="email"></div>
-            </label>
-
-            <label class="auth-field">
-              <span class="auth-field-label">Mật khẩu</span>
-              <div class="auth-input-wrap">
-                <input
-                  class="auth-input"
-                  name="password"
-                  type="password"
-                  autocomplete="${isLoginMode ? "current-password" : "new-password"}"
-                  placeholder="Nhập mật khẩu"
-                  minlength="6"
-                  required
-                />
-                <button
-                  type="button"
-                  class="auth-password-toggle"
-                  data-password-toggle
-                  aria-label="Hiện mật khẩu"
-                >
-                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-                    <path
-                      d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.8"
-                      stroke-linejoin="round"
-                    />
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="2.8"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.8"
-                    />
-                  </svg>
-                </button>
-              </div>
-              <div class="auth-field-error" data-auth-error-for="password"></div>
-            </label>
-
-            <div class="auth-feedback" data-auth-feedback></div>
-
-            <button type="submit" class="auth-submit-button" data-auth-submit>
-              ${isLoginMode ? "Đăng nhập" : "Tạo tài khoản"}
-            </button>
-          </form>
-
-          <div class="auth-switch">
-            ${
-              isLoginMode
-                ? 'Chưa có tài khoản? <button type="button" class="auth-link-button" data-auth-mode-toggle="register">Đăng ký</button>'
-                : 'Đã có tài khoản? <button type="button" class="auth-link-button" data-auth-mode-toggle="login">Đăng nhập</button>'
-            }
-          </div>
-        </div>
-      </div>
-    </section>
-  `;
-
-  authRoot.dataset.renderedMode = renderKey;
-  bindAuthRootEventsOnce();
-}
-
-function bindAuthRootEventsOnceLegacy() {
-  const authRoot = getAuthRoot();
-
-  if (!authRoot || bootstrapState.authRootBound) {
-    return;
-  }
-
-  authRoot.addEventListener("click", (event) => {
-    const modeToggle = event.target.closest("[data-auth-mode-toggle]");
-    if (modeToggle) {
-      const nextMode = modeToggle.dataset.authModeToggle;
-      if (nextMode === "login" || nextMode === "register") {
-        bootstrapState.authMode = nextMode;
-        authRoot.removeAttribute("data-rendered-mode");
-        renderAuthView();
-        setAuthFeedback("");
-      }
-      return;
-    }
-
-    const passwordToggle = event.target.closest("[data-password-toggle]");
-    if (passwordToggle) {
-      const input = authRoot.querySelector('input[name="password"]');
-      if (!input) {
-        return;
-      }
-
-      input.type = input.type === "password" ? "text" : "password";
-      passwordToggle.setAttribute(
-        "aria-label",
-        input.type === "password" ? "Hiện mật khẩu" : "Ẩn mật khẩu",
-      );
-    }
-  });
-
-  authRoot.addEventListener("submit", async (event) => {
-    const form = event.target.closest("[data-auth-form]");
-    if (!form) {
-      return;
-    }
-
-    event.preventDefault();
-
-    const submitButton = form.querySelector("[data-auth-submit]");
-    const email = String(form.querySelector('input[name="email"]')?.value || "").trim();
-    const password = String(form.querySelector('input[name="password"]')?.value || "").trim();
-
-    if (!email || !password) {
-      setAuthFeedback("Vui lòng nhập email và mật khẩu.");
-      return;
-    }
-
-    const auth = getFirebaseAuth();
-    if (!auth) {
-      setAuthFeedback("Firebase Auth chưa sẵn sàng. Vui lòng tải lại trang.");
-      return;
-    }
-
-    try {
-      if (submitButton) {
-        submitButton.disabled = true;
-      }
-
-      setAuthFeedback("Đang xác thực...", "success");
-
-      if (bootstrapState.authMode === "register") {
-        await auth.createUserWithEmailAndPassword(email, password);
-      } else {
-        await auth.signInWithEmailAndPassword(email, password);
-      }
-    } catch (error) {
-      console.error("[EduKids] Auth request failed:", error);
-      setAuthFeedback(error?.message || "Đăng nhập thất bại. Vui lòng thử lại.");
-    } finally {
-      if (submitButton) {
-        submitButton.disabled = false;
-      }
-    }
-  });
-
-  bootstrapState.authRootBound = true;
-}
-
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -410,7 +401,7 @@ function renderPasswordField({
           type="button"
           class="auth-password-toggle"
           data-password-toggle="${id}"
-          aria-label="Hiện mật khẩu"
+          aria-label="Hiá»‡n máº­t kháº©u"
           aria-pressed="false"
         >
           <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
@@ -449,7 +440,7 @@ function renderLoginScreen() {
   return `
     <section class="auth-shell">
       <div class="auth-stage">
-        <div class="auth-badge">ĐĂNG NHẬP</div>
+        <div class="auth-badge">ÄÄ‚NG NHáº¬P</div>
         <div class="auth-card">
           ${renderAuthBrand()}
 
@@ -457,48 +448,48 @@ function renderLoginScreen() {
             ${renderTextField({
               id: "login-username",
               name: "username",
-              label: "Tên đăng nhập",
-              placeholder: "Nhập tên đăng nhập",
+              label: "TĂªn Ä‘Äƒng nháº­p",
+              placeholder: "Nháº­p tĂªn Ä‘Äƒng nháº­p",
               value: draft.username,
               autocomplete: "username",
             })}
             ${renderPasswordField({
               id: "login-password",
               name: "password",
-              label: "Mật khẩu",
-              placeholder: "Nhập mật khẩu",
+              label: "Máº­t kháº©u",
+              placeholder: "Nháº­p máº­t kháº©u",
               value: draft.password,
               autocomplete: "current-password",
             })}
 
             <div class="auth-help-row">
               <button type="button" class="auth-link-button" data-forgot-password>
-                Quên mật khẩu
+                QuĂªn máº­t kháº©u
               </button>
             </div>
 
             ${renderChoiceGroup({
               name: "role",
-              label: "Vai trò",
+              label: "Vai trĂ²",
               selectedValue: draft.role,
               options: [
-                { value: "student", label: "Học sinh", icon: "👤" },
-                { value: "teacher", label: "Giáo viên", icon: "👩‍🏫" },
+                { value: "student", label: "Há»c sinh", icon: "đŸ‘¤" },
+                { value: "teacher", label: "GiĂ¡o viĂªn", icon: "đŸ‘©â€đŸ«" },
               ],
             })}
 
             ${renderAuthFeedback()}
 
-            <button type="submit" class="auth-submit-button">Đăng nhập</button>
+            <button type="submit" class="auth-submit-button">ÄÄƒng nháº­p</button>
 
             <p class="auth-switch">
-              Chưa có tài khoản?
+              ChÆ°a cĂ³ tĂ i khoáº£n?
               <button
                 type="button"
                 class="auth-link-button"
                 data-auth-switch="register"
               >
-                Đăng ký ngay
+                ÄÄƒng kĂ½ ngay
               </button>
             </p>
           </form>
@@ -514,7 +505,7 @@ function renderRegisterScreen() {
   return `
     <section class="auth-shell">
       <div class="auth-stage">
-        <div class="auth-badge">ĐĂNG KÝ</div>
+        <div class="auth-badge">ÄÄ‚NG KĂ</div>
         <div class="auth-card">
           ${renderAuthBrand()}
 
@@ -522,61 +513,61 @@ function renderRegisterScreen() {
             ${renderTextField({
               id: "register-name",
               name: "name",
-              label: "Họ và tên",
-              placeholder: "Nhập họ và tên",
+              label: "Há» vĂ  tĂªn",
+              placeholder: "Nháº­p há» vĂ  tĂªn",
               value: draft.name,
               autocomplete: "name",
             })}
             ${renderTextField({
               id: "register-username",
               name: "username",
-              label: "Tên đăng nhập",
-              placeholder: "Nhập tên đăng nhập",
+              label: "TĂªn Ä‘Äƒng nháº­p",
+              placeholder: "Nháº­p tĂªn Ä‘Äƒng nháº­p",
               value: draft.username,
               autocomplete: "username",
             })}
             ${renderPasswordField({
               id: "register-password",
               name: "password",
-              label: "Mật khẩu",
-              placeholder: "Nhập mật khẩu",
+              label: "Máº­t kháº©u",
+              placeholder: "Nháº­p máº­t kháº©u",
               value: draft.password,
               autocomplete: "new-password",
             })}
             ${renderPasswordField({
               id: "register-confirm-password",
               name: "confirmPassword",
-              label: "Xác nhận mật khẩu",
-              placeholder: "Nhập lại mật khẩu",
+              label: "XĂ¡c nháº­n máº­t kháº©u",
+              placeholder: "Nháº­p láº¡i máº­t kháº©u",
               value: draft.confirmPassword,
               autocomplete: "new-password",
             })}
 
             ${renderChoiceGroup({
               name: "role",
-              label: "Vai trò",
+              label: "Vai trĂ²",
               selectedValue: draft.role,
               options: [
-                { value: "student", label: "Học sinh", icon: "👤" },
-                { value: "teacher", label: "Giáo viên", icon: "👩‍🏫" },
+                { value: "student", label: "Há»c sinh", icon: "đŸ‘¤" },
+                { value: "teacher", label: "GiĂ¡o viĂªn", icon: "đŸ‘©â€đŸ«" },
               ],
             })}
 
             ${renderChoiceGroup({
               name: "gender",
-              label: "Giới tính",
+              label: "Giá»›i tĂ­nh",
               selectedValue: draft.gender,
               options: [
-                { value: "male", label: "Nam", icon: "♂" },
-                { value: "female", label: "Nữ", icon: "♀" },
+                { value: "male", label: "Nam", icon: "â™‚" },
+                { value: "female", label: "Ná»¯", icon: "â™€" },
               ],
             })}
 
             ${renderTextField({
               id: "register-class",
               name: "className",
-              label: "Lớp (nếu là học sinh)",
-              placeholder: "Chọn lớp",
+              label: "Lá»›p (náº¿u lĂ  há»c sinh)",
+              placeholder: "Chá»n lá»›p",
               value: draft.className,
               autocomplete: "off",
             })}
@@ -691,7 +682,10 @@ function togglePasswordVisibility(button) {
 
   const isPassword = input.type === "password";
   input.type = isPassword ? "text" : "password";
-  button.setAttribute("aria-label", isPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu");
+  button.setAttribute(
+    "aria-label",
+    isPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu",
+  );
   button.setAttribute("aria-pressed", String(isPassword));
   button.innerHTML = isPassword
     ? `
@@ -881,18 +875,7 @@ async function handleLoginSubmit(form) {
   if (hasError) {
     setFeedbackMessage(
       form,
-      "Vui lòng kiểm tra lại các thông tin đã nhập.",
-      "error",
-    );
-    return;
-  }
-
-  const auth = getFirebaseAuth();
-
-  if (!auth) {
-    setFeedbackMessage(
-      form,
-      "Firebase Auth chưa sẵn sàng. Vui lòng tải lại trang.",
+      "Vui lòng trả lời các thông tin đăng nhập.",
       "error",
     );
     return;
@@ -901,19 +884,58 @@ async function handleLoginSubmit(form) {
   try {
     setFeedbackMessage(form, "Đang đăng nhập...", "success");
 
-    await auth.signInWithEmailAndPassword(
-      buildAuthEmail(username, role),
+    const result = await apiRequest("/api/auth/login", {
+      username,
       password,
-    );
+      role,
+    });
+
+    const authUser = result.data?.user;
+    const token = result.data?.token;
+
+    if (!authUser) {
+      throw new Error("Thiếu dữ liệu người dùng từ server");
+    }
+
+    if (normalizeRole(authUser.role) !== normalizeRole(role)) {
+      setFieldError(form, "role", "Vai trò chưa khớp với tài khoản.");
+      setFeedbackMessage(
+        form,
+        "Đăng nhập thất bại, vui lòng thử lại.",
+        "error",
+      );
+      return;
+    }
+
+    saveAuthSession(authUser, token);
 
     authDrafts.login.password = "";
     authDrafts.login.username = username;
+    authDrafts.login.role = role;
+
+    setFeedbackMessage(
+      form,
+      "Đăng nhập thành công. Đang chuyển vào hệ thống",
+      "success",
+    );
+
+    setTimeout(() => {
+      const authRoot = getAuthContainer();
+      if (authRoot) {
+        authRoot.removeAttribute("data-rendered-mode");
+        authRoot.innerHTML = "";
+      }
+
+      setAuthMode(false);
+      initApp(authUser);
+      changePage(getDefaultPageForRole(authUser.role));
+    }, 250);
   } catch (error) {
     console.error("[EduKids][auth] login failed", error);
 
     setFeedbackMessage(
       form,
-      error.message || "Đăng nhập thất bại. Vui lòng thử lại.",
+      error.message || "Đăng nhập thất bại, vui lòng thử lại.",
       "error",
     );
   }
@@ -940,13 +962,13 @@ async function handleRegisterSubmit(form) {
     setFieldError(form, "username", "Vui lòng nhập tên đăng nhập.");
     hasError = true;
   } else if (username.length < 3) {
-    setFieldError(form, "username", "Tên đăng nhập phải có ít nhất 3 ký tự.");
+    setFieldError(form, "username", "Tên đăng nhập phải có ít nhất 3 kí tự.");
     hasError = true;
   } else if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
     setFieldError(
       form,
       "username",
-      "Tên đăng nhập chỉ được gồm chữ, số và ký tự . _ -",
+      "Tên đăng nhập chỉ được gồm chữ, số và kí tự . _ -",
     );
     hasError = true;
   }
@@ -955,7 +977,7 @@ async function handleRegisterSubmit(form) {
     setFieldError(form, "password", "Vui lòng nhập mật khẩu.");
     hasError = true;
   } else if (password.length < 6) {
-    setFieldError(form, "password", "Mật khẩu phải có ít nhất 6 ký tự.");
+    setFieldError(form, "password", "Mật khẩu phải có ít nhất 6 kí tự.");
     hasError = true;
   }
 
@@ -963,7 +985,7 @@ async function handleRegisterSubmit(form) {
     setFieldError(form, "confirmPassword", "Vui lòng xác nhận mật khẩu.");
     hasError = true;
   } else if (confirmPassword !== password) {
-    setFieldError(form, "confirmPassword", "Mật khẩu xác nhận không khớp.");
+    setFieldError(form, "confirmPassword", "Mật khẩu không khớp.");
     hasError = true;
   }
 
@@ -988,34 +1010,26 @@ async function handleRegisterSubmit(form) {
   }
 
   if (hasError) {
-    setFeedbackMessage(form, "Vui lòng kiểm tra lại các trường bị lỗi.", "error");
-    return;
-  }
-
-  const auth = getFirebaseAuth();
-
-  if (!auth) {
     setFeedbackMessage(
       form,
-      "Firebase Auth chưa sẵn sàng. Vui lòng tải lại trang.",
+      "Vui lòng kiểm tra lại các trường còn thiếu.",
       "error",
     );
     return;
   }
 
-  bootstrapState.pendingRegisterFlow = true;
-
   try {
-    setFeedbackMessage(form, "Đang đăng ký...", "success");
+    setFeedbackMessage(form, "Đang đăng k?...", "success");
 
-    const credential = await auth.createUserWithEmailAndPassword(
-      buildAuthEmail(username, role),
+    await apiRequest("/api/auth/register", {
+      username,
       password,
-    );
-
-    if (credential?.user?.updateProfile) {
-      await credential.user.updateProfile({ displayName: name });
-    }
+      role,
+      fullName: name,
+      gender,
+      school,
+      className,
+    });
 
     authDrafts.login.username = username;
     authDrafts.login.role = role;
@@ -1023,17 +1037,9 @@ async function handleRegisterSubmit(form) {
     authDrafts.register.password = "";
     authDrafts.register.confirmPassword = "";
 
-    try {
-      await auth.signOut();
-    } catch (error) {
-      console.warn("[EduKids][auth] signOut after register failed", error);
-    }
-
-    bootstrapState.pendingRegisterFlow = false;
-
     setFeedbackMessage(
       form,
-      "Đăng ký thành công. Chuyển sang màn đăng nhập...",
+      "Đăng kí thành công, chuyển sang màn hình đăng nhập...",
       "success",
     );
 
@@ -1045,13 +1051,11 @@ async function handleRegisterSubmit(form) {
       renderAuthScreen("login");
     }, 250);
   } catch (error) {
-    bootstrapState.pendingRegisterFlow = false;
-
     console.error("[EduKids][auth] register failed", error);
 
     setFeedbackMessage(
       form,
-      error.message || "Đăng ký thất bại. Vui lòng thử lại.",
+      error.message || "Đăng kí thất bại. Vui lòng thử lại.",
       "error",
     );
   }
@@ -1094,10 +1098,7 @@ function bindAppEventsOnce() {
 
     const logoutButton = event.target.closest("[data-logout-button]");
     if (logoutButton) {
-      const auth = getFirebaseAuth();
-      if (auth) {
-        await auth.signOut();
-      }
+      handleLogout();
     }
   });
 
@@ -1124,84 +1125,78 @@ function initApp(user) {
     return;
   }
 
-  if (bootstrapState.initializedUid === user.uid) {
+  const identityKey = String(
+    user.uid || user.userId || user.id || user.username || user.email || "",
+  ).trim();
+
+  if (bootstrapState.initializedUid === identityKey) {
     return;
   }
 
-  bootstrapState.initializedUid = user.uid;
+  bootstrapState.initializedUid = identityKey;
   bootstrapState.currentUser = user;
 
   bindAppEventsOnce();
-  showPage("student-home");
+  showPage(getDefaultPageForRole(user.role));
   window.EduKidsCurrentUser = user;
 }
 
-function handleAuthStateChanged(user) {
-  bootstrapState.currentUser = user || null;
-
-  if (bootstrapState.pendingRegisterFlow) {
-    if (user) {
-      return;
-    }
-
-    bootstrapState.pendingRegisterFlow = false;
-  }
-
+function initializeAuth() {
+  const sessionUser = getCurrentAuthUser();
+  const role = normalizeRole(sessionUser?.role);
   const appShell = getAppShell();
   const authRoot = getAuthRoot();
 
-  if (appShell) {
-    appShell.hidden = !user;
-  }
-
-  if (authRoot) {
-    authRoot.hidden = Boolean(user);
-  }
-
-  document.body?.classList.toggle("auth-mode", !user);
-
-  if (user) {
-    initApp(user);
+  if (sessionUser && role) {
+    bootstrapState.currentUser = sessionUser;
+    setAuthMode(false);
+    initApp(sessionUser);
+    changePage(getDefaultPageForRole(role));
     return;
   }
 
-  bootstrapState.authMode = "login";
+  bootstrapState.currentUser = null;
+  bootstrapState.initializedUid = null;
+  setAuthMode(true);
+
+  if (appShell) {
+    appShell.hidden = true;
+  }
+
   if (authRoot) {
     authRoot.removeAttribute("data-rendered-mode");
   }
-  renderAuthView();
+
+  renderAuthScreen("login");
 }
 
-function startAuthListenerOnce() {
-  if (window.__authInitialized) {
+function syncAuthState() {
+  const sessionUser = getCurrentAuthUser();
+  const role = normalizeRole(sessionUser?.role);
+
+  if (sessionUser && role) {
+    bootstrapState.currentUser = sessionUser;
+    setAuthMode(false);
+    initApp(sessionUser);
+    changePage(getDefaultPageForRole(role));
     return;
   }
 
-  window.__authInitialized = true;
+  bootstrapState.currentUser = null;
+  bootstrapState.initializedUid = null;
+  bootstrapState.authMode = "login";
+  setAuthMode(true);
 
-  const auth = getFirebaseAuth();
-  if (!auth) {
-    console.warn("[EduKids] Firebase Auth is unavailable.");
-    handleAuthStateChanged(null);
-    bootstrapState.listenerReady = true;
-    return;
+  const authRoot = getAuthRoot();
+  if (authRoot) {
+    authRoot.removeAttribute("data-rendered-mode");
   }
 
-  auth.onAuthStateChanged(
-    (user) => {
-      handleAuthStateChanged(user);
-      bootstrapState.listenerReady = true;
-    },
-    (error) => {
-      console.error("[EduKids] Auth listener failed:", error);
-      handleAuthStateChanged(null);
-      bootstrapState.listenerReady = true;
-    },
-  );
+  renderAuthScreen("login");
 }
 
 function installCompatibilityGlobals() {
-  window.checkAuth = () => getFirebaseAuth()?.currentUser || null;
+  window.checkAuth = () => getCurrentAuthUser();
   window.renderLogin = () => {
     const authRoot = getAuthRoot();
     if (authRoot) {
@@ -1223,6 +1218,10 @@ function installCompatibilityGlobals() {
   window.askAI = () => {
     console.info("[EduKids] AI Coach action triggered.");
   };
+  window.EduKidsApi = {
+    request: apiRequest,
+    requestWithAuth: apiRequestWithAuth,
+  };
 }
 
 async function bootstrap() {
@@ -1237,9 +1236,8 @@ async function bootstrap() {
   }
   document.body?.classList.add("auth-mode");
 
-  renderAuthView();
   installCompatibilityGlobals();
-  startAuthListenerOnce();
+  initializeAuth();
 }
 
 void whenDomReady().then(bootstrap);
