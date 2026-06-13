@@ -36,6 +36,7 @@ const ROLE_ALLOWED_PAGES = {
     "missions",
     "progress",
     "profile",
+    "classroom",
   ]),
   teacher: new Set([
     "teacher-dashboard",
@@ -485,6 +486,13 @@ function changePage(pageId) {
     typeof initializeStudentQuizPage === "function"
   ) {
     void initializeStudentQuizPage();
+  }
+
+  if (
+    targetPageId === "classroom" &&
+    typeof initializeClassroomPage === "function"
+  ) {
+    void initializeClassroomPage();
   }
 }
 
@@ -1908,6 +1916,12 @@ const manualAssignmentState = {
   questions: [],
 };
 
+const classroomState = {
+  classes: [],
+  selectedClassId: "",
+  loading: false,
+};
+
 let manualAssignmentFormBound = false;
 let teacherAssignmentsUnsubscribe = null;
 let createMethod = "manual";
@@ -1953,8 +1967,18 @@ function normalizeClassroomRecord(classroom) {
     classCode: String(classroom.classCode || classroom.code || "").trim(),
     teacherId: String(classroom.teacherId || "").trim(),
     teacherName: String(classroom.teacherName || classroom.teacherUsername || "").trim(),
+    students: Array.isArray(classroom.students) ? classroom.students : [],
+    studentIds: Array.isArray(classroom.studentIds) ? classroom.studentIds : [],
+    members: Array.isArray(classroom.members) ? classroom.members : [],
     studentCount: Number(classroom.studentCount ?? classroom.studentsCount ?? 0) || 0,
     createdAt: classroom.createdAt || "",
+    averageScore: classroom.averageScore ?? classroom.average ?? classroom.averagePercent ?? classroom.avgScore ?? "",
+    completionRate:
+      classroom.completionRate ??
+      classroom.completion ??
+      classroom.completionPercent ??
+      classroom.completedPercent ??
+      "",
   };
 }
 
@@ -1965,6 +1989,546 @@ function sortClassroomRecords(classrooms) {
 
     return rightTime - leftTime;
   });
+}
+
+function uniqueClassroomValues(values) {
+  return Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [])
+        .map((value) => String(value || "").trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function getClassroomListPanel() {
+  return document.getElementById("classroom-list-panel");
+}
+
+function getClassroomDetailName() {
+  return document.getElementById("classroom-detail-name");
+}
+
+function getClassroomDetailCode() {
+  return document.getElementById("classroom-detail-code");
+}
+
+function getClassroomStatSize() {
+  return document.getElementById("classroom-stat-size");
+}
+
+function getClassroomStatAverage() {
+  return document.getElementById("classroom-stat-average");
+}
+
+function getClassroomStatCompletion() {
+  return document.getElementById("classroom-stat-completion");
+}
+
+function getClassroomStudentList() {
+  return document.getElementById("classroom-student-list");
+}
+
+function getClassroomCreateButton() {
+  return document.querySelector(".classroom-create-btn");
+}
+
+function getClassroomJoinButton() {
+  return document.getElementById("join-class-btn");
+}
+
+function getClassroomJoinInput() {
+  return document.getElementById("join-class-code");
+}
+
+function getClassroomCopyButton() {
+  return document.querySelector(".classroom-copy-btn");
+}
+
+function getClassroomToggleButton() {
+  return document.querySelector(".classroom-toggle-btn");
+}
+
+function getJoinedClassListPanel() {
+  return document.getElementById("joined-class-list");
+}
+
+function getSelectedClassroom() {
+  return (
+    classroomState.classes.find(
+      (classroom) => classroom.id === classroomState.selectedClassId,
+    ) || classroomState.classes[0] || null
+  );
+}
+
+function getClassroomStudentNames(classroom) {
+  const studentIds = Array.isArray(classroom?.students)
+    ? classroom.students
+    : Array.isArray(classroom?.studentIds)
+      ? classroom.studentIds
+      : Array.isArray(classroom?.members)
+        ? classroom.members
+        : [];
+
+  const displayValues = studentIds.map((student) => {
+    if (student && typeof student === "object") {
+      return (
+        student.fullName ||
+        student.name ||
+        student.username ||
+        student.userId ||
+        student.uid ||
+        student.id ||
+        ""
+      );
+    }
+
+    return student;
+  });
+
+  return uniqueClassroomValues(displayValues).slice(0, 50);
+}
+
+function formatClassroomPercentage(value) {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) {
+    return "--";
+  }
+
+  return `${numeric}%`;
+}
+
+function renderClassroomEmptyState(panel, title, description) {
+  if (!panel) {
+    return;
+  }
+
+  panel.innerHTML = `
+    <div class="classroom-empty-state">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(description)}</p>
+    </div>
+  `;
+}
+
+function renderClassroomStudentList(classroom) {
+  const studentList = getClassroomStudentList();
+
+  if (!studentList) {
+    return;
+  }
+
+  const studentNames = getClassroomStudentNames(classroom);
+
+  if (!classroom) {
+    renderClassroomEmptyState(
+      studentList,
+      "Chưa có dữ liệu học sinh",
+      "Chọn hoặc tạo một lớp để xem danh sách học sinh.",
+    );
+    return;
+  }
+
+  if (studentNames.length === 0) {
+    renderClassroomEmptyState(
+      studentList,
+      "Lớp này chưa có học sinh",
+      "Học sinh sẽ xuất hiện ở đây sau khi tham gia lớp.",
+    );
+    return;
+  }
+
+  studentList.innerHTML = `
+    <div class="classroom-student-chips">
+      ${studentNames
+        .map(
+          (studentId, index) => `
+            <div class="classroom-student-chip">
+              <span>${index + 1}</span>
+              <strong>${escapeHtml(studentId)}</strong>
+            </div>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderClassroomDetails(classroom) {
+  const nameNode = getClassroomDetailName();
+  const codeNode = getClassroomDetailCode();
+  const sizeNode = getClassroomStatSize();
+  const averageNode = getClassroomStatAverage();
+  const completionNode = getClassroomStatCompletion();
+  const createButton = getClassroomCreateButton();
+
+  if (createButton) {
+    createButton.hidden = getCurrentRole() !== "teacher";
+  }
+
+  if (!classroom) {
+    if (nameNode) {
+      nameNode.textContent = "Chưa có lớp nào";
+    }
+
+    if (codeNode) {
+      codeNode.textContent = "Mã lớp: --";
+    }
+
+    if (sizeNode) {
+      sizeNode.textContent = "0";
+    }
+
+    if (averageNode) {
+      averageNode.textContent = "--";
+    }
+
+    if (completionNode) {
+      completionNode.textContent = "--";
+    }
+
+    renderClassroomStudentList(null);
+    return;
+  }
+
+  if (nameNode) {
+    nameNode.textContent = classroom.name || classroom.className || "Chưa đặt tên";
+  }
+
+  if (codeNode) {
+    codeNode.textContent = `Mã lớp: ${classroom.classCode || "--"}`;
+  }
+
+  if (sizeNode) {
+    sizeNode.textContent = String(classroom.studentCount ?? 0);
+  }
+
+  if (averageNode) {
+    averageNode.textContent = formatClassroomPercentage(
+      classroom.averageScore ??
+        classroom.average ??
+        classroom.averagePercent ??
+        classroom.avgScore,
+    );
+  }
+
+  if (completionNode) {
+    completionNode.textContent = formatClassroomPercentage(
+      classroom.completionRate ??
+        classroom.completion ??
+        classroom.completionPercent ??
+        classroom.completedPercent,
+    );
+  }
+
+  renderClassroomStudentList(classroom);
+}
+
+function renderClassroomListPanel() {
+  const panel = getClassroomListPanel();
+  const joinedClassList = getJoinedClassListPanel();
+  const classes = classroomState.classes;
+  const selectedClassId = classroomState.selectedClassId || classes[0]?.id || "";
+  const selectedClass =
+    classes.find((classroom) => classroom.id === selectedClassId) ||
+    classes[0] ||
+    null;
+
+  classroomState.selectedClassId = selectedClass?.id || "";
+
+  if (panel) {
+    if (classes.length === 0) {
+      renderClassroomEmptyState(
+        panel,
+        "Chưa có lớp học nào",
+        getCurrentRole() === "teacher"
+          ? "Tạo lớp đầu tiên để bắt đầu quản lý học sinh."
+          : "Nhập mã lớp để tham gia và đồng bộ dữ liệu lớp học.",
+      );
+    } else {
+      panel.innerHTML = `
+        <div class="classroom-card-list">
+          ${classes
+            .map((classroom) => {
+              const isActive = classroom.id === classroomState.selectedClassId;
+              return `
+                <button
+                  type="button"
+                  class="classroom-card ${isActive ? "active" : ""}"
+                  data-classroom-id="${escapeHtml(classroom.id)}"
+                >
+                  <div class="classroom-card-head">
+                    <strong>${escapeHtml(classroom.name || classroom.className || "Lớp học")}</strong>
+                    <span>${escapeHtml(classroom.classCode || "--")}</span>
+                  </div>
+                  <div class="classroom-card-meta">
+                    <span>Sĩ số: ${escapeHtml(classroom.studentCount ?? 0)}</span>
+                    <span>Giáo viên: ${escapeHtml(classroom.teacherName || "--")}</span>
+                  </div>
+                </button>
+              `;
+            })
+            .join("")}
+        </div>
+      `;
+    }
+  }
+
+  if (joinedClassList) {
+    if (classes.length === 0) {
+      joinedClassList.innerHTML = `
+        <div class="joined-class-empty">Chưa có lớp nào.</div>
+      `;
+    } else {
+      joinedClassList.innerHTML = classes
+        .map(
+          (classroom) => `
+            <button
+              type="button"
+              class="joined-class-item ${classroom.id === classroomState.selectedClassId ? "active" : ""}"
+              data-classroom-id="${escapeHtml(classroom.id)}"
+            >
+              <strong>${escapeHtml(classroom.name || classroom.className || "Lớp học")}</strong>
+              <span>${escapeHtml(classroom.classCode || "--")}</span>
+            </button>
+          `,
+        )
+        .join("");
+    }
+  }
+
+  renderClassroomDetails(selectedClass);
+}
+
+async function loadClassroomData(preferredClassId = "") {
+  const panel = getClassroomListPanel();
+
+  try {
+    classroomState.loading = true;
+
+    if (panel) {
+      renderClassroomEmptyState(
+        panel,
+        "Đang tải lớp học...",
+        "Hệ thống đang đồng bộ dữ liệu lớp học thật.",
+      );
+    }
+
+    const response = await apiRequestWithAuth("/api/classes/my", {
+      method: "GET",
+    });
+
+    const classes = sortClassroomRecords(
+      Array.isArray(response?.data)
+        ? response.data.map(normalizeClassroomRecord).filter(Boolean)
+        : [],
+    );
+
+    classroomState.classes = classes;
+
+    if (preferredClassId && classes.some((item) => item.id === preferredClassId)) {
+      classroomState.selectedClassId = preferredClassId;
+    } else if (
+      classroomState.selectedClassId &&
+      classes.some((item) => item.id === classroomState.selectedClassId)
+    ) {
+      // keep current selection
+    } else {
+      classroomState.selectedClassId = classes[0]?.id || "";
+    }
+
+    renderClassroomListPanel();
+    return classes;
+  } catch (error) {
+    classroomState.classes = [];
+    classroomState.selectedClassId = "";
+
+    if (panel) {
+      renderClassroomEmptyState(
+        panel,
+        "Không thể tải lớp học",
+        error.message || "Vui lòng thử lại sau.",
+      );
+    }
+
+    renderClassroomDetails(null);
+    showToast(error.message || "Không thể tải lớp học.", "error");
+    return [];
+  } finally {
+    classroomState.loading = false;
+  }
+}
+
+async function refreshClassroomData(preferredClassId = "") {
+  return loadClassroomData(preferredClassId);
+}
+
+async function handleCreateClassroom() {
+  if (getCurrentRole() !== "teacher") {
+    showToast("Chỉ giáo viên mới có thể tạo lớp.", "error");
+    return;
+  }
+
+  const name = String(
+    window.prompt("Nhập tên lớp học") || "",
+  ).trim();
+
+  if (!name) {
+    return;
+  }
+
+  const description = String(
+    window.prompt("Nhập mô tả lớp học (không bắt buộc)") || "",
+  ).trim();
+
+  try {
+    const response = await apiRequestWithAuth("/api/classes/create", {
+      method: "POST",
+      body: {
+        name,
+        description,
+      },
+    });
+
+    showToast("Đã tạo lớp thành công.", "success");
+    await refreshClassroomData(response?.data?.id || response?.data?.classId || "");
+  } catch (error) {
+    showToast(error.message || "Không thể tạo lớp.", "error");
+  }
+}
+
+async function handleJoinClassroom() {
+  const input = getClassroomJoinInput();
+  const classCode = String(input?.value || "").trim().toUpperCase();
+
+  if (!classCode) {
+    showToast("Vui lòng nhập mã lớp.", "error");
+    return;
+  }
+
+  try {
+    const response = await apiRequestWithAuth("/api/classes/join", {
+      method: "POST",
+      body: {
+        classCode,
+      },
+    });
+
+    if (input) {
+      input.value = "";
+    }
+
+    showToast("Tham gia lớp thành công.", "success");
+    await refreshClassroomData(response?.data?.class?.id || "");
+  } catch (error) {
+    showToast(error.message || "Không thể tham gia lớp.", "error");
+  }
+}
+
+async function copyCurrentClassroomCode() {
+  const selectedClass = getSelectedClassroom();
+  const classCode = String(selectedClass?.classCode || "").trim();
+
+  if (!classCode) {
+    showToast("Chưa có mã lớp để sao chép.", "error");
+    return;
+  }
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(classCode);
+    } else {
+      const fallbackInput = document.createElement("input");
+      fallbackInput.value = classCode;
+      fallbackInput.setAttribute("readonly", "true");
+      fallbackInput.style.position = "absolute";
+      fallbackInput.style.left = "-9999px";
+      document.body.appendChild(fallbackInput);
+      fallbackInput.select();
+      document.execCommand("copy");
+      fallbackInput.remove();
+    }
+
+    showToast("Đã sao chép mã lớp.", "success");
+  } catch (error) {
+    showToast("Không thể sao chép mã lớp.", "error");
+  }
+}
+
+function bindClassroomControlsOnce() {
+  const createButton = getClassroomCreateButton();
+  const joinButton = getClassroomJoinButton();
+  const joinInput = getClassroomJoinInput();
+  const copyButton = getClassroomCopyButton();
+  const toggleButton = getClassroomToggleButton();
+  const dropdown = document.querySelector(".classroom-dropdown");
+  const classroomPage = document.getElementById("classroom");
+
+  if (createButton && !createButton.dataset.bound) {
+    createButton.dataset.bound = "true";
+    createButton.addEventListener("click", () => {
+      void handleCreateClassroom();
+    });
+  }
+
+  if (joinButton && !joinButton.dataset.bound) {
+    joinButton.dataset.bound = "true";
+    joinButton.addEventListener("click", () => {
+      void handleJoinClassroom();
+    });
+  }
+
+  if (joinInput && !joinInput.dataset.bound) {
+    joinInput.dataset.bound = "true";
+    joinInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        void handleJoinClassroom();
+      }
+    });
+  }
+
+  if (copyButton && !copyButton.dataset.bound) {
+    copyButton.dataset.bound = "true";
+    copyButton.addEventListener("click", () => {
+      void copyCurrentClassroomCode();
+    });
+  }
+
+  if (toggleButton && dropdown && !toggleButton.dataset.bound) {
+    toggleButton.dataset.bound = "true";
+    toggleButton.addEventListener("click", () => {
+      const isOpen = dropdown.classList.toggle("open");
+      toggleButton.setAttribute("aria-expanded", String(isOpen));
+      dropdown.setAttribute("aria-hidden", String(!isOpen));
+    });
+  }
+
+  if (classroomPage && !classroomPage.dataset.bound) {
+    classroomPage.dataset.bound = "true";
+    classroomPage.addEventListener("click", (event) => {
+      const classroomButton = event.target.closest("[data-classroom-id]");
+
+      if (!classroomButton) {
+        return;
+      }
+
+      const classroomId = String(classroomButton.dataset.classroomId || "").trim();
+
+      if (!classroomId) {
+        return;
+      }
+
+      classroomState.selectedClassId = classroomId;
+      renderClassroomListPanel();
+    });
+  }
+}
+
+async function initializeClassroomPage() {
+  bindClassroomControlsOnce();
+  await loadClassroomData();
 }
 
 function resetManualAssignmentState() {
@@ -2921,6 +3485,9 @@ function handleLogout() {
   }
   teacherAssignmentsUnsubscribe = null;
   manualAssignmentState.classes = [];
+  classroomState.classes = [];
+  classroomState.selectedClassId = "";
+  classroomState.loading = false;
   resetManualAssignmentState();
   setAuthMode(true);
   renderAuthScreen("login");
@@ -3996,6 +4563,7 @@ function installCompatibilityGlobals() {
   window.showSubject = showSubject;
   window.createAssignment = createAssignment;
   window.initializeTeacherAssignmentForm = initializeTeacherAssignmentForm;
+  window.initializeClassroomPage = initializeClassroomPage;
   window.initializeManualAssignmentBuilder = initializeManualAssignmentBuilder;
   window.refreshTeacherAssignments = refreshTeacherAssignments;
   window.askAI = () => {
