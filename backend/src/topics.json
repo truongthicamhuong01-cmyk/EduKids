@@ -242,5 +242,330 @@
     "title": "Thống kê và xác suất đơn giản",
     "image": "assets/mathTopic/toan5/thongkevaxacsuat.png",
     "description": "Đọc dữ liệu, biểu đồ và các tình huống xác suất cơ bản."
+  },
+  {
+    "topicId": "p1-myself",
+    "grade": "1",
+    "subject": "english",
+    "title": "Bản thân em",
+    "image": "assets/englishTopic/tienganh1/myself.png",
+    "description": "Giới thiệu bản thân và các thông tin cơ bản."
+  },
+  {
+    "topicId": "p1-family",
+    "grade": "1",
+    "subject": "english",
+    "title": "Gia đình",
+    "image": "assets/englishTopic/tienganh1/family.png",
+    "description": "Tìm hiểu các thành viên trong gia đình."
+  },
+  {
+    "topicId": "p1-school",
+    "grade": "1",
+    "subject": "english",
+    "title": "Trường học",
+    "image": "assets/englishTopic/tienganh1/school.png",
+    "description": "Làm quen với trường học và lớp học."
+  },
+  {
+    "topicId": "p1-toys",
+    "grade": "1",
+    "subject": "english",
+    "title": "Đồ chơi",
+    "image": "assets/englishTopic/tienganh1/toys.png",
+    "description": "Nhận biết và gọi tên các loại đồ chơi."
+  },
+  {
+    "topicId": "p1-colours",
+    "grade": "1",
+    "subject": "english",
+    "title": "Màu sắc",
+    "image": "assets/englishTopic/tienganh1/colours.png",
+    "description": "Học từ vựng về màu sắc."
+  },
+  {
+    "topicId": "p1-numbers",
+    "grade": "1",
+    "subject": "english",
+    "title": "Số đếm",
+    "image": "assets/englishTopic/tienganh1/numbers.png",
+    "description": "Làm quen với số và cách đếm."
+  },
+  {
+    "topicId": "p1-animals",
+    "grade": "1",
+    "subject": "english",
+    "title": "Động vật",
+    "image": "assets/englishTopic/tienganh1/animals.png",
+    "description": "Học tên các con vật quen thuộc."
+  },
+  {
+    "topicId": "p1-food",
+    "grade": "1",
+    "subject": "english",
+    "title": "Thức ăn",
+    "image": "assets/englishTopic/tienganh1/food.png",
+    "description": "Học từ vựng về đồ ăn."
+  },
+
+  {
+    "topicId": "p2-myself",
+    "grade": "2",
+    "subject": "english",
+    "title": "Bản thân em",
+    "image": "assets/englishTopic/tienganh2/myself.png",
+    "description": "Mô tả bản thân và sở thích."
+  },
+  {
+    "topicId": "p2-family",
+    "grade": "2",
+    "subject": "english",
+    "title": "Gia đình",
+    "image": "assets/englishTopic/tienganh2/family.png",
+    "description": "Nói về gia đình và các thành viên."
+  },
+  {
+    "topicId": "p2-school",
+    "grade": "2",
+    "subject": "english",
+    "title": "Trường học",
+    "image": "assets/englishTopic/tienganh2/school.png",
+    "description": "Tìm hiểu các hoạt động ở trường."
+  },
+  {
+    "topicId": "p2-things-around-us",
+    "grade": "2",
+    "subject": "english",
+    "title": "Đồ vật xung quanh",
+    "image": "assets/englishTopic/tienganh2/thingsaroundus.png",
+    "description": "Nhận biết các đồ vật quen thuộc."
+  },
+  {
+    "topicId": "p2-food-and-drink",
+    "grade": "2",
+    "subject": "english",
+    "title": "Đồ ăn và thức uống",
+    "image": "assets/englishTopic/tienganh2/foodanddrink.png",
+    "description": "Học từ vựng đồ ăn và thức uống."
+  },
+  {
+    "topicId": "p2-animals",
+    "grade": "2",
+    "subject": "english",
+    "title": "Động vật",
+    "image": "assets/englishTopic/tienganh2/animals.png",
+    "description": "Mở rộng từ vựng về động vật."
+  },
+  {
+    "topicId": "p2-places",
+    "grade": "2",
+    "subject": "english",
+    "title": "Địa điểm",
+    "image": "assets/englishTopic/tienganh2/places.png",
+    "description": "Nhận biết các địa điểm quen thuộc."
+  },
+  {
+    "topicId": "p2-daily-routines",
+    "grade": "2",
+    "subject": "english",
+    "title": "Thói quen hằng ngày",
+    "image": "assets/englishTopic/tienganh2/dailyroutines.png",
+    "description": "Nói về các hoạt động hằng ngày."
+  },
+
+  {
+    "topicId": "p3-family",
+    "grade": "3",
+    "subject": "english",
+    "title": "Gia đình",
+    "image": "assets/englishTopic/tienganh3/family.png",
+    "description": "Mô tả gia đình."
+  },
+  {
+    "topicId": "p3-friends",
+    "grade": "3",
+    "subject": "english",
+    "title": "Bạn bè",
+    "image": "assets/englishTopic/tienganh3/friends.png",
+    "description": "Nói về bạn bè và các mối quan hệ."
+  },
+  {
+    "topicId": "p3-school",
+    "grade": "3",
+    "subject": "english",
+    "title": "Trường học",
+    "image": "assets/englishTopic/tienganh3/school.png",
+    "description": "Các hoạt động trong trường học."
+  },
+  {
+    "topicId": "p3-hobbies",
+    "grade": "3",
+    "subject": "english",
+    "title": "Sở thích",
+    "image": "assets/englishTopic/tienganh3/hobbies.png",
+    "description": "Nói về sở thích cá nhân."
+  },
+  {
+    "topicId": "p3-food-and-drink",
+    "grade": "3",
+    "subject": "english",
+    "title": "Đồ ăn và thức uống",
+    "image": "assets/englishTopic/tienganh3/foodanddrink.png",
+    "description": "Từ vựng đồ ăn và đồ uống."
+  },
+  {
+    "topicId": "p3-animals",
+    "grade": "3",
+    "subject": "english",
+    "title": "Động vật",
+    "image": "assets/englishTopic/tienganh3/animals.png",
+    "description": "Tìm hiểu thế giới động vật."
+  },
+  {
+    "topicId": "p3-places-in-town",
+    "grade": "3",
+    "subject": "english",
+    "title": "Địa điểm trong thành phố",
+    "image": "assets/englishTopic/tienganh3/placesintown.png",
+    "description": "Nhận biết các địa điểm trong thành phố."
+  },
+  {
+    "topicId": "p3-weather",
+    "grade": "3",
+    "subject": "english",
+    "title": "Thời tiết",
+    "image": "assets/englishTopic/tienganh3/weather.png",
+    "description": "Học cách mô tả thời tiết."
+  },
+
+  {
+    "topicId": "p4-family",
+    "grade": "4",
+    "subject": "english",
+    "title": "Gia đình",
+    "image": "assets/englishTopic/tienganh4/family.png",
+    "description": "Mở rộng chủ đề gia đình."
+  },
+  {
+    "topicId": "p4-school",
+    "grade": "4",
+    "subject": "english",
+    "title": "Trường học",
+    "image": "assets/englishTopic/tienganh4/school.png",
+    "description": "Mô tả môi trường học tập."
+  },
+  {
+    "topicId": "p4-activities",
+    "grade": "4",
+    "subject": "english",
+    "title": "Hoạt động",
+    "image": "assets/englishTopic/tienganh4/activities.png",
+    "description": "Nói về các hoạt động hằng ngày."
+  },
+  {
+    "topicId": "p4-hobbies",
+    "grade": "4",
+    "subject": "english",
+    "title": "Sở thích",
+    "image": "assets/englishTopic/tienganh4/hobbies.png",
+    "description": "Chia sẻ sở thích cá nhân."
+  },
+  {
+    "topicId": "p4-food-and-drink",
+    "grade": "4",
+    "subject": "english",
+    "title": "Đồ ăn và thức uống",
+    "image": "assets/englishTopic/tienganh4/foodanddrink.png",
+    "description": "Học cách gọi tên món ăn."
+  },
+  {
+    "topicId": "p4-places",
+    "grade": "4",
+    "subject": "english",
+    "title": "Địa điểm",
+    "image": "assets/englishTopic/tienganh4/places.png",
+    "description": "Mô tả địa điểm quen thuộc."
+  },
+  {
+    "topicId": "p4-transport",
+    "grade": "4",
+    "subject": "english",
+    "title": "Phương tiện giao thông",
+    "image": "assets/englishTopic/tienganh4/transport.png",
+    "description": "Từ vựng về phương tiện."
+  },
+  {
+    "topicId": "p4-festivals",
+    "grade": "4",
+    "subject": "english",
+    "title": "Lễ hội",
+    "image": "assets/englishTopic/tienganh4/festivals.png",
+    "description": "Khám phá các lễ hội."
+  },
+
+  {
+    "topicId": "p5-family-and-friends",
+    "grade": "5",
+    "subject": "english",
+    "title": "Gia đình và bạn bè",
+    "image": "assets/englishTopic/tienganh5/familyandfriends.png",
+    "description": "Nói về gia đình và bạn bè."
+  },
+  {
+    "topicId": "p5-school",
+    "grade": "5",
+    "subject": "english",
+    "title": "Trường học",
+    "image": "assets/englishTopic/tienganh5/school.png",
+    "description": "Mô tả các hoạt động ở trường."
+  },
+  {
+    "topicId": "p5-hobbies",
+    "grade": "5",
+    "subject": "english",
+    "title": "Sở thích",
+    "image": "assets/englishTopic/tienganh5/hobbies.png",
+    "description": "Chia sẻ sở thích cá nhân."
+  },
+  {
+    "topicId": "p5-health",
+    "grade": "5",
+    "subject": "english",
+    "title": "Sức khỏe",
+    "image": "assets/englishTopic/tienganh5/health.png",
+    "description": "Tìm hiểu về sức khỏe và thói quen tốt."
+  },
+  {
+    "topicId": "p5-food-and-drink",
+    "grade": "5",
+    "subject": "english",
+    "title": "Đồ ăn và thức uống",
+    "image": "assets/englishTopic/tienganh5/foodanddrink.png",
+    "description": "Học từ vựng về thực phẩm."
+  },
+  {
+    "topicId": "p5-places",
+    "grade": "5",
+    "subject": "english",
+    "title": "Địa điểm",
+    "image": "assets/englishTopic/tienganh5/places.png",
+    "description": "Mô tả các địa điểm."
+  },
+  {
+    "topicId": "p5-environment",
+    "grade": "5",
+    "subject": "english",
+    "title": "Môi trường",
+    "image": "assets/englishTopic/tienganh5/environment.png",
+    "description": "Tìm hiểu và bảo vệ môi trường."
+  },
+  {
+    "topicId": "p5-jobs",
+    "grade": "5",
+    "subject": "english",
+    "title": "Nghề nghiệp",
+    "image": "assets/englishTopic/tienganh5/jobs.png",
+    "description": "Khám phá các nghề nghiệp khác nhau."
   }
+
 ]
