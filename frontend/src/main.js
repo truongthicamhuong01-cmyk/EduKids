@@ -36,7 +36,6 @@ const ROLE_ALLOWED_PAGES = {
     "missions",
     "progress",
     "profile",
-    "classroom",
   ]),
   teacher: new Set([
     "teacher-dashboard",
@@ -228,6 +227,10 @@ function isPageAllowedForRole(pageId, role) {
 }
 
 function resolvePageForRole(pageId, role) {
+  if (normalizeRole(role) === "student" && pageId === "classroom") {
+    return "assignments";
+  }
+
   return isPageAllowedForRole(pageId, role)
     ? pageId
     : getDefaultPageForRole(role);
@@ -486,6 +489,14 @@ function changePage(pageId) {
     typeof initializeStudentQuizPage === "function"
   ) {
     void initializeStudentQuizPage();
+  }
+
+  if (
+    targetPageId === "assignments" &&
+    role === "student" &&
+    typeof initializeStudentAssignmentPage === "function"
+  ) {
+    void initializeStudentAssignmentPage();
   }
 
   if (
@@ -1922,6 +1933,12 @@ const classroomState = {
   loading: false,
 };
 
+const studentAssignmentClassState = {
+  classes: [],
+  selectedClassId: "",
+  loading: false,
+};
+
 let manualAssignmentFormBound = false;
 let teacherAssignmentsUnsubscribe = null;
 let createMethod = "manual";
@@ -2051,6 +2068,22 @@ function getClassroomToggleButton() {
 
 function getJoinedClassListPanel() {
   return document.getElementById("joined-class-list");
+}
+
+function getAssignmentsPageRoot() {
+  return document.getElementById("assignments");
+}
+
+function getStudentClassSwitcher() {
+  return document.getElementById("student-class-switcher");
+}
+
+function getJoinClassActionButton() {
+  return document.getElementById("join-class-action-btn");
+}
+
+function getStudentClassSwitcherButton() {
+  return document.querySelector("#student-class-switcher .student-class-switcher-btn");
 }
 
 function getSelectedClassroom() {
@@ -2529,6 +2562,235 @@ function bindClassroomControlsOnce() {
 async function initializeClassroomPage() {
   bindClassroomControlsOnce();
   await loadClassroomData();
+}
+
+function getSelectedStudentAssignmentClass() {
+  return (
+    studentAssignmentClassState.classes.find(
+      (classroom) => classroom.id === studentAssignmentClassState.selectedClassId,
+    ) || studentAssignmentClassState.classes[0] || null
+  );
+}
+
+function closeStudentClassSwitcherMenu() {
+  const switcher = getStudentClassSwitcher();
+
+  if (!switcher) {
+    return;
+  }
+
+  switcher.classList.remove("is-open");
+
+  const button = getStudentClassSwitcherButton();
+  if (button) {
+    button.setAttribute("aria-expanded", "false");
+  }
+}
+
+function renderStudentClassSwitcher() {
+  const switcher = getStudentClassSwitcher();
+
+  if (!switcher) {
+    return;
+  }
+
+  const classes = studentAssignmentClassState.classes;
+  const selectedClass = getSelectedStudentAssignmentClass();
+  const selectedLabel = selectedClass
+    ? selectedClass.name || selectedClass.className || "Lớp học"
+    : "Chưa có lớp";
+
+  switcher.innerHTML = `
+    <button
+      type="button"
+      class="student-class-switcher-btn"
+      data-student-class-toggle
+      aria-expanded="${switcher.classList.contains("is-open") ? "true" : "false"}"
+      ${classes.length === 0 ? "disabled" : ""}
+    >
+      <span>${escapeHtml(selectedLabel)}</span>
+      <span aria-hidden="true">▾</span>
+    </button>
+    <div class="student-class-switcher-menu">
+      ${
+        classes.length === 0
+          ? `<button type="button" disabled>Chưa có lớp đã tham gia</button>`
+          : classes
+              .map((classroom) => {
+                const isActive = classroom.id === studentAssignmentClassState.selectedClassId;
+                return `
+                  <button
+                    type="button"
+                    data-student-class-id="${escapeHtml(classroom.id)}"
+                    class="${isActive ? "is-active" : ""}"
+                  >
+                    ${escapeHtml(classroom.name || classroom.className || "Lớp học")}
+                  </button>
+                `;
+              })
+              .join("")
+      }
+    </div>
+  `;
+}
+
+function setStudentAssignmentActiveClass(classId) {
+  const normalizedClassId = String(classId || "").trim();
+
+  if (!normalizedClassId) {
+    return;
+  }
+
+  studentAssignmentClassState.selectedClassId = normalizedClassId;
+  renderStudentClassSwitcher();
+}
+
+async function loadStudentAssignmentClasses(preferredClassId = "") {
+  const switcher = getStudentClassSwitcher();
+
+  try {
+    studentAssignmentClassState.loading = true;
+
+    if (switcher) {
+      switcher.innerHTML = `
+        <button type="button" class="student-class-switcher-btn" disabled>
+          Đang tải lớp...
+        </button>
+      `;
+    }
+
+    const response = await apiRequestWithAuth("/api/classes/my", {
+      method: "GET",
+    });
+
+    const classes = sortClassroomRecords(
+      Array.isArray(response?.data)
+        ? response.data.map(normalizeClassroomRecord).filter(Boolean)
+        : [],
+    );
+
+    studentAssignmentClassState.classes = classes;
+
+    if (preferredClassId && classes.some((item) => item.id === preferredClassId)) {
+      studentAssignmentClassState.selectedClassId = preferredClassId;
+    } else if (
+      studentAssignmentClassState.selectedClassId &&
+      classes.some((item) => item.id === studentAssignmentClassState.selectedClassId)
+    ) {
+      // keep current selection
+    } else {
+      studentAssignmentClassState.selectedClassId = classes[0]?.id || "";
+    }
+
+    renderStudentClassSwitcher();
+    return classes;
+  } catch (error) {
+    studentAssignmentClassState.classes = [];
+    studentAssignmentClassState.selectedClassId = "";
+
+    if (switcher) {
+      switcher.innerHTML = `
+        <button type="button" class="student-class-switcher-btn" disabled>
+          Không thể tải lớp
+        </button>
+      `;
+    }
+
+    showToast(error.message || "Không thể tải lớp đã tham gia.", "error");
+    return [];
+  } finally {
+    studentAssignmentClassState.loading = false;
+  }
+}
+
+async function refreshStudentAssignmentClasses(preferredClassId = "") {
+  return loadStudentAssignmentClasses(preferredClassId);
+}
+
+async function handleStudentJoinClass() {
+  const classCode = String(
+    window.prompt("Nhập mã lớp") || "",
+  )
+    .trim()
+    .toUpperCase();
+
+  if (!classCode) {
+    return;
+  }
+
+  try {
+    const response = await apiRequestWithAuth("/api/classes/join", {
+      method: "POST",
+      body: {
+        classCode,
+      },
+    });
+
+    showToast("Tham gia lớp thành công.", "success");
+    await refreshStudentAssignmentClasses(response?.data?.class?.id || "");
+  } catch (error) {
+    showToast(error.message || "Không thể tham gia lớp.", "error");
+  }
+}
+
+function bindStudentAssignmentControlsOnce() {
+  const switcher = getStudentClassSwitcher();
+  const joinButton = getJoinClassActionButton();
+
+  if (switcher && !switcher.dataset.bound) {
+    switcher.dataset.bound = "true";
+
+    switcher.addEventListener("click", (event) => {
+      const toggleButton = event.target.closest("[data-student-class-toggle]");
+      const classButton = event.target.closest("[data-student-class-id]");
+
+      if (toggleButton) {
+        const isOpen = switcher.classList.toggle("is-open");
+        toggleButton.setAttribute("aria-expanded", String(isOpen));
+        return;
+      }
+
+      if (classButton) {
+        const classId = String(classButton.dataset.studentClassId || "").trim();
+
+        if (!classId) {
+          return;
+        }
+
+        setStudentAssignmentActiveClass(classId);
+        closeStudentClassSwitcherMenu();
+      }
+    });
+  }
+
+  if (joinButton && !joinButton.dataset.bound) {
+    joinButton.dataset.bound = "true";
+    joinButton.addEventListener("click", () => {
+      void handleStudentJoinClass();
+    });
+  }
+
+  if (!document.body.dataset.studentClassSwitcherBound) {
+    document.body.dataset.studentClassSwitcherBound = "true";
+    document.addEventListener("click", (event) => {
+      const switcherRoot = getStudentClassSwitcher();
+
+      if (!switcherRoot || switcherRoot.contains(event.target)) {
+        return;
+      }
+
+      closeStudentClassSwitcherMenu();
+    });
+  }
+}
+
+async function initializeStudentAssignmentPage() {
+  if (getCurrentRole() !== "student") {
+    return;
+  }
+
+  bindStudentAssignmentControlsOnce();
+  await loadStudentAssignmentClasses();
 }
 
 function resetManualAssignmentState() {
@@ -3488,6 +3750,9 @@ function handleLogout() {
   classroomState.classes = [];
   classroomState.selectedClassId = "";
   classroomState.loading = false;
+  studentAssignmentClassState.classes = [];
+  studentAssignmentClassState.selectedClassId = "";
+  studentAssignmentClassState.loading = false;
   resetManualAssignmentState();
   setAuthMode(true);
   renderAuthScreen("login");
@@ -4564,6 +4829,7 @@ function installCompatibilityGlobals() {
   window.createAssignment = createAssignment;
   window.initializeTeacherAssignmentForm = initializeTeacherAssignmentForm;
   window.initializeClassroomPage = initializeClassroomPage;
+  window.initializeStudentAssignmentPage = initializeStudentAssignmentPage;
   window.initializeManualAssignmentBuilder = initializeManualAssignmentBuilder;
   window.refreshTeacherAssignments = refreshTeacherAssignments;
   window.askAI = () => {
