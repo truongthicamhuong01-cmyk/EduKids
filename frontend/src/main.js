@@ -1383,12 +1383,12 @@ function renderStudentQuizScreen() {
       <div class="quiz-panel-header">
         <div>
           <span class="quiz-panel-kicker">Quiz</span>
-          <h2>đang tạo bài quiz...</h2>
+          <h2>Đang tạo bộ câu hỏi cho chủ đề này...</h2>
         </div>
       </div>
       <div class="quiz-loading-card">
         <span class="quiz-loading-spinner"></span>
-        <p>Đang lấy dữ liệu từ Firestore...</p>
+        <p>Đang tạo bộ câu hỏi cho chủ đề này...</p>
       </div>
     `;
     resultScreen?.classList.add("hidden");
@@ -1697,12 +1697,7 @@ async function loadStudentQuizByTopic(topicId) {
     studentQuizState.answers = [];
   } catch (error) {
     studentQuizState.quiz = null;
-
-    if ((error.message || "").toLowerCase().includes("quiz not found")) {
-      showToast("Chủ đề này chưa có quiz được tạo.", "error");
-    } else {
-      showToast(error.message || "Không thể tải quiz cho chủ đề này.", "error");
-    }
+    showToast("Không thể tạo bộ câu hỏi. Vui lòng thử lại.", "error");
   } finally {
     studentQuizState.loadingQuiz = false;
     renderStudentTopicCards();
