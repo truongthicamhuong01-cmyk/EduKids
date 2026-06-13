@@ -1345,21 +1345,18 @@ function renderStudentTopicCards() {
   grid.innerHTML = topics
     .map((topic) => {
       const isActive = topic.topicId === studentQuizState.selectedTopicId;
-      const hasQuiz = topic.hasQuiz !== false;
 
       return `
         <button
           type="button"
-          class="topic-card ${isActive ? "is-active" : ""} ${hasQuiz ? "" : "is-disabled"}"
+          class="topic-card ${isActive ? "is-active" : ""}"
           data-topic-id="${escapeHtml(topic.topicId)}"
           data-topic-name="${escapeHtml(topic.name)}"
-          ${hasQuiz ? "" : "disabled"}
         >
           <img class="topic-card-image" src="${escapeHtml(getStudentTopicImage(topic))}" alt="${escapeHtml(topic.name)}" />
           <span class="topic-card-grade">Lớp ${escapeHtml(topic.grade)}</span>
           <h3 class="topic-card-title">${escapeHtml(topic.name)}</h3>
           <p class="topic-card-description">${escapeHtml(topic.description || "Chọn để mở quiz để luyện.")}</p>
-          ${hasQuiz ? "" : `<span class="topic-card-status">Chưa có quiz</span>`}
         </button>
       `;
     })
@@ -1383,12 +1380,12 @@ function renderStudentQuizScreen() {
       <div class="quiz-panel-header">
         <div>
           <span class="quiz-panel-kicker">Quiz</span>
-          <h2>Đang tạo bộ câu hỏi cho chủ đề này...</h2>
+          <h2>Đang tải bài học...</h2>
         </div>
       </div>
       <div class="quiz-loading-card">
         <span class="quiz-loading-spinner"></span>
-        <p>Đang tạo bộ câu hỏi cho chủ đề này...</p>
+        <p>Đang tải bài học...</p>
       </div>
     `;
     resultScreen?.classList.add("hidden");
@@ -1796,10 +1793,6 @@ document.addEventListener("click", (event) => {
   const topicCard = event.target.closest("[data-topic-id]");
 
   if (topicCard && getStudentQuizRoot()?.contains(topicCard)) {
-    if (topicCard.disabled) {
-      showToast("Chủ đề này chưa có quiz được tạo.", "error");
-      return;
-    }
     void loadStudentQuizByTopic(topicCard.dataset.topicId);
     return;
   }
