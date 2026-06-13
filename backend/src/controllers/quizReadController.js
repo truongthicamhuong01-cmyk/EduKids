@@ -5,6 +5,7 @@ const { normalizeString } = require("../utils/validators");
 const { listTopics, getQuizByTopic } = require("../services/quizReadService");
 const { selectQuizVersion } = require("../services/quizSelectionService");
 const { listQuizVersions } = require("../services/quizVersionService");
+const { ensureQuizVersionsForTopic } = require("../services/quizGenerationService");
 
 const getTopics = asyncHandler(async (req, res) => {
   if (!req.user) {
@@ -46,8 +47,49 @@ const getQuizByTopicId = asyncHandler(async (req, res) => {
   });
 
   if (versions.length === 0) {
-    const legacyQuiz = await getQuizByTopic({ grade, subject, topicId });
-    return successResponse(res, 200, "Quiz fetched successfully", legacyQuiz);
+    try {
+      const legacyQuiz = await getQuizByTopic({ grade, subject, topicId });
+      return successResponse(res, 200, "Quiz fetched successfully", legacyQuiz);
+    } catch (error) {
+      if (error.statusCode !== 404 || error.message !== "Quiz not found for this topic") {
+        throw error;
+      }
+    }
+
+    await ensureQuizVersionsForTopic({
+      grade,
+      subject,
+      topicId,
+      targetVersions: 3,
+    });
+
+    const generatedVersions = await listQuizVersions({
+      grade,
+      subject,
+      topicId,
+    });
+
+    const selected = await selectQuizVersion({
+      userId: req.user.userId || req.user.uid,
+      grade,
+      subject,
+      topicId,
+      versions: generatedVersions,
+      strategy: normalizeString(req.query.strategy) || "round_robin",
+    });
+
+    const selectedVersion = selected.selectedVersion;
+    const quizData = selectedVersion.data || {};
+    const quiz = {
+      ...quizData,
+      id: selected.quizId,
+      quizId: selected.quizId,
+      versionId: selectedVersion.versionId,
+      versionNumber: selectedVersion.versionNumber,
+      availableVersions: generatedVersions.map((version) => version.versionId),
+    };
+
+    return successResponse(res, 200, "Quiz fetched successfully", quiz);
   }
 
   const selected = await selectQuizVersion({

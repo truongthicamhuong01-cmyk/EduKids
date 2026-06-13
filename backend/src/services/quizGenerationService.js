@@ -125,6 +125,40 @@ async function ensureNextQuizVersion({ grade, subject, topicId, minVersions = 3 
   };
 }
 
+async function ensureQuizVersionsForTopic({ grade, subject, topicId, targetVersions = 3 }) {
+  const normalizedTargetVersions = Number(targetVersions);
+  const desiredVersions =
+    Number.isInteger(normalizedTargetVersions) && normalizedTargetVersions > 0
+      ? normalizedTargetVersions
+      : 3;
+
+  for (let attempt = 0; attempt < desiredVersions; attempt += 1) {
+    const meta = await getVersionedQuizMeta({
+      grade,
+      subject,
+      topicId,
+    });
+
+    if (meta.versionCount >= desiredVersions) {
+      return meta;
+    }
+
+    await ensureNextQuizVersion({
+      grade,
+      subject,
+      topicId,
+      minVersions: desiredVersions,
+    });
+  }
+
+  return getVersionedQuizMeta({
+    grade,
+    subject,
+    topicId,
+  });
+}
+
 module.exports = {
   ensureNextQuizVersion,
+  ensureQuizVersionsForTopic,
 };
