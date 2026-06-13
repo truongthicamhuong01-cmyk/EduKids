@@ -440,58 +440,80 @@ function renderLoginScreen() {
   return `
     <section class="auth-shell">
       <div class="auth-stage">
-        <div class="auth-badge">ÄÄ‚NG NHáº¬P</div>
+        <div class="auth-badge">ĐĂNG NHẬP</div>
+
         <div class="auth-card">
           ${renderAuthBrand()}
 
           <form class="auth-form" id="auth-form" data-view="login" novalidate>
+
             ${renderTextField({
               id: "login-username",
               name: "username",
-              label: "TĂªn Ä‘Äƒng nháº­p",
-              placeholder: "Nháº­p tĂªn Ä‘Äƒng nháº­p",
+              label: "Tên đăng nhập",
+              placeholder: "Nhập tên đăng nhập",
               value: draft.username,
               autocomplete: "username",
             })}
+
             ${renderPasswordField({
               id: "login-password",
               name: "password",
-              label: "Máº­t kháº©u",
-              placeholder: "Nháº­p máº­t kháº©u",
+              label: "Mật khẩu",
+              placeholder: "Nhập mật khẩu",
               value: draft.password,
               autocomplete: "current-password",
             })}
 
             <div class="auth-help-row">
-              <button type="button" class="auth-link-button" data-forgot-password>
-                QuĂªn máº­t kháº©u
+              <button
+                type="button"
+                class="auth-link-button"
+                data-forgot-password
+              >
+                Quên mật khẩu
               </button>
             </div>
 
             ${renderChoiceGroup({
               name: "role",
-              label: "Vai trĂ²",
+              label: "Vai trò",
               selectedValue: draft.role,
               options: [
-                { value: "student", label: "Há»c sinh", icon: "đŸ‘¤" },
-                { value: "teacher", label: "GiĂ¡o viĂªn", icon: "đŸ‘©â€đŸ«" },
+                {
+                  value: "student",
+                  label: "Học sinh",
+                  icon: "👤",
+                },
+                {
+                  value: "teacher",
+                  label: "Giáo viên",
+                  icon: "👩‍🏫",
+                },
               ],
             })}
 
             ${renderAuthFeedback()}
 
-            <button type="submit" class="auth-submit-button">ÄÄƒng nháº­p</button>
+            <button
+              type="submit"
+              class="auth-submit-button"
+            >
+              Đăng nhập
+            </button>
 
             <p class="auth-switch">
-              ChÆ°a cĂ³ tĂ i khoáº£n?
+              Chưa có tài khoản?
+
               <button
                 type="button"
                 class="auth-link-button"
                 data-auth-switch="register"
               >
-                ÄÄƒng kĂ½ ngay
+                Đăng ký ngay
               </button>
             </p>
+
           </form>
         </div>
       </div>
@@ -505,7 +527,7 @@ function renderRegisterScreen() {
   return `
     <section class="auth-shell">
       <div class="auth-stage">
-        <div class="auth-badge">ÄÄ‚NG KĂ</div>
+        <div class="auth-badge">ĐĂNG KÝ</div>
         <div class="auth-card">
           ${renderAuthBrand()}
 
@@ -513,64 +535,84 @@ function renderRegisterScreen() {
             ${renderTextField({
               id: "register-name",
               name: "name",
-              label: "Há» vĂ  tĂªn",
-              placeholder: "Nháº­p há» vĂ  tĂªn",
+              label: "Họ và tên",
+              placeholder: "Nhập họ và tên",
               value: draft.name,
               autocomplete: "name",
             })}
+
             ${renderTextField({
               id: "register-username",
               name: "username",
-              label: "TĂªn Ä‘Äƒng nháº­p",
-              placeholder: "Nháº­p tĂªn Ä‘Äƒng nháº­p",
+              label: "Tên đăng nhập",
+              placeholder: "Nhập tên đăng nhập",
               value: draft.username,
               autocomplete: "username",
             })}
+
             ${renderPasswordField({
               id: "register-password",
               name: "password",
-              label: "Máº­t kháº©u",
-              placeholder: "Nháº­p máº­t kháº©u",
+              label: "Mật khẩu",
+              placeholder: "Nhập mật khẩu",
               value: draft.password,
               autocomplete: "new-password",
             })}
+
             ${renderPasswordField({
               id: "register-confirm-password",
               name: "confirmPassword",
-              label: "XĂ¡c nháº­n máº­t kháº©u",
-              placeholder: "Nháº­p láº¡i máº­t kháº©u",
+              label: "Xác nhận mật khẩu",
+              placeholder: "Nhập lại mật khẩu",
               value: draft.confirmPassword,
               autocomplete: "new-password",
             })}
 
             ${renderChoiceGroup({
               name: "role",
-              label: "Vai trĂ²",
+              label: "Vai trò",
               selectedValue: draft.role,
               options: [
-                { value: "student", label: "Há»c sinh", icon: "đŸ‘¤" },
-                { value: "teacher", label: "GiĂ¡o viĂªn", icon: "đŸ‘©â€đŸ«" },
+                {
+                  value: "student",
+                  label: "Học sinh",
+                  icon: "👤",
+                },
+                {
+                  value: "teacher",
+                  label: "Giáo viên",
+                  icon: "👩‍🏫",
+                },
               ],
             })}
 
             ${renderChoiceGroup({
               name: "gender",
-              label: "Giá»›i tĂ­nh",
+              label: "Giới tính",
               selectedValue: draft.gender,
               options: [
-                { value: "male", label: "Nam", icon: "â™‚" },
-                { value: "female", label: "Ná»¯", icon: "â™€" },
+                {
+                  value: "male",
+                  label: "Nam",
+                  icon: "♂",
+                },
+                {
+                  value: "female",
+                  label: "Nữ",
+                  icon: "♀",
+                },
               ],
             })}
 
             ${renderTextField({
               id: "register-class",
               name: "className",
-              label: "Lá»›p (náº¿u lĂ  há»c sinh)",
-              placeholder: "Chá»n lá»›p",
+              label: "Lớp (nếu là học sinh)",
+              placeholder: "Chọn lớp",
               value: draft.className,
               autocomplete: "off",
             })}
+
             ${renderTextField({
               id: "register-school",
               name: "school",
@@ -582,10 +624,13 @@ function renderRegisterScreen() {
 
             ${renderAuthFeedback()}
 
-            <button type="submit" class="auth-submit-button">Tạo tài khoản</button>
+            <button type="submit" class="auth-submit-button">
+              Tạo tài khoản
+            </button>
 
             <p class="auth-switch">
               Đã có tài khoản?
+
               <button
                 type="button"
                 class="auth-link-button"
