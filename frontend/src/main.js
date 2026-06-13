@@ -22,6 +22,34 @@ const AUTH_CLEAR_KEYS = [
   AUTH_SESSION_KEY,
 ];
 
+const ROLE_DEFAULT_PAGES = {
+  student: "student-home",
+  teacher: "teacher-dashboard",
+};
+
+const ROLE_ALLOWED_PAGES = {
+  student: new Set([
+    "student-home",
+    "ai-coach",
+    "subjects",
+    "assignments",
+    "missions",
+    "progress",
+    "profile",
+  ]),
+  teacher: new Set([
+    "teacher-dashboard",
+    "classroom",
+    "create-assignment",
+    "manage",
+    "stats",
+    "teacher-profile",
+  ]),
+};
+
+let previousPage = ROLE_DEFAULT_PAGES.student;
+let currentPage = ROLE_DEFAULT_PAGES.student;
+
 function apiRequest(path, payload) {
   return fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
@@ -175,7 +203,2692 @@ function getCurrentRole() {
 }
 
 function getDefaultPageForRole(role) {
-  return role === "teacher" ? "teacher-dashboard" : "student-home";
+  return ROLE_DEFAULT_PAGES[normalizeRole(role)] || ROLE_DEFAULT_PAGES.student;
+}
+
+function getProfilePageType(pageId) {
+  if (pageId === "profile") {
+    return "student";
+  }
+
+  if (pageId === "teacher-profile") {
+    return "teacher";
+  }
+
+  return null;
+}
+
+function isPageAllowedForRole(pageId, role) {
+  const normalizedRole = normalizeRole(role);
+
+  return Boolean(
+    normalizedRole && ROLE_ALLOWED_PAGES[normalizedRole]?.has(pageId),
+  );
+}
+
+function resolvePageForRole(pageId, role) {
+  return isPageAllowedForRole(pageId, role)
+    ? pageId
+    : getDefaultPageForRole(role);
+}
+
+function getSidebarAvatarPath(profile) {
+  if (window.EduKidsProfileService?.getAvatarPathFromProfile) {
+    return window.EduKidsProfileService.getAvatarPathFromProfile(profile);
+  }
+
+  const avatar = String(profile?.avatar || profile?.photoURL || "").trim();
+
+  if (avatar) {
+    if (/^https?:\/\//i.test(avatar) || avatar.startsWith("data:")) {
+      return avatar;
+    }
+
+    if (avatar.startsWith("assets/")) {
+      return avatar;
+    }
+
+    return `assets/userAvatar/${avatar}`;
+  }
+
+  const role = normalizeRole(profile?.role) || "student";
+  const gender = profile?.gender === "female" ? "female" : "male";
+
+  if (role === "teacher") {
+    return `assets/userAvatar/${gender === "female" ? "femaleteacher.png" : "maleteacher.png"}`;
+  }
+
+  return `assets/userAvatar/${gender === "female" ? "girl.png" : "boy.png"}`;
+}
+
+function getSidebarUserData(profile) {
+  const role = normalizeRole(profile?.role) || "student";
+  const name =
+    String(
+      profile?.name ||
+        profile?.fullName ||
+        profile?.displayName ||
+        profile?.username ||
+        "Đang tải...",
+    ).trim() || "Đang tải...";
+  const code =
+    String(
+      profile?.userCode ||
+        profile?.studentCode ||
+        profile?.teacherCode ||
+        profile?.code ||
+        "--",
+    ).trim() || "--";
+
+  return {
+    role,
+    name,
+    code,
+    roleLabel: role === "teacher" ? "Giáo viên" : "Học sinh",
+    avatar: getSidebarAvatarPath(profile),
+  };
+}
+
+function setSidebarCardsLoading(isLoading) {
+  document.querySelectorAll("[data-sidebar-card]").forEach((card) => {
+    card.setAttribute("aria-busy", String(isLoading));
+    card.classList.toggle("is-loading", isLoading);
+  });
+}
+
+function resetSidebarProfileCards() {
+  document.querySelectorAll("[data-sidebar-card]").forEach((card) => {
+    const role = card.dataset.sidebarRole || card.dataset.card || "student";
+    const avatar = card.querySelector("[data-sidebar-avatar]");
+    const name = card.querySelector("[data-sidebar-name]");
+    const roleLabel = card.querySelector("[data-sidebar-role-label]");
+
+    if (avatar) {
+      avatar.src =
+        "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+      avatar.alt = "";
+    }
+
+    if (name) {
+      name.textContent = "Đang tải...";
+    }
+
+    if (roleLabel) {
+      roleLabel.textContent = role === "teacher" ? "Giáo viên" : "Học sinh";
+    }
+  });
+}
+
+function renderSidebarProfileCards(profile) {
+  const userData = getSidebarUserData(profile);
+
+  document.querySelectorAll("[data-sidebar-card]").forEach((card) => {
+    const shouldShow = card.dataset.sidebarRole === userData.role;
+    card.hidden = !shouldShow;
+
+    if (!shouldShow) {
+      return;
+    }
+
+    const avatar = card.querySelector("[data-sidebar-avatar]");
+    const name = card.querySelector("[data-sidebar-name]");
+    const roleLabel = card.querySelector("[data-sidebar-role-label]");
+
+    if (avatar) {
+      avatar.src = userData.avatar;
+      avatar.alt = `${userData.roleLabel} ${userData.name}`;
+    }
+
+    if (name) {
+      name.textContent = userData.name;
+    }
+
+    if (roleLabel) {
+      roleLabel.textContent = userData.roleLabel;
+    }
+
+    card.setAttribute("aria-busy", "false");
+    card.classList.remove("is-loading");
+  });
+}
+
+function getCurrentSidebarProfile() {
+  const service = window.EduKidsProfileService;
+
+  if (service?.getCurrentProfileSync) {
+    const profile = service.getCurrentProfileSync();
+
+    if (profile) {
+      return profile;
+    }
+  }
+
+  return getCurrentAuthUser();
+}
+
+function applyRoleVisibility(role = getCurrentRole()) {
+  const normalizedRole = normalizeRole(role);
+
+  if (!normalizedRole) {
+    return;
+  }
+
+  const allowedPages = ROLE_ALLOWED_PAGES[normalizedRole];
+  const showStudentCard = normalizedRole === "student";
+  const showTeacherCard = normalizedRole === "teacher";
+
+  document.querySelectorAll(".menu-item").forEach((item) => {
+    if (!item.dataset.page) {
+      return;
+    }
+
+    item.hidden = !allowedPages.has(item.dataset.page);
+  });
+
+  document.querySelectorAll(".page").forEach((page) => {
+    page.hidden = !allowedPages.has(page.id);
+  });
+
+  document.querySelectorAll(".student-card").forEach((card) => {
+    card.hidden = !showStudentCard;
+  });
+
+  document.querySelectorAll(".teacher-card").forEach((card) => {
+    card.hidden = !showTeacherCard;
+  });
+}
+
+async function syncSidebarProfile() {
+  const profile = getCurrentSidebarProfile();
+
+  if (!profile) {
+    setSidebarCardsLoading(true);
+    resetSidebarProfileCards();
+    return;
+  }
+
+  applyRoleVisibility(profile.role);
+  setSidebarCardsLoading(true);
+
+  try {
+    let resolvedProfile = profile;
+
+    if (window.EduKidsProfileService?.fetchCurrentProfile) {
+      resolvedProfile =
+        await window.EduKidsProfileService.fetchCurrentProfile();
+    }
+
+    if (resolvedProfile) {
+      bootstrapState.currentUser = resolvedProfile;
+      window.EduKidsCurrentUser = resolvedProfile;
+    }
+
+    renderSidebarProfileCards(resolvedProfile || profile);
+  } catch (error) {
+    console.warn("Không thể đồng bộ sidebar user:", error);
+    renderSidebarProfileCards(profile);
+  }
+}
+
+function showPage(pageId) {
+  if (!pageId) {
+    return;
+  }
+
+  document.querySelectorAll(".page").forEach((page) => {
+    page.classList.toggle("active", page.id === pageId);
+  });
+
+  document.querySelectorAll("[data-page]").forEach((item) => {
+    item.classList.toggle("active", item.dataset.page === pageId);
+  });
+}
+
+function changePage(pageId) {
+  const role = getCurrentRole();
+  const targetPageId = resolvePageForRole(pageId, role);
+
+  previousPage = currentPage;
+  currentPage = targetPageId;
+
+  showPage(targetPageId);
+  applyRoleVisibility(role);
+
+  const profilePageType = getProfilePageType(targetPageId);
+
+  if (
+    profilePageType &&
+    typeof ensureProfileLoaded === "function"
+  ) {
+    void ensureProfileLoaded(targetPageId);
+  }
+
+  if (
+    targetPageId === "create-assignment" &&
+    role === "teacher" &&
+    typeof initializeTeacherAssignmentForm === "function"
+  ) {
+    void initializeTeacherAssignmentForm();
+  }
+
+  if (
+    targetPageId === "manage" &&
+    role === "teacher" &&
+    typeof refreshTeacherAssignments === "function"
+  ) {
+    void refreshTeacherAssignments();
+  }
+
+  if (
+    targetPageId === "subjects" &&
+    role === "student" &&
+    typeof initializeStudentQuizPage === "function"
+  ) {
+    void initializeStudentQuizPage();
+  }
+}
+
+function openCreateAssignment() {
+  changePage("create-assignment");
+}
+
+function openProfile() {
+  changePage("profile");
+}
+
+function openTeacherDashboard() {
+  changePage("teacher-dashboard");
+}
+
+function goBackPage() {
+  changePage(previousPage);
+}
+
+const profileState = {
+  current: null,
+  loading: false,
+  error: null,
+};
+
+function getProfilePageRoot(pageType) {
+  if (!pageType) {
+    return null;
+  }
+
+  return document.querySelector(`[data-profile-page="${pageType}"]`);
+}
+
+function getProfileAvatar(profile) {
+  if (window.EduKidsProfileService?.getAvatarPathFromProfile) {
+    return window.EduKidsProfileService.getAvatarPathFromProfile(profile);
+  }
+
+  const avatar = String(profile?.avatar || "").trim();
+
+  if (avatar) {
+    if (avatar.startsWith("assets/")) {
+      return avatar;
+    }
+
+    return `assets/userAvatar/${avatar}`;
+  }
+
+  if (profile?.role === "teacher") {
+    return `assets/userAvatar/${profile?.gender === "female" ? "femaleteacher.png" : "maleteacher.png"}`;
+  }
+
+  return `assets/userAvatar/${profile?.gender === "female" ? "girl.png" : "boy.png"}`;
+}
+
+function formatRoleLabel(role) {
+  return role === "teacher" ? "Giáo viên" : "Học sinh";
+}
+
+function formatGenderLabel(gender) {
+  if (gender === "male") {
+    return "Nam";
+  }
+
+  if (gender === "female") {
+    return "Nữ";
+  }
+
+  return "--";
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "--";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "--";
+  }
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function formatStatValue(value) {
+  const numeric = Number(value);
+
+  return Number.isFinite(numeric) ? String(numeric) : "--";
+}
+
+function setProfileLoadingState(pageType, isLoading) {
+  const root = getProfilePageRoot(pageType);
+
+  if (!root) {
+    return;
+  }
+
+  root.setAttribute("aria-busy", String(isLoading));
+  root.classList.toggle("is-loading", isLoading);
+}
+
+function applyProfileSkeleton(pageType, isLoading) {
+  const root = getProfilePageRoot(pageType);
+
+  if (!root) {
+    return;
+  }
+
+  const selectorList = [
+    "[id$='-profile-avatar']",
+    "[id$='-profile-name']",
+    "[id$='-profile-role']",
+    "[id$='-profile-code']",
+    "[id$='-profile-class']",
+    "[id$='-profile-created-at']",
+    "[id$='-profile-full-name']",
+    "[id$='-profile-username']",
+    "[id$='-profile-gender']",
+    "[id$='-profile-role-detail']",
+    "[id$='-profile-school']",
+    "[id$='-profile-class-extra']",
+    "[id$='-profile-hobby']",
+    "[id$='-profile-dream']",
+    "[id$='-profile-phone']",
+    "[id$='-profile-address']",
+    "[id$='-profile-note']",
+    "[id$='-profile-level']",
+    "[id$='-profile-streak']",
+    "[id$='-profile-completed']",
+    "[id$='-profile-study-minutes']",
+    "[id$='-profile-total-classes']",
+    "[id$='-profile-assignments-created']",
+    "[id$='-profile-students-managed']",
+    "[id$='-profile-average-score']",
+  ];
+
+  selectorList.forEach((selector) => {
+    root.querySelectorAll(selector).forEach((node) => {
+      if (isLoading) {
+        node.classList.add("profile-skeleton");
+      } else {
+        node.classList.remove("profile-skeleton");
+      }
+    });
+  });
+
+  root.querySelectorAll("[data-student-subject]").forEach((node) => {
+    if (isLoading) {
+      node.classList.add("profile-skeleton-bar");
+    } else {
+      node.classList.remove("profile-skeleton-bar");
+    }
+  });
+}
+
+function renderStudentSubjectProgress(profile) {
+  const subjects = Array.isArray(profile?.subjects) ? profile.subjects : [];
+  const subjectMap = new Map(
+    subjects.map((subject) => [subject.name, Number(subject.progress) || 0]),
+  );
+
+  document.querySelectorAll("[data-student-subject]").forEach((node) => {
+    const name = node.dataset.studentSubject;
+    const progress = subjectMap.get(name) ?? 0;
+    node.style.width = `${Math.max(0, Math.min(progress, 100))}%`;
+  });
+
+  document
+    .querySelectorAll("[data-student-subject-percent]")
+    .forEach((node) => {
+      const name = node.dataset.studentSubjectPercent;
+      const progress = subjectMap.get(name) ?? 0;
+      node.textContent = `${Math.max(0, Math.min(progress, 100))}%`;
+    });
+}
+
+function renderStudentProfile(profile) {
+  const avatar = document.getElementById("student-profile-avatar");
+  const name = document.getElementById("student-profile-name");
+  const role = document.getElementById("student-profile-role");
+  const code = document.getElementById("student-profile-code");
+  const className = document.getElementById("student-profile-class");
+  const createdAt = document.getElementById("student-profile-created-at");
+  const level = document.getElementById("student-profile-level");
+  const streak = document.getElementById("student-profile-streak");
+  const completed = document.getElementById("student-profile-completed");
+  const studyMinutes = document.getElementById("student-profile-study-minutes");
+  const fullName = document.getElementById("student-profile-full-name");
+  const username = document.getElementById("student-profile-username");
+  const gender = document.getElementById("student-profile-gender");
+  const roleDetail = document.getElementById("student-profile-role-detail");
+  const school = document.getElementById("student-profile-school");
+  const classExtra = document.getElementById("student-profile-class-extra");
+  const hobby = document.getElementById("student-profile-hobby");
+  const dream = document.getElementById("student-profile-dream");
+
+  if (avatar) {
+    avatar.src = getProfileAvatar(profile);
+  }
+
+  if (name) name.textContent = profile?.name || profile?.fullName || "--";
+  if (role) role.textContent = formatRoleLabel(profile?.role);
+  if (code) code.textContent = profile?.userCode || "--";
+  if (className) className.textContent = profile?.className || "--";
+  if (createdAt) createdAt.textContent = formatDateTime(profile?.createdAt);
+  if (level) level.textContent = formatStatValue(profile?.stats?.level);
+
+  if (streak) {
+    streak.innerHTML = `${formatStatValue(profile?.stats?.streak)} <span>ngày</span>`;
+  }
+
+  if (completed) {
+    completed.innerHTML = `${formatStatValue(profile?.stats?.completedQuestions)} <span>câu hỏi</span>`;
+  }
+
+  if (studyMinutes) {
+    studyMinutes.innerHTML = `${formatStatValue(profile?.stats?.studyMinutes)} <span>phút</span>`;
+  }
+
+  if (fullName) {
+    fullName.textContent = profile?.name || profile?.fullName || "--";
+  }
+
+  if (username) username.textContent = profile?.username || "--";
+  if (gender) gender.textContent = formatGenderLabel(profile?.gender);
+  if (roleDetail) roleDetail.textContent = formatRoleLabel(profile?.role);
+  if (school) school.textContent = profile?.school || "--";
+  if (classExtra) classExtra.textContent = profile?.className || "--";
+  if (hobby) hobby.textContent = profile?.hobby || "--";
+  if (dream) dream.textContent = profile?.dream || "--";
+
+  renderStudentSubjectProgress(profile);
+}
+
+function renderTeacherProfile(profile) {
+  const avatar = document.getElementById("teacher-profile-avatar");
+  const name = document.getElementById("teacher-profile-name");
+  const role = document.getElementById("teacher-profile-role");
+  const code = document.getElementById("teacher-profile-code");
+  const school = document.getElementById("teacher-profile-school");
+  const createdAt = document.getElementById("teacher-profile-created-at");
+  const fullName = document.getElementById("teacher-profile-full-name");
+  const username = document.getElementById("teacher-profile-username");
+  const gender = document.getElementById("teacher-profile-gender");
+  const roleDetail = document.getElementById("teacher-profile-role-detail");
+  const phone = document.getElementById("teacher-profile-phone");
+  const address = document.getElementById("teacher-profile-address");
+  const note = document.getElementById("teacher-profile-note");
+  const totalClasses = document.getElementById("teacher-profile-total-classes");
+  const assignmentsCreated = document.getElementById(
+    "teacher-profile-assignments-created",
+  );
+  const studentsManaged = document.getElementById(
+    "teacher-profile-students-managed",
+  );
+  const averageScore = document.getElementById("teacher-profile-average-score");
+  const extra = document.getElementById("teacher-profile-extra");
+  const birthdate = document.getElementById("teacher-profile-birthdate");
+  const email = document.getElementById("teacher-profile-email");
+  const classTags = document.querySelectorAll("[data-teacher-class-tag]");
+
+  if (avatar) {
+    avatar.src = getProfileAvatar(profile);
+  }
+  if (name) name.textContent = profile?.name || profile?.fullName || "--";
+  if (role) role.textContent = formatRoleLabel(profile?.role);
+  if (code) code.textContent = profile?.userCode || "--";
+  if (school) school.textContent = profile?.school || "--";
+  if (createdAt) createdAt.textContent = formatDateTime(profile?.createdAt);
+  if (fullName) {
+    fullName.textContent = profile?.name || profile?.fullName || "--";
+  }
+  if (username) username.textContent = profile?.username || "--";
+  if (gender) gender.textContent = formatGenderLabel(profile?.gender);
+  if (roleDetail) roleDetail.textContent = formatRoleLabel(profile?.role);
+  if (phone) phone.textContent = profile?.phone || "--";
+  if (address) address.textContent = profile?.address || "--";
+  if (note) note.textContent = profile?.note || "--";
+  if (extra) extra.textContent = profile?.note || profile?.address || "--";
+  if (birthdate) birthdate.textContent = formatDateTime(profile?.createdAt);
+  if (email) email.textContent = profile?.email || "--";
+
+  const stats = profile?.stats || {};
+  if (totalClasses) {
+    totalClasses.textContent = formatStatValue(stats.totalClasses);
+  }
+  if (assignmentsCreated) {
+    assignmentsCreated.textContent = formatStatValue(stats.assignmentsCreated);
+  }
+  if (studentsManaged) {
+    studentsManaged.textContent = formatStatValue(stats.studentsManaged);
+  }
+  if (averageScore) {
+    averageScore.textContent = formatStatValue(stats.averageScore);
+  }
+
+  const tags =
+    Array.isArray(profile?.classTags) && profile.classTags.length > 0
+      ? profile.classTags
+      : [];
+
+  if (classTags.length > 0) {
+    classTags.forEach((tag, index) => {
+      tag.textContent = tags[index] || tags[0] || "--";
+    });
+  }
+}
+
+function updateSidebarProfileCards(profile) {
+  renderSidebarProfileCards(profile);
+}
+
+function renderProfileView(profile) {
+  const profileType = profile?.role === "teacher" ? "teacher" : "student";
+
+  profileState.current = profile;
+
+  if (profileType === "teacher") {
+    renderTeacherProfile(profile);
+  } else {
+    renderStudentProfile(profile);
+  }
+
+  updateSidebarProfileCards(profile);
+
+  applyProfileSkeleton(profileType, false);
+  setProfileLoadingState(profileType, false);
+}
+
+function renderProfileError(profileType, message) {
+  const fallbackMessage = message || "Không thể tải hồ sơ người dùng.";
+  console.warn(fallbackMessage);
+  setProfileLoadingState(profileType, false);
+  applyProfileSkeleton(profileType, false);
+  setSidebarCardsLoading(false);
+}
+
+async function ensureProfileLoaded(pageId) {
+  const profileType = getProfilePageType(pageId);
+
+  if (!profileType) {
+    return;
+  }
+
+  try {
+    profileState.loading = true;
+    setProfileLoadingState(profileType, true);
+    applyProfileSkeleton(profileType, true);
+    setSidebarCardsLoading(true);
+
+    const profile = await window.EduKidsProfileService.fetchCurrentProfile();
+
+    if (!profile) {
+      throw new Error("Không tìm thấy hồ sơ người dùng.");
+    }
+
+    profileState.current = profile;
+    profileState.error = null;
+    bootstrapState.currentUser = profile;
+    window.EduKidsCurrentUser = profile;
+    renderProfileView(profile);
+  } catch (error) {
+    profileState.error = error;
+    renderProfileError(
+      profileType,
+      error.message || "Lỗi tải hồ sơ người dùng.",
+    );
+  } finally {
+    profileState.loading = false;
+  }
+}
+
+function buildProfileEditModal(profile) {
+  const isTeacher = profile?.role === "teacher";
+  const title = isTeacher
+    ? "Chỉnh sửa hồ sơ giáo viên"
+    : "Chỉnh sửa hồ sơ học sinh";
+  const extraFields = isTeacher
+    ? `
+      <div class="profile-edit-field">
+        <label for="profile-school">Trường</label>
+        <input id="profile-school" name="school" type="text" value="${escapeHtml(profile?.school || "")}" placeholder="Nhập tên trường" />
+      </div>
+      <div class="profile-edit-field">
+        <label for="profile-phone">Số điện thoại</label>
+        <input id="profile-phone" name="phone" type="text" value="${escapeHtml(profile?.phone || "")}" placeholder="Nhập số điện thoại" />
+      </div>
+      <div class="profile-edit-field">
+        <label for="profile-address">Địa chỉ</label>
+        <input id="profile-address" name="address" type="text" value="${escapeHtml(profile?.address || "")}" placeholder="Nhập địa chỉ" />
+      </div>
+      <div class="profile-edit-field profile-edit-field-full">
+        <label for="profile-note">Ghi chú</label>
+        <textarea id="profile-note" name="note" rows="4" placeholder="Nhập ghi chú">${escapeHtml(profile?.note || "")}</textarea>
+      </div>
+    `
+    : `
+      <div class="profile-edit-field">
+        <label for="profile-school">Trường</label>
+        <input id="profile-school" name="school" type="text" value="${escapeHtml(profile?.school || "")}" placeholder="Nhập tên trường" />
+      </div>
+      <div class="profile-edit-field">
+        <label for="profile-class-name">Lớp</label>
+        <input id="profile-class-name" name="className" type="text" value="${escapeHtml(profile?.className || "")}" placeholder="Nhập lớp" />
+      </div>
+      <div class="profile-edit-field profile-edit-field-full">
+        <label for="profile-hobby">Sở thích</label>
+        <input id="profile-hobby" name="hobby" type="text" value="${escapeHtml(profile?.hobby || "")}" placeholder="Nhập sở thích" />
+      </div>
+      <div class="profile-edit-field profile-edit-field-full">
+        <label for="profile-dream">Ước mơ</label>
+        <input id="profile-dream" name="dream" type="text" value="${escapeHtml(profile?.dream || "")}" placeholder="Nhập ước mơ" />
+      </div>
+    `;
+
+  const classTags =
+    Array.isArray(profile?.classTags) && profile.classTags.length > 0
+      ? profile.classTags
+      : [];
+
+  return `
+    <form class="profile-edit-form" data-profile-edit-form>
+      <div class="profile-edit-grid">
+        <section class="profile-edit-avatar-card">
+          <h4>Ảnh đại diện</h4>
+          <div class="profile-edit-avatar">
+            <img src="${getProfileAvatar(profile)}" alt="Ảnh đại diện" />
+          </div>
+          <button class="profile-edit-avatar-btn" type="button" disabled>
+            Ảnh tự động theo giới tính và vai trò
+          </button>
+          <p class="profile-edit-help">JPG, PNG tối đa 2MB</p>
+        </section>
+
+        <section class="profile-edit-info-card">
+          <h4>Thông tin cá nhân</h4>
+          <div class="profile-edit-field">
+            <label for="profile-name">Họ và tên</label>
+            <input id="profile-name" name="name" type="text" value="${escapeHtml(profile?.name || profile?.fullName || "")}" placeholder="Nhập họ và tên" />
+          </div>
+          <div class="profile-edit-field">
+            <label for="profile-code">Mã ${isTeacher ? "giáo viên" : "học sinh"}</label>
+            <input id="profile-code" type="text" value="${escapeHtml(profile?.userCode || "")}" readonly />
+          </div>
+          <div class="profile-edit-field">
+            <label for="profile-username">Tên đăng nhập</label>
+            <input id="profile-username" name="username" type="text" value="${escapeHtml(profile?.username || "")}" placeholder="Nhập tên đăng nhập" />
+          </div>
+          <div class="profile-edit-field">
+            <label for="profile-role">Vai trò</label>
+            <input id="profile-role" type="text" value="${escapeHtml(formatRoleLabel(profile?.role))}" readonly />
+          </div>
+          <div class="profile-edit-field">
+            <label for="profile-gender">Giới tính</label>
+            <select id="profile-gender" name="gender">
+              <option value="male" ${profile?.gender === "male" ? "selected" : ""}>Nam</option>
+              <option value="female" ${profile?.gender === "female" ? "selected" : ""}>Nữ</option>
+            </select>
+          </div>
+          ${extraFields}
+        </section>
+      </div>
+
+      ${
+        isTeacher
+          ? `
+            <section class="profile-edit-tags-card">
+              <h4>Lớp đang chủ nhiệm</h4>
+              <div class="profile-edit-tag-list">
+                ${
+                  classTags.length > 0
+                    ? classTags
+                        .map(
+                          (tag) =>
+                            `<span class="profile-edit-tag">${escapeHtml(tag)}</span>`,
+                        )
+                        .join("")
+                    : `<span class="profile-edit-tag is-empty">Chưa cập nhật</span>`
+                }
+              </div>
+            </section>
+          `
+          : ""
+      }
+
+      <div class="profile-edit-actions">
+        <button type="button" class="profile-edit-cancel-btn" data-profile-edit-cancel>Hủy bỏ</button>
+        <button type="submit" class="profile-edit-save-btn">Lưu thay đổi</button>
+      </div>
+
+      <div class="profile-edit-feedback" data-profile-edit-feedback aria-live="polite"></div>
+    </form>
+  `;
+}
+
+async function openProfileEditModal() {
+  let profile = profileState.current || getCurrentAuthUser();
+
+  if (!profile?.userCode && window.EduKidsProfileService?.fetchCurrentProfile) {
+    try {
+      profile = await window.EduKidsProfileService.fetchCurrentProfile();
+      profileState.current = profile;
+    } catch (error) {
+      console.warn(error?.message || "Không thể tải hồ sơ.");
+      return;
+    }
+  }
+
+  if (!profile) {
+    console.warn("Không có dữ liệu hồ sơ để chỉnh sửa.");
+    return;
+  }
+
+  const modal = document.createElement("div");
+  modal.className = "modal-overlay profile-edit-overlay";
+  modal.innerHTML = `
+    <div class="modal profile-edit-modal">
+      <div class="modal-header">
+        <h3>${profile.role === "teacher" ? "Chỉnh sửa hồ sơ giáo viên" : "Chỉnh sửa hồ sơ học sinh"}</h3>
+        <button class="close-btn" type="button" aria-label="Đóng cửa sổ">×</button>
+      </div>
+      <div class="modal-content">
+        ${buildProfileEditModal(profile)}
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeModal = () => modal.remove();
+  modal.querySelector(".close-btn")?.addEventListener("click", closeModal);
+  modal
+    .querySelector("[data-profile-edit-cancel]")
+    ?.addEventListener("click", closeModal);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  const form = modal.querySelector("[data-profile-edit-form]");
+  const feedback = modal.querySelector("[data-profile-edit-feedback]");
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalLabel = submitButton?.textContent || "";
+
+    try {
+      if (feedback) {
+        feedback.textContent = "Đang lưu thay đổi...";
+      }
+
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Đang lưu...";
+      }
+
+      const formData = new FormData(form);
+      const payload = {
+        name: String(formData.get("name") || "").trim(),
+        username: String(formData.get("username") || "").trim(),
+        gender: String(formData.get("gender") || "").trim(),
+      };
+
+      if (profile.role === "teacher") {
+        payload.school = String(formData.get("school") || "").trim();
+        payload.phone = String(formData.get("phone") || "").trim();
+        payload.address = String(formData.get("address") || "").trim();
+        payload.note = String(formData.get("note") || "").trim();
+      } else {
+        payload.school = String(formData.get("school") || "").trim();
+        payload.className = String(formData.get("className") || "").trim();
+        payload.hobby = String(formData.get("hobby") || "").trim();
+        payload.dream = String(formData.get("dream") || "").trim();
+      }
+
+      const updatedProfile =
+        await window.EduKidsProfileService.updateCurrentProfile(payload);
+
+      profileState.current = updatedProfile;
+      profileState.error = null;
+      bootstrapState.currentUser = updatedProfile;
+      window.EduKidsCurrentUser = updatedProfile;
+      saveAuthSession(
+        updatedProfile,
+        localStorage.getItem("authToken") || localStorage.getItem("token"),
+      );
+      renderProfileView(updatedProfile);
+      console.info("Đã cập nhật hồ sơ thành công.");
+      closeModal();
+    } catch (error) {
+      if (feedback) {
+        feedback.textContent = error.message || "Không thể cập nhật hồ sơ.";
+      }
+      console.warn(error?.message || "Không thể cập nhật hồ sơ.");
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = originalLabel || "Lưu thay đổi";
+      }
+    }
+  });
+}
+
+document.addEventListener("click", (event) => {
+  const editButton = event.target.closest(
+    ".student-profile-edit-btn, .teacher-profile-edit-btn",
+  );
+
+  if (!editButton) {
+    return;
+  }
+
+  void openProfileEditModal();
+});
+
+const STUDENT_QUIZ_DEFAULTS = {
+  grade: "1",
+  subject: "math",
+};
+
+const studentQuizState = {
+  initialized: false,
+  grade: STUDENT_QUIZ_DEFAULTS.grade,
+  subject: STUDENT_QUIZ_DEFAULTS.subject,
+  topics: [],
+  loadedTopicsKey: "",
+  topicsMessage: "",
+  selectedTopicId: "",
+  quiz: null,
+  answers: [],
+  isSubmitted: false,
+  resultData: null,
+  wrongQuestions: [],
+  submissionLoading: false,
+  reviewVisible: false,
+  loadingTopics: false,
+  loadingQuiz: false,
+};
+
+let studentQuizControlsBound = false;
+
+function getStudentQuizRoot() {
+  return document.getElementById("subjects");
+}
+
+function getStudentQuizTopicGrid() {
+  return document.getElementById("student-topic-grid");
+}
+
+function getStudentQuizScreen() {
+  return document.getElementById("student-quiz-screen");
+}
+
+function getStudentResultScreen() {
+  return document.getElementById("student-result-screen");
+}
+
+function getStudentWrongReviewScreen() {
+  return document.getElementById("student-wrong-review-screen");
+}
+
+function getStudentQuizEmptyState() {
+  return document.getElementById("student-topic-empty");
+}
+
+function getStudentQuizGradeSelect() {
+  return document.getElementById("quiz-grade-select");
+}
+
+function getStudentQuizSubjectSelect() {
+  return document.getElementById("quiz-subject-select");
+}
+
+function getStudentQuizLoadButton() {
+  return document.getElementById("quiz-load-topics-btn");
+}
+
+function normalizeQuizText(value) {
+  return String(value || "").trim();
+}
+
+function getInitialStudentQuizGrade() {
+  const profile = getCurrentAuthUser();
+  const className = normalizeQuizText(profile?.className);
+  const gradeMatch = className.match(/(\d+)/);
+
+  if (gradeMatch) {
+    return gradeMatch[1];
+  }
+
+  const profileGrade = normalizeQuizText(profile?.grade);
+
+  if (profileGrade) {
+    return profileGrade;
+  }
+
+  return STUDENT_QUIZ_DEFAULTS.grade;
+}
+
+function getStudentTopicImage(topic) {
+  const image = normalizeQuizText(topic?.image);
+
+  if (image) {
+    return image;
+  }
+
+  if (topic?.subject === "english") {
+    return "assets/englishTopic/vocabulary.png";
+  }
+
+  return "assets/math.png";
+}
+
+function getSelectedQuizAnswer(questionIndex) {
+  return (
+    studentQuizState.answers.find(
+      (item) => item.questionIndex === questionIndex,
+    )?.selected || ""
+  );
+}
+
+function setStudentQuizAnswer(questionIndex, selected) {
+  const existingIndex = studentQuizState.answers.findIndex(
+    (item) => item.questionIndex === questionIndex,
+  );
+
+  if (existingIndex >= 0) {
+    studentQuizState.answers[existingIndex].selected = selected;
+  } else {
+    studentQuizState.answers.push({
+      questionIndex,
+      selected,
+    });
+  }
+}
+
+function getStudentQuizAnsweredCount() {
+  return studentQuizState.answers.filter((item) =>
+    normalizeQuizText(item.selected),
+  ).length;
+}
+
+function getQuizCorrectAnswerLabel(question) {
+  const correctOption = Array.isArray(question?.options)
+    ? question.options.find((option) => option && option.correct === true)
+    : null;
+
+  return normalizeQuizText(correctOption?.label).toUpperCase();
+}
+
+function getQuizCorrectAnswerText(question) {
+  const correctOption = Array.isArray(question?.options)
+    ? question.options.find((option) => option && option.correct === true)
+    : null;
+
+  return normalizeQuizText(correctOption?.text);
+}
+
+function getSubmittedAnswerOption(question, selectedLabel) {
+  const normalizedSelected = normalizeQuizText(selectedLabel).toUpperCase();
+
+  return Array.isArray(question?.options)
+    ? question.options.find(
+        (option) =>
+          normalizeQuizText(option?.label).toUpperCase() === normalizedSelected,
+      ) || null
+    : null;
+}
+
+function resetQuizSubmissionState() {
+  studentQuizState.isSubmitted = false;
+  studentQuizState.resultData = null;
+  studentQuizState.wrongQuestions = [];
+  studentQuizState.submissionLoading = false;
+  studentQuizState.reviewVisible = false;
+}
+
+function scrollToElement(elementId) {
+  const element = document.getElementById(elementId);
+
+  if (element) {
+    element.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function renderStudentTopicEmpty(message) {
+  const empty = getStudentQuizEmptyState();
+
+  if (!empty) {
+    return;
+  }
+
+  empty.textContent = message;
+  empty.classList.remove("hidden");
+}
+
+function hideStudentTopicEmpty() {
+  const empty = getStudentQuizEmptyState();
+
+  if (empty) {
+    empty.classList.add("hidden");
+  }
+}
+
+function updateStudentQuizControls() {
+  const gradeSelect = getStudentQuizGradeSelect();
+  const subjectSelect = getStudentQuizSubjectSelect();
+
+  if (gradeSelect && gradeSelect.value !== studentQuizState.grade) {
+    gradeSelect.value = studentQuizState.grade;
+  }
+
+  if (subjectSelect && subjectSelect.value !== studentQuizState.subject) {
+    subjectSelect.value = studentQuizState.subject;
+  }
+}
+
+function renderStudentTopicCards() {
+  const grid = getStudentQuizTopicGrid();
+
+  if (!grid) {
+    return;
+  }
+
+  const topics = Array.isArray(studentQuizState.topics)
+    ? studentQuizState.topics
+    : [];
+
+  if (studentQuizState.loadingTopics) {
+    grid.innerHTML = `
+      <div class="quiz-loading-card">
+        <span class="quiz-loading-spinner"></span>
+        <p>Đang tải chủ đề...</p>
+      </div>
+    `;
+    hideStudentTopicEmpty();
+    return;
+  }
+
+  if (topics.length === 0) {
+    grid.innerHTML = "";
+    renderStudentTopicEmpty(
+      studentQuizState.topicsMessage ||
+        "Không tìm thấy chủ đề nào cho khối và môn học đã chọn.",
+    );
+    return;
+  }
+
+  hideStudentTopicEmpty();
+
+  grid.innerHTML = topics
+    .map((topic) => {
+      const isActive = topic.topicId === studentQuizState.selectedTopicId;
+      const hasQuiz = topic.hasQuiz !== false;
+
+      return `
+        <button
+          type="button"
+          class="topic-card ${isActive ? "is-active" : ""} ${hasQuiz ? "" : "is-disabled"}"
+          data-topic-id="${escapeHtml(topic.topicId)}"
+          data-topic-name="${escapeHtml(topic.name)}"
+          ${hasQuiz ? "" : "disabled"}
+        >
+          <img class="topic-card-image" src="${escapeHtml(getStudentTopicImage(topic))}" alt="${escapeHtml(topic.name)}" />
+          <span class="topic-card-grade">Lớp ${escapeHtml(topic.grade)}</span>
+          <h3 class="topic-card-title">${escapeHtml(topic.name)}</h3>
+          <p class="topic-card-description">${escapeHtml(topic.description || "Chọn để mở quiz để luyện.")}</p>
+          ${hasQuiz ? "" : `<span class="topic-card-status">Chưa có quiz</span>`}
+        </button>
+      `;
+    })
+    .join("");
+}
+
+function renderStudentQuizScreen() {
+  const screen = getStudentQuizScreen();
+
+  if (!screen) {
+    return;
+  }
+
+  const quiz = studentQuizState.quiz;
+  const resultScreen = getStudentResultScreen();
+  const reviewScreen = getStudentWrongReviewScreen();
+
+  if (studentQuizState.loadingQuiz) {
+    screen.classList.remove("hidden");
+    screen.innerHTML = `
+      <div class="quiz-panel-header">
+        <div>
+          <span class="quiz-panel-kicker">Quiz</span>
+          <h2>đang tạo bài quiz...</h2>
+        </div>
+      </div>
+      <div class="quiz-loading-card">
+        <span class="quiz-loading-spinner"></span>
+        <p>Đang lấy dữ liệu từ Firestore...</p>
+      </div>
+    `;
+    resultScreen?.classList.add("hidden");
+    reviewScreen?.classList.add("hidden");
+    return;
+  }
+
+  if (!quiz) {
+    screen.classList.add("hidden");
+    screen.innerHTML = "";
+    resultScreen?.classList.add("hidden");
+    reviewScreen?.classList.add("hidden");
+    return;
+  }
+
+  const answeredCount = getStudentQuizAnsweredCount();
+  const totalQuestions = Array.isArray(quiz.questions)
+    ? quiz.questions.length
+    : 0;
+  const submitDisabled =
+    studentQuizState.submissionLoading || studentQuizState.isSubmitted;
+
+  screen.classList.remove("hidden");
+  screen.innerHTML = `
+    <div class="quiz-panel-header">
+      <div>
+        <span class="quiz-panel-kicker">Quiz đã lưu</span>
+        <h2>${escapeHtml(quiz.topicName || quiz.topicId || "Bài quiz")}</h2>
+        <p>Lớp: ${escapeHtml(quiz.grade || studentQuizState.grade)} ⬢ ${escapeHtml(quiz.subject || studentQuizState.subject)} ⬢ ${escapeHtml(quiz.topicId || "")}</p>
+      </div>
+      <div class="quiz-panel-progress">
+        <strong>${answeredCount}/${totalQuestions}</strong>
+        <span>đã chọn</span>
+      </div>
+    </div>
+    <div class="quiz-question-list ${studentQuizState.isSubmitted ? "is-submitted" : ""}">
+      ${(Array.isArray(quiz.questions) ? quiz.questions : [])
+        .map((question, questionIndex) => {
+          const selected = getSelectedQuizAnswer(questionIndex);
+          const correctLabel = getQuizCorrectAnswerLabel(question);
+          const isQuestionCorrect =
+            studentQuizState.isSubmitted && selected === correctLabel;
+          const isQuestionWrong =
+            studentQuizState.isSubmitted &&
+            selected &&
+            selected !== correctLabel;
+
+          return `
+            <article class="quiz-question-card ${isQuestionCorrect ? "is-correct" : ""} ${isQuestionWrong ? "is-wrong" : ""}">
+              <div class="quiz-question-meta">Câu ${questionIndex + 1}</div>
+              <h3 class="quiz-question-text">${escapeHtml(question.question)}</h3>
+              <div class="quiz-option-grid">
+                ${(Array.isArray(question.options) ? question.options : [])
+                  .map((option) => {
+                    const optionLabel = normalizeQuizText(
+                      option.label,
+                    ).toUpperCase();
+                    const isSelected = selected === optionLabel;
+                    const isCorrectAnswer =
+                      studentQuizState.isSubmitted &&
+                      optionLabel === correctLabel;
+                    const isWrongSelection =
+                      studentQuizState.isSubmitted &&
+                      isSelected &&
+                      optionLabel !== correctLabel;
+
+                    return `
+                      <button
+                        type="button"
+                        class="quiz-option-btn ${isSelected ? "is-selected" : ""} ${isCorrectAnswer ? "is-correct" : ""} ${isWrongSelection ? "is-wrong" : ""}"
+                        data-question-index="${questionIndex}"
+                        data-option-label="${escapeHtml(optionLabel)}"
+                        ${studentQuizState.isSubmitted ? "disabled" : ""}
+                      >
+                        <span class="quiz-option-label">${escapeHtml(optionLabel)}</span>
+                        <span class="quiz-option-text">${escapeHtml(option.text)}</span>
+                      </button>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+    <div class="quiz-actions">
+      <button
+        type="button"
+        class="quiz-submit-btn"
+        data-action="submit-quiz"
+        ${submitDisabled ? "disabled" : ""}
+      >
+        ${studentQuizState.submissionLoading ? "Đang nộp..." : studentQuizState.isSubmitted ? "Quiz đã nộp" : "Submit Quiz"}
+      </button>
+    </div>
+  `;
+}
+
+function renderStudentResultScreen() {
+  const screen = getStudentResultScreen();
+
+  if (!screen) {
+    return;
+  }
+
+  if (!studentQuizState.isSubmitted || !studentQuizState.resultData) {
+    screen.classList.add("hidden");
+    screen.innerHTML = "";
+    return;
+  }
+
+  const result = studentQuizState.resultData;
+
+  screen.classList.remove("hidden");
+  screen.innerHTML = `
+    <div class="result-card">
+      <div class="result-card-header">
+        <div>
+          <span class="quiz-panel-kicker">Kết quả</span>
+          <h2>Bạn đã hoàn thành bài quiz</h2>
+        </div>
+        <div class="result-score-badge">${escapeHtml(result.score)}%</div>
+      </div>
+
+      <div class="result-stats">
+        <div class="result-stat">
+          <strong>${escapeHtml(result.correctAnswers)}</strong>
+          <span>đúng</span>
+        </div>
+        <div class="result-stat">
+          <strong>${escapeHtml(result.totalQuestions)}</strong>
+          <span>Tổng câu</span>
+        </div>
+      </div>
+
+      <div class="result-summary">
+        <p><b>${escapeHtml(result.correctAnswers)}</b> / <b>${escapeHtml(result.totalQuestions)}</b> câu trả lời đúng.</p>
+      </div>
+
+      <div class="result-actions">
+        <button type="button" class="quiz-link-btn" data-action="show-wrong-review">
+          Xem câu sai
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderStudentWrongAnswerScreen() {
+  const screen = getStudentWrongReviewScreen();
+
+  if (!screen) {
+    return;
+  }
+
+  if (!studentQuizState.isSubmitted) {
+    screen.classList.add("hidden");
+    screen.innerHTML = "";
+    return;
+  }
+
+  const wrongQuestions = Array.isArray(studentQuizState.wrongQuestions)
+    ? studentQuizState.wrongQuestions
+    : [];
+
+  screen.classList.remove("hidden");
+  screen.innerHTML = `
+    <div class="wrong-review-card">
+      <div class="wrong-review-header">
+        <div>
+          <span class="quiz-panel-kicker">Wrong Answer Review</span>
+          <h2>Câu trả lời sai</h2>
+        </div>
+        <div class="wrong-review-count">${escapeHtml(wrongQuestions.length)} câu</div>
+      </div>
+
+      ${
+        wrongQuestions.length === 0
+          ? `<div class="quiz-empty">Không có câu sai. Bài làm của bạn rất tốt.</div>`
+          : `
+            <div class="wrong-review-list">
+              ${wrongQuestions
+                .map((item) => {
+                  const userAnswerLabel = normalizeQuizText(item.userAnswer);
+                  const correctAnswerLabel = normalizeQuizText(
+                    item.correctAnswer,
+                  );
+                  const userAnswerText = normalizeQuizText(item.userAnswerText);
+                  const correctAnswerText = normalizeQuizText(
+                    item.correctAnswerText,
+                  );
+
+                  return `
+                    <article class="wrong-review-item">
+                      <div class="wrong-review-meta">Câu ${Number(item.questionIndex) + 1}</div>
+                      <h3>${escapeHtml(item.question)}</h3>
+                      <div class="wrong-review-row">
+                        <span>Bạn chọn</span>
+                        <strong>${escapeHtml(userAnswerLabel || "Chưa chọn")}</strong>
+                        <p>${escapeHtml(userAnswerText || "Không có lựa chọn")}</p>
+                      </div>
+                      <div class="wrong-review-row is-correct">
+                        <span>Đáp án đúng</span>
+                        <strong>${escapeHtml(correctAnswerLabel)}</strong>
+                        <p>${escapeHtml(correctAnswerText)}</p>
+                      </div>
+                    </article>
+                  `;
+                })
+                .join("")}
+            </div>
+          `
+      }
+    </div>
+  `;
+}
+
+function renderStudentQuizFlow() {
+  renderStudentQuizScreen();
+  renderStudentResultScreen();
+  renderStudentWrongAnswerScreen();
+}
+
+async function loadStudentQuizTopics() {
+  const gradeSelect = getStudentQuizGradeSelect();
+  const subjectSelect = getStudentQuizSubjectSelect();
+  const grade = normalizeQuizText(gradeSelect?.value || studentQuizState.grade);
+  const subject = normalizeQuizText(
+    subjectSelect?.value || studentQuizState.subject,
+  );
+
+  studentQuizState.grade = grade || STUDENT_QUIZ_DEFAULTS.grade;
+  studentQuizState.subject = subject || STUDENT_QUIZ_DEFAULTS.subject;
+  studentQuizState.selectedTopicId = "";
+  studentQuizState.quiz = null;
+  studentQuizState.answers = [];
+  resetQuizSubmissionState();
+  studentQuizState.loadedTopicsKey = "";
+  studentQuizState.topicsMessage = "";
+  studentQuizState.loadingTopics = true;
+  studentQuizState.loadingQuiz = false;
+
+  updateStudentQuizControls();
+  renderStudentTopicCards();
+  renderStudentQuizFlow();
+
+  try {
+    const params = new URLSearchParams({
+      grade: studentQuizState.grade,
+      subject: studentQuizState.subject,
+    });
+
+    const response = await apiRequestWithAuth(
+      `/api/quiz/topics?${params.toString()}`,
+      {
+        method: "GET",
+      },
+    );
+
+    studentQuizState.topics = Array.isArray(response.data) ? response.data : [];
+    studentQuizState.loadedTopicsKey = `${studentQuizState.grade}:${studentQuizState.subject}`;
+    studentQuizState.topicsMessage = "";
+  } catch (error) {
+    studentQuizState.topics = [];
+    studentQuizState.topicsMessage =
+      error.message || "Không thể tải danh sách chủ đề.";
+    showToast(studentQuizState.topicsMessage, "error");
+  } finally {
+    studentQuizState.loadingTopics = false;
+    renderStudentTopicCards();
+  }
+}
+
+async function loadStudentQuizByTopic(topicId) {
+  const normalizedTopicId = normalizeQuizText(topicId);
+
+  if (!normalizedTopicId) {
+    return;
+  }
+
+  studentQuizState.selectedTopicId = normalizedTopicId;
+  studentQuizState.loadingQuiz = true;
+  studentQuizState.quiz = null;
+  studentQuizState.answers = [];
+  resetQuizSubmissionState();
+
+  renderStudentTopicCards();
+  renderStudentQuizFlow();
+
+  try {
+    const params = new URLSearchParams({
+      grade: studentQuizState.grade,
+      subject: studentQuizState.subject,
+      topicId: normalizedTopicId,
+    });
+
+    const response = await apiRequestWithAuth(
+      `/api/quiz/by-topic?${params.toString()}`,
+      {
+        method: "GET",
+      },
+    );
+
+    studentQuizState.quiz = response.data || null;
+    studentQuizState.answers = [];
+  } catch (error) {
+    studentQuizState.quiz = null;
+
+    if ((error.message || "").toLowerCase().includes("quiz not found")) {
+      showToast("Chủ đề này chưa có quiz được tạo.", "error");
+    } else {
+      showToast(error.message || "Không thể tải quiz cho chủ đề này.", "error");
+    }
+  } finally {
+    studentQuizState.loadingQuiz = false;
+    renderStudentTopicCards();
+    renderStudentQuizFlow();
+  }
+}
+
+async function submitStudentQuiz() {
+  const quiz = studentQuizState.quiz;
+
+  if (!quiz) {
+    showToast("Chưa có quiz để nộp.", "error");
+    return;
+  }
+
+  if (studentQuizState.submissionLoading || studentQuizState.isSubmitted) {
+    return;
+  }
+
+  studentQuizState.submissionLoading = true;
+  renderStudentQuizFlow();
+
+  try {
+    const response = await apiRequestWithAuth("/api/quiz/submit", {
+      method: "POST",
+      body: {
+        quizId: quiz.id || quiz.quizId || "",
+        answers: studentQuizState.answers,
+      },
+    });
+
+    studentQuizState.isSubmitted = true;
+    studentQuizState.resultData = response.data || null;
+    studentQuizState.wrongQuestions = Array.isArray(
+      response.data?.wrongQuestions,
+    )
+      ? response.data.wrongQuestions
+      : [];
+    studentQuizState.reviewVisible = true;
+    renderStudentQuizFlow();
+    showToast("Đã nộp quiz thành công.", "success");
+    scrollToElement("student-result-screen");
+  } catch (error) {
+    showToast(error.message || "Không thể nộp quiz.", "error");
+  } finally {
+    studentQuizState.submissionLoading = false;
+    renderStudentQuizFlow();
+  }
+}
+
+function showStudentWrongAnswerReview() {
+  if (!studentQuizState.isSubmitted) {
+    return;
+  }
+
+  studentQuizState.reviewVisible = true;
+  renderStudentWrongAnswerScreen();
+  scrollToElement("student-wrong-review-screen");
+}
+
+function openSubject(subject) {
+  if (subject) {
+    studentQuizState.subject =
+      normalizeQuizText(subject) || STUDENT_QUIZ_DEFAULTS.subject;
+    updateStudentQuizControls();
+  }
+
+  studentQuizState.topics = [];
+  studentQuizState.loadedTopicsKey = "";
+  changePage("subjects");
+}
+
+function showSubject(subject, button) {
+  if (button) {
+    document
+      .querySelectorAll(".quiz-subject-tab")
+      .forEach((tab) => tab.classList.remove("active"));
+    button.classList.add("active");
+  }
+
+  if (subject) {
+    studentQuizState.subject =
+      normalizeQuizText(subject) || STUDENT_QUIZ_DEFAULTS.subject;
+    updateStudentQuizControls();
+    studentQuizState.topics = [];
+    studentQuizState.loadedTopicsKey = "";
+    void loadStudentQuizTopics();
+  }
+}
+
+function goBackSubjects() {
+  changePage(previousPage === "subjects" ? "student-home" : previousPage);
+}
+
+document.addEventListener("click", (event) => {
+  const topicCard = event.target.closest("[data-topic-id]");
+
+  if (topicCard && getStudentQuizRoot()?.contains(topicCard)) {
+    if (topicCard.disabled) {
+      showToast("Chủ đề này chưa có quiz được tạo.", "error");
+      return;
+    }
+    void loadStudentQuizByTopic(topicCard.dataset.topicId);
+    return;
+  }
+
+  const optionButton = event.target.closest(
+    "[data-question-index][data-option-label]",
+  );
+
+  if (optionButton && getStudentQuizScreen()?.contains(optionButton)) {
+    if (studentQuizState.isSubmitted) {
+      return;
+    }
+
+    const questionIndex = Number(optionButton.dataset.questionIndex);
+    const selected = normalizeQuizText(
+      optionButton.dataset.optionLabel,
+    ).toUpperCase();
+
+    if (Number.isNaN(questionIndex) || !selected) {
+      return;
+    }
+
+    setStudentQuizAnswer(questionIndex, selected);
+    renderStudentQuizFlow();
+    return;
+  }
+
+  const actionButton = event.target.closest("[data-action]");
+
+  if (actionButton && getStudentQuizRoot()?.contains(actionButton)) {
+    const action = actionButton.dataset.action;
+
+    if (action === "submit-quiz") {
+      void submitStudentQuiz();
+    }
+
+    if (action === "show-wrong-review") {
+      showStudentWrongAnswerReview();
+    }
+  }
+});
+
+function bindStudentQuizControlsOnce() {
+  if (studentQuizControlsBound) {
+    return;
+  }
+
+  const gradeSelect = getStudentQuizGradeSelect();
+  const subjectSelect = getStudentQuizSubjectSelect();
+  const loadButton = getStudentQuizLoadButton();
+
+  if (gradeSelect) {
+    gradeSelect.value = studentQuizState.grade;
+    gradeSelect.addEventListener("change", () => {
+      studentQuizState.grade =
+        normalizeQuizText(gradeSelect.value) || STUDENT_QUIZ_DEFAULTS.grade;
+      void loadStudentQuizTopics();
+    });
+  }
+
+  if (subjectSelect) {
+    subjectSelect.value = studentQuizState.subject;
+    subjectSelect.addEventListener("change", () => {
+      studentQuizState.subject =
+        normalizeQuizText(subjectSelect.value) || STUDENT_QUIZ_DEFAULTS.subject;
+      void loadStudentQuizTopics();
+    });
+  }
+
+  if (loadButton) {
+    loadButton.addEventListener("click", () => {
+      void loadStudentQuizTopics();
+    });
+  }
+
+  studentQuizControlsBound = true;
+}
+
+async function initializeStudentQuizPage() {
+  if (getCurrentRole() !== "student") {
+    return;
+  }
+
+  if (!studentQuizState.initialized) {
+    studentQuizState.initialized = true;
+    studentQuizState.grade = getInitialStudentQuizGrade();
+    studentQuizState.subject = STUDENT_QUIZ_DEFAULTS.subject;
+  }
+
+  updateStudentQuizControls();
+
+  const currentTopicsKey = `${studentQuizState.grade}:${studentQuizState.subject}`;
+
+  if (
+    !studentQuizState.topics.length ||
+    studentQuizState.loadedTopicsKey !== currentTopicsKey
+  ) {
+    await loadStudentQuizTopics();
+  } else {
+    renderStudentTopicCards();
+    renderStudentQuizFlow();
+  }
+}
+
+const manualAssignmentState = {
+  classes: [],
+  classId: "",
+  className: "",
+  title: "",
+  description: "",
+  subject: "Math",
+  dueDate: "",
+  questions: [],
+};
+
+let manualAssignmentFormBound = false;
+let teacherAssignmentsUnsubscribe = null;
+let createMethod = "manual";
+
+function getCurrentUserId() {
+  const user = getCurrentAuthUser();
+
+  return String(user?.userId || user?.uid || user?.id || "").trim();
+}
+
+function getAssignmentService() {
+  return window.EduKidsAssignmentService || null;
+}
+
+function createManualQuestion(index = 1) {
+  return {
+    id: generateManualQuestionId(index),
+    question: "",
+    correctAnswer: "",
+    wrongAnswer1: "",
+    wrongAnswer2: "",
+    wrongAnswer3: "",
+  };
+}
+
+function generateManualQuestionId(index = 1) {
+  if (window.crypto?.randomUUID) {
+    return `question-${window.crypto.randomUUID()}`;
+  }
+
+  return `question-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeClassroomRecord(classroom) {
+  if (!classroom || typeof classroom !== "object") {
+    return null;
+  }
+
+  return {
+    id: String(classroom.id || classroom.classId || "").trim(),
+    name: String(classroom.name || classroom.className || "Chưa đặt tên").trim(),
+    className: String(classroom.className || classroom.name || "").trim(),
+    classCode: String(classroom.classCode || classroom.code || "").trim(),
+    teacherId: String(classroom.teacherId || "").trim(),
+    teacherName: String(classroom.teacherName || classroom.teacherUsername || "").trim(),
+    studentCount: Number(classroom.studentCount ?? classroom.studentsCount ?? 0) || 0,
+    createdAt: classroom.createdAt || "",
+  };
+}
+
+function sortClassroomRecords(classrooms) {
+  return [...(Array.isArray(classrooms) ? classrooms : [])].sort((left, right) => {
+    const leftTime = Date.parse(left.createdAt || "") || 0;
+    const rightTime = Date.parse(right.createdAt || "") || 0;
+
+    return rightTime - leftTime;
+  });
+}
+
+function resetManualAssignmentState() {
+  manualAssignmentState.classId = "";
+  manualAssignmentState.className = "";
+  manualAssignmentState.title = "";
+  manualAssignmentState.description = "";
+  manualAssignmentState.subject = "Math";
+  manualAssignmentState.dueDate = "";
+  manualAssignmentState.questions = [createManualQuestion(1)];
+}
+
+function getSelectedManualAssignmentClass() {
+  return (
+    manualAssignmentState.classes.find(
+      (item) => item.id === manualAssignmentState.classId,
+    ) || null
+  );
+}
+
+function getManualAssignmentCard() {
+  return document.querySelector("[data-manual-assignment-root]");
+}
+
+function getManualAssignmentForm() {
+  return document.getElementById("manual-assignment-form");
+}
+
+function getManualAssignmentQuestionList() {
+  return document.querySelector("[data-manual-question-list]");
+}
+
+function getManualAssignmentPreviewPanel() {
+  return document.querySelector("[data-manual-preview-panel]");
+}
+
+function getManualAssignmentClassSelect() {
+  return document.querySelector("[data-manual-class-select]");
+}
+
+function getManualAssignmentTitleInput() {
+  return document.querySelector("[data-manual-title]");
+}
+
+function getManualAssignmentSubjectSelect() {
+  return document.querySelector("[data-manual-subject]");
+}
+
+function getManualAssignmentDueDateInput() {
+  return document.querySelector("[data-manual-due-date]");
+}
+
+function syncManualAssignmentFormFields() {
+  const titleInput = getManualAssignmentTitleInput();
+  const subjectSelect = getManualAssignmentSubjectSelect();
+  const classSelect = getManualAssignmentClassSelect();
+  const dueDateInput = getManualAssignmentDueDateInput();
+
+  if (titleInput) {
+    titleInput.value = manualAssignmentState.title || "";
+  }
+
+  if (subjectSelect) {
+    subjectSelect.value = manualAssignmentState.subject || "Math";
+  }
+
+  if (classSelect) {
+    classSelect.value = manualAssignmentState.classId || "";
+  }
+
+  if (dueDateInput) {
+    dueDateInput.value = manualAssignmentState.dueDate || "";
+  }
+}
+
+function syncManualAssignmentMethodCards() {
+  document.querySelectorAll("[data-create-method]").forEach((card) => {
+    card.classList.toggle("active", card.dataset.method === createMethod);
+  });
+}
+
+function getManualAssignmentDraft() {
+  const selectedClass = getSelectedManualAssignmentClass();
+
+  return {
+    title: String(manualAssignmentState.title || "").trim(),
+    description: String(manualAssignmentState.description || "").trim(),
+    subject: String(manualAssignmentState.subject || "").trim(),
+    classId: String(manualAssignmentState.classId || "").trim(),
+    className: String(
+      selectedClass?.name ||
+        selectedClass?.className ||
+        manualAssignmentState.className ||
+        "",
+    ).trim(),
+    dueDate: String(manualAssignmentState.dueDate || "").trim(),
+    questions: Array.isArray(manualAssignmentState.questions)
+      ? manualAssignmentState.questions.map((question, index) => ({
+          id: String(question?.id || generateManualQuestionId(index + 1)),
+          question: String(question?.question || "").trim(),
+          correctAnswer: String(question?.correctAnswer || "").trim(),
+          wrongAnswer1: String(question?.wrongAnswer1 || "").trim(),
+          wrongAnswer2: String(question?.wrongAnswer2 || "").trim(),
+          wrongAnswer3: String(question?.wrongAnswer3 || "").trim(),
+        }))
+      : [],
+  };
+}
+
+function updateManualAssignmentStateFromElement(target) {
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  if (target.matches("[data-manual-title]")) {
+    manualAssignmentState.title = target.value;
+    return;
+  }
+
+  if (target.matches("[data-manual-subject]")) {
+    manualAssignmentState.subject = target.value || "Math";
+    return;
+  }
+
+  if (target.matches("[data-manual-class-select]")) {
+    manualAssignmentState.classId = target.value || "";
+    const selectedClass = getSelectedManualAssignmentClass();
+    manualAssignmentState.className =
+      selectedClass?.name || selectedClass?.className || "";
+    return;
+  }
+
+  if (target.matches("[data-manual-due-date]")) {
+    manualAssignmentState.dueDate = target.value;
+    return;
+  }
+
+  const block = target.closest("[data-question-block]");
+
+  if (!block) {
+    return;
+  }
+
+  const questionIndex = Number(block.dataset.questionIndex) - 1;
+  const question = manualAssignmentState.questions[questionIndex];
+
+  if (!question) {
+    return;
+  }
+
+  const fieldName = target.getAttribute("name");
+
+  if (!fieldName || !(fieldName in question)) {
+    return;
+  }
+
+  question[fieldName] = target.value;
+}
+
+function normalizeSubjectLabel(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  if (normalized === "math" || normalized === "toán" || normalized === "toan") {
+    return "Math";
+  }
+
+  if (
+    normalized === "english" ||
+    normalized === "tiếng anh" ||
+    normalized === "tieng anh"
+  ) {
+    return "English";
+  }
+
+  return "";
+}
+
+function formatAssignmentDate(value) {
+  if (!value) {
+    return "--";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return date.toLocaleDateString("vi-VN");
+}
+
+function formatAssignmentStatusLabel(status) {
+  const normalized = String(status || "").toLowerCase();
+
+  if (normalized === "active") {
+    return "Đang giao";
+  }
+
+  if (normalized === "draft") {
+    return "Nháp";
+  }
+
+  if (normalized === "done" || normalized === "completed") {
+    return "Hoàn thành";
+  }
+
+  return status || "--";
+}
+
+function renderManualQuestionBlock(question, index) {
+  const questionNumber = index + 1;
+
+  return `
+    <article class="manual-question-card" data-question-block data-question-index="${questionNumber}" data-question-id="${escapeHtml(question.id || "")}">
+      <div class="manual-question-card-head">
+        <span class="manual-question-badge">Câu ${questionNumber}</span>
+        <button
+          type="button"
+          class="manual-question-remove"
+          data-manual-remove-question
+          aria-label="Xoá câu ${questionNumber}"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+
+      <div class="manual-question-field">
+        <label class="auth-field-label" for="manual-question-${questionNumber}">Câu hỏi</label>
+        <input
+          id="manual-question-${questionNumber}"
+          class="auth-input manual-question-input"
+          type="text"
+          name="question"
+          placeholder="Nhập câu hỏi của bạn..."
+          value="${escapeHtml(question.question)}"
+        />
+      </div>
+
+      <div class="manual-answer-grid">
+        <div class="manual-answer-field is-correct">
+          <label class="auth-field-label" for="manual-correct-${questionNumber}">Đáp án đúng</label>
+          <input
+            id="manual-correct-${questionNumber}"
+            class="auth-input manual-answer-input"
+            type="text"
+            name="correctAnswer"
+            placeholder="Nhập đáp án đúng"
+            value="${escapeHtml(question.correctAnswer)}"
+          />
+        </div>
+
+        <div class="manual-answer-field is-wrong">
+          <label class="auth-field-label" for="manual-wrong-1-${questionNumber}">Đáp án sai 1</label>
+          <input
+            id="manual-wrong-1-${questionNumber}"
+            class="auth-input manual-answer-input"
+            type="text"
+            name="wrongAnswer1"
+            placeholder="Nhập đáp án sai"
+            value="${escapeHtml(question.wrongAnswer1)}"
+          />
+        </div>
+
+        <div class="manual-answer-field is-wrong">
+          <label class="auth-field-label" for="manual-wrong-2-${questionNumber}">Đáp án sai 2</label>
+          <input
+            id="manual-wrong-2-${questionNumber}"
+            class="auth-input manual-answer-input"
+            type="text"
+            name="wrongAnswer2"
+            placeholder="Nhập đáp án sai"
+            value="${escapeHtml(question.wrongAnswer2)}"
+          />
+        </div>
+
+        <div class="manual-answer-field is-wrong">
+          <label class="auth-field-label" for="manual-wrong-3-${questionNumber}">Đáp án sai 3</label>
+          <input
+            id="manual-wrong-3-${questionNumber}"
+            class="auth-input manual-answer-input"
+            type="text"
+            name="wrongAnswer3"
+            placeholder="Nhập đáp án sai"
+            value="${escapeHtml(question.wrongAnswer3)}"
+          />
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderManualQuestionList() {
+  const list = getManualAssignmentQuestionList();
+
+  if (!list) {
+    return;
+  }
+
+  if (!Array.isArray(manualAssignmentState.questions) || manualAssignmentState.questions.length === 0) {
+    manualAssignmentState.questions = [createManualQuestion(1)];
+  }
+
+  list.innerHTML = manualAssignmentState.questions
+    .map((question, index) => renderManualQuestionBlock(question, index))
+    .join("");
+}
+
+function renderManualAssignmentShell() {
+  const card = getManualAssignmentCard();
+
+  if (!card) {
+    return;
+  }
+
+  card.innerHTML = `
+    <div class="create-assignment-shell">
+      <div class="create-assignment-layout">
+        <section class="create-assignment-main">
+          <header class="create-assignment-hero">
+            <div class="create-assignment-hero-icon" aria-hidden="true">
+              <span>✦</span>
+            </div>
+
+            <div class="create-assignment-hero-copy">
+              <h1>Tạo bài tập mới</h1>
+              <p>Tạo bài tập thủ công hoặc bằng AI nhanh chóng</p>
+            </div>
+          </header>
+
+          <form id="manual-assignment-form" class="manual-assignment-form">
+            <section class="manual-assignment-section manual-assignment-section-card">
+              <div class="manual-assignment-meta">
+                <div class="auth-field">
+                  <label class="auth-field-label" for="manual-assignment-title">Tên bài tập</label>
+                  <input
+                    id="manual-assignment-title"
+                    class="auth-input"
+                    type="text"
+                    placeholder="Nhập tên bài tập"
+                    data-manual-title
+                  />
+                </div>
+
+                <div class="auth-field">
+                  <label class="auth-field-label" for="manual-assignment-subject">Môn</label>
+                  <select id="manual-assignment-subject" class="auth-input" data-manual-subject>
+                    <option value="Math">Toán</option>
+                    <option value="English">Tiếng Anh</option>
+                  </select>
+                </div>
+
+                <div class="auth-field">
+                  <label class="auth-field-label" for="manual-assignment-class">Lớp</label>
+                  <select id="manual-assignment-class" class="auth-input" data-manual-class-select>
+                    <option value="">Đang tải lớp...</option>
+                  </select>
+                </div>
+
+                <div class="auth-field">
+                  <label class="auth-field-label" for="manual-assignment-due-date">Hạn nộp</label>
+                  <input
+                    id="manual-assignment-due-date"
+                    class="auth-input"
+                    type="date"
+                    data-manual-due-date
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section class="manual-assignment-section">
+              <div class="manual-section-heading">
+                <h2>Chọn cách tạo bài tập</h2>
+              </div>
+
+              <div class="create-methods">
+                <div class="create-method active" data-create-method data-method="manual">
+                  <div class="create-method-icon create-method-icon-manual" aria-hidden="true">
+                    <span>✎</span>
+                  </div>
+                  <div class="create-method-copy">
+                    <h3>Tự tạo</h3>
+                    <p>Tự tạo câu hỏi và đáp án thủ công</p>
+                  </div>
+                  <span class="create-method-check" aria-hidden="true">✓</span>
+                </div>
+
+                <div class="create-method" data-create-method data-method="ai">
+                  <div class="create-method-icon create-method-icon-ai" aria-hidden="true">
+                    <span>AI</span>
+                  </div>
+                  <div class="create-method-copy">
+                    <h3>Tạo bằng AI</h3>
+                    <p>AI sẽ tạo câu hỏi dựa trên chủ đề của bạn</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="manual-assignment-section">
+              <div class="manual-section-heading">
+                <h2>Nội dung bài tập</h2>
+              </div>
+              <div class="manual-assignment-question-list" data-manual-question-list></div>
+            </section>
+
+            <div class="manual-assignment-actions">
+              <div class="manual-assignment-actions-row">
+                <button type="button" class="manual-btn manual-btn-secondary" data-manual-add-question>
+                  + Thêm câu
+                </button>
+              </div>
+
+              <button type="submit" class="manual-btn manual-btn-primary">Tạo bài tập</button>
+            </div>
+          </form>
+        </section>
+
+        <aside class="manual-preview-panel" data-manual-preview-panel>
+          <div class="manual-preview-card">
+            <div class="manual-preview-header">
+              <div class="manual-preview-icon" aria-hidden="true">✦</div>
+              <h2>Xem trước đề</h2>
+            </div>
+            <div class="manual-preview-content"></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  `;
+}
+
+async function loadManualAssignmentClasses() {
+  const classSelect = getManualAssignmentClassSelect();
+
+  if (!classSelect) {
+    return [];
+  }
+
+  try {
+    classSelect.disabled = true;
+    classSelect.innerHTML = `
+      <option value="">Đang tải lớp...</option>
+    `;
+
+    const response = await apiRequestWithAuth("/api/classes/my", {
+      method: "GET",
+    });
+
+    const classes = sortClassroomRecords(
+      Array.isArray(response?.data)
+        ? response.data.map(normalizeClassroomRecord).filter(Boolean)
+        : [],
+    );
+
+    manualAssignmentState.classes = classes;
+
+    if (!manualAssignmentState.classId && classes.length > 0) {
+      manualAssignmentState.classId = classes[0].id || "";
+    }
+
+    if (
+      manualAssignmentState.classId &&
+      !classes.some((classroom) => classroom.id === manualAssignmentState.classId)
+    ) {
+      manualAssignmentState.classId = classes[0]?.id || "";
+    }
+
+    const selectedClass = getSelectedManualAssignmentClass();
+    manualAssignmentState.className =
+      selectedClass?.name || selectedClass?.className || "";
+
+    classSelect.innerHTML =
+      classes.length > 0
+        ? `
+          <option value="">Chọn lớp</option>
+          ${classes
+            .map(
+              (classroom) =>
+                `<option value="${escapeHtml(classroom.id)}">${escapeHtml(classroom.id)} - ${escapeHtml(classroom.name || classroom.className || "Lớp học")}</option>`,
+            )
+            .join("")}
+        `
+        : `<option value="">Chưa có lớp khả dụng</option>`;
+
+    classSelect.value = manualAssignmentState.classId || "";
+    classSelect.disabled = classes.length === 0;
+
+    syncManualAssignmentFormFields();
+    syncManualAssignmentPreview();
+    return classes;
+  } catch (error) {
+    console.warn("Không thể tải danh sách lớp cho bài tập thủ công:", error);
+    classSelect.innerHTML = `
+      <option value="">Không thể tải danh sách lớp.</option>
+    `;
+    classSelect.disabled = true;
+    manualAssignmentState.classId = "";
+    manualAssignmentState.className = "";
+    showToast(error.message || "Không thể tải danh sách lớp.", "error");
+    return [];
+  }
+}
+
+function createManualAssignmentPreviewHtml(draft) {
+  const previewQuestions = (draft.questions || []).map((question, index) => {
+    const answers = [
+      {
+        key: "A",
+        text: question.correctAnswer || "Chưa nhập đáp án đúng",
+        isCorrect: true,
+      },
+      {
+        key: "B",
+        text: question.wrongAnswer1 || "Chưa nhập đáp án sai",
+        isCorrect: false,
+      },
+      {
+        key: "C",
+        text: question.wrongAnswer2 || "Chưa nhập đáp án sai",
+        isCorrect: false,
+      },
+      {
+        key: "D",
+        text: question.wrongAnswer3 || "Chưa nhập đáp án sai",
+        isCorrect: false,
+      },
+    ];
+    const letters = ["A", "B", "C", "D"];
+
+    return `
+      <section class="manual-preview-question">
+        <div class="manual-preview-question-head">
+          <span class="manual-preview-badge">Câu ${index + 1}</span>
+          <p class="manual-preview-question-text">${escapeHtml(
+            question.question || "Chưa nhập câu hỏi",
+          )}</p>
+        </div>
+        <div class="manual-preview-answer-list">
+          ${answers
+            .map(
+              (answer, answerIndex) => `
+                <div class="manual-preview-answer ${answer.isCorrect ? "is-correct" : "is-wrong"}">
+                  <span class="manual-preview-answer-key">${letters[answerIndex]}</span>
+                  <span class="manual-preview-answer-text">${escapeHtml(answer.text)}</span>
+                  ${answer.isCorrect ? '<span class="manual-preview-answer-mark">✓</span>' : ""}
+                </div>
+              `,
+            )
+            .join("")}
+        </div>
+      </section>
+    `;
+  });
+
+  const subjectLabel =
+    draft.subject === "Math"
+      ? "Toán"
+      : draft.subject === "English"
+        ? "Tiếng Anh"
+        : "--";
+
+  const meta = `
+    <div class="manual-preview-summary">
+      <h3>${escapeHtml(draft.title || "Chưa có tên bài tập")}</h3>
+      <p>Môn: ${escapeHtml(subjectLabel)}</p>
+      <p>Lớp: ${escapeHtml(draft.className || "--")}</p>
+      <p>Hạn nộp: ${escapeHtml(draft.dueDate || "--")}</p>
+    </div>
+  `;
+
+  return `${meta}${previewQuestions.join("")}`;
+}
+
+function syncManualAssignmentPreview() {
+  const panel = getManualAssignmentPreviewPanel();
+
+  if (!panel) {
+    return;
+  }
+
+  const content = panel.querySelector(".manual-preview-content");
+
+  if (!content) {
+    return;
+  }
+
+  const draft = getManualAssignmentDraft();
+  content.innerHTML = createManualAssignmentPreviewHtml(draft);
+}
+
+function validateManualAssignmentDraft(draft) {
+  if (!draft.title) {
+    return "Vui lòng nhập tên bài tập.";
+  }
+
+  if (!draft.subject) {
+    return "Vui lòng chọn môn học.";
+  }
+
+  if (!draft.classId) {
+    return "Vui lòng chọn lớp học.";
+  }
+
+  if (!draft.dueDate) {
+    return "Vui lòng chọn hạn nộp.";
+  }
+
+  if (!Array.isArray(draft.questions) || draft.questions.length === 0) {
+    return "Vui lòng thêm ít nhất 1 câu hỏi.";
+  }
+
+  for (let index = 0; index < draft.questions.length; index += 1) {
+    const question = draft.questions[index];
+
+    if (!question.question) {
+      return `Câu ${index + 1}: vui lòng nhập nội dung câu hỏi.`;
+    }
+
+    if (!question.correctAnswer) {
+      return `Câu ${index + 1}: vui lòng nhập câu trả lời đúng.`;
+    }
+
+    if (
+      !question.wrongAnswer1 ||
+      !question.wrongAnswer2 ||
+      !question.wrongAnswer3
+    ) {
+      return `Câu ${index + 1}: vui lòng nhập đủ 3 đáp án sai.`;
+    }
+  }
+
+  return "";
+}
+
+function normalizeManualAssignmentQuestions(questions) {
+  return questions.map((question, index) => {
+    const options = [
+      String(question?.correctAnswer || "").trim(),
+      String(question?.wrongAnswer1 || "").trim(),
+      String(question?.wrongAnswer2 || "").trim(),
+      String(question?.wrongAnswer3 || "").trim(),
+    ];
+
+    return {
+      id: String(question?.id || generateManualQuestionId(index + 1)),
+      question: String(question?.question || "").trim(),
+      options,
+      correctAnswer: options[0],
+    };
+  });
+}
+
+function ensureAssignmentService() {
+  return getAssignmentService();
+}
+
+function renderManualAssignmentPreviewFromState() {
+  syncManualAssignmentPreview();
+}
+
+async function createAssignment(payload) {
+  const service = getAssignmentService();
+
+  if (!service?.createAssignment) {
+    throw new Error("Dịch vụ tạo bài tập chưa sẵn sàng.");
+  }
+
+  return service.createAssignment(payload);
+}
+
+async function refreshTeacherAssignments() {
+  if (getCurrentRole() !== "teacher") {
+    return;
+  }
+
+  const service = getAssignmentService();
+  const list = document.querySelector("#manage .manage-list");
+
+  if (!service?.getTeacherAssignments || !list) {
+    return;
+  }
+
+  const teacherId = getCurrentUserId();
+
+  if (!teacherId) {
+    list.innerHTML = `
+      <div class="manage-empty-state">
+        <h3>Không thể xác định giáo viên.</h3>
+        <p>Vui lòng đăng nhập lại.</p>
+      </div>
+    `;
+    return;
+  }
+
+  if (typeof teacherAssignmentsUnsubscribe === "function") {
+    teacherAssignmentsUnsubscribe();
+  }
+
+  list.innerHTML = `
+    <div class="manage-empty-state">
+      <h3>Đang tải bài tập...</h3>
+      <p>Vui lòng chờ trong giây lát.</p>
+    </div>
+  `;
+
+  const renderAssignments = (assignments) => {
+    if (!Array.isArray(assignments) || assignments.length === 0) {
+      list.innerHTML = `
+        <div class="manage-empty-state">
+          <h3>Chưa có bài tập nào.</h3>
+          <p>Bài tập sẽ được xuất hiện ở đây sau khi bạn lưu.</p>
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = assignments
+      .map((assignment) => {
+        const questionCount =
+          Number(assignment.totalQuestions || assignment.questionCount) ||
+          (Array.isArray(assignment.questions)
+            ? assignment.questions.length
+            : 0);
+
+        return `
+          <article class="manage-card">
+            <div class="manage-card-top">
+              <div>
+                <h3>${escapeHtml(assignment.title || "Bài tập")}</h3>
+                <p>${escapeHtml(assignment.className || "Lớp học")}</p>
+              </div>
+              <span class="manage-date">Ngày giao: ${escapeHtml(formatAssignmentDate(assignment.createdAt))}</span>
+            </div>
+
+            <div class="manage-card-meta">
+              <span>${questionCount} câu hỏi</span>
+              <strong>${escapeHtml(formatAssignmentStatusLabel(assignment.status))}</strong>
+            </div>
+
+            <div class="manage-progress">
+              <div class="manage-progress-fill is-green" style="width: 0%"></div>
+            </div>
+
+            <div class="manage-card-actions">
+              <button type="button" class="manage-detail-btn">
+                Xem chi tiết
+              </button>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+  };
+
+  if (typeof service.listenTeacherAssignments === "function") {
+    teacherAssignmentsUnsubscribe = service.listenTeacherAssignments(
+      teacherId,
+      renderAssignments,
+    );
+    return;
+  }
+
+  try {
+    const assignments = await service.getTeacherAssignments(teacherId);
+    renderAssignments(assignments);
+  } catch (error) {
+    console.warn("Không thể tải danh sách bài tập của giáo viên:", error);
+    list.innerHTML = `
+      <div class="manage-empty-state">
+        <h3>Không thể tải bài tập.</h3>
+        <p>Vui lòng thử lại sau.</p>
+      </div>
+    `;
+  }
+}
+
+async function initializeManualAssignmentBuilder() {
+  if (getCurrentRole() !== "teacher") {
+    return;
+  }
+
+  const card = getManualAssignmentCard();
+
+  if (!card) {
+    return;
+  }
+
+  resetManualAssignmentState();
+  manualAssignmentFormBound = false;
+  renderManualAssignmentShell();
+  renderManualQuestionList();
+  syncManualAssignmentMethodCards();
+  syncManualAssignmentFormFields();
+  syncManualAssignmentPreview();
+
+  await loadManualAssignmentClasses();
+  syncManualAssignmentFormFields();
+
+  const form = getManualAssignmentForm();
+
+  if (!form || manualAssignmentFormBound) {
+    return;
+  }
+
+  const handleDraftChange = (event) => {
+    updateManualAssignmentStateFromElement(event.target);
+    syncManualAssignmentMethodCards();
+    syncManualAssignmentPreview();
+  };
+
+  form.addEventListener("input", handleDraftChange);
+  form.addEventListener("change", handleDraftChange);
+
+  form.addEventListener("click", (event) => {
+    const removeButton = event.target.closest("[data-manual-remove-question]");
+
+    if (removeButton) {
+      const block = removeButton.closest("[data-question-block]");
+      const nextQuestions = manualAssignmentState.questions.filter(
+        (_, index) => !block || index !== Number(block.dataset.questionIndex) - 1,
+      );
+
+      manualAssignmentState.questions = nextQuestions.length
+        ? nextQuestions.map((question, index) => ({
+            ...question,
+            id: question.id || generateManualQuestionId(index + 1),
+          }))
+        : [createManualQuestion(1)];
+
+      renderManualQuestionList();
+      syncManualAssignmentFormFields();
+      syncManualAssignmentMethodCards();
+      syncManualAssignmentPreview();
+    }
+  });
+
+  form
+    .querySelector("[data-manual-add-question]")
+    ?.addEventListener("click", () => {
+      manualAssignmentState.questions = manualAssignmentState.questions.length
+        ? manualAssignmentState.questions.map((question, index) => ({
+            ...question,
+            id: question.id || generateManualQuestionId(index + 1),
+          }))
+        : [createManualQuestion(1)];
+      manualAssignmentState.questions.push(
+        createManualQuestion(manualAssignmentState.questions.length + 1),
+      );
+      renderManualQuestionList();
+      syncManualAssignmentFormFields();
+      syncManualAssignmentPreview();
+    });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const draft = getManualAssignmentDraft();
+    const validationMessage = validateManualAssignmentDraft(draft);
+
+    if (validationMessage) {
+      showToast(validationMessage, "error");
+      return;
+    }
+
+    const service = getAssignmentService();
+
+    const selectedClass = manualAssignmentState.classes.find(
+      (item) => item.id === draft.classId,
+    );
+
+    try {
+      await createAssignment({
+        title: draft.title,
+        description: draft.description || "",
+        subject: draft.subject,
+        classId: draft.classId,
+        className:
+          selectedClass?.name ||
+          selectedClass?.className ||
+          draft.className ||
+          "",
+        dueDate: draft.dueDate,
+        teacherId: getCurrentUserId(),
+        teacherName:
+          getCurrentAuthUser()?.fullName ||
+          getCurrentAuthUser()?.name ||
+          getCurrentAuthUser()?.username ||
+          "",
+        totalQuestions: draft.questions.length,
+        questions: normalizeManualAssignmentQuestions(draft.questions),
+      });
+
+      showToast("Đã tạo bài tập thành công.", "success");
+      resetManualAssignmentState();
+      syncManualAssignmentFormFields();
+      renderManualQuestionList();
+      await loadManualAssignmentClasses();
+      syncManualAssignmentPreview();
+      await refreshTeacherAssignments();
+    } catch (error) {
+      showToast(error.message || "Không thể tạo bài tập.", "error");
+    }
+  });
+
+  manualAssignmentFormBound = true;
+}
+
+async function initializeTeacherAssignmentForm() {
+  return initializeManualAssignmentBuilder();
 }
 
 function getAuthContainer() {
@@ -212,6 +2925,15 @@ function handleLogout() {
   bootstrapState.currentUser = null;
   bootstrapState.initializedUid = null;
   bootstrapState.authMode = "login";
+  previousPage = ROLE_DEFAULT_PAGES.student;
+  currentPage = ROLE_DEFAULT_PAGES.student;
+  manualAssignmentFormBound = false;
+  if (typeof teacherAssignmentsUnsubscribe === "function") {
+    teacherAssignmentsUnsubscribe();
+  }
+  teacherAssignmentsUnsubscribe = null;
+  manualAssignmentState.classes = [];
+  resetManualAssignmentState();
   setAuthMode(true);
   renderAuthScreen("login");
 }
@@ -253,6 +2975,42 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+let toastHideTimer = null;
+
+function showToast(message, type = "success") {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const existingToast = document.querySelector(".toast");
+
+  if (existingToast) {
+    existingToast.remove();
+  }
+
+  if (toastHideTimer) {
+    window.clearTimeout(toastHideTimer);
+    toastHideTimer = null;
+  }
+
+  const toast = document.createElement("div");
+  toast.className = `toast ${type === "error" ? "error" : ""}`.trim();
+  toast.innerHTML = String(message || "");
+
+  document.body.appendChild(toast);
+
+  window.requestAnimationFrame(() => {
+    toast.classList.add("show");
+  });
+
+  toastHideTimer = window.setTimeout(() => {
+    toast.classList.remove("show");
+    window.setTimeout(() => {
+      toast.remove();
+    }, 250);
+  }, 3000);
 }
 
 function normalizeAuthUsername(value) {
@@ -401,7 +3159,7 @@ function renderPasswordField({
           type="button"
           class="auth-password-toggle"
           data-password-toggle="${id}"
-          aria-label="Hiá»‡n máº­t kháº©u"
+          aria-label="Hiện mật khẩu"
           aria-pressed="false"
         >
           <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
@@ -973,7 +3731,6 @@ async function handleLoginSubmit(form) {
 
       setAuthMode(false);
       initApp(authUser);
-      changePage(getDefaultPageForRole(authUser.role));
     }, 250);
   } catch (error) {
     console.error("[EduKids][auth] login failed", error);
@@ -1064,7 +3821,7 @@ async function handleRegisterSubmit(form) {
   }
 
   try {
-    setFeedbackMessage(form, "Đang đăng k?...", "success");
+    setFeedbackMessage(form, "Đang đăng ký...", "success");
 
     await apiRequest("/api/auth/register", {
       username,
@@ -1106,21 +3863,6 @@ async function handleRegisterSubmit(form) {
   }
 }
 
-function showPage(pageId) {
-  const appShell = getAppShell();
-  if (!appShell || !pageId) {
-    return;
-  }
-
-  appShell.querySelectorAll(".page").forEach((page) => {
-    page.classList.toggle("active", page.id === pageId);
-  });
-
-  appShell.querySelectorAll("[data-page]").forEach((item) => {
-    item.classList.toggle("active", item.dataset.page === pageId);
-  });
-}
-
 function bindAppEventsOnce() {
   const appShell = getAppShell();
   if (!appShell || bootstrapState.appBound) {
@@ -1130,7 +3872,7 @@ function bindAppEventsOnce() {
   appShell.addEventListener("click", async (event) => {
     const pageTrigger = event.target.closest("[data-page]");
     if (pageTrigger?.dataset.page) {
-      showPage(pageTrigger.dataset.page);
+      changePage(pageTrigger.dataset.page);
       return;
     }
 
@@ -1174,16 +3916,13 @@ function initApp(user) {
     user.uid || user.userId || user.id || user.username || user.email || "",
   ).trim();
 
-  if (bootstrapState.initializedUid === identityKey) {
-    return;
-  }
-
   bootstrapState.initializedUid = identityKey;
   bootstrapState.currentUser = user;
 
   bindAppEventsOnce();
-  showPage(getDefaultPageForRole(user.role));
+  changePage(getDefaultPageForRole(user.role));
   window.EduKidsCurrentUser = user;
+  void syncSidebarProfile();
 }
 
 function initializeAuth() {
@@ -1196,7 +3935,6 @@ function initializeAuth() {
     bootstrapState.currentUser = sessionUser;
     setAuthMode(false);
     initApp(sessionUser);
-    changePage(getDefaultPageForRole(role));
     return;
   }
 
@@ -1223,7 +3961,6 @@ function syncAuthState() {
     bootstrapState.currentUser = sessionUser;
     setAuthMode(false);
     initApp(sessionUser);
-    changePage(getDefaultPageForRole(role));
     return;
   }
 
@@ -1260,6 +3997,19 @@ function installCompatibilityGlobals() {
   };
   window.initApp = initApp;
   window.showAssignmentTab = showAssignmentTab;
+  window.openCreateAssignment = openCreateAssignment;
+  window.openProfile = openProfile;
+  window.openTeacherDashboard = openTeacherDashboard;
+  window.goBackPage = goBackPage;
+  window.openSubject = openSubject;
+  window.goBackSubjects = goBackSubjects;
+  window.submitStudentQuiz = submitStudentQuiz;
+  window.showStudentWrongAnswerReview = showStudentWrongAnswerReview;
+  window.showSubject = showSubject;
+  window.createAssignment = createAssignment;
+  window.initializeTeacherAssignmentForm = initializeTeacherAssignmentForm;
+  window.initializeManualAssignmentBuilder = initializeManualAssignmentBuilder;
+  window.refreshTeacherAssignments = refreshTeacherAssignments;
   window.askAI = () => {
     console.info("[EduKids] AI Coach action triggered.");
   };
@@ -1282,6 +4032,7 @@ async function bootstrap() {
   document.body?.classList.add("auth-mode");
 
   installCompatibilityGlobals();
+  bindStudentQuizControlsOnce();
   initializeAuth();
 }
 
