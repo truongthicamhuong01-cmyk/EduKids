@@ -6,6 +6,7 @@ const {
   buildVersionQuizId,
   seedLegacyVersionIfNeeded,
 } = require("./quizVersionService");
+const { getUserTopicProgress } = require("./quizSelectionService");
 
 function normalizeFilter(value) {
   return String(value || "").trim();
@@ -23,10 +24,11 @@ function normalizeTopicRecord(topic) {
   };
 }
 
-async function listTopics({ grade, subject } = {}) {
+async function listTopics({ grade, subject, userId } = {}) {
   const topics = readTopicsFile().map(normalizeTopicRecord);
   const normalizedGrade = normalizeFilter(grade);
   const normalizedSubject = normalizeFilter(subject).toLowerCase();
+  const normalizedUserId = normalizeFilter(userId);
 
   const filteredTopics = topics.filter((topic) => {
     if (normalizedGrade && topic.grade !== normalizedGrade) {
@@ -49,9 +51,19 @@ async function listTopics({ grade, subject } = {}) {
       });
 
       const legacyQuiz = versions.length === 0 ? await getLegacyQuizData(topic) : null;
+      const progress = normalizedUserId
+        ? await getUserTopicProgress(normalizedUserId, topic.topicId).catch(() => null)
+        : null;
+      const totalAnswered = Math.max(0, Number(progress?.totalAnswered) || 0);
+      const totalCorrect = Math.max(0, Number(progress?.totalCorrect) || 0);
+      const percentage =
+        totalAnswered > 0
+          ? Math.round((totalCorrect / totalAnswered) * 100)
+          : Math.max(0, Math.min(100, Number(progress?.percentage) || 0));
 
       return {
         ...topic,
+        topicName: topic.name,
         quizId:
           versions.length > 0
             ? buildVersionQuizId({
@@ -70,6 +82,9 @@ async function listTopics({ grade, subject } = {}) {
               : "",
         hasQuiz: versions.length > 0 || Boolean(legacyQuiz),
         versionCount: versions.length || (legacyQuiz ? 1 : 0),
+        totalAnswered,
+        totalCorrect,
+        percentage,
       };
     })
   );

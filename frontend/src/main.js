@@ -2,6 +2,7 @@
 import "./firebase-init.js";
 import "./services/profileService.js";
 import "./services/assignmentService.js";
+import "./services/topicAccuracyService.js";
 import "./style.css";
 
 const bootstrapState = (window.__EDUKIDS_BOOTSTRAP__ ||= {
@@ -1228,6 +1229,23 @@ function getStudentTopicImage(topic) {
   return "assets/math.png";
 }
 
+function getTopicAccuracySummary(topic) {
+  return (
+    window.EduKidsTopicAccuracyService?.normalizeTopicAccuracySummary(topic) || {
+      totalAnswered: 0,
+      totalCorrect: 0,
+      percentage: 0,
+    }
+  );
+}
+
+function getTopicAccuracyProgressClass(percentage) {
+  return (
+    window.EduKidsTopicAccuracyService?.getTopicAccuracyProgressClass(percentage) ||
+    "is-red"
+  );
+}
+
 function getSelectedQuizAnswer(questionIndex) {
   return (
     studentQuizState.answers.find(
@@ -1368,22 +1386,53 @@ function renderStudentTopicCards() {
   grid.innerHTML = topics
     .map((topic) => {
       const isActive = topic.topicId === studentQuizState.selectedTopicId;
+      const topicName = topic.topicName || topic.name || "";
+      const topicAccuracy = getTopicAccuracySummary(topic);
+      const topicAccuracyClass = getTopicAccuracyProgressClass(
+        topicAccuracy.percentage,
+      );
+      const topicAccuracyWidth = `${Math.max(0, Math.min(topicAccuracy.percentage, 100))}%`;
 
       return `
         <button
           type="button"
           class="topic-card ${isActive ? "is-active" : ""}"
           data-topic-id="${escapeHtml(topic.topicId)}"
-          data-topic-name="${escapeHtml(topic.name)}"
+          data-topic-name="${escapeHtml(topicName)}"
         >
-          <img class="topic-card-image" src="${escapeHtml(getStudentTopicImage(topic))}" alt="${escapeHtml(topic.name)}" />
+          <img class="topic-card-image" src="${escapeHtml(getStudentTopicImage(topic))}" alt="${escapeHtml(topicName)}" />
           <span class="topic-card-grade">Lớp ${escapeHtml(topic.grade)}</span>
-          <h3 class="topic-card-title">${escapeHtml(topic.name)}</h3>
+          <h3 class="topic-card-title">${escapeHtml(topicName)}</h3>
           <p class="topic-card-description">${escapeHtml(topic.description || "Chọn để mở quiz để luyện.")}</p>
+          <div class="topic-card-progress">
+            <div class="topic-card-progress-label">
+              <span>Độ chính xác</span>
+              <strong>${escapeHtml(String(topicAccuracy.percentage))}%</strong>
+            </div>
+            <div class="topic-card-progress-track" aria-hidden="true">
+              <div class="topic-card-progress-fill ${escapeHtml(topicAccuracyClass)}" style="width: ${escapeHtml(topicAccuracyWidth)}"></div>
+            </div>
+          </div>
         </button>
       `;
     })
     .join("");
+}
+
+async function fetchStudentQuizTopics() {
+  const params = new URLSearchParams({
+    grade: studentQuizState.grade,
+    subject: studentQuizState.subject,
+  });
+
+  const response = await apiRequestWithAuth(
+    `/api/quiz/topics?${params.toString()}`,
+    {
+      method: "GET",
+    },
+  );
+
+  return Array.isArray(response.data) ? response.data : [];
 }
 
 function renderStudentQuizScreen() {
@@ -1657,19 +1706,7 @@ async function loadStudentQuizTopics() {
   renderStudentQuizFlow();
 
   try {
-    const params = new URLSearchParams({
-      grade: studentQuizState.grade,
-      subject: studentQuizState.subject,
-    });
-
-    const response = await apiRequestWithAuth(
-      `/api/quiz/topics?${params.toString()}`,
-      {
-        method: "GET",
-      },
-    );
-
-    studentQuizState.topics = Array.isArray(response.data) ? response.data : [];
+    studentQuizState.topics = await fetchStudentQuizTopics();
     studentQuizState.loadedTopicsKey = `${studentQuizState.grade}:${studentQuizState.subject}`;
     studentQuizState.topicsMessage = "";
   } catch (error) {
@@ -1680,6 +1717,23 @@ async function loadStudentQuizTopics() {
   } finally {
     studentQuizState.loadingTopics = false;
     renderStudentTopicCards();
+  }
+}
+
+async function refreshStudentQuizTopics() {
+  const currentTopicsKey = `${studentQuizState.grade}:${studentQuizState.subject}`;
+
+  if (!currentTopicsKey) {
+    return;
+  }
+
+  try {
+    studentQuizState.topics = await fetchStudentQuizTopics();
+    studentQuizState.loadedTopicsKey = currentTopicsKey;
+    studentQuizState.topicsMessage = "";
+    renderStudentTopicCards();
+  } catch (error) {
+    console.warn("[EduKids][studentQuiz] Unable to refresh topic accuracy:", error);
   }
 }
 
@@ -1758,6 +1812,7 @@ async function submitStudentQuiz() {
       : [];
     studentQuizState.reviewVisible = true;
     renderStudentQuizFlow();
+    void refreshStudentQuizTopics();
     showToast("Đã nộp quiz thành công.", "success");
     scrollToElement("student-result-screen");
   } catch (error) {

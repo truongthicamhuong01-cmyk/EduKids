@@ -1,6 +1,7 @@
 const { db } = require("../firebase");
 const ApiError = require("../utils/apiError");
 const { buildVersionQuizId } = require("./quizVersionService");
+const { calculateTopicAccuracy } = require("./topicAccuracyService");
 
 const USER_PROGRESS_COLLECTION = db.collection("user_progress");
 
@@ -38,14 +39,56 @@ async function getUserTopicProgress(userId, topicId) {
     return {
       lastVersionUsed: "",
       history: [],
+      totalAnswered: 0,
+      totalCorrect: 0,
+      percentage: 0,
     };
   }
 
   const data = snapshot.data() || {};
+  const totalAnswered = Number(data.totalAnswered) || 0;
+  const totalCorrect = Number(data.totalCorrect) || 0;
+  const percentage = Number.isFinite(Number(data.percentage))
+    ? Math.max(0, Math.min(100, Math.round(Number(data.percentage))))
+    : totalAnswered > 0
+      ? Math.round((totalCorrect / totalAnswered) * 100)
+      : 0;
 
   return {
     lastVersionUsed: String(data.lastVersionUsed || "").trim(),
     history: Array.isArray(data.history) ? data.history.filter(Boolean) : [],
+    totalAnswered,
+    totalCorrect,
+    percentage,
+  };
+}
+
+async function recordUserTopicAccuracy(userId, topicId, topicResults = []) {
+  const progressRef = await getUserTopicProgressRef(userId, topicId);
+  const currentProgress = await getUserTopicProgress(userId, topicId);
+  const accuracy = calculateTopicAccuracy(topicResults);
+  const now = new Date().toISOString();
+  const totalAnswered = Math.max(0, Number(currentProgress.totalAnswered) || 0) + accuracy.totalAnswered;
+  const totalCorrect = Math.max(0, Number(currentProgress.totalCorrect) || 0) + accuracy.totalCorrect;
+  const percentage = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
+
+  await progressRef.set(
+    {
+      userId: String(userId || "").trim(),
+      topicId: String(topicId || "").trim(),
+      totalAnswered,
+      totalCorrect,
+      percentage,
+      accuracyUpdatedAt: now,
+      updatedAt: now,
+    },
+    { merge: true }
+  );
+
+  return {
+    totalAnswered,
+    totalCorrect,
+    percentage,
   };
 }
 
@@ -138,4 +181,5 @@ async function selectQuizVersion({
 module.exports = {
   selectQuizVersion,
   getUserTopicProgress,
+  recordUserTopicAccuracy,
 };

@@ -4,6 +4,7 @@ const {
   parseVersionQuizId,
   getQuizVersionDocRefByParentId,
 } = require("./quizVersionService");
+const { recordUserTopicAccuracy } = require("./quizSelectionService");
 
 const QUIZZES_COLLECTION = db.collection("quizzes");
 const WRONG_ANSWERS_COLLECTION = db.collection("wrong_answers");
@@ -151,6 +152,7 @@ async function gradeQuizSubmission({ userId, quizId, answers }) {
 
   const wrongQuestions = [];
   let correctAnswers = 0;
+  const topicResults = [];
 
   questions.forEach((question, questionIndex) => {
     const correctOption = getCorrectOption(question);
@@ -162,6 +164,12 @@ async function gradeQuizSubmission({ userId, quizId, answers }) {
     const selectedLabel = answersByQuestionIndex.get(questionIndex) || "";
     const userOption = selectedLabel ? getOptionByLabel(question, selectedLabel) : null;
     const isCorrect = selectedLabel && normalizeAnswerLabel(correctOption.label) === selectedLabel;
+
+    if (selectedLabel) {
+      topicResults.push({
+        isCorrect,
+      });
+    }
 
     if (isCorrect) {
       correctAnswers += 1;
@@ -196,6 +204,14 @@ async function gradeQuizSubmission({ userId, quizId, answers }) {
     },
     { merge: true }
   );
+
+  if (quiz.topicId) {
+    try {
+      await recordUserTopicAccuracy(normalizedUserId, quiz.topicId, topicResults);
+    } catch (error) {
+      console.warn("[EduKids][quizGradeService] Unable to update topic accuracy:", error);
+    }
+  }
 
   return {
     totalQuestions,

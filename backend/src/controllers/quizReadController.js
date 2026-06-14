@@ -14,7 +14,11 @@ const getTopics = asyncHandler(async (req, res) => {
 
   const grade = normalizeString(req.query.grade);
   const subject = normalizeString(req.query.subject);
-  const topics = await listTopics({ grade, subject });
+  const topics = await listTopics({
+    grade,
+    subject,
+    userId: req.user.userId || req.user.uid,
+  });
 
   return successResponse(res, 200, "Topics fetched successfully", topics);
 });
