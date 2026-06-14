@@ -5242,6 +5242,132 @@ img.profile-skeleton {
   background: linear-gradient(90deg, #7c3aed, #6d28d9);
 }
 
+.ai-analyze-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.ai-coach-status {
+  margin: 8px 4px 18px;
+  padding: 14px 18px;
+  border-radius: 18px;
+  font-weight: 600;
+  line-height: 1.6;
+  background: #f8fafc;
+  color: #4338ca;
+  border: 1px solid #dbeafe;
+}
+
+.ai-coach-status.is-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.ai-coach-status.is-loading {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.ai-coach-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.coach-insight-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 14px 40px rgba(99, 102, 241, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.coach-insight-card h3 {
+  font-size: 24px;
+  line-height: 1.3;
+  color: #1f2937;
+}
+
+.coach-insight-card p {
+  color: #374151;
+  line-height: 1.8;
+  font-size: 17px;
+}
+
+.coach-insight-card.is-strength {
+  border-color: #bbf7d0;
+  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+}
+
+.coach-insight-card.is-weakness {
+  border-color: #fecaca;
+  background: linear-gradient(180deg, #fff1f2 0%, #ffffff 100%);
+}
+
+.coach-insight-card.is-advice {
+  border-color: #c7d2fe;
+  background: linear-gradient(180deg, #eef2ff 0%, #ffffff 100%);
+}
+
+.coach-insight-card.is-level {
+  border-color: #f5d0fe;
+  background: linear-gradient(180deg, #fdf4ff 0%, #ffffff 100%);
+}
+
+.coach-level-label {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #7c2d12;
+}
+
+.coach-practice-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.coach-practice-label {
+  color: #4338ca;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.coach-practice-btn {
+  align-self: flex-start;
+  border: none;
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 14px 22px;
+  border-radius: 16px;
+  cursor: pointer;
+  background: linear-gradient(90deg, #2563eb, #7c3aed);
+}
+
+.coach-practice-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.coach-empty-card,
+.coach-loading-card {
+  grid-column: 1 / -1;
+  background: white;
+  border: 1px dashed #cbd5e1;
+  border-radius: 24px;
+  padding: 28px;
+  text-align: center;
+  color: #475569;
+  line-height: 1.8;
+}
+
 .strength-weakness-card {
   background: white;
 
@@ -7973,6 +8099,7 @@ body.sidebar-open {
   .manage-sidebar,
   .teacher-stats-card,
   .analysis-box,
+  .ai-coach-results,
   .quiz-panel,
   .quiz-result,
   .quiz-review {
@@ -8014,6 +8141,19 @@ body.sidebar-open {
   .subject-card img {
     width: 120px;
     height: 120px;
+  }
+
+  .ai-coach-results {
+    grid-template-columns: 1fr;
+  }
+
+  .coach-insight-card {
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .coach-level-label {
+    font-size: 28px;
   }
 
   .teacher-dashboard-header,

@@ -509,6 +509,14 @@ function changePage(pageId) {
   }
 
   if (
+    targetPageId === "ai-coach" &&
+    role === "student" &&
+    typeof initializeAICoachPage === "function"
+  ) {
+    void initializeAICoachPage();
+  }
+
+  if (
     targetPageId === "assignments" &&
     role === "student" &&
     typeof initializeStudentAssignmentPage === "function"
@@ -556,6 +564,12 @@ const studentWeeklyProgressCache = new Map();
 const studentStrengthWeaknessCache = new Map();
 const studentHomeAssignmentCache = new Map();
 const studentRecentWrongAnswersCache = new Map();
+const aiCoachState = {
+  analysis: null,
+  loading: false,
+  error: "",
+  initialized: false,
+};
 
 function getProfilePageRoot(pageType) {
   if (!pageType) {
@@ -563,6 +577,198 @@ function getProfilePageRoot(pageType) {
   }
 
   return document.querySelector(`[data-profile-page="${pageType}"]`);
+}
+
+function getAICoachRoot() {
+  return document.querySelector("[data-ai-coach-root]");
+}
+
+function getAICoachStatusNode() {
+  return document.querySelector("[data-ai-coach-status]");
+}
+
+function getAICoachResultsNode() {
+  return document.querySelector("[data-ai-coach-results]");
+}
+
+function getAICoachAnalyzeButton() {
+  return document.querySelector("[data-ai-coach-analyze-btn]");
+}
+
+function getAICoachSummaryNode() {
+  return document.querySelector("[data-ai-coach-summary]");
+}
+
+function resetAICoachStatus() {
+  const statusNode = getAICoachStatusNode();
+
+  if (statusNode) {
+    statusNode.hidden = true;
+    statusNode.textContent = "";
+    statusNode.classList.remove("is-error", "is-loading");
+  }
+}
+
+function renderAICoachStatus(message = "", type = "") {
+  const statusNode = getAICoachStatusNode();
+
+  if (!statusNode) {
+    return;
+  }
+
+  const normalizedMessage = String(message || "").trim();
+
+  if (!normalizedMessage) {
+    statusNode.hidden = true;
+    statusNode.textContent = "";
+    statusNode.classList.remove("is-error", "is-loading");
+    return;
+  }
+
+  statusNode.hidden = false;
+  statusNode.textContent = normalizedMessage;
+  statusNode.classList.toggle("is-error", type === "error");
+  statusNode.classList.toggle("is-loading", type === "loading");
+}
+
+function buildAICoachCard(title, body, variant) {
+  return `
+    <article class="coach-insight-card ${escapeHtml(variant)}">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(body)}</p>
+    </article>
+  `;
+}
+
+function formatCoachLevelLabel(level) {
+  const normalized = String(level || "").trim();
+
+  if (!normalized) {
+    return "🌟 --";
+  }
+
+  return `🌟 ${normalized}`;
+}
+
+function renderAICoachResults() {
+  const resultsNode = getAICoachResultsNode();
+  const summaryNode = getAICoachSummaryNode();
+  const analyzeButton = getAICoachAnalyzeButton();
+  const analysis = aiCoachState.analysis;
+
+  if (analyzeButton) {
+    analyzeButton.disabled = aiCoachState.loading;
+    analyzeButton.textContent = aiCoachState.loading
+      ? "Đang phân tích..."
+      : "✨ AI phân tích";
+  }
+
+  if (summaryNode && analysis && !aiCoachState.loading) {
+    summaryNode.textContent = `Đã phân tích ${formatStatValue(analysis.bestTopics?.length || 0)} điểm mạnh và ${formatStatValue(analysis.weakTopics?.length || 0)} điểm cần cải thiện.`;
+  } else if (summaryNode && !analysis && !aiCoachState.loading) {
+    summaryNode.textContent =
+      "Nhấn nút bên dưới để AI phân tích kết quả học tập mới nhất của bạn!";
+  }
+
+  if (!resultsNode) {
+    return;
+  }
+
+  if (aiCoachState.loading) {
+    resultsNode.hidden = false;
+    resultsNode.innerHTML = `
+      <div class="coach-loading-card">
+        AI Coach đang phân tích kết quả học tập...
+      </div>
+    `;
+    return;
+  }
+
+  if (analysis) {
+    const focusTopicName = String(
+      analysis.focusTopicName || analysis.focusTopic || "",
+    ).trim();
+    const focusTopicId = String(analysis.focusTopicId || "").trim();
+    const focusTopicGrade = String(
+      analysis.weakTopics?.[0]?.grade || analysis.focusGrade || "",
+    ).trim();
+    const focusTopicSubject = String(
+      analysis.weakTopics?.[0]?.subject || analysis.focusSubject || "",
+    ).trim();
+    const averageAccuracy = Number(analysis.averageAccuracy) || 0;
+    const coachLevel = String(analysis.coachLevel || "").trim();
+
+    resultsNode.hidden = false;
+    resultsNode.innerHTML = [
+      buildAICoachCard("Điểm mạnh", analysis.strengths || "", "is-strength"),
+      buildAICoachCard(
+        "Cần cải thiện",
+        analysis.weaknesses || "",
+        "is-weakness",
+      ),
+      `
+        <article class="coach-insight-card is-advice">
+          <h3>Gợi ý luyện tập</h3>
+          <p>${escapeHtml(analysis.advice || "")}</p>
+          <div class="coach-practice-block">
+            <span class="coach-practice-label">Luyện chủ đề ${escapeHtml(focusTopicName || "--")}</span>
+            <button
+              type="button"
+              class="coach-practice-btn"
+              data-ai-coach-practice-topic="${escapeHtml(focusTopicId)}"
+              data-ai-coach-practice-grade="${escapeHtml(focusTopicGrade)}"
+              data-ai-coach-practice-subject="${escapeHtml(focusTopicSubject)}"
+              ${focusTopicId ? "" : "disabled"}
+            >
+              Luyện topic này
+            </button>
+          </div>
+        </article>
+      `,
+      `
+        <article class="coach-insight-card is-level">
+          <h3>Mức độ hiện tại</h3>
+          <p class="coach-level-label">${escapeHtml(formatCoachLevelLabel(coachLevel))}</p>
+          <p>Độ chính xác trung bình: <strong>${escapeHtml(String(Math.round(averageAccuracy)))}%</strong></p>
+        </article>
+      `,
+    ].join("");
+    return;
+  }
+
+  if (aiCoachState.error) {
+    resultsNode.hidden = true;
+    resultsNode.innerHTML = "";
+    return;
+  }
+
+  resultsNode.hidden = false;
+  resultsNode.innerHTML = `
+    <div class="coach-empty-card">
+      Bạn cần làm bài trước khi AI Coach có thể phân tích.
+    </div>
+  `;
+}
+
+function renderAICoachPage() {
+  const root = getAICoachRoot();
+
+  if (!root) {
+    return;
+  }
+
+  resetAICoachStatus();
+
+  if (aiCoachState.loading) {
+    renderAICoachStatus(
+      "AI Coach đang phân tích kết quả học tập...",
+      "loading",
+    );
+  } else if (aiCoachState.error) {
+    renderAICoachStatus(aiCoachState.error, "error");
+  }
+
+  renderAICoachResults();
 }
 
 function getProfileAvatar(profile) {
@@ -1551,6 +1757,93 @@ async function syncStudentStrengthWeakness(profile) {
   renderStudentStrengthWeakness(profile, payload);
 }
 
+async function fetchAICoachAnalysis() {
+  const response = await apiRequestWithAuth("/api/coach/analyze", {
+    method: "POST",
+  });
+
+  return response.data || null;
+}
+
+async function handleAICoachAnalyze() {
+  const profile = getCurrentAuthUser();
+
+  if (normalizeRole(profile?.role) !== "student") {
+    return;
+  }
+
+  if (aiCoachState.loading) {
+    return;
+  }
+
+  aiCoachState.loading = true;
+  aiCoachState.error = "";
+  renderAICoachPage();
+
+  try {
+    const analysis = await fetchAICoachAnalysis();
+
+    if (!analysis) {
+      throw new Error("Không thể phân tích kết quả học tập. Vui lòng thử lại.");
+    }
+
+    aiCoachState.analysis = analysis;
+    aiCoachState.error = "";
+  } catch (error) {
+    const rawMessage = String(error?.message || "");
+    aiCoachState.error = rawMessage.includes(
+      "Bạn cần làm bài trước khi AI Coach có thể phân tích.",
+    )
+      ? "Bạn cần làm bài trước khi AI Coach có thể phân tích."
+      : "Không thể phân tích kết quả học tập. Vui lòng thử lại.";
+    showToast(aiCoachState.error, "error");
+  } finally {
+    aiCoachState.loading = false;
+    aiCoachState.initialized = true;
+    renderAICoachPage();
+  }
+}
+
+async function openAICoachPracticeTopic(topicId, grade, subject) {
+  const normalizedTopicId = normalizeQuizText(topicId);
+  const normalizedGrade = normalizeQuizText(grade);
+  const normalizedSubject = normalizeQuizText(subject);
+
+  if (!normalizedTopicId) {
+    showToast("Chủ đề này hiện chưa có bộ câu hỏi luyện tập.", "error");
+    return;
+  }
+
+  if (!normalizedGrade || !normalizedSubject) {
+    showToast("Không thể xác định khối lớp hoặc môn học cho chủ đề này.", "error");
+    return;
+  }
+
+  studentQuizState.initialized = true;
+  studentQuizState.grade = normalizedGrade;
+  studentQuizState.subject = normalizedSubject;
+  studentQuizState.pendingTopicId = normalizedTopicId;
+
+  changePage("subjects");
+}
+
+function initializeAICoachPage() {
+  const root = getAICoachRoot();
+
+  if (!root) {
+    return;
+  }
+
+  if (!aiCoachState.initialized) {
+    aiCoachState.initialized = true;
+    aiCoachState.analysis = null;
+    aiCoachState.loading = false;
+    aiCoachState.error = "";
+  }
+
+  renderAICoachPage();
+}
+
 function invalidateStudentHomeAssignmentCache(profile) {
   const cacheKey = String(
     profile?.uid || profile?.userId || profile?.id || "",
@@ -2452,6 +2745,7 @@ const studentQuizState = {
   reviewVisible: false,
   loadingTopics: false,
   loadingQuiz: false,
+  pendingTopicId: "",
 };
 
 let studentQuizControlsBound = false;
@@ -3074,11 +3368,37 @@ async function loadStudentQuizByTopic(topicId) {
       },
     );
 
-    studentQuizState.quiz = response.data || null;
+    const quizData = response.data || null;
+    const questionCount = Array.isArray(quizData?.questions)
+      ? quizData.questions.length
+      : 0;
+
+    if (questionCount === 0) {
+      studentQuizState.quiz = null;
+      showToast(
+        "Chủ đề này hiện chưa có bộ câu hỏi luyện tập.",
+        "error",
+      );
+      return;
+    }
+
+    studentQuizState.quiz = quizData;
     studentQuizState.answers = [];
   } catch (error) {
     studentQuizState.quiz = null;
-    showToast("Không thể tạo bộ câu hỏi. Vui lòng thử lại.", "error");
+    const errorMessage = String(error?.message || "");
+    if (
+      errorMessage.includes("Quiz not found") ||
+      errorMessage.includes("no questions") ||
+      errorMessage.includes("không có bộ câu hỏi")
+    ) {
+      showToast(
+        "Chủ đề này hiện chưa có bộ câu hỏi luyện tập.",
+        "error",
+      );
+    } else {
+      showToast("Không thể tạo bộ câu hỏi. Vui lòng thử lại.", "error");
+    }
   } finally {
     studentQuizState.loadingQuiz = false;
     renderStudentTopicCards();
@@ -3284,6 +3604,12 @@ async function initializeStudentQuizPage() {
   } else {
     renderStudentTopicCards();
     renderStudentQuizFlow();
+  }
+
+  if (studentQuizState.pendingTopicId) {
+    const pendingTopicId = studentQuizState.pendingTopicId;
+    studentQuizState.pendingTopicId = "";
+    await loadStudentQuizByTopic(pendingTopicId);
   }
 }
 
@@ -10961,6 +11287,25 @@ function bindAppEventsOnce() {
       return;
     }
 
+    const aiCoachPracticeButton = event.target.closest(
+      "[data-ai-coach-practice-topic]",
+    );
+    if (aiCoachPracticeButton) {
+      const topicId = String(
+        aiCoachPracticeButton.dataset.aiCoachPracticeTopic || "",
+      ).trim();
+      const grade = String(
+        aiCoachPracticeButton.dataset.aiCoachPracticeGrade || "",
+      ).trim();
+      const subject = String(
+        aiCoachPracticeButton.dataset.aiCoachPracticeSubject || "",
+      ).trim();
+
+      event.preventDefault();
+      void openAICoachPracticeTopic(topicId, grade, subject);
+      return;
+    }
+
     const openAssignmentsButton = event.target.closest(
       "[data-open-assignments]",
     );
@@ -11119,7 +11464,7 @@ function installCompatibilityGlobals() {
   window.calculateStreak = calculateStreak;
   window.calculateLevel = calculateLevel;
   window.askAI = () => {
-    console.info("[EduKids] AI Coach action triggered.");
+    void handleAICoachAnalyze();
   };
   window.EduKidsApi = {
     request: apiRequest,

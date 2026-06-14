@@ -301,14 +301,14 @@
         </section>
 
         <section id="ai-coach" class="page">
-          <div class="ai-coach-page">
+          <div class="ai-coach-page" data-ai-coach-root>
             <div class="coach-header">
               <div class="coach-header-left">
                 <h1>🤖 AI Coach</h1>
 
                 <p>
-                  AI sẽ phân tích kết quả học tập của bạn và đưa ra nhận xét chi
-                  tiết.
+                  AI sẽ phân tích kết quả học tập của bạn từ Firestore và đưa
+                  ra nhận xét ngắn gọn, dễ hiểu.
                 </p>
               </div>
 
@@ -320,63 +320,19 @@
 
               <h2>Phân tích</h2>
 
-              <p>
+              <p data-ai-coach-summary>
                 Nhấn nút bên dưới để AI phân tích kết quả học tập mới nhất của
                 bạn!
               </p>
 
-              <button class="ai-analyze-btn" onclick="askAI()">
+              <button class="ai-analyze-btn" type="button" onclick="askAI()" data-ai-coach-analyze-btn>
                 ✨ AI phân tích
               </button>
             </div>
 
-            <div class="strength-weakness-card">
-              <div class="section-title strong-title">👍 Điểm mạnh</div>
+            <p class="ai-coach-status" data-ai-coach-status hidden></p>
 
-              <div class="skill-line">
-                <span>Phân số</span>
-
-                <div class="skill-track">
-                  <div class="skill-fill green" style="width: 85%"></div>
-                </div>
-
-                <b>85% đúng</b>
-              </div>
-
-              <div class="skill-line">
-                <span>Hình học</span>
-
-                <div class="skill-track">
-                  <div class="skill-fill green" style="width: 75%"></div>
-                </div>
-
-                <b>75% đúng</b>
-              </div>
-
-              <hr />
-
-              <div class="section-title weak-title">⚠️ Điểm yếu</div>
-
-              <div class="skill-line">
-                <span>Tỉ số và tỉ lệ</span>
-
-                <div class="skill-track">
-                  <div class="skill-fill red" style="width: 45%"></div>
-                </div>
-
-                <b>45% đúng</b>
-              </div>
-
-              <div class="skill-line">
-                <span>Đo lường</span>
-
-                <div class="skill-track">
-                  <div class="skill-fill red" style="width: 40%"></div>
-                </div>
-
-                <b>40% đúng</b>
-              </div>
-            </div>
+            <div class="ai-coach-results" data-ai-coach-results hidden></div>
           </div>
         </section>
         <!-- SUBJECT -->

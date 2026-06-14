@@ -5,6 +5,7 @@ const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
 const assignmentRoutes = require("./routes/assignmentRoutes");
 const classRoutes = require("./routes/classRoutes");
+const coachRoutes = require("./routes/coachRoutes");
 const quizRoutes = require("./routes/quizRoutes");
 const userRoutes = require("./routes/userRoutes");
 const verifyToken = require("./middleware/verifyToken");
@@ -32,6 +33,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/classes", classRoutes);
+app.use("/api/coach", coachRoutes);
 app.use("/api/quiz", quizRoutes);
 app.use("/api/users", userRoutes);
 
