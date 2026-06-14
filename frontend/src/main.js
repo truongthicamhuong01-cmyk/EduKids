@@ -3012,6 +3012,8 @@ function openStudentAssignmentDetail(assignmentId) {
     return;
   }
 
+  console.log("[EduKids][student-assignment] open detail", normalizedId);
+
   const assignment =
     currentAssignments.find((item) => item.id === normalizedId) ||
     window.EduKidsCurrentAssignment ||
@@ -4573,7 +4575,11 @@ function bindStudentAssignmentControlsOnce() {
       if (assignmentPrimaryAction) {
         event.preventDefault();
         event.stopPropagation();
-        void openAssignmentDetail(assignmentId);
+        if (getCurrentRole() === "student") {
+          void openStudentAssignmentDetail(assignmentId);
+        } else {
+          void openAssignmentDetail(assignmentId);
+        }
         return;
       }
 
@@ -4582,7 +4588,11 @@ function bindStudentAssignmentControlsOnce() {
         event.stopPropagation();
       }
 
-      void openAssignmentDetail(assignmentId);
+      if (getCurrentRole() === "student") {
+        void openStudentAssignmentDetail(assignmentId);
+      } else {
+        void openAssignmentDetail(assignmentId);
+      }
     });
 
     assignmentsPage.addEventListener("submit", (event) => {
@@ -6646,7 +6656,7 @@ function bindAppEventsOnce() {
       if (getCurrentRole() === "teacher") {
         await loadAssignmentSubmissionsForDetail(assignmentId);
       } else {
-        await openAssignmentDetail(assignmentId);
+        await openStudentAssignmentDetail(assignmentId);
       }
       return;
     }
