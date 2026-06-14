@@ -1988,6 +1988,8 @@ function normalizeStudentAssignmentRecord(assignment, fallbackClassId = "") {
     createdAt: assignment.createdAt || "",
     updatedAt: assignment.updatedAt || "",
     questions: Array.isArray(assignment.questions) ? assignment.questions : [],
+    submissionStatus:
+      String(assignment.submissionStatus || "").trim().toLowerCase() || "",
     submissionId: String(assignment.submissionId || "").trim(),
     submittedAt: assignment.submittedAt || "",
     score: assignment.score ?? null,
@@ -2576,7 +2578,8 @@ function renderTeacherAssignmentSubmissionsView(assignments, submissions = [], l
 }
 
 function normalizeStudentAssignmentStatus(assignment) {
-  const rawStatus = String(assignment?.status || "").trim().toLowerCase();
+  const rawSubmissionStatus = String(assignment?.submissionStatus || "").trim().toLowerCase();
+  const rawStatus = rawSubmissionStatus || String(assignment?.status || "").trim().toLowerCase();
 
   if (
     rawStatus === "doing" ||
@@ -2612,12 +2615,18 @@ function normalizeStudentAssignmentStatus(assignment) {
   return "pending";
 }
 
-function formatStudentAssignmentStatusLabel(statusKey) {
+function formatStudentAssignmentStatusLabel(statusKey, assignment = null) {
+  const rawSubmissionStatus = String(assignment?.submissionStatus || "").trim().toLowerCase();
+
   if (statusKey === "doing") {
     return "Đang làm";
   }
 
   if (statusKey === "done") {
+    if (rawSubmissionStatus === "graded") {
+      return "Đã chấm";
+    }
+
     return "Hoàn thành";
   }
 
@@ -2638,6 +2647,20 @@ function getStudentAssignmentActionLabel(statusKey) {
   }
 
   return "Làm bài";
+}
+
+function getStudentAssignmentScoreBadgeText(assignment) {
+  const rawSubmissionStatus = String(assignment?.submissionStatus || "").trim().toLowerCase();
+
+  if (rawSubmissionStatus !== "graded") {
+    return "";
+  }
+
+  if (assignment?.score === null || typeof assignment?.score === "undefined" || assignment?.score === "") {
+    return "";
+  }
+
+  return `${String(assignment.score)} điểm`;
 }
 
 function getStudentAssignmentIcon(assignment) {
@@ -2697,6 +2720,8 @@ function renderStudentAssignmentEmptyState(list, title, description) {
 function renderStudentAssignmentCard(assignment) {
   const statusKey = normalizeStudentAssignmentStatus(assignment);
   const actionLabel = getStudentAssignmentActionLabel(statusKey);
+  const statusLabel = formatStudentAssignmentStatusLabel(statusKey, assignment);
+  const scoreBadgeText = getStudentAssignmentScoreBadgeText(assignment);
   const icon = getStudentAssignmentIcon(assignment);
   const dueDateText = assignment?.dueDate
     ? `Hạn nộp: ${formatAssignmentDate(assignment.dueDate)}`
@@ -2734,7 +2759,10 @@ function renderStudentAssignmentCard(assignment) {
       </div>
 
       <div class="assignment-right">
-        <span class="status ${escapeHtml(statusKey)}">${escapeHtml(formatStudentAssignmentStatusLabel(statusKey))}</span>
+        <span class="status ${escapeHtml(statusKey)}">
+          ${escapeHtml(statusLabel)}
+          ${scoreBadgeText ? `<small class="assignment-score-badge">${escapeHtml(scoreBadgeText)}</small>` : ""}
+        </span>
         <button
           type="button"
           class="action-btn"

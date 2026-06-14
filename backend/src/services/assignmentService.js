@@ -279,11 +279,10 @@ async function getSubmissionByStudent(assignmentId, studentId) {
   return normalizeSubmissionDoc(querySnapshot.docs[0]);
 }
 
-async function getSubmissionsByStudentAndClassIds(classIds, studentId) {
-  const normalizedClassIds = uniqueStrings(classIds);
+async function getSubmissionsByStudentId(studentId) {
   const normalizedStudentId = String(studentId || "").trim();
 
-  if (normalizedClassIds.length === 0 || !normalizedStudentId) {
+  if (!normalizedStudentId) {
     return [];
   }
 
@@ -293,10 +292,7 @@ async function getSubmissionsByStudentAndClassIds(classIds, studentId) {
 
   return snapshot.docs
     .map((doc) => normalizeSubmissionDoc(doc))
-    .filter(
-      (submission) =>
-        submission && normalizedClassIds.includes(submission.classId),
-    );
+    .filter((submission) => submission && submission.studentId === normalizedStudentId);
 }
 
 async function getSubmissionsByAssignmentId(assignmentId) {
@@ -417,13 +413,13 @@ async function getAssignmentsByClassIds(classIds, studentId = "") {
   const submissionsByAssignmentId = new Map();
 
   if (String(studentId || "").trim()) {
-    const submissions = await getSubmissionsByStudentAndClassIds(
-      normalizedClassIds,
-      studentId,
-    );
+    const submissions = await getSubmissionsByStudentId(studentId);
 
     submissions.forEach((submission) => {
-      if (submission?.assignmentId) {
+      if (
+        submission?.assignmentId &&
+        normalizedClassIds.includes(submission.classId)
+      ) {
         submissionsByAssignmentId.set(submission.assignmentId, submission);
       }
     });
@@ -433,12 +429,17 @@ async function getAssignmentsByClassIds(classIds, studentId = "") {
     const submission = submissionsByAssignmentId.get(assignment.id);
 
     if (!submission) {
-      return assignment;
+      return {
+        ...assignment,
+        submissionStatus: "pending",
+        submittedAt: "",
+        score: null,
+      };
     }
 
     return {
       ...assignment,
-      status: submission.status || "submitted",
+      submissionStatus: submission.status || "submitted",
       submissionId: submission.id,
       submittedAt: submission.submittedAt,
       score: submission.score ?? null,
