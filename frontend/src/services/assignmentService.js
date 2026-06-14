@@ -20,6 +20,16 @@
     }
   }
 
+  function getFirestoreCollection(name) {
+    const firestore = getFirestore();
+
+    if (!firestore) {
+      return null;
+    }
+
+    return firestore.collection(name);
+  }
+
   function normalizeAssignment(doc) {
     const data = typeof doc.data === "function" ? doc.data() || {} : doc || {};
     const dueDate = String(data.dueDate || "").trim();
@@ -154,9 +164,52 @@
     return Array.isArray(response.data) ? response.data : [];
   }
 
+  async function fetchAssignmentSubmissionByStudent(assignmentId, studentId) {
+    const normalizedAssignmentId = String(assignmentId || "").trim();
+    const normalizedStudentId = String(studentId || "").trim();
+
+    if (!normalizedAssignmentId || !normalizedStudentId) {
+      return null;
+    }
+
+    const collection = getFirestoreCollection("assignment_submissions");
+
+    if (!collection) {
+      return null;
+    }
+
+    const directDocId = `${normalizedAssignmentId}_${normalizedStudentId}`;
+    const directSnapshot = await collection.doc(directDocId).get();
+
+    if (directSnapshot.exists) {
+      return {
+        id: directSnapshot.id,
+        ...(directSnapshot.data() || {}),
+      };
+    }
+
+    const querySnapshot = await collection
+      .where("assignmentId", "==", normalizedAssignmentId)
+      .where("studentId", "==", normalizedStudentId)
+      .limit(1)
+      .get();
+
+    if (querySnapshot.empty) {
+      return null;
+    }
+
+    const doc = querySnapshot.docs[0];
+
+    return {
+      id: doc.id,
+      ...(doc.data() || {}),
+    };
+  }
+
   window.EduKidsAssignmentService = {
     createAssignment,
     fetchAssignmentSubmissions,
+    fetchAssignmentSubmissionByStudent,
     getTeacherAssignments,
     listenTeacherAssignments,
   };

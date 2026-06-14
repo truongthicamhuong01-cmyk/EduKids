@@ -458,6 +458,10 @@ function changePage(pageId) {
   showPage(targetPageId);
   applyRoleVisibility(role);
 
+  if (role === "teacher" && targetPageId !== "manage" && currentTeacherAssignmentDetail.visible) {
+    closeTeacherAssignmentDetail();
+  }
+
   const profilePageType = getProfilePageType(targetPageId);
 
   if (
@@ -1956,12 +1960,21 @@ const teacherAssignmentSubmissionState = {
   loading: false,
   error: "",
 };
-const assignmentDetailState = {
+const currentTeacherAssignmentDetail = {
   visible: false,
   loading: false,
   error: "",
-  submissionsVisible: false,
-  submissionLoading: false,
+  assignment: null,
+  classInfo: null,
+  classStudents: [],
+  submissions: [],
+  selectedStudentId: "",
+  selectedSubmission: null,
+  selectedStudentProfile: null,
+  submissionByStudentId: new Map(),
+  profileByStudentId: new Map(),
+  loadingStudentId: "",
+  requestId: 0,
 };
 let createMethod = "manual";
 
@@ -2532,65 +2545,20 @@ function normalizeTeacherAssignmentSubmissionRecord(submission) {
     assignmentId: String(submission.assignmentId || "").trim(),
     classId: String(submission.classId || "").trim(),
     studentId: String(submission.studentId || "").trim(),
+    studentName: String(submission.studentName || "").trim(),
     submittedAt: submission.submittedAt || "",
     score: submission.score ?? null,
+    correctCount: Number.isFinite(Number(submission.correctCount))
+      ? Number(submission.correctCount)
+      : null,
+    wrongCount: Number.isFinite(Number(submission.wrongCount))
+      ? Number(submission.wrongCount)
+      : null,
+    totalQuestions: Number.isFinite(Number(submission.totalQuestions))
+      ? Number(submission.totalQuestions)
+      : null,
     status: String(submission.status || "").trim().toLowerCase() || "submitted",
   };
-}
-
-function renderAssignmentSubmissionsList(submissions) {
-  const normalizedSubmissions = Array.isArray(submissions)
-    ? submissions
-        .map((submission) => normalizeTeacherAssignmentSubmissionRecord(submission))
-        .filter((submission) => submission && submission.assignmentId)
-    : [];
-
-  if (normalizedSubmissions.length === 0) {
-    return `
-      <div class="manage-empty-state">
-        <h3>Chưa có bài nộp nào.</h3>
-        <p>Danh sách bài nộp sẽ xuất hiện sau khi học sinh gửi bài.</p>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="manage-submission-list">
-      ${normalizedSubmissions
-        .map((submission) => {
-          const scoreLabel =
-            submission.score === null || typeof submission.score === "undefined"
-              ? "--"
-              : String(submission.score);
-
-          return `
-            <div class="manage-submission-item">
-              <div class="manage-submission-row">
-                <span>studentId</span>
-                <strong>${escapeHtml(submission.studentId || "--")}</strong>
-              </div>
-              <div class="manage-submission-row">
-                <span>classId</span>
-                <strong>${escapeHtml(submission.classId || "--")}</strong>
-              </div>
-              <div class="manage-submission-row">
-                <span>submittedAt</span>
-                <strong>${escapeHtml(formatDateTime(submission.submittedAt))}</strong>
-              </div>
-              <div class="manage-submission-row">
-                <span>score</span>
-                <strong>${escapeHtml(scoreLabel)}</strong>
-              </div>
-              <div class="manage-submission-row">
-                <span>status</span>
-                <strong>${escapeHtml(submission.status || "submitted")}</strong>
-              </div>
-            </div>
-          `;
-        })
-        .join("")}
-    </div>
-  `;
 }
 
 function renderTeacherAssignmentSubmissionsView(assignments, submissions = [], loading = false, error = "") {
@@ -2654,20 +2622,793 @@ function renderTeacherAssignmentSubmissionsView(assignments, submissions = [], l
 
   list.innerHTML = assignmentCards;
 
-  const selectedAssignment = normalizedAssignments.find(
-    (assignment) => assignment.id === teacherAssignmentSubmissionState.selectedAssignmentId,
-  );
-
-  if (selectedAssignment) {
-    renderAssignmentDetail(selectedAssignment);
+  if (currentTeacherAssignmentDetail.visible) {
+    setTeacherAssignmentDetailVisibility(true);
+    renderTeacherAssignmentDetail();
   } else {
-    const detailRoot = getAssignmentDetailRoot();
+    setTeacherAssignmentDetailVisibility(false);
+  }
+}
 
-    if (detailRoot) {
-      detailRoot.innerHTML = "";
-      detailRoot.hidden = true;
+function normalizeTeacherSubmissionStatusKey(submission) {
+  const rawStatus = String(submission?.status || "").trim().toLowerCase();
+
+  if (
+    rawStatus === "doing" ||
+    rawStatus === "in_progress" ||
+    rawStatus === "in-progress" ||
+    rawStatus === "started"
+  ) {
+    return "doing";
+  }
+
+  if (
+    rawStatus === "submitted" ||
+    rawStatus === "graded" ||
+    rawStatus === "done" ||
+    rawStatus === "completed" ||
+    rawStatus === "complete"
+  ) {
+    return "submitted";
+  }
+
+  return "pending";
+}
+
+function getTeacherSubmissionStatusLabel(statusKey) {
+  if (statusKey === "doing") {
+    return "Đang làm";
+  }
+
+  if (statusKey === "submitted") {
+    return "Đã nộp";
+  }
+
+  return "Chưa nộp";
+}
+
+function getTeacherSubmissionStatusClass(statusKey) {
+  if (statusKey === "doing") {
+    return "doing";
+  }
+
+  if (statusKey === "submitted") {
+    return "submitted";
+  }
+
+  return "pending";
+}
+
+function getTeacherSubmissionScoreText(submission) {
+  if (submission?.score === null || typeof submission?.score === "undefined" || submission?.score === "") {
+    return "--";
+  }
+
+  return `${String(submission.score)}/10`;
+}
+
+function normalizeTeacherQuestionChoices(question) {
+  if (!question || typeof question !== "object" || !Array.isArray(question.options)) {
+    return [];
+  }
+
+  return question.options
+    .map((option, index) => {
+      const label = String.fromCharCode(65 + index);
+
+      if (option && typeof option === "object") {
+        const text = String(option.text || option.answer || option.value || "").trim();
+        const normalizedValue = String(option.value || option.text || option.answer || text || "").trim();
+
+        return {
+          label,
+          text,
+          value: normalizedValue || text,
+        };
+      }
+
+      const text = String(option || "").trim();
+
+      return {
+        label,
+        text,
+        value: text,
+      };
+    })
+    .filter((choice) => choice.text)
+    .slice(0, 4);
+}
+
+function normalizeTeacherQuestionCorrectLabel(question) {
+  const direct = String(
+    question?.correctAnswer ||
+      question?.answer ||
+      question?.correct ||
+      "",
+  ).trim().toUpperCase();
+
+  if (!direct) {
+    return "";
+  }
+
+  if (/^[A-Z]$/.test(direct)) {
+    return direct;
+  }
+
+  const choices = normalizeTeacherQuestionChoices(question);
+  const matched = choices.find((choice) => {
+    const normalizedText = String(choice.text || "").trim().toUpperCase();
+    const normalizedValue = String(choice.value || "").trim().toUpperCase();
+
+    return normalizedText === direct || normalizedValue === direct;
+  });
+
+  return matched?.label || direct;
+}
+
+function normalizeTeacherSubmissionAnswerValue(answer) {
+  if (answer === null || typeof answer === "undefined") {
+    return "";
+  }
+
+  if (
+    typeof answer === "string" ||
+    typeof answer === "number" ||
+    typeof answer === "boolean"
+  ) {
+    return String(answer).trim().toUpperCase();
+  }
+
+  if (typeof answer !== "object") {
+    return "";
+  }
+
+  return String(
+    answer.selected ??
+      answer.answer ??
+      answer.correctAnswer ??
+      answer.value ??
+      answer.text ??
+      answer.label ??
+      answer.option ??
+      "",
+  )
+    .trim()
+    .toUpperCase();
+}
+
+function normalizeTeacherSelectedLabel(answer, question) {
+  const normalizedAnswer = normalizeTeacherSubmissionAnswerValue(answer);
+
+  if (!normalizedAnswer) {
+    return "";
+  }
+
+  if (/^[A-Z]$/.test(normalizedAnswer)) {
+    return normalizedAnswer;
+  }
+
+  const choices = normalizeTeacherQuestionChoices(question);
+  const matched = choices.find((choice) => {
+    const normalizedText = String(choice.text || "").trim().toUpperCase();
+    const normalizedValue = String(choice.value || "").trim().toUpperCase();
+
+    return normalizedText === normalizedAnswer || normalizedValue === normalizedAnswer;
+  });
+
+  return matched?.label || normalizedAnswer;
+}
+
+function getTeacherAnswerDisplayText(answer, question) {
+  const normalizedAnswer = normalizeTeacherSubmissionAnswerValue(answer);
+
+  if (!normalizedAnswer) {
+    return "--";
+  }
+
+  const choices = normalizeTeacherQuestionChoices(question);
+  const matchedChoice = choices.find((choice) => {
+    const normalizedText = String(choice.text || "").trim().toUpperCase();
+    const normalizedValue = String(choice.value || "").trim().toUpperCase();
+
+    return (
+      normalizedText === normalizedAnswer ||
+      normalizedValue === normalizedAnswer ||
+      choice.label === normalizedAnswer
+    );
+  });
+
+  if (matchedChoice) {
+    return `${matchedChoice.label}. ${matchedChoice.text}`;
+  }
+
+  return normalizedAnswer;
+}
+
+function getTeacherSubmissionAnswerByIndex(submission, question, questionIndex) {
+  const answers = Array.isArray(submission?.answers) ? submission.answers : [];
+
+  if (answers.length === 0) {
+    return null;
+  }
+
+  const directAnswer = answers[questionIndex];
+
+  if (directAnswer) {
+    return directAnswer;
+  }
+
+  const questionId = String(question?.id || question?.questionId || "").trim();
+
+  if (questionId) {
+    const matched = answers.find((answer) => {
+      if (!answer || typeof answer !== "object") {
+        return false;
+      }
+
+      return String(answer.questionId || answer.id || "").trim() === questionId;
+    });
+
+    if (matched) {
+      return matched;
     }
   }
+
+  const matchedIndex = answers.find((answer) => {
+    if (!answer || typeof answer !== "object") {
+      return false;
+    }
+
+    if (!Number.isFinite(Number(answer.questionIndex))) {
+      return false;
+    }
+
+    return Number(answer.questionIndex) === questionIndex;
+  });
+
+  return matchedIndex || null;
+}
+
+function buildTeacherSubmissionQuestionReviews(assignment, submission) {
+  const questions = Array.isArray(assignment?.questions) ? assignment.questions : [];
+
+  return questions.map((question, questionIndex) => {
+    const answer = getTeacherSubmissionAnswerByIndex(submission, question, questionIndex);
+    const studentLabel = normalizeTeacherSelectedLabel(answer, question);
+    const correctLabel = normalizeTeacherQuestionCorrectLabel(question);
+    const isCorrect = Boolean(studentLabel && correctLabel && studentLabel === correctLabel);
+    const choices = normalizeTeacherQuestionChoices(question);
+    const studentAnswerText = getTeacherAnswerDisplayText(answer, question);
+    const correctChoice = choices.find((choice) => choice.label === correctLabel);
+    const correctAnswerText = correctChoice
+      ? `${correctChoice.label}. ${correctChoice.text}`
+      : correctLabel || "--";
+
+    return {
+      questionIndex,
+      questionNumber: questionIndex + 1,
+      questionText: String(question?.question || question?.text || question?.content || "--").trim() || "--",
+      studentAnswerText,
+      correctAnswerText,
+      isCorrect,
+      pointText: isCorrect ? "1 điểm" : "0 điểm",
+      resultLabel: isCorrect ? "✓ Chính xác" : "✗ Sai",
+      resultClass: isCorrect ? "is-correct" : "is-wrong",
+    };
+  });
+}
+
+function normalizeTeacherStudentProfile(student = {}) {
+  return {
+    id: String(student?.id || student?.studentId || "").trim(),
+    name: String(
+      student?.name ||
+        student?.fullName ||
+        student?.username ||
+        student?.studentName ||
+        student?.id ||
+        "",
+    ).trim(),
+    username: String(student?.username || student?.name || student?.fullName || "").trim(),
+    avatar: String(student?.avatar || student?.photoURL || student?.profilePicture || "").trim(),
+  };
+}
+
+function normalizeTeacherAssignmentStudentRecord(student, submission = null, profile = null) {
+  const normalizedProfile = normalizeTeacherStudentProfile(profile || student);
+  const normalizedSubmission = normalizeTeacherAssignmentSubmissionRecord(submission);
+  const statusKey = normalizedSubmission
+    ? normalizeTeacherSubmissionStatusKey(normalizedSubmission)
+    : "pending";
+
+  return {
+    id: String(student?.id || student?.studentId || normalizedSubmission?.studentId || "").trim(),
+    name:
+      normalizedProfile.name ||
+      normalizedSubmission?.studentName ||
+      String(student?.name || student?.fullName || student?.username || "").trim() ||
+      normalizedSubmission?.studentId ||
+      "--",
+    username:
+      normalizedProfile.username ||
+      normalizedProfile.name ||
+      normalizedSubmission?.studentName ||
+      "--",
+    avatar: normalizedProfile.avatar || "",
+    statusKey,
+    statusLabel: getTeacherSubmissionStatusLabel(statusKey),
+    statusClass: getTeacherSubmissionStatusClass(statusKey),
+    submittedAt: normalizedSubmission?.submittedAt || "",
+    score: normalizedSubmission?.score ?? null,
+    correctCount: normalizedSubmission?.correctCount ?? null,
+    wrongCount: normalizedSubmission?.wrongCount ?? null,
+    submission: normalizedSubmission,
+    profile: profile || null,
+  };
+}
+
+function getTeacherAssignmentTotalStudents(classStudents, submissions) {
+  const studentIds = uniqueClassroomValues([
+    ...((Array.isArray(classStudents) ? classStudents : []).map((student) => student?.id)),
+    ...((Array.isArray(submissions) ? submissions : []).map((submission) => submission?.studentId)),
+  ]);
+
+  return studentIds.length;
+}
+
+function getTeacherAssignmentSummaryStats(rows) {
+  const normalizedRows = Array.isArray(rows) ? rows : [];
+  const submittedRows = normalizedRows.filter((row) => row.statusKey === "submitted");
+  const doingRows = normalizedRows.filter((row) => row.statusKey === "doing");
+  const scoreValues = submittedRows
+    .map((row) => Number(row.score))
+    .filter((score) => Number.isFinite(score));
+  const averageScore = scoreValues.length
+    ? scoreValues.reduce((sum, value) => sum + value, 0) / scoreValues.length
+    : 0;
+
+  return {
+    submittedCount: submittedRows.length,
+    doingCount: doingRows.length,
+    averageScore,
+  };
+}
+
+function getTeacherAssignmentSelectedStudentId() {
+  const detail = currentTeacherAssignmentDetail;
+  const assignment = detail.assignment;
+
+  if (!assignment) {
+    return "";
+  }
+
+  if (
+    detail.selectedStudentId &&
+    detail.studentRows.some((row) => row.id === detail.selectedStudentId)
+  ) {
+    return detail.selectedStudentId;
+  }
+
+  const firstSubmitted = detail.studentRows.find((row) => row.statusKey === "submitted");
+
+  if (firstSubmitted) {
+    return firstSubmitted.id;
+  }
+
+  return detail.studentRows[0]?.id || "";
+}
+
+function renderTeacherStudentSubmission(studentRow = null) {
+  const detail = currentTeacherAssignmentDetail;
+  const assignment = detail.assignment;
+  const questionReviews = buildTeacherSubmissionQuestionReviews(
+    assignment,
+    studentRow?.submission || detail.selectedSubmission || null,
+  );
+  const selectedProfile = studentRow?.profile || detail.selectedStudentProfile || null;
+  const avatarPath =
+    selectedProfile?.avatar ||
+    studentRow?.avatar ||
+    (window.EduKidsProfileService?.getAvatarPathFromProfile
+      ? window.EduKidsProfileService.getAvatarPathFromProfile({
+          avatar: studentRow?.avatar || "",
+          role: "student",
+        })
+      : "assets/userAvatar/boy.png");
+  const badgeClass = studentRow?.statusClass || "pending";
+  const submittedAt = studentRow?.submittedAt
+    ? formatDateTime(studentRow.submittedAt)
+    : "--";
+  const scoreText = studentRow ? getTeacherSubmissionScoreText(studentRow) : "--";
+  const correctCount = studentRow?.correctCount;
+  const wrongCount = studentRow?.wrongCount;
+  const questionCount = questionReviews.length;
+
+  return `
+    <div class="teacher-assignment-sidebar-card">
+      <div class="teacher-assignment-sidebar-header">
+        <div class="teacher-assignment-sidebar-profile">
+          <img
+            class="teacher-assignment-sidebar-avatar"
+            src="${escapeHtml(avatarPath || "assets/userAvatar/boy.png")}"
+            alt="${escapeHtml(studentRow?.name || "Học sinh")}"
+          />
+          <div>
+            <h3>${escapeHtml(studentRow?.name || "--")}</h3>
+            <p>${escapeHtml(studentRow?.username || studentRow?.name || "--")}</p>
+          </div>
+        </div>
+        <span class="teacher-assignment-status-badge is-${escapeHtml(badgeClass)}">
+          ${escapeHtml(studentRow?.statusLabel || "Chưa nộp")}
+        </span>
+      </div>
+
+      <div class="teacher-assignment-sidebar-meta">
+        <div class="teacher-assignment-sidebar-row">
+          <span>Ngày nộp</span>
+          <strong>${escapeHtml(submittedAt)}</strong>
+        </div>
+        <div class="teacher-assignment-sidebar-row">
+          <span>Điểm</span>
+          <strong>${escapeHtml(scoreText)}</strong>
+        </div>
+        <div class="teacher-assignment-sidebar-row">
+          <span>Số câu đúng</span>
+          <strong>${escapeHtml(Number.isFinite(Number(correctCount)) ? String(correctCount) : "0")}</strong>
+        </div>
+        <div class="teacher-assignment-sidebar-row">
+          <span>Số câu sai</span>
+          <strong>${escapeHtml(Number.isFinite(Number(wrongCount)) ? String(wrongCount) : String(questionCount > 0 ? Math.max(questionCount - Number(correctCount || 0), 0) : 0))}</strong>
+        </div>
+      </div>
+
+      <div class="teacher-assignment-question-list">
+        <h4>Chi tiết từng câu hỏi</h4>
+        ${
+          questionReviews.length > 0
+            ? questionReviews
+                .map(
+                  (question) => `
+                    <article class="teacher-assignment-question-card ${escapeHtml(question.resultClass)}">
+                      <div class="teacher-assignment-question-head">
+                        <strong>Câu ${question.questionNumber}</strong>
+                        <span>${escapeHtml(question.pointText)}</span>
+                      </div>
+                      <p class="teacher-assignment-question-text">${escapeHtml(question.questionText)}</p>
+                      <div class="teacher-assignment-question-row">
+                        <span>Đáp án học sinh</span>
+                        <strong>${escapeHtml(question.studentAnswerText)}</strong>
+                      </div>
+                      <div class="teacher-assignment-question-row">
+                        <span>Đáp án đúng</span>
+                        <strong>${escapeHtml(question.correctAnswerText)}</strong>
+                      </div>
+                      <div class="teacher-assignment-question-result">${escapeHtml(question.resultLabel)}</div>
+                    </article>
+                  `,
+                )
+                .join("")
+            : `
+              <div class="manage-empty-state">
+                <h3>Chưa có câu hỏi</h3>
+                <p>Bài tập này chưa có câu hỏi để hiển thị.</p>
+              </div>
+            `
+        }
+      </div>
+    </div>
+  `;
+}
+
+function renderTeacherAssignmentDetail() {
+  const detail = currentTeacherAssignmentDetail;
+  const root = getTeacherAssignmentDetailRoot();
+
+  if (!root) {
+    return;
+  }
+
+  if (!detail.visible || !detail.assignment) {
+    root.hidden = true;
+    root.innerHTML = "";
+    setTeacherAssignmentDetailVisibility(false);
+    return;
+  }
+
+  const assignment = detail.assignment;
+  const selectedStudentId = getTeacherAssignmentSelectedStudentId();
+  const selectedRow =
+    detail.studentRows.find((row) => row.id === selectedStudentId) ||
+    detail.studentRows[0] ||
+    null;
+  const stats = getTeacherAssignmentSummaryStats(detail.studentRows);
+  const totalStudents = getTeacherAssignmentTotalStudents(
+    detail.classStudents,
+    detail.submissions,
+  );
+  const unansweredCount = Math.max(totalStudents - stats.submittedCount - stats.doingCount, 0);
+  const topicText = String(
+    assignment.topic ||
+      assignment.description ||
+      assignment.subject ||
+      "",
+  ).trim();
+  const classLabel =
+    assignment.className ||
+    detail.classInfo?.name ||
+    detail.classInfo?.className ||
+    assignment.classId ||
+    "--";
+  const subjectLabel = assignment.subject || "--";
+  const dateAssigned = formatAssignmentDate(assignment.createdAt);
+  const dueDate = assignment.dueDate ? formatAssignmentDate(assignment.dueDate) : "--";
+  const maxScore = 10;
+  const averageScore = Number.isFinite(stats.averageScore) ? stats.averageScore.toFixed(1) : "0.0";
+
+  root.hidden = false;
+  root.innerHTML = `
+    <div class="teacher-assignment-detail-shell">
+      <div class="teacher-assignment-detail-main">
+        <header class="teacher-assignment-detail-header">
+          <button type="button" class="teacher-assignment-back-btn" data-teacher-assignment-back>
+            ← Quay lại danh sách bài tập
+          </button>
+
+          <button type="button" class="teacher-assignment-close-btn" data-teacher-assignment-close aria-label="Đóng chi tiết bài tập">
+            ×
+          </button>
+        </header>
+
+        <section class="teacher-assignment-hero">
+          <div class="teacher-assignment-hero-copy">
+            <h1>${escapeHtml(assignment.title || "--")}</h1>
+            <div class="teacher-assignment-hero-line">
+              <span class="teacher-assignment-hero-pill">${escapeHtml(subjectLabel)}</span>
+              <span class="teacher-assignment-hero-text">Chủ đề: ${escapeHtml(topicText || "--")}</span>
+            </div>
+            <div class="teacher-assignment-hero-dates">
+              <div class="teacher-assignment-hero-date">
+                <span>Ngày giao</span>
+                <strong>${escapeHtml(dateAssigned)}</strong>
+              </div>
+              <div class="teacher-assignment-hero-date">
+                <span>Hạn nộp</span>
+                <strong>${escapeHtml(dueDate)}</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        ${
+          detail.error
+            ? `
+              <div class="manage-empty-state">
+                <h3>Không thể tải đầy đủ dữ liệu</h3>
+                <p>${escapeHtml(detail.error)}</p>
+              </div>
+            `
+            : ""
+        }
+
+        <section class="teacher-assignment-stats">
+          <article class="teacher-assignment-stat-card teacher-assignment-stat-card-green">
+            <span>Đã nộp</span>
+            <strong>${escapeHtml(String(stats.submittedCount))}</strong>
+          </article>
+          <article class="teacher-assignment-stat-card teacher-assignment-stat-card-blue">
+            <span>Đang làm</span>
+            <strong>${escapeHtml(String(stats.doingCount))}</strong>
+          </article>
+          <article class="teacher-assignment-stat-card teacher-assignment-stat-card-orange">
+            <span>Chưa làm</span>
+            <strong>${escapeHtml(String(unansweredCount))}</strong>
+          </article>
+          <article class="teacher-assignment-stat-card teacher-assignment-stat-card-purple">
+            <span>Điểm trung bình</span>
+            <strong>${escapeHtml(averageScore)}<small>/10</small></strong>
+          </article>
+        </section>
+
+        <section class="teacher-assignment-info">
+          <h2>Thông tin bài tập</h2>
+          <div class="teacher-assignment-info-grid">
+            <div class="teacher-assignment-info-item">
+              <span>Mô tả</span>
+              <strong>${escapeHtml(assignment.description || "--")}</strong>
+            </div>
+            <div class="teacher-assignment-info-item">
+              <span>Khối lớp</span>
+              <strong>${escapeHtml(classLabel)}</strong>
+            </div>
+            <div class="teacher-assignment-info-item">
+              <span>Môn học</span>
+              <strong>${escapeHtml(subjectLabel)}</strong>
+            </div>
+            <div class="teacher-assignment-info-item">
+              <span>Số câu hỏi</span>
+              <strong>${escapeHtml(String(Array.isArray(assignment.questions) ? assignment.questions.length : 0))} câu</strong>
+            </div>
+            <div class="teacher-assignment-info-item">
+              <span>Điểm tối đa</span>
+              <strong>${escapeHtml(String(maxScore))} điểm</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="teacher-assignment-students">
+          <div class="teacher-assignment-section-head">
+            <h2>Danh sách học sinh</h2>
+          </div>
+
+          <div class="teacher-assignment-table-wrap">
+            <table class="teacher-assignment-table">
+              <thead>
+                <tr>
+                  <th>STT</th>
+                  <th>Học sinh</th>
+                  <th>Trạng thái</th>
+                  <th>Điểm</th>
+                  <th>Ngày nộp</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${
+                  detail.studentRows.length > 0
+                    ? detail.studentRows
+                        .map((row, index) => {
+                          const isActive = row.id === selectedRow?.id;
+                          const scoreDisplay = row.statusKey === "submitted"
+                            ? getTeacherSubmissionScoreText(row)
+                            : "--";
+                          const submittedAtText = row.submittedAt
+                            ? formatDateTime(row.submittedAt)
+                            : "--";
+
+                          return `
+                            <tr class="${isActive ? "is-active" : ""}" data-teacher-student-row data-student-id="${escapeHtml(row.id)}">
+                              <td>${escapeHtml(String(index + 1))}</td>
+                              <td>
+                                <div class="teacher-assignment-student">
+                                  <img
+                                    src="${escapeHtml(
+                                      row.avatar ||
+                                        (window.EduKidsProfileService?.getAvatarPathFromProfile
+                                          ? window.EduKidsProfileService.getAvatarPathFromProfile({
+                                              role: "student",
+                                              gender: "male",
+                                            })
+                                          : "assets/userAvatar/boy.png"),
+                                    )}"
+                                    alt="${escapeHtml(row.name || "Học sinh")}"
+                                  />
+                                  <span>${escapeHtml(row.name || "--")}</span>
+                                </div>
+                              </td>
+                              <td><span class="teacher-assignment-row-badge is-${escapeHtml(row.statusClass)}">${escapeHtml(row.statusLabel)}</span></td>
+                              <td>${escapeHtml(scoreDisplay)}</td>
+                              <td>${escapeHtml(submittedAtText)}</td>
+                              <td>
+                                <button
+                                  type="button"
+                                  class="teacher-assignment-view-btn"
+                                  data-teacher-student-view
+                                  data-student-id="${escapeHtml(row.id)}"
+                                >
+                                  Xem
+                                </button>
+                              </td>
+                            </tr>
+                          `;
+                        })
+                        .join("")
+                    : `
+                      <tr>
+                        <td colspan="6">
+                          <div class="manage-empty-state">
+                            <h3>Chưa có học sinh</h3>
+                            <p>Lớp này chưa có học sinh để hiển thị.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    `
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <aside class="teacher-assignment-sidebar">
+        <div class="teacher-assignment-sidebar-head">
+          <h2>Chi tiết bài làm</h2>
+        </div>
+        ${
+          currentTeacherAssignmentDetail.loading ||
+          currentTeacherAssignmentDetail.loadingStudentId
+            ? `
+              <div class="manage-empty-state">
+                <h3>Đang tải bài làm...</h3>
+                <p>Vui lòng chờ trong giây lát.</p>
+              </div>
+            `
+            : renderTeacherStudentSubmission(selectedRow)
+        }
+      </aside>
+    </div>
+  `;
+
+  setTeacherAssignmentDetailVisibility(true);
+}
+
+async function selectTeacherAssignmentStudent(studentId) {
+  const detail = currentTeacherAssignmentDetail;
+  const normalizedStudentId = String(studentId || "").trim();
+  const requestId = detail.requestId;
+
+  if (!detail.visible || !detail.assignment || !normalizedStudentId) {
+    return;
+  }
+
+  detail.selectedStudentId = normalizedStudentId;
+  detail.loadingStudentId = normalizedStudentId;
+  renderTeacherAssignmentDetail();
+
+  const cachedSubmission = detail.submissionByStudentId.get(normalizedStudentId) || null;
+  const cachedProfile = detail.profileByStudentId.get(normalizedStudentId) || null;
+  const [submission, profile] = await Promise.all([
+    cachedSubmission?.answers?.length
+      ? Promise.resolve(cachedSubmission)
+      : window.EduKidsAssignmentService?.fetchAssignmentSubmissionByStudent
+        ? window.EduKidsAssignmentService.fetchAssignmentSubmissionByStudent(
+            detail.assignment.id,
+            normalizedStudentId,
+          ).catch(() => null)
+        : Promise.resolve(null),
+    cachedProfile
+      ? Promise.resolve(cachedProfile)
+      : window.EduKidsProfileService?.fetchProfileById
+        ? window.EduKidsProfileService.fetchProfileById(normalizedStudentId).catch(() => null)
+        : Promise.resolve(null),
+  ]);
+
+  if (!detail.visible || detail.requestId !== requestId) {
+    return;
+  }
+
+  if (submission) {
+    detail.submissionByStudentId.set(normalizedStudentId, submission);
+  }
+
+  if (profile) {
+    detail.profileByStudentId.set(normalizedStudentId, profile);
+  }
+
+  const selectedSubmission = submission || detail.submissionByStudentId.get(normalizedStudentId) || null;
+  const selectedProfile = profile || detail.profileByStudentId.get(normalizedStudentId) || null;
+  const existingRow = detail.studentRows.find((row) => row.id === normalizedStudentId) || null;
+  const selectedRow = normalizeTeacherAssignmentStudentRecord(
+    existingRow || {
+      id: normalizedStudentId,
+      name:
+        selectedProfile?.name ||
+        selectedProfile?.fullName ||
+        selectedProfile?.username ||
+        normalizedStudentId,
+      username: selectedProfile?.username || "",
+      avatar: selectedProfile?.avatar || "",
+    },
+    selectedSubmission,
+    selectedProfile,
+  );
+
+  detail.selectedSubmission = selectedSubmission;
+  detail.selectedStudentProfile = selectedProfile;
+  detail.studentRows = detail.studentRows.map((row) =>
+    row.id === normalizedStudentId ? { ...row, ...selectedRow } : row,
+  );
+  detail.loadingStudentId = "";
+  renderTeacherAssignmentDetail();
 }
 
 function normalizeStudentAssignmentStatus(assignment) {
@@ -3211,6 +3952,11 @@ function getAssignmentDetailContext(assignment) {
 }
 
 function renderAssignmentDetail(assignment) {
+  if (getCurrentRole() === "teacher") {
+    renderTeacherAssignmentDetail();
+    return;
+  }
+
   const root = getAssignmentDetailRoot();
 
   if (!root) {
@@ -3276,117 +4022,210 @@ function renderAssignmentDetail(assignment) {
       ${context.footerHint ? `<div class="assignment-detail-row"><span>ghi chú</span><strong>${escapeHtml(context.footerHint)}</strong></div>` : ""}
     </div>
   `;
-
-  if (
-    getCurrentRole() === "teacher" &&
-    assignmentDetailState.submissionsVisible
-  ) {
-    const submissionsSection = document.createElement("div");
-    submissionsSection.className = "assignment-detail-submissions";
-    submissionsSection.innerHTML = `
-      <div class="assignment-detail-row">
-        <span>bài nộp</span>
-        <strong>${escapeHtml(teacherAssignmentSubmissionState.loading ? "Đang tải..." : `${Array.isArray(teacherAssignmentSubmissionState.submissions) ? teacherAssignmentSubmissionState.submissions.length : 0} bản ghi`)}</strong>
-      </div>
-      ${
-        teacherAssignmentSubmissionState.error
-          ? `<div class="assignment-detail-row"><span>lỗi</span><strong>${escapeHtml(teacherAssignmentSubmissionState.error)}</strong></div>`
-          : ""
-      }
-      ${
-        teacherAssignmentSubmissionState.loading
-          ? `<div class="manage-empty-state"><h3>Đang tải bài nộp...</h3><p>Vui lòng chờ trong giây lát.</p></div>`
-          : renderAssignmentSubmissionsList(teacherAssignmentSubmissionState.submissions)
-      }
-    `;
-
-    root.appendChild(submissionsSection);
-  }
 }
 
-async function openAssignmentDetail(assignmentId) {
+async function openTeacherAssignmentDetail(assignmentId) {
   const normalizedAssignmentId = String(assignmentId || "").trim();
 
   if (!normalizedAssignmentId) {
     return;
   }
 
-  currentAssignmentId = normalizedAssignmentId;
-
+  const detail = currentTeacherAssignmentDetail;
+  const requestId = detail.requestId + 1;
+  detail.requestId = requestId;
   const assignment =
     findAssignmentInCurrentState(normalizedAssignmentId) ||
     (await loadAssignmentFromAPI(normalizedAssignmentId).catch(() => null));
 
-  if (!assignment) {
-    showToast("Không thể tải chi tiết bài tập.", "error");
+  if (!assignment || detail.requestId !== requestId) {
+    if (!assignment) {
+      showToast("Không thể tải chi tiết bài tập.", "error");
+    }
     return;
   }
 
-  const currentRole = getCurrentRole();
-  const normalizedAssignment =
-    currentRole === "teacher"
-      ? normalizeAssignmentDetailRecord(assignment)
-      : normalizeStudentAssignmentRecord(assignment, assignment.classId || "");
+  detail.visible = true;
+  detail.loading = true;
+  detail.error = "";
+  detail.assignment = normalizeAssignmentDetailRecord(assignment);
+  detail.classInfo = null;
+  detail.classStudents = [];
+  detail.submissions = [];
+  detail.selectedStudentId = "";
+  detail.selectedSubmission = null;
+  detail.selectedStudentProfile = null;
+  detail.submissionByStudentId = new Map();
+  detail.profileByStudentId = new Map();
+  detail.loadingStudentId = "";
+  teacherAssignmentSubmissionState.selectedAssignmentId = normalizedAssignmentId;
+  teacherAssignmentSubmissionState.error = "";
+  teacherAssignmentSubmissionState.loading = true;
+  teacherAssignmentSubmissionState.submissions = [];
+  teacherAssignmentSubmissionState.assignments = teacherAssignmentSubmissionState.assignments.length
+    ? teacherAssignmentSubmissionState.assignments
+    : [detail.assignment];
 
-  if (currentRole === "student") {
-    window.EduKidsCurrentAssignment = normalizedAssignment;
-    syncCurrentStudentAssignmentSelection(normalizedAssignmentId);
-  } else if (currentRole === "teacher") {
-    teacherAssignmentSubmissionState.selectedAssignmentId = normalizedAssignmentId;
-    teacherAssignmentSubmissionState.submissions = [];
+  setTeacherAssignmentDetailVisibility(true);
+  renderTeacherAssignmentDetail();
+
+  try {
+    const [submissionSummary, classListResponse] = await Promise.all([
+      window.EduKidsAssignmentService?.fetchAssignmentSubmissions
+        ? window.EduKidsAssignmentService.fetchAssignmentSubmissions(normalizedAssignmentId).catch(() => [])
+        : Promise.resolve([]),
+      apiRequestWithAuth("/api/classes/my", { method: "GET" }).catch(() => ({ data: [] })),
+    ]);
+
+    if (!detail.visible || detail.requestId !== requestId) {
+      return;
+    }
+
+    const normalizedSubmissions = Array.isArray(submissionSummary)
+      ? submissionSummary
+          .map((submission) => normalizeTeacherAssignmentSubmissionRecord(submission))
+          .filter((submission) => submission && submission.studentId)
+      : [];
+
+    detail.submissions = normalizedSubmissions;
+    teacherAssignmentSubmissionState.submissions = normalizedSubmissions;
     teacherAssignmentSubmissionState.error = "";
+
+    const classInfo = Array.isArray(classListResponse?.data)
+      ? sortClassroomRecords(classListResponse.data.map(normalizeClassroomRecord).filter(Boolean)).find(
+          (classroom) => classroom.id === detail.assignment.classId,
+        ) || null
+      : null;
+
+    detail.classInfo = classInfo;
+    detail.classStudents = getClassroomStudentCards(classInfo);
+
+    const rosterStudentIds = uniqueClassroomValues([
+      ...detail.classStudents.map((student) => student.id),
+      ...normalizedSubmissions.map((submission) => submission.studentId),
+    ]);
+
+    const profileService = window.EduKidsProfileService;
+    const profilePairs = await Promise.all(
+      rosterStudentIds.map(async (studentId) => {
+        if (profileService?.fetchProfileById) {
+          const profile = await profileService.fetchProfileById(studentId).catch(() => null);
+          return [studentId, profile];
+        }
+
+        return [studentId, null];
+      }),
+    );
+
+    profilePairs.forEach(([studentId, profile]) => {
+      if (studentId && profile) {
+        detail.profileByStudentId.set(studentId, profile);
+      }
+    });
+
+    const submissionMap = new Map(
+      normalizedSubmissions.map((submission) => [submission.studentId, submission]),
+    );
+
+    const studentRows = rosterStudentIds.map((studentId, index) => {
+      const classStudent =
+        detail.classStudents.find((student) => student.id === studentId) || null;
+      const submission = submissionMap.get(studentId) || null;
+      const profile = detail.profileByStudentId.get(studentId) || classStudent || null;
+      const row = normalizeTeacherAssignmentStudentRecord(
+        {
+          id: studentId,
+          name: classStudent?.name || submission?.studentName || profile?.name || profile?.fullName || profile?.username || studentId,
+          username: profile?.username || classStudent?.name || submission?.studentName || "",
+          avatar: classStudent?.avatar || profile?.avatar || "",
+        },
+        submission,
+        profile,
+      );
+
+      return {
+        ...row,
+        order: index,
+      };
+    });
+
+    studentRows.sort((left, right) => {
+      const leftRank = left.statusKey === "submitted" ? 0 : left.statusKey === "doing" ? 1 : 2;
+      const rightRank = right.statusKey === "submitted" ? 0 : right.statusKey === "doing" ? 1 : 2;
+
+      if (leftRank !== rightRank) {
+        return leftRank - rightRank;
+      }
+
+      return left.order - right.order;
+    });
+
+    detail.studentRows = studentRows.map((row) => {
+      const selectedSubmission = submissionMap.get(row.id) || null;
+      return {
+        ...row,
+        submission: selectedSubmission,
+      };
+    });
+
+    detail.selectedStudentId = getTeacherAssignmentSelectedStudentId();
+    detail.loading = false;
     teacherAssignmentSubmissionState.loading = false;
-    assignmentDetailState.submissionsVisible = false;
-    assignmentDetailState.submissionLoading = false;
-    teacherAssignmentSubmissionState.assignments = teacherAssignmentSubmissionState.assignments.length
-      ? teacherAssignmentSubmissionState.assignments
-      : [normalizedAssignment];
-    window.EduKidsCurrentAssignment = normalizedAssignment;
+
+    if (detail.selectedStudentId) {
+      await selectTeacherAssignmentStudent(detail.selectedStudentId);
+    } else {
+      renderTeacherAssignmentDetail();
+    }
+  } catch (error) {
+    if (!detail.visible || detail.requestId !== requestId) {
+      return;
+    }
+
+    detail.loading = false;
+    detail.error = error.message || "Không thể tải chi tiết bài tập.";
+    teacherAssignmentSubmissionState.loading = false;
+    teacherAssignmentSubmissionState.error = detail.error;
+    showToast(detail.error, "error");
+    renderTeacherAssignmentDetail();
   }
 
-  renderAssignmentDetail(normalizedAssignment);
+  const root = getTeacherAssignmentDetailRoot();
 
-  const root = getAssignmentDetailRoot();
   if (root && typeof root.scrollIntoView === "function") {
     root.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
 
-async function loadAssignmentSubmissionsForDetail(assignmentId) {
-  const normalizedAssignmentId = String(assignmentId || "").trim();
+function closeTeacherAssignmentDetail() {
+  const detail = currentTeacherAssignmentDetail;
 
-  if (!normalizedAssignmentId) {
-    return;
-  }
-
-  const service = getAssignmentService();
-
-  if (!service?.fetchAssignmentSubmissions) {
-    showToast("Dịch vụ xem bài nộp chưa sẵn sàng.", "error");
-    return;
-  }
-
-  teacherAssignmentSubmissionState.selectedAssignmentId = normalizedAssignmentId;
-  assignmentDetailState.submissionsVisible = true;
-  assignmentDetailState.submissionLoading = true;
-  teacherAssignmentSubmissionState.loading = true;
+  detail.requestId += 1;
+  detail.visible = false;
+  detail.loading = false;
+  detail.error = "";
+  detail.assignment = null;
+  detail.classInfo = null;
+  detail.classStudents = [];
+  detail.submissions = [];
+  detail.selectedStudentId = "";
+  detail.selectedSubmission = null;
+  detail.selectedStudentProfile = null;
+  detail.submissionByStudentId = new Map();
+  detail.profileByStudentId = new Map();
+  detail.loadingStudentId = "";
+  teacherAssignmentSubmissionState.loading = false;
   teacherAssignmentSubmissionState.error = "";
-  teacherAssignmentSubmissionState.submissions = [];
+  setTeacherAssignmentDetailVisibility(false);
+  renderTeacherAssignmentDetail();
+}
 
-  renderAssignmentDetail(findAssignmentInCurrentState(normalizedAssignmentId));
+async function openAssignmentDetail(assignmentId) {
+  return openTeacherAssignmentDetail(assignmentId);
+}
 
-  try {
-    const submissions = await service.fetchAssignmentSubmissions(normalizedAssignmentId);
-    teacherAssignmentSubmissionState.submissions = Array.isArray(submissions) ? submissions : [];
-  } catch (error) {
-    teacherAssignmentSubmissionState.submissions = [];
-    teacherAssignmentSubmissionState.error = error.message || "Không thể tải bài nộp.";
-    showToast(teacherAssignmentSubmissionState.error, "error");
-  } finally {
-    teacherAssignmentSubmissionState.loading = false;
-    assignmentDetailState.submissionLoading = false;
-    renderAssignmentDetail(findAssignmentInCurrentState(normalizedAssignmentId));
-  }
+async function loadAssignmentSubmissionsForDetail(assignmentId) {
+  return openTeacherAssignmentDetail(assignmentId);
 }
 
 function buildStudentAssignmentsQuery() {
@@ -3822,11 +4661,8 @@ function getTeacherManageRoot() {
 }
 
 function getAssignmentDetailRoot() {
-  const role = getCurrentRole();
   const existingRoot = document.querySelector(
-    role === "teacher"
-      ? "#manage [data-assignment-detail-root]"
-      : "#assignments [data-assignment-detail-root]",
+    "#assignments [data-assignment-detail-root]",
   );
 
   if (existingRoot) {
@@ -3860,6 +4696,53 @@ function getAssignmentDetailRoot() {
 
   assignmentsRoot?.prepend(root);
   return root;
+}
+
+function getTeacherAssignmentDetailRoot() {
+  const existingRoot = document.querySelector(
+    "#manage [data-teacher-assignment-detail-root]",
+  );
+
+  if (existingRoot) {
+    return existingRoot;
+  }
+
+  const root = document.createElement("section");
+  root.dataset.teacherAssignmentDetailRoot = "true";
+  root.className = "teacher-assignment-detail";
+
+  const manageRoot = getTeacherManageRoot();
+
+  if (manageRoot) {
+    manageRoot.prepend(root);
+    return root;
+  }
+
+  return null;
+}
+
+function setTeacherAssignmentDetailVisibility(isVisible) {
+  const manageRoot = getTeacherManageRoot();
+  const detailRoot = getTeacherAssignmentDetailRoot();
+
+  if (manageRoot) {
+    manageRoot.classList.toggle("is-detail-open", Boolean(isVisible));
+  }
+
+  if (detailRoot) {
+    detailRoot.hidden = !isVisible;
+  }
+
+  const header = manageRoot?.querySelector(".manage-header");
+  const list = manageRoot?.querySelector(".manage-list");
+
+  if (header) {
+    header.hidden = Boolean(isVisible);
+  }
+
+  if (list) {
+    list.hidden = Boolean(isVisible);
+  }
 }
 
 function getStudentClassSwitcher() {
@@ -4651,7 +5534,7 @@ function bindStudentAssignmentControlsOnce() {
         if (getCurrentRole() === "student") {
           void openStudentAssignmentDetail(assignmentId);
         } else {
-          void openAssignmentDetail(assignmentId);
+          void openTeacherAssignmentDetail(assignmentId);
         }
         return;
       }
@@ -4664,7 +5547,7 @@ function bindStudentAssignmentControlsOnce() {
       if (getCurrentRole() === "student") {
         void openStudentAssignmentDetail(assignmentId);
       } else {
-        void openAssignmentDetail(assignmentId);
+        void openTeacherAssignmentDetail(assignmentId);
       }
     });
 
@@ -5732,11 +6615,7 @@ function handleLogout() {
   studentAssignmentClassState.selectedClassId = "";
   studentAssignmentClassState.loading = false;
   studentAssignmentSubmissionLoading = false;
-  assignmentDetailState.visible = false;
-  assignmentDetailState.loading = false;
-  assignmentDetailState.error = "";
-  assignmentDetailState.submissionsVisible = false;
-  assignmentDetailState.submissionLoading = false;
+  closeTeacherAssignmentDetail();
   currentAssignments = [];
   currentAssignmentId = "";
   delete window.EduKidsCurrentAssignment;
@@ -6680,10 +7559,52 @@ function bindAppEventsOnce() {
     const studentDetailRoot = document.querySelector(
       "#assignments [data-assignment-detail-root]",
     );
+    const teacherDetailRoot = document.querySelector(
+      "#manage [data-teacher-assignment-detail-root]",
+    );
     const assignmentBackButton = event.target.closest("[data-assignment-back]");
     if (assignmentBackButton && studentDetailRoot?.contains(assignmentBackButton)) {
       event.preventDefault();
       closeStudentAssignmentDetail();
+      return;
+    }
+
+    const teacherBackButton = event.target.closest("[data-teacher-assignment-back]");
+    const teacherCloseButton = event.target.closest("[data-teacher-assignment-close]");
+    const teacherStudentViewButton = event.target.closest("[data-teacher-student-view]");
+    const teacherStudentRow = event.target.closest("[data-teacher-student-row]");
+
+    if (
+      (teacherBackButton || teacherCloseButton) &&
+      teacherDetailRoot?.contains(teacherBackButton || teacherCloseButton)
+    ) {
+      event.preventDefault();
+      closeTeacherAssignmentDetail();
+      return;
+    }
+
+    if (
+      teacherStudentViewButton &&
+      teacherDetailRoot?.contains(teacherStudentViewButton)
+    ) {
+      const studentId = String(teacherStudentViewButton.dataset.studentId || "").trim();
+
+      if (studentId) {
+        event.preventDefault();
+        await selectTeacherAssignmentStudent(studentId);
+      }
+
+      return;
+    }
+
+    if (teacherStudentRow && teacherDetailRoot?.contains(teacherStudentRow)) {
+      const studentId = String(teacherStudentRow.dataset.studentId || "").trim();
+
+      if (studentId) {
+        event.preventDefault();
+        await selectTeacherAssignmentStudent(studentId);
+      }
+
       return;
     }
 
@@ -6727,7 +7648,7 @@ function bindAppEventsOnce() {
       event.preventDefault();
 
       if (getCurrentRole() === "teacher") {
-        await loadAssignmentSubmissionsForDetail(assignmentId);
+        await openTeacherAssignmentDetail(assignmentId);
       } else {
         await openStudentAssignmentDetail(assignmentId);
       }
@@ -6745,7 +7666,7 @@ function bindAppEventsOnce() {
       }
 
       event.preventDefault();
-      await openAssignmentDetail(assignmentId);
+      await openTeacherAssignmentDetail(assignmentId);
       return;
     }
 

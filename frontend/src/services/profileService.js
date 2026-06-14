@@ -1,6 +1,27 @@
 import { API_BASE_URL } from "../config.js";
 
 (() => {
+  function getFirestore() {
+    if (
+      !window.firebase?.apps?.length ||
+      typeof window.firebase.app !== "function"
+    ) {
+      return null;
+    }
+
+    if (typeof window.firebase.firestore !== "function") {
+      return null;
+    }
+
+    try {
+      const app = window.firebase.app();
+      return app.firestore();
+    } catch (error) {
+      console.warn("Unable to initialize Firestore for profile service:", error);
+      return null;
+    }
+  }
+
   function request(path, { method = "GET", body } = {}) {
     const headers = {
       "Content-Type": "application/json",
@@ -29,8 +50,12 @@ import { API_BASE_URL } from "../config.js";
   }
 
   function getAvatarPathFromProfile(profile) {
-    if (profile?.avatar) {
-      const avatar = String(profile.avatar).trim();
+    const avatarValue = String(
+      profile?.avatar || profile?.photoURL || profile?.profilePicture || "",
+    ).trim();
+
+    if (avatarValue) {
+      const avatar = avatarValue;
 
       if (avatar.startsWith("assets/")) {
         return avatar;
@@ -47,6 +72,32 @@ import { API_BASE_URL } from "../config.js";
     }
 
     return `assets/userAvatar/${gender === "female" ? "girl.png" : "boy.png"}`;
+  }
+
+  async function fetchProfileById(userId) {
+    const normalizedUserId = String(userId || "").trim();
+
+    if (!normalizedUserId) {
+      return null;
+    }
+
+    const firestore = getFirestore();
+
+    if (!firestore) {
+      return null;
+    }
+
+    const snapshot = await firestore.collection("users").doc(normalizedUserId).get();
+
+    if (!snapshot.exists) {
+      return null;
+    }
+
+    return normalizeProfile({
+      id: snapshot.id,
+      uid: snapshot.id,
+      ...(snapshot.data() || {}),
+    });
   }
 
   function normalizeProfile(profile) {
@@ -100,6 +151,7 @@ import { API_BASE_URL } from "../config.js";
 
   window.EduKidsProfileService = {
     fetchCurrentProfile,
+    fetchProfileById,
     getAvatarPathFromProfile,
     normalizeProfile,
     updateCurrentProfile,

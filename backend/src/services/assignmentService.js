@@ -215,12 +215,16 @@ function gradeAssignmentSubmission(assignment, answers) {
 
   const totalQuestions = questions.length;
   const wrongCount = Math.max(totalQuestions - correctCount, 0);
+  const score =
+    totalQuestions > 0
+      ? Number(((correctCount / totalQuestions) * 10).toFixed(2))
+      : 0;
 
   return {
     correctCount,
     wrongCount,
     totalQuestions,
-    score: correctCount,
+    score,
   };
 }
 
