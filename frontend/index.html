@@ -1205,7 +1205,7 @@
                     aria-expanded="false"
                     aria-label="Mở danh sách lớp"
                   >
-                    ▾
+                    <span>Danh sách lớp</span>
                   </button>
 
                   <div class="classroom-dropdown" aria-hidden="true">
@@ -1624,14 +1624,17 @@
                       />
                     </svg>
                   </span>
-                  <input type="text" placeholder="Tìm kiếm bài tập..." />
+                  <input
+                    type="text"
+                    placeholder="Tìm theo tiêu đề, mô tả, môn học, chủ đề..."
+                    data-teacher-assignment-search
+                  />
                 </label>
 
                 <label class="manage-filter">
-                  <select>
-                    <option>Tất cả lớp</option>
-                    <option>Lớp 4A</option>
-                    <option>Lớp 4B</option>
+                  <select data-teacher-assignment-class-filter>
+                    <option value="">Tất cả lớp</option>
+                    <option value="" disabled>Đang tải lớp...</option>
                   </select>
                 </label>
               </div>
