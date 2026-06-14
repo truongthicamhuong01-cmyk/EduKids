@@ -275,9 +275,77 @@ const getAssignmentSubmissions = asyncHandler(async (req, res) => {
   );
 });
 
+const getAssignmentByIdController = asyncHandler(async (req, res) => {
+  const userId = req.user?.userId || req.user?.uid || "";
+
+  if (!userId) {
+    throw new ApiError(401, "Unauthorized");
+  }
+
+  const userProfile = await findUserById(userId);
+
+  if (!userProfile) {
+    throw new ApiError(404, "User profile not found");
+  }
+
+  const assignmentId = normalizeString(req.params.assignmentId);
+
+  if (!assignmentId) {
+    throw new ApiError(400, "assignmentId is required");
+  }
+
+  const assignment = await getAssignmentById(assignmentId);
+
+  if (!assignment) {
+    throw new ApiError(404, "Assignment not found");
+  }
+
+  if (userProfile.role === "teacher") {
+    if (assignment.teacherId && assignment.teacherId !== userId) {
+      throw new ApiError(403, "You can only view your own assignments");
+    }
+
+    return successResponse(res, 200, "Assignment fetched successfully", assignment);
+  }
+
+  if (userProfile.role !== "student") {
+    throw new ApiError(403, "Only students or teachers can load assignments");
+  }
+
+  const allowedClassIds = await resolveStudentClassIds(userId, userProfile);
+
+  if (assignment.classId && !allowedClassIds.includes(assignment.classId)) {
+    throw new ApiError(403, "You cannot view this assignment");
+  }
+
+  const submission = await getSubmissionByStudent(assignmentId, userId);
+  const normalizedAssignment = submission
+    ? {
+        ...assignment,
+        submissionStatus: submission.status || "submitted",
+        submissionId: submission.id,
+        submittedAt: submission.submittedAt,
+        score: submission.score ?? null,
+      }
+    : {
+        ...assignment,
+        submissionStatus: "pending",
+        submittedAt: "",
+        score: null,
+      };
+
+  return successResponse(
+    res,
+    200,
+    "Assignment fetched successfully",
+    normalizedAssignment,
+  );
+});
+
 module.exports = {
   createAssignment,
   getStudentAssignments,
   submitAssignment,
   getAssignmentSubmissions,
+  getAssignmentById: getAssignmentByIdController,
 };

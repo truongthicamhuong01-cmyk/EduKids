@@ -1951,6 +1951,13 @@ const teacherAssignmentSubmissionState = {
   loading: false,
   error: "",
 };
+const assignmentDetailState = {
+  visible: false,
+  loading: false,
+  error: "",
+  submissionsVisible: false,
+  submissionLoading: false,
+};
 let createMethod = "manual";
 
 function getCurrentUserId() {
@@ -2485,10 +2492,6 @@ function renderTeacherAssignmentSubmissionsView(assignments, submissions = [], l
   }
 
   const normalizedAssignments = Array.isArray(assignments) ? assignments : [];
-  const selectedAssignment = normalizedAssignments.find(
-    (assignment) => assignment.id === teacherAssignmentSubmissionState.selectedAssignmentId,
-  );
-
   const assignmentCards = normalizedAssignments.length > 0
     ? normalizedAssignments
         .map((assignment) => {
@@ -2497,9 +2500,12 @@ function renderTeacherAssignmentSubmissionsView(assignments, submissions = [], l
             (Array.isArray(assignment.questions)
               ? assignment.questions.length
               : 0);
+          const isActive =
+            String(teacherAssignmentSubmissionState.selectedAssignmentId || "").trim() ===
+            String(assignment.id || "").trim();
 
           return `
-            <article class="manage-card">
+            <article class="manage-card ${isActive ? "is-active" : ""}">
               <div class="manage-card-top">
                 <div>
                   <h3>${escapeHtml(assignment.title || "Bài tập")}</h3>
@@ -2537,44 +2543,22 @@ function renderTeacherAssignmentSubmissionsView(assignments, submissions = [], l
       </div>
     `;
 
-  const detailSection = selectedAssignment
-    ? `
-      <article class="manage-card">
-        <div class="manage-card-top">
-          <div>
-            <h3>${escapeHtml(selectedAssignment.title || "Bài tập")}</h3>
-            <p>${escapeHtml(selectedAssignment.className || "Lớp học")}</p>
-          </div>
-          <span class="manage-date">Bài nộp của học sinh</span>
-        </div>
+  list.innerHTML = assignmentCards;
 
-        <div class="manage-card-meta">
-          <span>${Array.isArray(submissions) ? submissions.length : 0} bài nộp</span>
-          <strong>${escapeHtml(error ? "Có lỗi" : loading ? "Đang tải..." : "Đã tải")}</strong>
-        </div>
+  const selectedAssignment = normalizedAssignments.find(
+    (assignment) => assignment.id === teacherAssignmentSubmissionState.selectedAssignmentId,
+  );
 
-        ${
-          error
-            ? `
-              <div class="manage-empty-state">
-                <h3>Không thể tải bài nộp.</h3>
-                <p>${escapeHtml(error)}</p>
-              </div>
-            `
-            : loading
-              ? `
-                <div class="manage-empty-state">
-                  <h3>Đang tải bài nộp...</h3>
-                  <p>Vui lòng chờ trong giây lát.</p>
-                </div>
-              `
-              : renderAssignmentSubmissionsList(submissions)
-        }
-      </article>
-    `
-    : "";
+  if (selectedAssignment) {
+    renderAssignmentDetail(selectedAssignment);
+  } else {
+    const detailRoot = getAssignmentDetailRoot();
 
-  list.innerHTML = `${detailSection}${assignmentCards}`;
+    if (detailRoot) {
+      detailRoot.innerHTML = "";
+      detailRoot.hidden = true;
+    }
+  }
 }
 
 function normalizeStudentAssignmentStatus(assignment) {
@@ -2613,6 +2597,110 @@ function normalizeStudentAssignmentStatus(assignment) {
   }
 
   return "pending";
+}
+
+function getAssignmentDetailStatusValue(assignment) {
+  const submissionStatus = String(assignment?.submissionStatus || "").trim().toLowerCase();
+
+  if (submissionStatus) {
+    return submissionStatus;
+  }
+
+  return String(assignment?.status || "").trim().toLowerCase() || "pending";
+}
+
+function getAssignmentDetailStatusLabel(assignment) {
+  if (getCurrentRole() === "teacher") {
+    return formatAssignmentStatusLabel(assignment?.status);
+  }
+
+  const statusValue = getAssignmentDetailStatusValue(assignment);
+
+  if (statusValue === "graded") {
+    return "Đã chấm";
+  }
+
+  if (statusValue === "submitted") {
+    return "Đã nộp";
+  }
+
+  if (statusValue === "doing") {
+    return "Đang làm";
+  }
+
+  if (statusValue === "done") {
+    return "Hoàn thành";
+  }
+
+  if (statusValue === "pending" || statusValue === "active") {
+    return "Chưa mở";
+  }
+
+  return statusValue || "--";
+}
+
+function getAssignmentDetailPrimaryActionLabel(assignment) {
+  const role = getCurrentRole();
+  const statusKey = normalizeStudentAssignmentStatus(assignment);
+
+  if (role === "teacher") {
+    return "Xem submissions";
+  }
+
+  if (statusKey === "doing") {
+    return "Tiếp tục";
+  }
+
+  if (statusKey === "done") {
+    return "Xem lại";
+  }
+
+  return "Làm bài";
+}
+
+function getAssignmentDetailPrimaryActionClass(assignment) {
+  const role = getCurrentRole();
+
+  if (role === "teacher") {
+    return "manage-detail-btn";
+  }
+
+  return "action-btn";
+}
+
+function getAssignmentDetailScoreBadgeText(assignment) {
+  const statusValue = getAssignmentDetailStatusValue(assignment);
+
+  if (statusValue !== "graded") {
+    return "";
+  }
+
+  if (assignment?.score === null || typeof assignment?.score === "undefined" || assignment?.score === "") {
+    return "";
+  }
+
+  return `${String(assignment.score)} điểm`;
+}
+
+function normalizeAssignmentDetailRecord(assignment) {
+  if (!assignment || typeof assignment !== "object") {
+    return null;
+  }
+
+  return {
+    ...assignment,
+    id: String(assignment.id || assignment.assignmentId || assignment.docId || "").trim(),
+    classId: String(assignment.classId || "").trim(),
+    title: String(assignment.title || "").trim(),
+    description: String(assignment.description || "").trim(),
+    dueDate: assignment.dueDate === "" ? "" : assignment.dueDate || "",
+    status: String(assignment.status || "").trim().toLowerCase() || "active",
+    submissionStatus:
+      String(assignment.submissionStatus || "").trim().toLowerCase() || "",
+    submittedAt: assignment.submittedAt || "",
+    score: assignment.score ?? null,
+    questions: Array.isArray(assignment.questions) ? assignment.questions : [],
+  };
 }
 
 function formatStudentAssignmentStatusLabel(statusKey, assignment = null) {
@@ -2832,34 +2920,7 @@ function syncCurrentStudentAssignmentSelection(assignmentId) {
 }
 
 function openStudentAssignmentDetail(assignmentId) {
-  const normalizedId = String(assignmentId || "").trim();
-
-  if (!normalizedId) {
-    return;
-  }
-
-  const assignment =
-    currentAssignments.find((item) => item.id === normalizedId) || null;
-
-  if (!assignment) {
-    return;
-  }
-
-  syncCurrentStudentAssignmentSelection(normalizedId);
-
-  const page = getAssignmentsPageRoot();
-
-  if (!page) {
-    return;
-  }
-
-  const targetCard = Array.from(
-    page.querySelectorAll("[data-assignment-id]"),
-  ).find((node) => node.dataset.assignmentId === normalizedId);
-
-  if (targetCard && typeof targetCard.scrollIntoView === "function") {
-    targetCard.scrollIntoView({ block: "center", behavior: "smooth" });
-  }
+  void openAssignmentDetail(assignmentId);
 }
 
 function updateStudentAssignmentFeed(assignments, errors = []) {
@@ -2898,6 +2959,276 @@ function updateStudentAssignmentFeed(assignments, errors = []) {
     if (firstError?.message) {
       showToast(firstError.message, "error");
     }
+  }
+}
+
+function findAssignmentInCurrentState(assignmentId) {
+  const normalizedAssignmentId = String(assignmentId || "").trim();
+
+  if (!normalizedAssignmentId) {
+    return null;
+  }
+
+  const fromStudentState =
+    currentAssignments.find((assignment) => assignment.id === normalizedAssignmentId) ||
+    null;
+
+  if (fromStudentState) {
+    return fromStudentState;
+  }
+
+  const fromTeacherState =
+    teacherAssignmentSubmissionState.assignments.find(
+      (assignment) => assignment.id === normalizedAssignmentId,
+    ) || null;
+
+  if (fromTeacherState) {
+    return fromTeacherState;
+  }
+
+  if (
+    window.EduKidsCurrentAssignment &&
+    String(window.EduKidsCurrentAssignment.id || "").trim() === normalizedAssignmentId
+  ) {
+    return window.EduKidsCurrentAssignment;
+  }
+
+  return null;
+}
+
+async function loadAssignmentFromAPI(assignmentId) {
+  const api = window.EduKidsApi?.requestWithAuth;
+  const normalizedAssignmentId = String(assignmentId || "").trim();
+
+  if (typeof api !== "function" || !normalizedAssignmentId) {
+    return null;
+  }
+
+  const response = await api(
+    `/api/assignments/${encodeURIComponent(normalizedAssignmentId)}`,
+    {
+      method: "GET",
+    },
+  );
+
+  return response?.data || null;
+}
+
+function getAssignmentDetailContext(assignment) {
+  const role = getCurrentRole();
+  const statusValue = getAssignmentDetailStatusValue(assignment);
+
+  if (role === "teacher") {
+    return {
+      actionLabel: "Xem submissions",
+      actionClass: "manage-detail-btn",
+      showSubmissionButton: true,
+      statusLabel: getAssignmentDetailStatusLabel(assignment),
+      scoreBadgeText: "",
+      footerHint: "",
+      primaryActionDisabled: false,
+    };
+  }
+
+  return {
+    actionLabel: getAssignmentDetailPrimaryActionLabel(assignment),
+    actionClass: "action-btn",
+    showSubmissionButton: false,
+    statusLabel:
+      statusValue === "graded"
+        ? "Đã chấm"
+        : statusValue === "submitted"
+          ? "Đã nộp"
+          : statusValue === "doing"
+            ? "Đang làm"
+            : statusValue === "done"
+              ? "Hoàn thành"
+              : "Chưa mở",
+    scoreBadgeText: getAssignmentDetailScoreBadgeText(assignment),
+    footerHint:
+      statusValue === "graded" && assignment?.score !== null && typeof assignment?.score !== "undefined"
+        ? `Điểm: ${String(assignment.score)}`
+        : "",
+    primaryActionDisabled: false,
+  };
+}
+
+function renderAssignmentDetail(assignment) {
+  const root = getAssignmentDetailRoot();
+
+  if (!root) {
+    return;
+  }
+
+  if (!assignment) {
+    root.innerHTML = "";
+    root.hidden = true;
+    return;
+  }
+
+  const statusValue = getAssignmentDetailStatusValue(assignment);
+  const statusLabel = getAssignmentDetailStatusLabel(assignment);
+  const context = getAssignmentDetailContext(assignment);
+  const actionLabel = context.actionLabel;
+  const scoreBadgeText = context.scoreBadgeText;
+  const statusClass =
+    getCurrentRole() === "teacher"
+      ? String(assignment.status || "").trim().toLowerCase() || "active"
+      : normalizeStudentAssignmentStatus(assignment);
+  const dueDateText = assignment.dueDate
+    ? formatAssignmentDate(assignment.dueDate)
+    : "--";
+  const classLabel = assignment.classId || "--";
+
+  root.hidden = false;
+  root.innerHTML = `
+    <article class="assignment-item is-active assignment-detail-card" data-assignment-id="${escapeHtml(assignment.id || "")}" data-assignment-class-id="${escapeHtml(assignment.classId || "")}" data-assignment-status="${escapeHtml(statusValue)}">
+      <div class="assignment-left">
+        <div class="subject-icon ${escapeHtml(getStudentAssignmentIcon(assignment).className)}">${escapeHtml(getStudentAssignmentIcon(assignment).label)}</div>
+        <div class="assignment-info">
+          <h3>${escapeHtml(assignment.title || "--")}</h3>
+          <p>${escapeHtml(assignment.description || "--")}</p>
+          <small>Hạn nộp: ${escapeHtml(dueDateText)}</small>
+          <div class="assignment-source">
+            <span>Lớp: ${escapeHtml(classLabel)}</span>
+          </div>
+        </div>
+      </div>
+      <div class="assignment-right">
+        <span class="status ${escapeHtml(statusClass)}">
+          ${escapeHtml(statusLabel)}
+          ${scoreBadgeText ? `<small class="assignment-score-badge">${escapeHtml(scoreBadgeText)}</small>` : ""}
+        </span>
+        <button
+          type="button"
+          class="${escapeHtml(context.actionClass)}"
+          data-assignment-action="detail-primary"
+          data-assignment-id="${escapeHtml(assignment.id || "")}"
+          ${context.primaryActionDisabled ? "disabled" : ""}
+        >
+          ${escapeHtml(actionLabel)}
+        </button>
+      </div>
+    </article>
+    <div class="assignment-detail-meta">
+      <div class="assignment-detail-row"><span>title</span><strong>${escapeHtml(assignment.title || "--")}</strong></div>
+      <div class="assignment-detail-row"><span>description</span><strong>${escapeHtml(assignment.description || "--")}</strong></div>
+      <div class="assignment-detail-row"><span>dueDate</span><strong>${escapeHtml(dueDateText)}</strong></div>
+      <div class="assignment-detail-row"><span>classId</span><strong>${escapeHtml(classLabel)}</strong></div>
+      <div class="assignment-detail-row"><span>status</span><strong>${escapeHtml(statusLabel)}</strong></div>
+      ${context.footerHint ? `<div class="assignment-detail-row"><span>ghi chú</span><strong>${escapeHtml(context.footerHint)}</strong></div>` : ""}
+    </div>
+  `;
+
+  if (
+    getCurrentRole() === "teacher" &&
+    assignmentDetailState.submissionsVisible
+  ) {
+    const submissionsSection = document.createElement("div");
+    submissionsSection.className = "assignment-detail-submissions";
+    submissionsSection.innerHTML = `
+      <div class="assignment-detail-row">
+        <span>bài nộp</span>
+        <strong>${escapeHtml(teacherAssignmentSubmissionState.loading ? "Đang tải..." : `${Array.isArray(teacherAssignmentSubmissionState.submissions) ? teacherAssignmentSubmissionState.submissions.length : 0} bản ghi`)}</strong>
+      </div>
+      ${
+        teacherAssignmentSubmissionState.error
+          ? `<div class="assignment-detail-row"><span>lỗi</span><strong>${escapeHtml(teacherAssignmentSubmissionState.error)}</strong></div>`
+          : ""
+      }
+      ${
+        teacherAssignmentSubmissionState.loading
+          ? `<div class="manage-empty-state"><h3>Đang tải bài nộp...</h3><p>Vui lòng chờ trong giây lát.</p></div>`
+          : renderAssignmentSubmissionsList(teacherAssignmentSubmissionState.submissions)
+      }
+    `;
+
+    root.appendChild(submissionsSection);
+  }
+}
+
+async function openAssignmentDetail(assignmentId) {
+  const normalizedAssignmentId = String(assignmentId || "").trim();
+
+  if (!normalizedAssignmentId) {
+    return;
+  }
+
+  currentAssignmentId = normalizedAssignmentId;
+
+  const assignment =
+    findAssignmentInCurrentState(normalizedAssignmentId) ||
+    (await loadAssignmentFromAPI(normalizedAssignmentId).catch(() => null));
+
+  if (!assignment) {
+    showToast("Không thể tải chi tiết bài tập.", "error");
+    return;
+  }
+
+  const currentRole = getCurrentRole();
+  const normalizedAssignment =
+    currentRole === "teacher"
+      ? normalizeAssignmentDetailRecord(assignment)
+      : normalizeStudentAssignmentRecord(assignment, assignment.classId || "");
+
+  if (currentRole === "student") {
+    window.EduKidsCurrentAssignment = normalizedAssignment;
+    syncCurrentStudentAssignmentSelection(normalizedAssignmentId);
+  } else if (currentRole === "teacher") {
+    teacherAssignmentSubmissionState.selectedAssignmentId = normalizedAssignmentId;
+    teacherAssignmentSubmissionState.submissions = [];
+    teacherAssignmentSubmissionState.error = "";
+    teacherAssignmentSubmissionState.loading = false;
+    assignmentDetailState.submissionsVisible = false;
+    assignmentDetailState.submissionLoading = false;
+    teacherAssignmentSubmissionState.assignments = teacherAssignmentSubmissionState.assignments.length
+      ? teacherAssignmentSubmissionState.assignments
+      : [normalizedAssignment];
+    window.EduKidsCurrentAssignment = normalizedAssignment;
+  }
+
+  renderAssignmentDetail(normalizedAssignment);
+
+  const root = getAssignmentDetailRoot();
+  if (root && typeof root.scrollIntoView === "function") {
+    root.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+async function loadAssignmentSubmissionsForDetail(assignmentId) {
+  const normalizedAssignmentId = String(assignmentId || "").trim();
+
+  if (!normalizedAssignmentId) {
+    return;
+  }
+
+  const service = getAssignmentService();
+
+  if (!service?.fetchAssignmentSubmissions) {
+    showToast("Dịch vụ xem bài nộp chưa sẵn sàng.", "error");
+    return;
+  }
+
+  teacherAssignmentSubmissionState.selectedAssignmentId = normalizedAssignmentId;
+  assignmentDetailState.submissionsVisible = true;
+  assignmentDetailState.submissionLoading = true;
+  teacherAssignmentSubmissionState.loading = true;
+  teacherAssignmentSubmissionState.error = "";
+  teacherAssignmentSubmissionState.submissions = [];
+
+  renderAssignmentDetail(findAssignmentInCurrentState(normalizedAssignmentId));
+
+  try {
+    const submissions = await service.fetchAssignmentSubmissions(normalizedAssignmentId);
+    teacherAssignmentSubmissionState.submissions = Array.isArray(submissions) ? submissions : [];
+  } catch (error) {
+    teacherAssignmentSubmissionState.submissions = [];
+    teacherAssignmentSubmissionState.error = error.message || "Không thể tải bài nộp.";
+    showToast(teacherAssignmentSubmissionState.error, "error");
+  } finally {
+    teacherAssignmentSubmissionState.loading = false;
+    assignmentDetailState.submissionLoading = false;
+    renderAssignmentDetail(findAssignmentInCurrentState(normalizedAssignmentId));
   }
 }
 
@@ -3169,6 +3500,51 @@ function getJoinedClassListPanel() {
 
 function getAssignmentsPageRoot() {
   return document.getElementById("assignments");
+}
+
+function getTeacherManageRoot() {
+  return document.getElementById("manage");
+}
+
+function getAssignmentDetailRoot() {
+  const role = getCurrentRole();
+  const existingRoot = document.querySelector(
+    role === "teacher"
+      ? "#manage [data-assignment-detail-root]"
+      : "#assignments [data-assignment-detail-root]",
+  );
+
+  if (existingRoot) {
+    return existingRoot;
+  }
+
+  const root = document.createElement("section");
+  root.dataset.assignmentDetailRoot = "true";
+  root.className = "assignment-detail";
+
+  if (role === "teacher") {
+    const manageRoot = getTeacherManageRoot();
+    const list = manageRoot?.querySelector(".manage-list");
+
+    if (list?.parentElement) {
+      list.parentElement.insertBefore(root, list);
+      return root;
+    }
+
+    manageRoot?.prepend(root);
+    return root;
+  }
+
+  const assignmentsRoot = getAssignmentsPageRoot();
+  const tabs = assignmentsRoot?.querySelector(".assignment-tabs");
+
+  if (tabs?.parentElement) {
+    tabs.parentElement.insertBefore(root, tabs);
+    return root;
+  }
+
+  assignmentsRoot?.prepend(root);
+  return root;
 }
 
 function getStudentClassSwitcher() {
@@ -3929,6 +4305,9 @@ function bindStudentAssignmentControlsOnce() {
           "input[type='submit'][data-assignment-submit]",
         ].join(","),
       );
+      const assignmentPrimaryAction = event.target.closest(
+        "[data-assignment-action='detail-primary']",
+      );
       const assignmentAction = event.target.closest("[data-assignment-action]");
       const assignmentCard = event.target.closest("[data-assignment-id]");
 
@@ -3951,12 +4330,19 @@ function bindStudentAssignmentControlsOnce() {
         return;
       }
 
+      if (assignmentPrimaryAction) {
+        event.preventDefault();
+        event.stopPropagation();
+        void openAssignmentDetail(assignmentId);
+        return;
+      }
+
       if (assignmentAction) {
         event.preventDefault();
         event.stopPropagation();
       }
 
-      openStudentAssignmentDetail(assignmentId);
+      void openAssignmentDetail(assignmentId);
     });
 
     assignmentsPage.addEventListener("submit", (event) => {
@@ -5012,6 +5398,11 @@ function handleLogout() {
   studentAssignmentClassState.selectedClassId = "";
   studentAssignmentClassState.loading = false;
   studentAssignmentSubmissionLoading = false;
+  assignmentDetailState.visible = false;
+  assignmentDetailState.loading = false;
+  assignmentDetailState.error = "";
+  assignmentDetailState.submissionsVisible = false;
+  assignmentDetailState.submissionLoading = false;
   currentAssignments = [];
   currentAssignmentId = "";
   delete window.EduKidsCurrentAssignment;
@@ -5952,6 +6343,28 @@ function bindAppEventsOnce() {
   }
 
   appShell.addEventListener("click", async (event) => {
+    const assignmentPrimaryButton = event.target.closest(
+      "[data-assignment-action='detail-primary']",
+    );
+    if (assignmentPrimaryButton) {
+      const assignmentId = String(
+        assignmentPrimaryButton.dataset.assignmentId || "",
+      ).trim();
+
+      if (!assignmentId) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (getCurrentRole() === "teacher") {
+        await loadAssignmentSubmissionsForDetail(assignmentId);
+      } else {
+        await openAssignmentDetail(assignmentId);
+      }
+      return;
+    }
+
     const assignmentDetailButton = event.target.closest(".manage-detail-btn");
     if (assignmentDetailButton) {
       const assignmentId = String(
@@ -5963,7 +6376,7 @@ function bindAppEventsOnce() {
       }
 
       event.preventDefault();
-      await fetchAndRenderAssignmentSubmissions(assignmentId);
+      await openAssignmentDetail(assignmentId);
       return;
     }
 
@@ -6102,6 +6515,7 @@ function installCompatibilityGlobals() {
   window.goBackSubjects = goBackSubjects;
   window.submitStudentQuiz = submitStudentQuiz;
   window.submitStudentAssignment = submitStudentAssignment;
+  window.openAssignmentDetail = openAssignmentDetail;
   window.showStudentWrongAnswerReview = showStudentWrongAnswerReview;
   window.showSubject = showSubject;
   window.createAssignment = createAssignment;
