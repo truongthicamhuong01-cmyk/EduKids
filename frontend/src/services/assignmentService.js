@@ -131,8 +131,32 @@
     return response.data;
   }
 
+  async function fetchAssignmentSubmissions(assignmentId) {
+    const api = window.EduKidsApi?.requestWithAuth;
+
+    if (typeof api !== "function") {
+      throw new Error("Assignment API is unavailable");
+    }
+
+    const normalizedAssignmentId = String(assignmentId || "").trim();
+
+    if (!normalizedAssignmentId) {
+      throw new Error("assignmentId is required");
+    }
+
+    const response = await api(
+      `/api/assignments/${encodeURIComponent(normalizedAssignmentId)}/submissions`,
+      {
+        method: "GET",
+      },
+    );
+
+    return Array.isArray(response.data) ? response.data : [];
+  }
+
   window.EduKidsAssignmentService = {
     createAssignment,
+    fetchAssignmentSubmissions,
     getTeacherAssignments,
     listenTeacherAssignments,
   };

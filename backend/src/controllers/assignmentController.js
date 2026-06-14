@@ -7,6 +7,10 @@ const { getStudentClasses } = require("../services/classService");
 const {
   createAssignment: createAssignmentService,
   getAssignmentsByClassIds,
+  createSubmission,
+  getAssignmentById,
+  getSubmissionByStudent,
+  getSubmissionsByAssignmentId,
 } = require("../services/assignmentService");
 
 function uniqueStrings(values) {
@@ -144,7 +148,7 @@ const getStudentAssignments = asyncHandler(async (req, res) => {
     finalClassIds = allowedClassIds;
   }
 
-  const assignments = await getAssignmentsByClassIds(finalClassIds);
+  const assignments = await getAssignmentsByClassIds(finalClassIds, userId);
 
   console.log("[EduKids][assignmentController] getStudentAssignments success", {
     userId,
@@ -157,7 +161,123 @@ const getStudentAssignments = asyncHandler(async (req, res) => {
   return successResponse(res, 200, "Student assignments fetched successfully", assignments);
 });
 
+const submitAssignment = asyncHandler(async (req, res) => {
+  const userId = req.user?.userId || req.user?.uid || "";
+
+  if (!userId) {
+    throw new ApiError(401, "Unauthorized");
+  }
+
+  const userProfile = await findUserById(userId);
+
+  if (!userProfile) {
+    throw new ApiError(404, "User profile not found");
+  }
+
+  if (userProfile.role !== "student") {
+    throw new ApiError(403, "Only students can submit assignments");
+  }
+
+  const assignmentId = normalizeString(req.body.assignmentId);
+  const rawAnswers = Array.isArray(req.body.answers) ? req.body.answers : null;
+
+  if (!assignmentId) {
+    throw new ApiError(400, "assignmentId is required");
+  }
+
+  if (!rawAnswers) {
+    throw new ApiError(400, "answers must be an array");
+  }
+
+  const assignment = await getAssignmentById(assignmentId);
+
+  if (!assignment) {
+    throw new ApiError(404, "Assignment not found");
+  }
+
+  const allowedClassIds = await resolveStudentClassIds(userId, userProfile);
+
+  if (assignment.classId && !allowedClassIds.includes(assignment.classId)) {
+    throw new ApiError(403, "You cannot submit this assignment");
+  }
+
+  const existingSubmission = await getSubmissionByStudent(assignmentId, userId);
+  const submission = await createSubmission({
+    assignmentId,
+    classId: assignment.classId,
+    studentId: userId,
+    answers: rawAnswers,
+  });
+
+  console.log("[EduKids][assignmentController] submitAssignment success", {
+    assignmentId,
+    studentId: userId,
+    hasExistingSubmission: Boolean(existingSubmission),
+    answerCount: Array.isArray(rawAnswers) ? rawAnswers.length : 0,
+  });
+
+  return successResponse(
+    res,
+    200,
+      existingSubmission
+      ? "Assignment resubmitted successfully"
+      : "Assignment submitted successfully",
+    submission,
+  );
+});
+
+const getAssignmentSubmissions = asyncHandler(async (req, res) => {
+  const userId = req.user?.userId || req.user?.uid || "";
+
+  if (!userId) {
+    throw new ApiError(401, "Unauthorized");
+  }
+
+  const userProfile = await findUserById(userId);
+
+  if (!userProfile) {
+    throw new ApiError(404, "User profile not found");
+  }
+
+  if (userProfile.role !== "teacher") {
+    throw new ApiError(403, "Only teachers can view assignment submissions");
+  }
+
+  const assignmentId = normalizeString(req.params.assignmentId);
+
+  if (!assignmentId) {
+    throw new ApiError(400, "assignmentId is required");
+  }
+
+  const assignment = await getAssignmentById(assignmentId);
+
+  if (!assignment) {
+    throw new ApiError(404, "Assignment not found");
+  }
+
+  if (assignment.teacherId && assignment.teacherId !== userId) {
+    throw new ApiError(403, "You can only view submissions for your own assignments");
+  }
+
+  const submissions = await getSubmissionsByAssignmentId(assignmentId);
+
+  console.log("[EduKids][assignmentController] getAssignmentSubmissions success", {
+    teacherId: userId,
+    assignmentId,
+    submissionCount: Array.isArray(submissions) ? submissions.length : 0,
+  });
+
+  return successResponse(
+    res,
+    200,
+    "Assignment submissions fetched successfully",
+    submissions,
+  );
+});
+
 module.exports = {
   createAssignment,
   getStudentAssignments,
+  submitAssignment,
+  getAssignmentSubmissions,
 };

@@ -3,6 +3,7 @@ const ApiError = require("../utils/apiError");
 
 const classesCollection = db.collection("classes");
 const assignmentsCollection = db.collection("assignments");
+const assignmentSubmissionsCollection = db.collection("assignment_submissions");
 
 function uniqueStrings(values) {
   return Array.from(
@@ -104,6 +105,30 @@ function normalizeAssignmentDoc(doc, fallbackClassId = "") {
     questions: Array.isArray(data.questions) ? data.questions : [],
     totalQuestions: Number(data.totalQuestions || data.questionCount || 0),
     questionCount: Number(data.questionCount || data.totalQuestions || 0),
+  };
+}
+
+function normalizeSubmissionDoc(doc) {
+  if (!doc) {
+    return null;
+  }
+
+  const data =
+    typeof doc.data === "function"
+      ? doc.data() || {}
+      : doc && typeof doc === "object"
+        ? doc
+        : {};
+
+  return {
+    id: String(doc.id || data.id || "").trim(),
+    assignmentId: String(data.assignmentId || "").trim(),
+    classId: String(data.classId || "").trim(),
+    studentId: String(data.studentId || "").trim(),
+    answers: Array.isArray(data.answers) ? data.answers : [],
+    submittedAt: String(data.submittedAt || "").trim(),
+    status: String(data.status || "").trim().toLowerCase() || "submitted",
+    score: data.score ?? null,
   };
 }
 
@@ -210,7 +235,159 @@ async function createAssignment({
   return assignmentData;
 }
 
-async function getAssignmentsByClassIds(classIds) {
+async function getAssignmentById(assignmentId) {
+  const normalizedAssignmentId = String(assignmentId || "").trim();
+
+  if (!normalizedAssignmentId) {
+    return null;
+  }
+
+  const snapshot = await assignmentsCollection.doc(normalizedAssignmentId).get();
+
+  if (!snapshot.exists) {
+    return null;
+  }
+
+  return normalizeAssignmentDoc(snapshot);
+}
+
+async function getSubmissionByStudent(assignmentId, studentId) {
+  const normalizedAssignmentId = String(assignmentId || "").trim();
+  const normalizedStudentId = String(studentId || "").trim();
+
+  if (!normalizedAssignmentId || !normalizedStudentId) {
+    return null;
+  }
+
+  const docId = `${normalizedAssignmentId}_${normalizedStudentId}`;
+  const docSnapshot = await assignmentSubmissionsCollection.doc(docId).get();
+
+  if (docSnapshot.exists) {
+    return normalizeSubmissionDoc(docSnapshot);
+  }
+
+  const querySnapshot = await assignmentSubmissionsCollection
+    .where("assignmentId", "==", normalizedAssignmentId)
+    .where("studentId", "==", normalizedStudentId)
+    .limit(1)
+    .get();
+
+  if (querySnapshot.empty) {
+    return null;
+  }
+
+  return normalizeSubmissionDoc(querySnapshot.docs[0]);
+}
+
+async function getSubmissionsByStudentAndClassIds(classIds, studentId) {
+  const normalizedClassIds = uniqueStrings(classIds);
+  const normalizedStudentId = String(studentId || "").trim();
+
+  if (normalizedClassIds.length === 0 || !normalizedStudentId) {
+    return [];
+  }
+
+  const snapshot = await assignmentSubmissionsCollection
+    .where("studentId", "==", normalizedStudentId)
+    .get();
+
+  return snapshot.docs
+    .map((doc) => normalizeSubmissionDoc(doc))
+    .filter(
+      (submission) =>
+        submission && normalizedClassIds.includes(submission.classId),
+    );
+}
+
+async function getSubmissionsByAssignmentId(assignmentId) {
+  const normalizedAssignmentId = String(assignmentId || "").trim();
+
+  if (!normalizedAssignmentId) {
+    return [];
+  }
+
+  const snapshot = await assignmentSubmissionsCollection
+    .where("assignmentId", "==", normalizedAssignmentId)
+    .get();
+
+  return snapshot.docs
+    .map((doc) => normalizeSubmissionDoc(doc))
+    .filter((submission) => submission && submission.assignmentId === normalizedAssignmentId)
+    .sort((left, right) => {
+      const leftTime = Date.parse(left.submittedAt || "") || 0;
+      const rightTime = Date.parse(right.submittedAt || "") || 0;
+
+      return rightTime - leftTime;
+    });
+}
+
+async function createSubmission({
+  assignmentId,
+  classId,
+  studentId,
+  answers = [],
+}) {
+  const normalizedAssignmentId = String(assignmentId || "").trim();
+  const normalizedClassId = String(classId || "").trim();
+  const normalizedStudentId = String(studentId || "").trim();
+  const normalizedAnswers = Array.isArray(answers) ? answers : [];
+
+  console.log("[EduKids][assignmentService] createSubmission requested", {
+    assignmentId: normalizedAssignmentId,
+    classId: normalizedClassId,
+    studentId: normalizedStudentId,
+    answerCount: normalizedAnswers.length,
+  });
+
+  if (!normalizedAssignmentId) {
+    throw new ApiError(400, "assignmentId is required");
+  }
+
+  if (!normalizedClassId) {
+    throw new ApiError(400, "classId is required");
+  }
+
+  if (!normalizedStudentId) {
+    throw new ApiError(400, "studentId is required");
+  }
+
+  const assignment = await getAssignmentById(normalizedAssignmentId);
+
+  if (!assignment) {
+    throw new ApiError(404, "Assignment not found");
+  }
+
+  if (assignment.classId && assignment.classId !== normalizedClassId) {
+    throw new ApiError(400, "classId does not match this assignment");
+  }
+
+  const submissionRef = assignmentSubmissionsCollection.doc(
+    `${normalizedAssignmentId}_${normalizedStudentId}`,
+  );
+  const submittedAt = new Date().toISOString();
+  const submissionData = {
+    id: submissionRef.id,
+    assignmentId: normalizedAssignmentId,
+    classId: normalizedClassId,
+    studentId: normalizedStudentId,
+    answers: normalizedAnswers,
+    submittedAt,
+    status: "submitted",
+    score: null,
+  };
+
+  await submissionRef.set(submissionData, { merge: true });
+
+  console.log("[EduKids][assignmentService] createSubmission success", {
+    submissionId: submissionRef.id,
+    assignmentId: normalizedAssignmentId,
+    studentId: normalizedStudentId,
+  });
+
+  return submissionData;
+}
+
+async function getAssignmentsByClassIds(classIds, studentId = "") {
   const normalizedClassIds = uniqueStrings(classIds);
 
   if (normalizedClassIds.length === 0) {
@@ -235,13 +412,48 @@ async function getAssignmentsByClassIds(classIds) {
     });
   });
 
-  return sortAssignments(
-    assignments.filter((assignment) => assignment.status === "active"),
-  );
+  const activeAssignments = assignments.filter((assignment) => assignment.status === "active");
+
+  const submissionsByAssignmentId = new Map();
+
+  if (String(studentId || "").trim()) {
+    const submissions = await getSubmissionsByStudentAndClassIds(
+      normalizedClassIds,
+      studentId,
+    );
+
+    submissions.forEach((submission) => {
+      if (submission?.assignmentId) {
+        submissionsByAssignmentId.set(submission.assignmentId, submission);
+      }
+    });
+  }
+
+  const mergedAssignments = activeAssignments.map((assignment) => {
+    const submission = submissionsByAssignmentId.get(assignment.id);
+
+    if (!submission) {
+      return assignment;
+    }
+
+    return {
+      ...assignment,
+      status: submission.status || "submitted",
+      submissionId: submission.id,
+      submittedAt: submission.submittedAt,
+      score: submission.score ?? null,
+    };
+  });
+
+  return sortAssignments(mergedAssignments);
 }
 
 module.exports = {
   createAssignment,
   getAssignmentsByClassIds,
+  createSubmission,
+  getAssignmentById,
+  getSubmissionByStudent,
+  getSubmissionsByAssignmentId,
   normalizeAssignmentDoc,
 };
