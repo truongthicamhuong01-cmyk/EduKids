@@ -1944,6 +1944,11 @@ let teacherAssignmentsUnsubscribe = null;
 let currentAssignments = [];
 let currentAssignmentId = "";
 let studentAssignmentSubmissionLoading = false;
+const studentAssignmentDetailState = {
+  visible: false,
+  assignment: null,
+  answers: [],
+};
 const teacherAssignmentSubmissionState = {
   assignments: [],
   selectedAssignmentId: "",
@@ -1968,6 +1973,60 @@ function getCurrentUserId() {
 
 function getAssignmentService() {
   return window.EduKidsAssignmentService || null;
+}
+
+function getStudentAssignmentFeedNodes() {
+  const page = getAssignmentsPageRoot();
+
+  if (!page) {
+    return [];
+  }
+
+  return Array.from(
+    page.querySelectorAll("h1, .assignments-toolbar, .assignment-tabs, .assignment-tab"),
+  );
+}
+
+function setStudentAssignmentFeedVisibility(isVisible) {
+  getStudentAssignmentFeedNodes().forEach((node) => {
+    node.hidden = !isVisible;
+  });
+}
+
+function getStudentAssignmentSelectedAnswer(questionIndex) {
+  const normalizedQuestionIndex = Number(questionIndex);
+
+  if (!Number.isInteger(normalizedQuestionIndex) || normalizedQuestionIndex < 0) {
+    return "";
+  }
+
+  return (
+    studentAssignmentDetailState.answers.find(
+      (item) => item.questionIndex === normalizedQuestionIndex,
+    )?.selected || ""
+  );
+}
+
+function setStudentAssignmentSelectedAnswer(questionIndex, selected) {
+  const normalizedQuestionIndex = Number(questionIndex);
+  const normalizedSelected = String(selected || "").trim().toUpperCase();
+
+  if (!Number.isInteger(normalizedQuestionIndex) || normalizedQuestionIndex < 0) {
+    return;
+  }
+
+  const existingIndex = studentAssignmentDetailState.answers.findIndex(
+    (item) => item.questionIndex === normalizedQuestionIndex,
+  );
+
+  if (existingIndex >= 0) {
+    studentAssignmentDetailState.answers[existingIndex].selected = normalizedSelected;
+  } else {
+    studentAssignmentDetailState.answers.push({
+      questionIndex: normalizedQuestionIndex,
+      selected: normalizedSelected,
+    });
+  }
 }
 
 function normalizeStudentAssignmentRecord(assignment, fallbackClassId = "") {
@@ -2001,6 +2060,33 @@ function normalizeStudentAssignmentRecord(assignment, fallbackClassId = "") {
     submittedAt: assignment.submittedAt || "",
     score: assignment.score ?? null,
   };
+}
+
+function normalizeStudentAssignmentQuestionOptions(question) {
+  if (!question || typeof question !== "object") {
+    return [];
+  }
+
+  if (Array.isArray(question.options)) {
+    return question.options
+      .map((option, index) => {
+        if (option && typeof option === "object") {
+          return {
+            label: String(option.label || String.fromCharCode(65 + index)).trim().toUpperCase(),
+            text: String(option.text || option.answer || option.value || "").trim(),
+          };
+        }
+
+        return {
+          label: String.fromCharCode(65 + index),
+          text: String(option || "").trim(),
+        };
+      })
+      .filter((option) => option.text)
+      .slice(0, 4);
+  }
+
+  return [];
 }
 
 function getCurrentStudentAssignment() {
@@ -2920,7 +3006,42 @@ function syncCurrentStudentAssignmentSelection(assignmentId) {
 }
 
 function openStudentAssignmentDetail(assignmentId) {
-  void openAssignmentDetail(assignmentId);
+  const normalizedId = String(assignmentId || "").trim();
+
+  if (!normalizedId) {
+    return;
+  }
+
+  const assignment =
+    currentAssignments.find((item) => item.id === normalizedId) ||
+    window.EduKidsCurrentAssignment ||
+    null;
+
+  if (!assignment) {
+    showToast("Không thể mở chi tiết bài tập.", "error");
+    return;
+  }
+
+  const previousAssignmentId = String(studentAssignmentDetailState.assignment?.id || "").trim();
+
+  currentAssignmentId = normalizedId;
+  studentAssignmentDetailState.visible = true;
+  studentAssignmentDetailState.assignment = assignment;
+
+  if (previousAssignmentId !== normalizedId) {
+    studentAssignmentDetailState.answers = [];
+  }
+
+  window.EduKidsCurrentAssignment = assignment;
+  setStudentAssignmentFeedVisibility(false);
+
+  renderStudentAssignmentDetail(assignment);
+
+  const root = getAssignmentDetailRoot();
+
+  if (root && typeof root.scrollIntoView === "function") {
+    root.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 function updateStudentAssignmentFeed(assignments, errors = []) {
@@ -3299,6 +3420,125 @@ async function refreshStudentAssignmentsFeed() {
       "error",
     );
   }
+}
+
+function renderStudentAssignmentDetail(assignment) {
+  const root = getAssignmentDetailRoot();
+
+  if (!root) {
+    return;
+  }
+
+  if (!assignment) {
+    root.hidden = true;
+    root.innerHTML = "";
+    return;
+  }
+
+  const statusKey = normalizeStudentAssignmentStatus(assignment);
+  const isReadOnly = statusKey === "done";
+  const questionList = Array.isArray(assignment.questions) ? assignment.questions : [];
+  const actionLabel = isReadOnly ? "Xem lại" : "Nộp bài";
+  const dueDateText = assignment.dueDate ? formatAssignmentDate(assignment.dueDate) : "--";
+  const classLabel =
+    assignment.className ||
+    studentAssignmentClassState.classes.find((classroom) => classroom.id === assignment.classId)?.name ||
+    studentAssignmentClassState.classes.find((classroom) => classroom.id === assignment.classId)?.className ||
+    assignment.classId ||
+    "--";
+
+  root.hidden = false;
+  root.dataset.studentAssignmentRoot = "true";
+  root.innerHTML = `
+    <div class="assignment-detail-shell">
+      <button type="button" class="back-btn" data-assignment-back>← Quay lại</button>
+
+      <section class="quiz-panel">
+        <div class="quiz-panel-header">
+          <div>
+            <span class="quiz-panel-kicker">Assignment</span>
+            <h2>${escapeHtml(assignment.title || "--")}</h2>
+            <p>Lớp: ${escapeHtml(classLabel)} · Hạn nộp: ${escapeHtml(dueDateText)}</p>
+          </div>
+          <div class="quiz-panel-progress">
+            <strong>${escapeHtml(formatStudentAssignmentStatusLabel(statusKey))}</strong>
+            <span>${escapeHtml(assignment.score === null || typeof assignment.score === "undefined" ? "--" : String(assignment.score))}</span>
+          </div>
+        </div>
+
+        <div class="assignment-detail-meta">
+          <div class="assignment-detail-row"><span>Tiêu đề</span><strong>${escapeHtml(assignment.title || "--")}</strong></div>
+          <div class="assignment-detail-row"><span>Mô tả</span><strong>${escapeHtml(assignment.description || "--")}</strong></div>
+          <div class="assignment-detail-row"><span>Hạn nộp</span><strong>${escapeHtml(dueDateText)}</strong></div>
+          <div class="assignment-detail-row"><span>Lớp</span><strong>${escapeHtml(classLabel)}</strong></div>
+        </div>
+
+        <div class="quiz-question-list ${isReadOnly ? "is-submitted" : ""}">
+          ${questionList.length === 0
+            ? `
+              <div class="quiz-empty">Bài tập này chưa có câu hỏi.</div>
+            `
+            : questionList
+                .map((question, questionIndex) => {
+                  const selected = getStudentAssignmentSelectedAnswer(questionIndex);
+                  const options = normalizeStudentAssignmentQuestionOptions(question);
+
+                  return `
+                    <article class="quiz-question-card" data-question-block data-assignment-question-index="${questionIndex}">
+                      <div class="quiz-question-meta">Câu ${questionIndex + 1}</div>
+                      <h3 class="quiz-question-text">${escapeHtml(question.question || "--")}</h3>
+                      <div class="quiz-option-grid">
+                        ${options
+                          .map((option) => {
+                            const isSelected = selected === option.label;
+
+                            return `
+                              <button
+                                type="button"
+                                class="quiz-option-btn ${isSelected ? "is-selected" : ""}"
+                                data-option-label="${escapeHtml(option.label)}"
+                                ${isReadOnly ? "disabled" : ""}
+                              >
+                                <span class="quiz-option-label">${escapeHtml(option.label)}</span>
+                                <span class="quiz-option-text">${escapeHtml(option.text)}</span>
+                              </button>
+                            `;
+                          })
+                          .join("")}
+                      </div>
+                    </article>
+                  `;
+                })
+                .join("")}
+        </div>
+
+        <div class="quiz-actions">
+          <button
+            type="button"
+            class="quiz-submit-btn"
+            data-assignment-submit
+            ${studentAssignmentSubmissionLoading || isReadOnly ? "disabled" : ""}
+          >
+            ${actionLabel}
+          </button>
+        </div>
+      </section>
+    </div>
+  `;
+}
+
+function closeStudentAssignmentDetail() {
+  studentAssignmentDetailState.visible = false;
+  setStudentAssignmentFeedVisibility(true);
+
+  const root = getAssignmentDetailRoot();
+
+  if (root) {
+    root.hidden = true;
+    root.innerHTML = "";
+  }
+
+  renderStudentAssignmentTabs(currentAssignments);
 }
 
 function getAssignmentSubmitButtonFromTrigger(trigger) {
@@ -4396,6 +4636,17 @@ function bindStudentAssignmentControlsOnce() {
 async function initializeStudentAssignmentPage() {
   if (getCurrentRole() !== "student") {
     return;
+  }
+
+  studentAssignmentDetailState.visible = false;
+  studentAssignmentDetailState.assignment = null;
+  studentAssignmentDetailState.answers = [];
+  setStudentAssignmentFeedVisibility(true);
+
+  const detailRoot = getAssignmentDetailRoot();
+  if (detailRoot) {
+    detailRoot.hidden = true;
+    detailRoot.innerHTML = "";
   }
 
   bindStudentAssignmentControlsOnce();
@@ -6343,6 +6594,41 @@ function bindAppEventsOnce() {
   }
 
   appShell.addEventListener("click", async (event) => {
+    const studentDetailRoot = document.querySelector(
+      "#assignments [data-assignment-detail-root]",
+    );
+    const assignmentBackButton = event.target.closest("[data-assignment-back]");
+    if (assignmentBackButton && studentDetailRoot?.contains(assignmentBackButton)) {
+      event.preventDefault();
+      closeStudentAssignmentDetail();
+      return;
+    }
+
+    const assignmentOptionButton = event.target.closest(
+      "[data-option-label]",
+    );
+
+    if (assignmentOptionButton && studentDetailRoot?.contains(assignmentOptionButton)) {
+      const selected = String(assignmentOptionButton.dataset.optionLabel || "").trim();
+      const questionBlock = assignmentOptionButton.closest("[data-question-block]");
+      const questionIndex = Number(
+        questionBlock?.dataset.assignmentQuestionIndex || "",
+      );
+
+      if (Number.isInteger(questionIndex) && selected && !assignmentOptionButton.disabled) {
+        setStudentAssignmentSelectedAnswer(questionIndex, selected);
+        const currentAssignment = studentAssignmentDetailState.assignment;
+
+        if (currentAssignment) {
+          renderStudentAssignmentDetail(currentAssignment);
+        }
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+
     const assignmentPrimaryButton = event.target.closest(
       "[data-assignment-action='detail-primary']",
     );
