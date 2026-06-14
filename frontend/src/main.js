@@ -5306,6 +5306,7 @@ function getAssignmentDetailRoot() {
   const root = document.createElement("section");
   root.dataset.assignmentDetailRoot = "true";
   root.className = "assignment-detail";
+  const role = getCurrentRole();
 
   if (role === "teacher") {
     const manageRoot = getTeacherManageRoot();
