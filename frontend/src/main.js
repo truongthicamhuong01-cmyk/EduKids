@@ -906,10 +906,10 @@ function toNormalizedScore(entry) {
   }
 
   if (score <= 10) {
-    return Math.max(0, Math.min(100, Math.round(score * 10)));
+    return Math.max(0, Math.min(10, score));
   }
 
-  return Math.max(0, Math.min(100, Math.round(score)));
+  return Math.max(0, Math.min(10, score / 10));
 }
 
 function calculateWeeklyProgress(activityLogs) {
@@ -932,11 +932,14 @@ function calculateWeeklyProgress(activityLogs) {
 
   const totalQuestions = recentLogs.reduce((total, entry) => total + toQuestionCount(entry), 0);
   const scoredEntries = recentLogs
-    .map(toNormalizedScore)
-    .filter((value) => Number.isFinite(value));
-  const averageScore = scoredEntries.length
-    ? Math.round(scoredEntries.reduce((sum, value) => sum + value, 0) / scoredEntries.length)
-    : 0;
+    .map((entry) => ({
+      score: toNormalizedScore(entry),
+      questions: toQuestionCount(entry),
+    }))
+    .filter((entry) => Number.isFinite(entry.score) && entry.questions > 0);
+  const totalScore = scoredEntries.reduce((sum, entry) => sum + (entry.score * entry.questions), 0);
+  const answeredQuestions = scoredEntries.reduce((sum, entry) => sum + entry.questions, 0);
+  const averageScore = answeredQuestions > 0 ? Number((totalScore / answeredQuestions).toFixed(1)) : 0;
 
   return {
     studyTime,
@@ -1525,7 +1528,7 @@ async function syncStudentWeeklyProgress(profile) {
   }
 
   if (averageScoreNode) {
-    averageScoreNode.textContent = `${formatStatValue(weeklyProgress.averageScore)}%`;
+    averageScoreNode.textContent = `${formatStatValue(weeklyProgress.averageScore)} điểm`;
   }
 }
 

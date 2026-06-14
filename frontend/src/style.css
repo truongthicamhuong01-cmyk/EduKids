@@ -3391,6 +3391,24 @@ img.profile-skeleton {
   color: #4f46e5;
 }
 
+.card-header .link-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-decoration: none;
+  font: inherit;
+  font-size: 14px;
+  color: #4f46e5;
+  cursor: pointer;
+}
+
+.card-header .link-button:hover,
+.card-header .link-button:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
 .stat-row {
   display: flex;
   justify-content: space-between;
