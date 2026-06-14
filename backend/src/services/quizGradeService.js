@@ -218,6 +218,8 @@ async function gradeQuizSubmission({ userId, quizId, answers }) {
     correctAnswers,
     score,
     wrongQuestions,
+    quizId: String(quiz.id || quizId).trim(),
+    topicId: String(quiz.topicId || "").trim(),
   };
 }
 

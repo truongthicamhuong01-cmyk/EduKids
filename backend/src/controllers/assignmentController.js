@@ -13,6 +13,7 @@ const {
   getSubmissionsByAssignmentId,
   applySubmissionResultToAssignment,
 } = require("../services/assignmentService");
+const { awardExp } = require("../services/progressService");
 
 function uniqueStrings(values) {
   return Array.from(
@@ -209,6 +210,12 @@ const submitAssignment = asyncHandler(async (req, res) => {
     studentId: userId,
     answers: rawAnswers,
   });
+  const awardResult = await awardExp(
+    userId,
+    20,
+    "Assignment",
+    `assignment:${assignmentId}:${userId}`,
+  ).catch(() => null);
 
   console.log("[EduKids][assignmentController] submitAssignment success", {
     assignmentId,
@@ -230,6 +237,7 @@ const submitAssignment = asyncHandler(async (req, res) => {
       wrongCount: submission.wrongCount,
       totalQuestions: submission.totalQuestions,
       gradedAt: submission.gradedAt,
+      profile: awardResult?.user || null,
     },
   );
 });

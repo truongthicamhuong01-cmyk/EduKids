@@ -33,6 +33,7 @@ function getDefaultStats(role) {
     level: 1,
     exp: 0,
     streak: 0,
+    lastStudyDate: null,
     completedQuestions: 0,
     studyMinutes: 0,
   };
@@ -59,6 +60,12 @@ function normalizeStats(role, stats = {}) {
     delete normalized.exp;
   } else {
     normalized.exp = Number(normalized.exp) || 0;
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(stats, "lastStudyDate")) {
+    delete normalized.lastStudyDate;
+  } else {
+    normalized.lastStudyDate = stats.lastStudyDate || null;
   }
 
   return normalized;
@@ -303,7 +310,11 @@ async function updateUserById(uid, updates) {
   delete safeUpdates.password;
   delete safeUpdates.role;
   delete safeUpdates.email;
-  delete safeUpdates.stats;
+  if (safeUpdates.stats && typeof safeUpdates.stats === "object") {
+    safeUpdates.stats = normalizeStats(nextRole, safeUpdates.stats);
+  } else {
+    delete safeUpdates.stats;
+  }
   delete safeUpdates.subjects;
   delete safeUpdates.classTags;
   delete safeUpdates.activityLogs;
@@ -313,6 +324,7 @@ async function updateUserById(uid, updates) {
   const nextPayload = {
     ...current,
     ...safeUpdates,
+    stats: normalizeStats(nextRole, safeUpdates.stats || current.stats || {}),
     avatar: normalizeAvatarFilename(
       updates.avatar || (shouldRecomputeAvatar ? getDefaultAvatar(nextRole, nextGender) : currentAvatar)
     ),

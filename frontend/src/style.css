@@ -5,6 +5,7 @@
 }
 
 :root {
+  --font-sans: "Be Vietnam Pro", "Inter", system-ui, sans-serif;
   --primary: #4f46e5;
   --primary-hover: #4338ca;
 
@@ -24,10 +25,17 @@
 }
 
 body {
-  font-family: "Inter", sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg);
   color: var(--text);
   overflow-x: hidden;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
 }
 
 html {

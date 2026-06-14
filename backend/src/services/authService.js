@@ -8,6 +8,7 @@ const {
   findUserByUsername,
   getDefaultAvatar,
 } = require("./userService");
+const { updateUserStreak } = require("./progressService");
 
 function buildAuthUserPayload(user) {
   return {
@@ -33,6 +34,7 @@ function buildAuthUserPayload(user) {
     subjects: user.subjects,
     classTags: user.classTags,
     activityLogs: user.activityLogs,
+    lastStudyDate: user.stats?.lastStudyDate || null,
   };
 }
 
@@ -84,6 +86,7 @@ async function loginUser({ username, password }) {
   }
 
   const normalizedUser = await ensureUserCode(user.uid, user);
+  const streakUpdatedUser = await updateUserStreak(normalizedUser.uid).catch(() => normalizedUser);
 
   const token = jwt.sign(
     {
@@ -99,7 +102,7 @@ async function loginUser({ username, password }) {
   );
 
   return {
-    user: buildAuthUserPayload({ ...normalizedUser, password: hashedPassword }),
+    user: buildAuthUserPayload({ ...streakUpdatedUser, password: hashedPassword }),
     token,
   };
 }

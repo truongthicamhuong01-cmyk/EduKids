@@ -1667,6 +1667,27 @@ function renderStudentHomeOverview(profile, activityLogs = null) {
   }
 }
 
+function applyLatestCurrentUser(profile) {
+  if (!profile) {
+    return;
+  }
+
+  const normalizedProfile =
+    window.EduKidsProfileService?.normalizeProfile?.(profile) || profile;
+
+  bootstrapState.currentUser = normalizedProfile;
+  window.EduKidsCurrentUser = normalizedProfile;
+  saveAuthSession(
+    normalizedProfile,
+    localStorage.getItem("authToken") || localStorage.getItem("token"),
+  );
+
+  if (currentPage === "student-home" || currentPage === "profile") {
+    renderStudentHomeOverview(normalizedProfile);
+    renderStudentProfile(normalizedProfile);
+  }
+}
+
 async function syncStudentHomeRecommendations(profile) {
   if (normalizeRole(profile?.role) !== "student") {
     return;
@@ -2911,6 +2932,9 @@ async function submitStudentQuiz() {
 
     studentQuizState.isSubmitted = true;
     studentQuizState.resultData = response.data || null;
+    if (response.data?.profile) {
+      applyLatestCurrentUser(response.data.profile);
+    }
     studentQuizState.wrongQuestions = Array.isArray(
       response.data?.wrongQuestions,
     )
@@ -6237,6 +6261,9 @@ async function submitStudentAssignment(trigger = null) {
     });
 
     const submissionResult = response.data || null;
+    if (submissionResult?.profile) {
+      applyLatestCurrentUser(submissionResult.profile);
+    }
     const updatedAssignment = markStudentAssignmentAsSubmitted(assignment.id, submissionResult);
 
     if (updatedAssignment) {

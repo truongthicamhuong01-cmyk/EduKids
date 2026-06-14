@@ -117,12 +117,13 @@ import { API_BASE_URL } from "../config.js";
           averageScore: 0,
         }
       : {
-          level: 1,
-          exp: 0,
-          streak: 0,
-          completedQuestions: 0,
-          studyMinutes: 0,
-        };
+        level: 1,
+        exp: 0,
+        streak: 0,
+        lastStudyDate: null,
+        completedQuestions: 0,
+        studyMinutes: 0,
+      };
 
     const normalizedStats =
       Object.keys(stats).length === 0
@@ -146,6 +147,12 @@ import { API_BASE_URL } from "../config.js";
         delete normalizedStats.exp;
       } else {
         normalizedStats.exp = Number(normalizedStats.exp) || 0;
+      }
+
+      if (!Object.prototype.hasOwnProperty.call(stats, "lastStudyDate")) {
+        delete normalizedStats.lastStudyDate;
+      } else {
+        normalizedStats.lastStudyDate = stats.lastStudyDate || null;
       }
     }
 
