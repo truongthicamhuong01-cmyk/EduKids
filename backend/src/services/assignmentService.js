@@ -217,7 +217,7 @@ function gradeAssignmentSubmission(assignment, answers) {
   const wrongCount = Math.max(totalQuestions - correctCount, 0);
   const score =
     totalQuestions > 0
-      ? Number(((correctCount / totalQuestions) * 10).toFixed(2))
+      ? Number(((correctCount / totalQuestions) * 10).toFixed(1))
       : 0;
 
   return {
@@ -349,6 +349,32 @@ function sortAssignments(assignments) {
 
     return rightTime - leftTime;
   });
+}
+
+function parseDueDateTimestamp(dueDate) {
+  const rawDueDate = String(dueDate || "").trim();
+
+  if (!rawDueDate) {
+    return null;
+  }
+
+  const normalizedDueDate =
+    rawDueDate.includes(" ") && !rawDueDate.includes("T")
+      ? rawDueDate.replace(" ", "T")
+      : rawDueDate;
+  const parsedTime = Date.parse(normalizedDueDate);
+
+  return Number.isFinite(parsedTime) ? parsedTime : null;
+}
+
+function isAssignmentPastDue(dueDate, now = Date.now()) {
+  const dueTimestamp = parseDueDateTimestamp(dueDate);
+
+  if (dueTimestamp === null) {
+    return false;
+  }
+
+  return dueTimestamp < now;
 }
 
 async function createAssignment({
@@ -642,7 +668,17 @@ async function getAssignmentsByClassIds(classIds, studentId = "") {
     });
   }
 
-  const mergedAssignments = activeAssignments.map((assignment) => {
+  const visibleAssignments = activeAssignments.filter((assignment) => {
+    const submission = submissionsByAssignmentId.get(assignment.id);
+
+    if (submission) {
+      return true;
+    }
+
+    return !isAssignmentPastDue(assignment.dueDate);
+  });
+
+  const mergedAssignments = visibleAssignments.map((assignment) => {
     const submission = submissionsByAssignmentId.get(assignment.id);
 
     return applySubmissionResultToAssignment(assignment, submission);
