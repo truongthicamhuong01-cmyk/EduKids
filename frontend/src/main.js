@@ -534,6 +534,12 @@ function changePage(pageId) {
   if (targetPageId === "teacher-dashboard" && role === "teacher") {
     void syncTeacherDashboard(getCurrentAuthUser());
   }
+
+  if (targetPageId === "progress" && normalizeRole(role) === "student") {
+    const currentProfile =
+      bootstrapState.currentUser || profileState.current || getCurrentAuthUser();
+    renderStudentProgressPage(currentProfile, getProfileActivityLogs(currentProfile));
+  }
 }
 
 function openCreateAssignment() {
@@ -1176,6 +1182,155 @@ function calculateWeeklyProgress(activityLogs) {
     totalQuestions,
     averageScore,
   };
+}
+
+function formatProgressChartDate(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "--";
+  }
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+  }).format(date);
+}
+
+function getStudentProgressChartEntries(activityLogs) {
+  const logs = Array.isArray(activityLogs) ? activityLogs : [];
+
+  return logs
+    .map((entry) => {
+      const date = getLogDate(entry);
+      const score = toNormalizedScore(entry);
+
+      if (!date || !Number.isFinite(score)) {
+        return null;
+      }
+
+      return {
+        id: entry?.id || `${date.getTime()}-${score}`,
+        date,
+        score: Math.max(0, Math.min(10, Number(score))),
+      };
+    })
+    .filter(Boolean)
+    .sort((left, right) => right.date.getTime() - left.date.getTime())
+    .slice(0, 7)
+    .reverse();
+}
+
+function getStudentProgressOverview(profile, activityLogs = []) {
+  const stats = profile?.stats || {};
+  const logs = Array.isArray(activityLogs) ? activityLogs : [];
+  const scoredLogs = logs
+    .map((entry) => ({
+      score: toNormalizedScore(entry),
+    }))
+    .filter((entry) => Number.isFinite(entry.score));
+  const averageScore =
+    scoredLogs.length > 0
+      ? Number(
+          (
+            scoredLogs.reduce((sum, entry) => sum + entry.score, 0) /
+            scoredLogs.length
+          ).toFixed(1),
+        )
+      : null;
+
+  return {
+    studyTime: Number(stats.studyMinutes) || 0,
+    completedAssignments:
+      Number(stats.completedQuestions) ||
+      logs.filter((entry) => Number.isFinite(Number(entry?.score))).length,
+    averageScore:
+      Number.isFinite(Number(stats.averageScore))
+        ? Number(stats.averageScore)
+        : averageScore,
+    streak: Number(stats.streak) || 0,
+  };
+}
+
+function renderStudentProgressPage(profile, activityLogs = null) {
+  const root = document.getElementById("progress");
+
+  if (!root || normalizeRole(profile?.role) !== "student") {
+    return;
+  }
+
+  const logs = Array.isArray(activityLogs)
+    ? activityLogs
+    : getProfileActivityLogs(profile);
+  const overview = getStudentProgressOverview(profile, logs);
+  const chartEntries = getStudentProgressChartEntries(logs);
+
+  const studyTimeNode = root.querySelector('[data-progress-overview="study-time"]');
+  const completedNode = root.querySelector(
+    '[data-progress-overview="completed-assignments"]',
+  );
+  const averageScoreNode = root.querySelector(
+    '[data-progress-overview="average-score"]',
+  );
+  const streakNode = root.querySelector('[data-progress-overview="streak"]');
+  const chartNode = root.querySelector("[data-progress-chart]");
+  const emptyStateNode = root.querySelector("[data-progress-empty-state]");
+
+  if (studyTimeNode) {
+    studyTimeNode.textContent = `${formatStatValue(overview.studyTime)} phút`;
+  }
+
+  if (completedNode) {
+    completedNode.textContent = `${formatStatValue(overview.completedAssignments)} bài`;
+  }
+
+  if (averageScoreNode) {
+    averageScoreNode.textContent = Number.isFinite(Number(overview.averageScore))
+      ? `${formatStatValue(overview.averageScore)} / 10`
+      : "--";
+  }
+
+  if (streakNode) {
+    streakNode.textContent = `${formatStatValue(overview.streak)} ngày`;
+  }
+
+  if (!chartNode) {
+    return;
+  }
+
+  chartNode.innerHTML = "";
+
+  if (chartEntries.length === 0) {
+    if (emptyStateNode) {
+      emptyStateNode.hidden = false;
+    }
+    chartNode.hidden = true;
+    return;
+  }
+
+  if (emptyStateNode) {
+    emptyStateNode.hidden = true;
+  }
+
+  chartNode.hidden = false;
+
+  chartEntries.forEach((entry) => {
+    const item = document.createElement("div");
+    item.className = "bar-item";
+
+    const scoreLabel = document.createElement("div");
+    scoreLabel.className = "bar-score";
+    scoreLabel.textContent = formatStatValue(entry.score);
+
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    bar.style.height = `${Math.max(0, Math.min(100, (entry.score / 10) * 100))}%`;
+    bar.title = `${formatStatValue(entry.score)} điểm - ${formatProgressChartDate(entry.date)}`;
+
+    const dateLabel = document.createElement("span");
+    dateLabel.textContent = formatProgressChartDate(entry.date);
+
+    item.append(scoreLabel, bar, dateLabel);
+    chartNode.appendChild(item);
+  });
 }
 
 function formatRecommendationText(prefix, topicName, suffix = "") {
@@ -2362,10 +2517,13 @@ async function syncStudentProgress(profile) {
 
   const cacheKey = getStudentActivityCacheKey(profile);
   const cachedLogs = cacheKey ? studentProgressCache.get(cacheKey) : null;
+  const profileLogs = getProfileActivityLogs(profile);
   const activityLogs =
-    Array.isArray(cachedLogs) && cachedLogs.length > 0
-      ? cachedLogs
-      : await fetchStudentActivityLogs(profile);
+    Array.isArray(profileLogs) && profileLogs.length > 0
+      ? profileLogs
+      : Array.isArray(cachedLogs) && cachedLogs.length > 0
+        ? cachedLogs
+        : await fetchStudentActivityLogs(profile);
 
   if (cacheKey && Array.isArray(activityLogs)) {
     studentProgressCache.set(cacheKey, activityLogs);
@@ -2399,6 +2557,7 @@ async function syncStudentProgress(profile) {
   }
 
   renderStudentHomeOverview(resolvedProfile, activityLogs);
+  renderStudentProgressPage(resolvedProfile, activityLogs);
 
   if (currentPage === "profile" || currentPage === "student-home") {
     renderStudentProfile(resolvedProfile);
@@ -2424,6 +2583,7 @@ function renderProfileView(profile) {
 
   updateSidebarProfileCards(profile);
   renderStudentHomeOverview(profile);
+  renderStudentProgressPage(profile);
   void syncStudentProgress(profile);
   void syncStudentHomeRecommendations(profile);
   void syncStudentStrengthWeakness(profile);
@@ -11362,6 +11522,7 @@ function initApp(user) {
   window.EduKidsCurrentUser = user;
   void syncSidebarProfile();
   renderStudentHomeOverview(user);
+  renderStudentProgressPage(user);
   void syncStudentProgress(user);
   void syncStudentHomeRecommendations(user);
   void syncStudentWeeklyProgress(user);

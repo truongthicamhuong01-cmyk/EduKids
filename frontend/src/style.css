@@ -5086,6 +5086,13 @@ img.profile-skeleton {
   border-bottom: 2px solid #e5e7eb;
 }
 
+.progress-empty-state {
+  margin-top: 20px;
+  color: #64748b;
+  font-size: 16px;
+  text-align: center;
+}
+
 .bar-item {
   flex: 1;
 
@@ -5105,7 +5112,7 @@ img.profile-skeleton {
 
   border-radius: 12px 12px 0 0;
 
-  min-height: 20px; /* tránh mất cột */
+  min-height: 20px;
 
   transition: 0.3s;
 }
@@ -5120,6 +5127,13 @@ img.profile-skeleton {
   font-size: 14px;
 
   color: #64748b;
+}
+
+.bar-score {
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
 }
 
 /* Mobile */

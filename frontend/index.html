@@ -539,7 +539,7 @@
                 <span>🕒</span>
                 <div>
                   <small>Thời gian học</small>
-                  <h4>15 giờ 30 phút</h4>
+                  <h4 data-progress-overview="study-time">--</h4>
                 </div>
               </div>
 
@@ -547,7 +547,7 @@
                 <span>✅</span>
                 <div>
                   <small>Bài đã hoàn thành</small>
-                  <h4>68 bài</h4>
+                  <h4 data-progress-overview="completed-assignments">--</h4>
                 </div>
               </div>
 
@@ -555,7 +555,7 @@
                 <span>⭐</span>
                 <div>
                   <small>Điểm trung bình</small>
-                  <h4>7.6 / 10</h4>
+                  <h4 data-progress-overview="average-score">--</h4>
                 </div>
               </div>
 
@@ -563,7 +563,7 @@
                 <span>🔥</span>
                 <div>
                   <small>Chuỗi ngày học</small>
-                  <h4>12 ngày</h4>
+                  <h4 data-progress-overview="streak">--</h4>
                 </div>
               </div>
             </div>
@@ -574,42 +574,10 @@
                 <h3>Biểu đồ tiến bộ</h3>
               </div>
 
-              <div class="bar-chart">
-                <div class="bar-item">
-                  <div class="bar" style="height: 45%"></div>
-                  <span>18/05</span>
-                </div>
-
-                <div class="bar-item">
-                  <div class="bar" style="height: 55%"></div>
-                  <span>19/05</span>
-                </div>
-
-                <div class="bar-item">
-                  <div class="bar" style="height: 70%"></div>
-                  <span>20/05</span>
-                </div>
-
-                <div class="bar-item">
-                  <div class="bar" style="height: 65%"></div>
-                  <span>21/05</span>
-                </div>
-
-                <div class="bar-item">
-                  <div class="bar" style="height: 85%"></div>
-                  <span>22/05</span>
-                </div>
-
-                <div class="bar-item">
-                  <div class="bar" style="height: 80%"></div>
-                  <span>23/05</span>
-                </div>
-
-                <div class="bar-item">
-                  <div class="bar" style="height: 100%"></div>
-                  <span>24/05</span>
-                </div>
-              </div>
+              <div class="bar-chart" data-progress-chart></div>
+              <p class="progress-empty-state" data-progress-empty-state hidden>
+                Chưa làm bài nào
+              </p>
             </div>
           </div>
         </section>
