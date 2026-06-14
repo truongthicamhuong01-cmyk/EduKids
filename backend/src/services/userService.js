@@ -31,10 +31,37 @@ function getDefaultStats(role) {
 
   return {
     level: 1,
+    exp: 0,
     streak: 0,
     completedQuestions: 0,
     studyMinutes: 0,
   };
+}
+
+function normalizeStats(role, stats = {}) {
+  const defaultStats = getDefaultStats(role);
+
+  if (!stats || typeof stats !== "object" || Object.keys(stats).length === 0) {
+    return defaultStats;
+  }
+
+  const normalized = {
+    ...stats,
+  };
+
+  Object.keys(defaultStats).forEach((key) => {
+    if (!Object.prototype.hasOwnProperty.call(normalized, key) || normalized[key] === undefined || normalized[key] === null) {
+      normalized[key] = defaultStats[key];
+    }
+  });
+
+  if (!Object.prototype.hasOwnProperty.call(stats, "exp")) {
+    delete normalized.exp;
+  } else {
+    normalized.exp = Number(normalized.exp) || 0;
+  }
+
+  return normalized;
 }
 
 function getDefaultSubjects(role) {
@@ -98,9 +125,10 @@ function mapUserDoc(doc) {
     phone: data.phone || "",
     address: data.address || "",
     note: data.note || "",
-    stats: data.stats || getDefaultStats(data.role),
+    stats: normalizeStats(data.role, data.stats),
     subjects: Array.isArray(data.subjects) ? data.subjects : getDefaultSubjects(data.role),
     classTags: Array.isArray(data.classTags) ? data.classTags : [],
+    activityLogs: Array.isArray(data.activityLogs) ? data.activityLogs : [],
     classIds: resolvedClassIds,
     joinedClasses: resolvedClassIds,
   };
@@ -222,9 +250,10 @@ async function createUser(userData) {
     phone: userData.phone || "",
     address: userData.address || "",
     note: userData.note || "",
-    stats: userData.stats || getDefaultStats(role),
+    stats: normalizeStats(role, userData.stats),
     subjects: Array.isArray(userData.subjects) ? userData.subjects : getDefaultSubjects(role),
     classTags: Array.isArray(userData.classTags) ? userData.classTags : [],
+    activityLogs: Array.isArray(userData.activityLogs) ? userData.activityLogs : [],
     classIds: Array.isArray(userData.classIds) ? userData.classIds : [],
     joinedClasses: Array.isArray(userData.joinedClasses) ? userData.joinedClasses : [],
     createdAt,
@@ -277,6 +306,7 @@ async function updateUserById(uid, updates) {
   delete safeUpdates.stats;
   delete safeUpdates.subjects;
   delete safeUpdates.classTags;
+  delete safeUpdates.activityLogs;
   delete safeUpdates.classIds;
   delete safeUpdates.joinedClasses;
 

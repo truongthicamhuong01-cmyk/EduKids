@@ -429,9 +429,13 @@ async function syncSidebarProfile() {
     }
 
     renderSidebarProfileCards(resolvedProfile || profile);
+    renderStudentHomeOverview(resolvedProfile || profile);
+    void syncStudentProgress(resolvedProfile || profile);
   } catch (error) {
     console.warn("Không thể đồng bộ sidebar user:", error);
     renderSidebarProfileCards(profile);
+    renderStudentHomeOverview(profile);
+    void syncStudentProgress(profile);
   }
 }
 
@@ -458,6 +462,13 @@ function changePage(pageId) {
 
   showPage(targetPageId);
   applyRoleVisibility(role);
+
+  if (targetPageId === "student-home" && role === "student") {
+    void syncStudentProgress(getCurrentAuthUser());
+    void syncStudentWeeklyProgress(getCurrentAuthUser());
+    void syncStudentHomeAssignments(getCurrentAuthUser());
+    void syncStudentRecentWrongAnswers(getCurrentAuthUser());
+  }
 
   if (role === "teacher" && targetPageId !== "manage" && currentTeacherAssignmentDetail.visible) {
     closeTeacherAssignmentDetail();
@@ -534,6 +545,13 @@ const profileState = {
   error: null,
 };
 
+const studentProgressCache = new Map();
+const studentRecommendationCache = new Map();
+const studentWeeklyProgressCache = new Map();
+const studentStrengthWeaknessCache = new Map();
+const studentHomeAssignmentCache = new Map();
+const studentRecentWrongAnswersCache = new Map();
+
 function getProfilePageRoot(pageType) {
   if (!pageType) {
     return null;
@@ -601,6 +619,914 @@ function formatStatValue(value) {
   const numeric = Number(value);
 
   return Number.isFinite(numeric) ? String(numeric) : "--";
+}
+
+function getDisplayName(fullName) {
+  const normalized = String(fullName || "")
+    .trim()
+    .replace(/\s+/g, " ");
+
+  if (!normalized) {
+    return "";
+  }
+
+  const parts = normalized.split(" ").filter(Boolean);
+
+  if (parts.length <= 1) {
+    return parts[0] || "";
+  }
+
+  return parts.slice(-2).join(" ");
+}
+
+function getRequiredExpForLevel(level) {
+  const normalizedLevel = Math.max(1, Math.floor(Number(level) || 1));
+
+  if (normalizedLevel === 1) {
+    return 100;
+  }
+
+  if (normalizedLevel === 2) {
+    return 200;
+  }
+
+  if (normalizedLevel === 3) {
+    return 400;
+  }
+
+  if (normalizedLevel === 4) {
+    return 800;
+  }
+
+  return 1000;
+}
+
+function calculateLevel(exp) {
+  let remainingExp = Math.max(0, Math.floor(Number(exp) || 0));
+  let level = 1;
+  let requiredExp = getRequiredExpForLevel(level);
+
+  while (remainingExp >= requiredExp) {
+    remainingExp -= requiredExp;
+    level += 1;
+    requiredExp = getRequiredExpForLevel(level);
+  }
+
+  return {
+    level,
+    currentExp: remainingExp,
+    requiredExp,
+  };
+}
+
+function getActivityLogDateValue(entry) {
+  if (!entry) {
+    return null;
+  }
+
+  if (entry instanceof Date) {
+    return Number.isNaN(entry.getTime()) ? null : entry;
+  }
+
+  if (typeof entry === "string" || typeof entry === "number") {
+    const parsed = new Date(entry);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  if (typeof entry === "object") {
+    const candidate =
+      entry.completedAt ||
+      entry.submittedAt ||
+      entry.finishedAt ||
+      entry.createdAt ||
+      entry.updatedAt ||
+      entry.timestamp ||
+      entry.time ||
+      entry.date ||
+      entry.day ||
+      null;
+
+    if (candidate) {
+      const parsed = new Date(candidate);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+  }
+
+  return null;
+}
+
+function toLocalDateKey(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function calculateStreak(activityLogs) {
+  const uniqueDates = Array.from(
+    new Set(
+      (Array.isArray(activityLogs) ? activityLogs : [])
+        .map(getActivityLogDateValue)
+        .filter(Boolean)
+        .map(toLocalDateKey)
+        .filter(Boolean),
+    ),
+  ).sort((left, right) => right.localeCompare(left));
+
+  if (uniqueDates.length === 0) {
+    return 0;
+  }
+
+  const orderedDates = uniqueDates
+    .map((dateKey) => new Date(`${dateKey}T00:00:00`))
+    .filter((date) => !Number.isNaN(date.getTime()));
+
+  if (orderedDates.length === 0) {
+    return 0;
+  }
+
+  const today = new Date();
+  const todayKey = toLocalDateKey(today);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = toLocalDateKey(yesterday);
+
+  const latestKey = toLocalDateKey(orderedDates[0]);
+
+  if (latestKey !== todayKey && latestKey !== yesterdayKey) {
+    return 0;
+  }
+
+  let streak = 1;
+
+  for (let index = 1; index < orderedDates.length; index += 1) {
+    const previousDate = orderedDates[index - 1];
+    const currentDate = orderedDates[index];
+    const diffDays = Math.round(
+      (previousDate.getTime() - currentDate.getTime()) / 86400000,
+    );
+
+    if (diffDays === 1) {
+      streak += 1;
+      continue;
+    }
+
+    if (diffDays === 0) {
+      continue;
+    }
+
+    break;
+  }
+
+  return streak;
+}
+
+function getProfileActivityLogs(profile) {
+  const candidateLogs =
+    profile?.activityLogs ||
+    profile?.stats?.activityLogs ||
+    profile?.learningLogs ||
+    profile?.studyLogs ||
+    profile?.recentActivities ||
+    [];
+
+  return Array.isArray(candidateLogs) ? candidateLogs : [];
+}
+
+function getStudentProgressStats(profile) {
+  const stats = profile?.stats || {};
+  const rawExp = Number(stats.exp);
+
+  if (Number.isFinite(rawExp)) {
+    const calculated = calculateLevel(rawExp);
+
+    return {
+      level: calculated.level,
+      currentExp: calculated.currentExp,
+      requiredExp: calculated.requiredExp,
+      streak: Number.isFinite(Number(stats.streak)) ? Number(stats.streak) : 0,
+      exp: Math.max(0, Math.floor(rawExp)),
+    };
+  }
+
+  const legacyLevel = Number(stats.level);
+  const level = Number.isFinite(legacyLevel) && legacyLevel > 0
+    ? Math.floor(legacyLevel)
+    : 1;
+
+  return {
+    level,
+    currentExp: 0,
+    requiredExp: getRequiredExpForLevel(level),
+    streak: Number.isFinite(Number(stats.streak)) ? Number(stats.streak) : 0,
+    exp: 0,
+  };
+}
+
+function getStudentGrade(profile) {
+  const className = normalizeQuizText(profile?.className);
+  const classMatch = className.match(/(\d+)/);
+
+  if (classMatch) {
+    const grade = Number(classMatch[1]);
+    if (Number.isFinite(grade) && grade >= 1 && grade <= 5) {
+      return String(grade);
+    }
+  }
+
+  const profileGrade = normalizeQuizText(profile?.grade);
+
+  if (profileGrade) {
+    return profileGrade;
+  }
+
+  return STUDENT_QUIZ_DEFAULTS.grade;
+}
+
+function pickRandomItem(items, excludedIds = []) {
+  const excluded = new Set((Array.isArray(excludedIds) ? excludedIds : []).map((value) => String(value || "").trim()).filter(Boolean));
+  const candidates = (Array.isArray(items) ? items : []).filter((item) => {
+    const key = String(item?.topicId || item?.id || item?.topicName || item?.name || "").trim();
+    return key && !excluded.has(key);
+  });
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+function startOfTodayLocal() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+function getSevenDayWindowStart() {
+  const start = startOfTodayLocal();
+  start.setDate(start.getDate() - 6);
+  return start;
+}
+
+function getLogDate(entry) {
+  const value =
+    entry?.submittedAt ||
+    entry?.gradedAt ||
+    entry?.accuracyUpdatedAt ||
+    entry?.updatedAt ||
+    entry?.createdAt ||
+    entry?.completedAt ||
+    entry?.timestamp ||
+    null;
+  const parsed = value ? new Date(value) : null;
+  return parsed && !Number.isNaN(parsed.getTime()) ? parsed : null;
+}
+
+function toQuestionCount(entry) {
+  const score = Number(entry?.score);
+  if (Number.isFinite(Number(entry?.totalQuestions))) {
+    return Math.max(0, Number(entry.totalQuestions));
+  }
+  if (Number.isFinite(score) && score > 0) {
+    return 1;
+  }
+  return 0;
+}
+
+function toNormalizedScore(entry) {
+  const score = Number(entry?.score);
+
+  if (!Number.isFinite(score)) {
+    return null;
+  }
+
+  if (score <= 10) {
+    return Math.max(0, Math.min(100, Math.round(score * 10)));
+  }
+
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function calculateWeeklyProgress(activityLogs) {
+  const logs = Array.isArray(activityLogs) ? activityLogs : [];
+  const windowStart = getSevenDayWindowStart();
+  const windowEnd = new Date(startOfTodayLocal().getTime() + 86400000);
+  const recentLogs = logs.filter((entry) => {
+    const date = getLogDate(entry);
+    return date && date >= windowStart && date < windowEnd;
+  });
+
+  const studyTime = recentLogs.reduce((total, entry) => {
+    const explicitMinutes = Number(entry?.studyMinutes);
+    if (Number.isFinite(explicitMinutes) && explicitMinutes > 0) {
+      return total + explicitMinutes;
+    }
+
+    return total;
+  }, 0);
+
+  const totalQuestions = recentLogs.reduce((total, entry) => total + toQuestionCount(entry), 0);
+  const scoredEntries = recentLogs
+    .map(toNormalizedScore)
+    .filter((value) => Number.isFinite(value));
+  const averageScore = scoredEntries.length
+    ? Math.round(scoredEntries.reduce((sum, value) => sum + value, 0) / scoredEntries.length)
+    : 0;
+
+  return {
+    studyTime,
+    totalQuestions,
+    averageScore,
+  };
+}
+
+function formatRecommendationText(prefix, topicName, suffix = "") {
+  if (!topicName) {
+    return `${prefix} --${suffix}`;
+  }
+
+  return `${prefix} ${topicName}${suffix}`;
+}
+
+function renderStudentStudyRecommendations(recommendations) {
+  const practiceText = document.querySelector("[data-home-study-text='practice']");
+  const reviewText = document.querySelector("[data-home-study-text='review']");
+  const newText = document.querySelector("[data-home-study-text='new']");
+  const practiceBadge = document.querySelector("[data-home-study-badge='practice']");
+  const reviewBadge = document.querySelector("[data-home-study-badge='review']");
+  const newBadge = document.querySelector("[data-home-study-badge='new']");
+
+  const practice = recommendations?.practice || null;
+  const review = recommendations?.review || null;
+  const fresh = recommendations?.new || null;
+
+  if (practiceText) {
+    practiceText.textContent = practice
+      ? `Luyện ${practice.topicName} (10 câu)`
+      : "Luyện -- (10 câu)";
+  }
+
+  if (reviewText) {
+    reviewText.textContent = review
+      ? `Ôn lại ${review.topicName}`
+      : "Ôn lại --";
+  }
+
+  if (newText) {
+    newText.textContent = fresh
+      ? `5 câu ${fresh.topicName}`
+      : "5 câu --";
+  }
+
+  if (practiceBadge) {
+    practiceBadge.textContent = practice?.percentage <= 33 ? "Yếu" : "Ôn tập";
+  }
+
+  if (reviewBadge) {
+    reviewBadge.textContent = "Ôn lại";
+  }
+
+  if (newBadge) {
+    newBadge.textContent = "Bài mới";
+  }
+}
+
+function buildStudentRecommendationSet(topics = []) {
+  const sorted = [...topics].sort((left, right) => {
+    const leftAccuracy = Number(left?.percentage) || 0;
+    const rightAccuracy = Number(right?.percentage) || 0;
+    if (leftAccuracy !== rightAccuracy) {
+      return leftAccuracy - rightAccuracy;
+    }
+    return String(left?.topicName || left?.name || "").localeCompare(String(right?.topicName || right?.name || ""));
+  });
+
+  const practice = sorted[0] || null;
+  const review = sorted[1] || null;
+  const fresh = pickRandomItem(sorted, [practice?.topicId, review?.topicId]);
+
+  return {
+    practice,
+    review,
+    new: fresh || pickRandomItem(sorted, [practice?.topicId]) || review || practice || null,
+  };
+}
+
+async function fetchStudentRecommendationTopics(profile) {
+  const cacheKey = String(profile?.uid || profile?.userId || profile?.id || "").trim();
+  const grade = getStudentGrade(profile);
+  const cacheId = `${cacheKey}:${grade}`;
+  const cached = studentRecommendationCache.get(cacheId);
+
+  if (cached) {
+    return cached;
+  }
+
+  const subjects = ["math", "english"];
+
+  try {
+    const responses = await Promise.all(
+      subjects.map((subject) =>
+        apiRequestWithAuth(`/api/quiz/topics?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`, {
+          method: "GET",
+        }),
+      ),
+    );
+
+    const topics = responses.flatMap((response) => Array.isArray(response.data) ? response.data : []);
+    const selected = buildStudentRecommendationSet(topics);
+    studentRecommendationCache.set(cacheId, selected);
+    return selected;
+  } catch (error) {
+    console.warn("Không thể tải chủ đề gợi ý:", error);
+    const fallback = buildStudentRecommendationSet([]);
+    studentRecommendationCache.set(cacheId, fallback);
+    return fallback;
+  }
+}
+
+function getStudentTopicSortName(topic) {
+  return String(topic?.topicName || topic?.name || topic?.title || "").trim();
+}
+
+function getStudentTopicAccuracy(topic) {
+  return Math.max(0, Math.min(100, Number(topic?.percentage) || 0));
+}
+
+function getAssignmentSortTime(assignment) {
+  return (
+    Date.parse(
+      assignment?.createdAt ||
+        assignment?.updatedAt ||
+        assignment?.submittedAt ||
+        assignment?.gradedAt ||
+        "",
+    ) || 0
+  );
+}
+
+function getAssignmentHomeStatus(assignment) {
+  return normalizeStudentAssignmentStatus(assignment);
+}
+
+function getAssignmentHomeStatusLabel(statusKey) {
+  if (statusKey === "doing") {
+    return "Đang làm";
+  }
+
+  if (statusKey === "done") {
+    return "Đã làm";
+  }
+
+  return "Chưa làm";
+}
+
+function getAssignmentHomeStatusClass(statusKey) {
+  if (statusKey === "doing") {
+    return "tag-blue";
+  }
+
+  if (statusKey === "done") {
+    return "tag-green";
+  }
+
+  return "tag-orange";
+}
+
+function buildStudentHomeAssignments(assignments) {
+  const sorted = [...(Array.isArray(assignments) ? assignments : [])]
+    .sort((left, right) => getAssignmentSortTime(right) - getAssignmentSortTime(left))
+    .map((assignment) => ({
+      ...assignment,
+      statusKey: getAssignmentHomeStatus(assignment),
+    }));
+
+  const pending = sorted.filter((assignment) => assignment.statusKey === "pending");
+  const doing = sorted.filter((assignment) => assignment.statusKey === "doing");
+  const done = sorted.filter((assignment) => assignment.statusKey === "done");
+
+  const firstPending = pending[0] || null;
+  const secondAssignment = doing[0] || done[0] || null;
+
+  const selected = [];
+
+  if (firstPending) {
+    selected.push(firstPending);
+  }
+
+  if (secondAssignment && (!firstPending || secondAssignment.id !== firstPending.id)) {
+    selected.push(secondAssignment);
+  }
+
+  if (selected.length < 2) {
+    const fallbackPool = sorted.filter(
+      (assignment) => !selected.some((item) => item.id === assignment.id),
+    );
+
+    const fallback = fallbackPool[0] || null;
+
+    if (fallback) {
+      selected.push(fallback);
+    }
+  }
+
+  return selected.slice(0, 2);
+}
+
+function calculateRecentWrongAnswers(records) {
+  const logs = Array.isArray(records) ? records : [];
+  const sorted = [...logs]
+    .map((entry) => ({
+      ...entry,
+      time: getAssignmentSortTime(entry),
+    }))
+    .sort((left, right) => right.time - left.time);
+
+  for (const entry of sorted) {
+    const wrongCount = Number(entry?.wrongCount ?? entry?.wrongAnswersCount);
+
+    if (Number.isFinite(wrongCount) && wrongCount > 0) {
+      return {
+        recentWrongCount: wrongCount,
+      };
+    }
+  }
+
+  return {
+    recentWrongCount: 0,
+  };
+}
+
+function renderStudentRecentWrongAnswers(progress) {
+  const card = document.querySelector(".mistake-card");
+
+  if (!card) {
+    return;
+  }
+
+  const title = card.querySelector(".mistake-top h2");
+  const description = card.querySelector("p");
+  const button = card.querySelector(".btn-danger");
+  const recentWrongCount = Number(progress?.recentWrongCount) || 0;
+
+  if (title) {
+    title.textContent = `${recentWrongCount} câu`;
+  }
+
+  if (description) {
+    description.textContent =
+      recentWrongCount > 0
+        ? `Câu sai gần đây: ${recentWrongCount}`
+        : "0 câu sai";
+  }
+
+  if (button) {
+    button.setAttribute("type", "button");
+    button.setAttribute("data-retry-later", "true");
+    button.setAttribute("title", "TODO: triển khai chức năng luyện lại sau");
+  }
+}
+
+async function fetchStudentRecentWrongAnswers(profile) {
+  const cacheKey = String(profile?.uid || profile?.userId || profile?.id || "").trim();
+  const cached = studentRecentWrongAnswersCache.get(cacheKey);
+
+  if (cached) {
+    return cached;
+  }
+
+  const studentId = cacheKey;
+
+  if (!studentId) {
+    return {
+      recentWrongCount: 0,
+    };
+  }
+
+  const firestore =
+    window.firebase?.apps?.length &&
+    typeof window.firebase.app === "function" &&
+    typeof window.firebase.firestore === "function"
+      ? window.firebase.app().firestore()
+      : null;
+
+  if (!firestore) {
+    return {
+      recentWrongCount: 0,
+    };
+  }
+
+  const records = [];
+
+  try {
+    const assignmentSnapshot = await firestore
+      .collection("assignment_submissions")
+      .where("studentId", "==", studentId)
+      .get();
+
+    assignmentSnapshot.docs.forEach((doc) => {
+      const data = doc.data() || {};
+      records.push({
+        id: doc.id,
+        wrongCount: Number(data.wrongCount) || 0,
+        submittedAt: data.submittedAt || data.gradedAt || data.updatedAt || data.createdAt || "",
+      });
+    });
+  } catch (error) {
+    console.warn("Không thể tải lịch sử bài làm để tính câu sai gần đây:", error);
+  }
+
+  try {
+    const wrongSnapshot = await firestore
+      .collection("wrong_answers")
+      .doc(studentId)
+      .get();
+
+    if (wrongSnapshot.exists) {
+      const data = wrongSnapshot.data() || {};
+      records.push({
+        id: wrongSnapshot.id,
+        wrongCount: Array.isArray(data.wrongQuestions)
+          ? data.wrongQuestions.length
+          : Number(data.wrongCount) || 0,
+        submittedAt: data.updatedAt || data.createdAt || "",
+      });
+    }
+  } catch (error) {
+    console.warn("Không thể tải wrong_answers để tính câu sai gần đây:", error);
+  }
+
+  const result = calculateRecentWrongAnswers(records);
+  studentRecentWrongAnswersCache.set(cacheKey, result);
+  return result;
+}
+
+async function syncStudentRecentWrongAnswers(profile) {
+  if (normalizeRole(profile?.role) !== "student") {
+    return;
+  }
+
+  const result = await fetchStudentRecentWrongAnswers(profile);
+  renderStudentRecentWrongAnswers(result);
+}
+
+function renderStudentHomeAssignments(assignments) {
+  const titleNodes = Array.from(
+    document.querySelectorAll("[data-student-home-assignment-title]"),
+  );
+  const statusNodes = Array.from(
+    document.querySelectorAll("[data-student-home-assignment-status]"),
+  );
+  const selectedAssignments = Array.isArray(assignments) ? assignments : [];
+
+  titleNodes.forEach((node, index) => {
+    const assignment = selectedAssignments[index];
+    node.textContent = assignment ? assignment.title : "--";
+  });
+
+  statusNodes.forEach((node, index) => {
+    const assignment = selectedAssignments[index];
+    const statusKey = assignment ? assignment.statusKey : "pending";
+    node.textContent = assignment ? getAssignmentHomeStatusLabel(statusKey) : "Chưa làm";
+    node.className = getAssignmentHomeStatusClass(statusKey);
+  });
+}
+
+async function syncStudentHomeAssignments(profile) {
+  if (normalizeRole(profile?.role) !== "student") {
+    return;
+  }
+
+  const cacheKey = String(profile?.uid || profile?.userId || profile?.id || "").trim();
+  const cached = studentHomeAssignmentCache.get(cacheKey);
+
+  if (cached && Array.isArray(cached.assignments)) {
+    renderStudentHomeAssignments(cached.assignments);
+    return;
+  }
+
+  const assignments = Array.isArray(currentAssignments) && currentAssignments.length > 0
+    ? currentAssignments
+    : await loadStudentAssignmentsFromAPI().catch(() => []);
+
+  const selectedAssignments = buildStudentHomeAssignments(assignments);
+  studentHomeAssignmentCache.set(cacheKey, {
+    assignments: selectedAssignments,
+  });
+  renderStudentHomeAssignments(selectedAssignments);
+}
+
+async function fetchStudentStrengthWeaknessTopics(profile) {
+  const cacheKey = String(profile?.uid || profile?.userId || profile?.id || "").trim();
+  const grade = getStudentGrade(profile);
+  const cacheId = `${cacheKey}:${grade}:strength-weakness`;
+  const cached = studentStrengthWeaknessCache.get(cacheId);
+
+  if (cached) {
+    return cached;
+  }
+
+  const subjects = ["math", "english"];
+
+  try {
+    const responses = await Promise.all(
+      subjects.map((subject) =>
+        apiRequestWithAuth(
+          `/api/quiz/topics?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`,
+          {
+            method: "GET",
+          },
+        ),
+      ),
+    );
+
+    const topics = responses.flatMap((response) =>
+      Array.isArray(response.data) ? response.data : [],
+    );
+
+    const sorted = [...topics].sort((left, right) => {
+      const accuracyDiff =
+        getStudentTopicAccuracy(right) - getStudentTopicAccuracy(left);
+
+      if (accuracyDiff !== 0) {
+        return accuracyDiff;
+      }
+
+      return getStudentTopicSortName(left).localeCompare(
+        getStudentTopicSortName(right),
+      );
+    });
+
+    const strengths = sorted.slice(0, 2);
+    const weaknesses = [...sorted].reverse().slice(0, 2);
+
+    const result = {
+      strengths,
+      weaknesses,
+    };
+
+    studentStrengthWeaknessCache.set(cacheId, result);
+    return result;
+  } catch (error) {
+    console.warn("Không thể tải dữ liệu phân tích học tập:", error);
+    const fallback = {
+      strengths: [],
+      weaknesses: [],
+    };
+    studentStrengthWeaknessCache.set(cacheId, fallback);
+    return fallback;
+  }
+}
+
+function renderStudentStrengthWeakness(profile, payload = null) {
+  if (normalizeRole(profile?.role) !== "student") {
+    return;
+  }
+
+  const strengthNodes = Array.from(
+    document.querySelectorAll("[data-student-strength-item]"),
+  );
+  const weaknessNodes = Array.from(
+    document.querySelectorAll("[data-student-weakness-item]"),
+  );
+
+  const strengths = Array.isArray(payload?.strengths) ? payload.strengths : [];
+  const weaknesses = Array.isArray(payload?.weaknesses) ? payload.weaknesses : [];
+
+  strengthNodes.forEach((node, index) => {
+    const topic = strengths[index];
+    node.textContent = topic ? getStudentTopicSortName(topic) : "--";
+  });
+
+  weaknessNodes.forEach((node, index) => {
+    const topic = weaknesses[index];
+    node.textContent = topic ? getStudentTopicSortName(topic) : "--";
+  });
+}
+
+async function syncStudentStrengthWeakness(profile) {
+  if (normalizeRole(profile?.role) !== "student") {
+    return;
+  }
+
+  const payload = await fetchStudentStrengthWeaknessTopics(profile);
+  renderStudentStrengthWeakness(profile, payload);
+}
+
+function invalidateStudentHomeAssignmentCache(profile) {
+  const cacheKey = String(profile?.uid || profile?.userId || profile?.id || "").trim();
+
+  if (cacheKey) {
+    studentHomeAssignmentCache.delete(cacheKey);
+  }
+}
+
+async function fetchStudentWeeklyActivityLogs(profile) {
+  const cacheKey = String(profile?.uid || profile?.userId || profile?.id || "").trim();
+  const cached = studentWeeklyProgressCache.get(cacheKey);
+
+  if (cached) {
+    return cached;
+  }
+
+  const studentId = cacheKey;
+
+  if (!studentId) {
+    return [];
+  }
+
+  const firestore =
+    window.firebase?.apps?.length &&
+    typeof window.firebase.app === "function" &&
+    typeof window.firebase.firestore === "function"
+      ? window.firebase.app().firestore()
+      : null;
+
+  if (!firestore) {
+    return [];
+  }
+
+  const logs = [];
+
+  try {
+    const assignmentSnapshot = await firestore
+      .collection("assignment_submissions")
+      .where("studentId", "==", studentId)
+      .get();
+
+    assignmentSnapshot.docs.forEach((doc) => {
+      const data = doc.data() || {};
+      logs.push({
+        id: doc.id,
+        type: "assignment",
+        submittedAt: data.submittedAt || data.gradedAt || data.updatedAt || data.createdAt || "",
+        totalQuestions: Number(data.totalQuestions) || 0,
+        score: data.score ?? null,
+        studyMinutes: Number(data.studyMinutes) || 0,
+      });
+    });
+  } catch (error) {
+    console.warn("Không thể tải assignment submissions cho tiến độ tuần:", error);
+  }
+
+  try {
+    const progressSnapshot = await firestore
+      .collectionGroup("topics")
+      .where("userId", "==", studentId)
+      .get();
+
+    progressSnapshot.docs.forEach((doc) => {
+      const data = doc.data() || {};
+      logs.push({
+        id: doc.id,
+        type: "topic-progress",
+        updatedAt: data.updatedAt || data.accuracyUpdatedAt || data.createdAt || "",
+        totalQuestions: Number(data.totalAnswered) || 0,
+        score: data.percentage ?? null,
+        studyMinutes: Number(data.studyMinutes) || 0,
+      });
+    });
+  } catch (error) {
+    console.warn("Không thể tải topic progress cho tiến độ tuần:", error);
+  }
+
+  studentWeeklyProgressCache.set(cacheKey, logs);
+  return logs;
+}
+
+async function syncStudentWeeklyProgress(profile) {
+  if (normalizeRole(profile?.role) !== "student") {
+    return;
+  }
+
+  const activityLogs = await fetchStudentWeeklyActivityLogs(profile);
+  const weeklyProgress = calculateWeeklyProgress(activityLogs);
+  const root = document.querySelector("[data-student-weekly-progress]");
+
+  if (!root) {
+    return;
+  }
+
+  const studyTimeNode = root.querySelector("[data-weekly-study-time]");
+  const totalQuestionsNode = root.querySelector("[data-weekly-total-questions]");
+  const averageScoreNode = root.querySelector("[data-weekly-average-score]");
+
+  if (studyTimeNode) {
+    studyTimeNode.textContent = `${formatStatValue(weeklyProgress.studyTime)} phút`;
+  }
+
+  if (totalQuestionsNode) {
+    totalQuestionsNode.textContent = `${formatStatValue(weeklyProgress.totalQuestions)} câu`;
+  }
+
+  if (averageScoreNode) {
+    averageScoreNode.textContent = `${formatStatValue(weeklyProgress.averageScore)}%`;
+  }
 }
 
 function setProfileLoadingState(pageType, isLoading) {
@@ -689,6 +1615,64 @@ function renderStudentSubjectProgress(profile) {
     });
 }
 
+function renderStudentHomeOverview(profile, activityLogs = null) {
+  if (normalizeRole(profile?.role) !== "student") {
+    return;
+  }
+
+  const greeting = document.getElementById("student-home-greeting");
+  const streakValue = document.getElementById("student-home-streak");
+  const levelValue = document.getElementById("student-home-level");
+  const expValue = document.getElementById("student-home-exp");
+  const expFill = document.getElementById("student-home-exp-fill");
+
+  const displayName = getDisplayName(
+    profile?.fullName || profile?.name || profile?.username || "",
+  );
+  const progressStats = getStudentProgressStats(profile);
+  const logs = Array.isArray(activityLogs)
+    ? activityLogs
+    : getProfileActivityLogs(profile);
+  const streak =
+    logs.length > 0
+      ? calculateStreak(logs)
+      : Number(profile?.stats?.streak) || 0;
+  const currentExp = progressStats.currentExp;
+  const requiredExp = Math.max(progressStats.requiredExp, 1);
+  const expPercent = Math.max(0, Math.min(100, (currentExp / requiredExp) * 100));
+
+  if (greeting) {
+    greeting.textContent = displayName
+      ? `Xin chào, ${displayName} 👋`
+      : "Xin chào 👋";
+  }
+
+  if (streakValue) {
+    streakValue.textContent = `${formatStatValue(streak)} ngày`;
+  }
+
+  if (levelValue) {
+    levelValue.textContent = formatStatValue(progressStats.level);
+  }
+
+  if (expValue) {
+    expValue.textContent = `${formatStatValue(currentExp)} / ${formatStatValue(requiredExp)}`;
+  }
+
+  if (expFill) {
+    expFill.style.width = `${expPercent}%`;
+  }
+}
+
+async function syncStudentHomeRecommendations(profile) {
+  if (normalizeRole(profile?.role) !== "student") {
+    return;
+  }
+
+  const recommendations = await fetchStudentRecommendationTopics(profile);
+  renderStudentStudyRecommendations(recommendations);
+}
+
 function renderStudentProfile(profile) {
   const avatar = document.getElementById("student-profile-avatar");
   const name = document.getElementById("student-profile-name");
@@ -708,6 +1692,12 @@ function renderStudentProfile(profile) {
   const classExtra = document.getElementById("student-profile-class-extra");
   const hobby = document.getElementById("student-profile-hobby");
   const dream = document.getElementById("student-profile-dream");
+  const progressStats = getStudentProgressStats(profile);
+  const activityLogs = getProfileActivityLogs(profile);
+  const streakValue =
+    activityLogs.length > 0
+      ? calculateStreak(activityLogs)
+      : Number(profile?.stats?.streak) || 0;
 
   if (avatar) {
     avatar.src = getProfileAvatar(profile);
@@ -718,10 +1708,10 @@ function renderStudentProfile(profile) {
   if (code) code.textContent = profile?.userCode || "--";
   if (className) className.textContent = profile?.className || "--";
   if (createdAt) createdAt.textContent = formatDateTime(profile?.createdAt);
-  if (level) level.textContent = formatStatValue(profile?.stats?.level);
+  if (level) level.textContent = formatStatValue(progressStats.level);
 
   if (streak) {
-    streak.innerHTML = `${formatStatValue(profile?.stats?.streak)} <span>ngày</span>`;
+    streak.innerHTML = `${formatStatValue(streakValue)} <span>ngày</span>`;
   }
 
   if (completed) {
@@ -825,6 +1815,113 @@ function updateSidebarProfileCards(profile) {
   renderSidebarProfileCards(profile);
 }
 
+function getStudentActivityCacheKey(profile) {
+  return String(profile?.uid || profile?.userId || profile?.id || "").trim();
+}
+
+async function fetchStudentActivityLogs(profile) {
+  const existingLogs = getProfileActivityLogs(profile);
+
+  if (existingLogs.length > 0) {
+    return existingLogs;
+  }
+
+  const studentId = getStudentActivityCacheKey(profile);
+
+  if (!studentId) {
+    return [];
+  }
+
+  const firestore =
+    window.firebase?.apps?.length &&
+    typeof window.firebase.app === "function" &&
+    typeof window.firebase.firestore === "function"
+      ? window.firebase.app().firestore()
+      : null;
+
+  if (!firestore) {
+    return [];
+  }
+
+  try {
+    const snapshot = await firestore
+      .collection("assignment_submissions")
+      .where("studentId", "==", studentId)
+      .get();
+
+    return snapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...(doc.data() || {}),
+      }))
+      .sort((left, right) => {
+        const leftTime = Date.parse(
+          left.submittedAt || left.completedAt || left.createdAt || "",
+        ) || 0;
+        const rightTime = Date.parse(
+          right.submittedAt || right.completedAt || right.createdAt || "",
+        ) || 0;
+
+        return rightTime - leftTime;
+      });
+  } catch (error) {
+    console.warn("Không thể tải lịch sử học tập để tính streak:", error);
+    return [];
+  }
+}
+
+async function syncStudentProgress(profile) {
+  if (normalizeRole(profile?.role) !== "student") {
+    return;
+  }
+
+  const cacheKey = getStudentActivityCacheKey(profile);
+  const cachedLogs = cacheKey ? studentProgressCache.get(cacheKey) : null;
+  const activityLogs =
+    Array.isArray(cachedLogs) && cachedLogs.length > 0
+      ? cachedLogs
+      : await fetchStudentActivityLogs(profile);
+
+  if (cacheKey && Array.isArray(activityLogs)) {
+    studentProgressCache.set(cacheKey, activityLogs);
+  }
+
+  const resolvedProfile = {
+    ...profile,
+    activityLogs: Array.isArray(activityLogs) ? activityLogs : [],
+    stats: profile?.stats || {},
+  };
+
+  if (
+    bootstrapState.currentUser &&
+    String(bootstrapState.currentUser.uid || bootstrapState.currentUser.userId || bootstrapState.currentUser.id || "").trim() ===
+      cacheKey
+  ) {
+    bootstrapState.currentUser = resolvedProfile;
+    window.EduKidsCurrentUser = resolvedProfile;
+  }
+
+  if (profileState.current && cacheKey) {
+    const currentKey = getStudentActivityCacheKey(profileState.current);
+
+    if (currentKey === cacheKey) {
+      profileState.current = resolvedProfile;
+    }
+  }
+
+  renderStudentHomeOverview(resolvedProfile, activityLogs);
+
+  if (currentPage === "profile" || currentPage === "student-home") {
+    renderStudentProfile(resolvedProfile);
+  }
+
+  if (currentPage === "student-home") {
+    void syncStudentHomeRecommendations(resolvedProfile);
+    void syncStudentStrengthWeakness(resolvedProfile);
+    void syncStudentHomeAssignments(resolvedProfile);
+  }
+}
+
 function renderProfileView(profile) {
   const profileType = profile?.role === "teacher" ? "teacher" : "student";
 
@@ -837,6 +1934,12 @@ function renderProfileView(profile) {
   }
 
   updateSidebarProfileCards(profile);
+  renderStudentHomeOverview(profile);
+  void syncStudentProgress(profile);
+  void syncStudentHomeRecommendations(profile);
+  void syncStudentStrengthWeakness(profile);
+  void syncStudentHomeAssignments(profile);
+  void syncStudentRecentWrongAnswers(profile);
 
   applyProfileSkeleton(profileType, false);
   setProfileLoadingState(profileType, false);
@@ -4450,6 +5553,7 @@ function updateStudentAssignmentFeed(assignments, errors = []) {
     : [];
 
   currentAssignments = normalizedAssignments;
+  invalidateStudentHomeAssignmentCache(getCurrentAuthUser());
 
   if (
     !currentAssignmentId ||
@@ -8427,6 +9531,30 @@ function bindAppEventsOnce() {
       return;
     }
 
+    const homeStartButton = event.target.closest("[data-home-start-learning]");
+    if (homeStartButton) {
+      openSubject();
+      return;
+    }
+
+    const weeklyProgressButton = event.target.closest("[data-weekly-progress-details]");
+    if (weeklyProgressButton) {
+      changePage("progress");
+      return;
+    }
+
+    const aiCoachButton = event.target.closest("[data-open-ai-coach]");
+    if (aiCoachButton) {
+      changePage("ai-coach");
+      return;
+    }
+
+    const openAssignmentsButton = event.target.closest("[data-open-assignments]");
+    if (openAssignmentsButton) {
+      changePage("assignments");
+      return;
+    }
+
     const menuToggle = event.target.closest("[data-mobile-menu-toggle]");
     if (menuToggle) {
       const isOpen = document.body.classList.toggle("sidebar-open");
@@ -8474,6 +9602,13 @@ function initApp(user) {
   changePage(getDefaultPageForRole(user.role));
   window.EduKidsCurrentUser = user;
   void syncSidebarProfile();
+  renderStudentHomeOverview(user);
+  void syncStudentProgress(user);
+  void syncStudentHomeRecommendations(user);
+  void syncStudentWeeklyProgress(user);
+  void syncStudentStrengthWeakness(user);
+  void syncStudentHomeAssignments(user);
+  void syncStudentRecentWrongAnswers(user);
 }
 
 function initializeAuth() {
@@ -8565,6 +9700,9 @@ function installCompatibilityGlobals() {
   window.initializeStudentAssignmentPage = initializeStudentAssignmentPage;
   window.initializeManualAssignmentBuilder = initializeManualAssignmentBuilder;
   window.refreshTeacherAssignments = refreshTeacherAssignments;
+  window.getDisplayName = getDisplayName;
+  window.calculateStreak = calculateStreak;
+  window.calculateLevel = calculateLevel;
   window.askAI = () => {
     console.info("[EduKids] AI Coach action triggered.");
   };

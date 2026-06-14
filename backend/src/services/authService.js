@@ -32,6 +32,7 @@ function buildAuthUserPayload(user) {
     stats: user.stats,
     subjects: user.subjects,
     classTags: user.classTags,
+    activityLogs: user.activityLogs,
   };
 }
 

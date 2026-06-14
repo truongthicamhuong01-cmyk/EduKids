@@ -105,6 +105,50 @@ import { API_BASE_URL } from "../config.js";
       return null;
     }
 
+    const stats =
+      profile.stats && typeof profile.stats === "object" ? profile.stats : {};
+    const role = profile.role || "";
+    const isTeacher = role === "teacher";
+    const defaultStats = isTeacher
+      ? {
+          totalClasses: 0,
+          assignmentsCreated: 0,
+          studentsManaged: 0,
+          averageScore: 0,
+        }
+      : {
+          level: 1,
+          exp: 0,
+          streak: 0,
+          completedQuestions: 0,
+          studyMinutes: 0,
+        };
+
+    const normalizedStats =
+      Object.keys(stats).length === 0
+        ? defaultStats
+        : {
+            ...stats,
+          };
+
+    if (Object.keys(stats).length > 0) {
+      Object.keys(defaultStats).forEach((key) => {
+        if (
+          !Object.prototype.hasOwnProperty.call(normalizedStats, key) ||
+          normalizedStats[key] === undefined ||
+          normalizedStats[key] === null
+        ) {
+          normalizedStats[key] = defaultStats[key];
+        }
+      });
+
+      if (!Object.prototype.hasOwnProperty.call(stats, "exp")) {
+        delete normalizedStats.exp;
+      } else {
+        normalizedStats.exp = Number(normalizedStats.exp) || 0;
+      }
+    }
+
     return {
       ...profile,
       uid: profile.uid || profile.userId || profile.id || "",
@@ -124,14 +168,10 @@ import { API_BASE_URL } from "../config.js";
       note: profile.note || "",
       createdAt: profile.createdAt || "",
       updatedAt: profile.updatedAt || profile.createdAt || "",
-      stats: profile.stats || {
-        level: 1,
-        streak: 0,
-        completedQuestions: 0,
-        studyMinutes: 0,
-      },
+      stats: normalizedStats,
       subjects: Array.isArray(profile.subjects) ? profile.subjects : [],
       classTags: Array.isArray(profile.classTags) ? profile.classTags : [],
+      activityLogs: Array.isArray(profile.activityLogs) ? profile.activityLogs : [],
     };
   }
 

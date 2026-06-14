@@ -150,7 +150,7 @@
         <section id="student-home" class="page active">
           <div class="welcome-header">
             <div>
-              <h1>Xin chào, Anh Vỹ! 👋</h1>
+              <h1 id="student-home-greeting">Xin chào, ... 👋</h1>
               <p>Cùng cố gắng học tập mỗi ngày nhé!</p>
             </div>
 
@@ -159,7 +159,7 @@
                 <span>🔥</span>
                 <div>
                   <small>Streak</small>
-                  <h3>12 ngày</h3>
+                  <h3 id="student-home-streak">-- ngày</h3>
                 </div>
               </div>
 
@@ -167,16 +167,20 @@
                 <span>⭐</span>
                 <div>
                   <small>Level</small>
-                  <h3>8</h3>
+                  <h3 id="student-home-level">--</h3>
                 </div>
               </div>
 
               <div class="mini-stat exp-card">
                 <small>EXP</small>
-                <h3>1540 / 2000</h3>
+                <h3 id="student-home-exp">-- / --</h3>
 
                 <div class="progress">
-                  <div class="progress-fill" style="width: 77%"></div>
+                  <div
+                    class="progress-fill"
+                    id="student-home-exp-fill"
+                    style="width: 0%"
+                  ></div>
                 </div>
               </div>
             </div>
@@ -186,46 +190,50 @@
             <div class="card">
               <h3>🤖 Hôm nay nên học gì?</h3>
 
-              <div class="task-item">
+              <div class="task-item" data-home-study-item="practice">
                 <span>1</span>
-                <p>Luyện Tỉ số (10 câu)</p>
-                <label class="tag-red">Yếu</label>
+                <p data-home-study-text="practice">Luyện -- (10 câu)</p>
+                <label class="tag-red" data-home-study-badge="practice">Yếu</label>
               </div>
 
-              <div class="task-item">
+              <div class="task-item" data-home-study-item="review">
                 <span>2</span>
-                <p>Ôn tập Phân số</p>
-                <label class="tag-blue">Ôn lại</label>
+                <p data-home-study-text="review">Ôn lại --</p>
+                <label class="tag-blue" data-home-study-badge="review">Ôn lại</label>
               </div>
 
-              <div class="task-item">
+              <div class="task-item" data-home-study-item="new">
                 <span>3</span>
-                <p>5 câu Tiếng Anh</p>
-                <label class="tag-green">Bài mới</label>
+                <p data-home-study-text="new">5 câu --</p>
+                <label class="tag-green" data-home-study-badge="new">Bài mới</label>
               </div>
 
-              <button class="btn-primary">Bắt đầu học</button>
+              <button class="btn-primary" type="button" data-home-start-learning>
+                Bắt đầu học
+              </button>
             </div>
 
-            <div class="card">
+            <div class="card" data-student-weekly-progress>
               <h3>📊 Tiến độ tuần này</h3>
 
               <div class="stat-row">
                 <span>Thời gian học</span>
-                <b>145 phút</b>
+                <b data-weekly-study-time>-- phút</b>
               </div>
 
               <div class="stat-row">
                 <span>Số câu đã làm</span>
-                <b>73 câu</b>
+                <b data-weekly-total-questions>-- câu</b>
               </div>
 
               <div class="stat-row">
                 <span>Điểm trung bình</span>
-                <b>8.2 / 10</b>
+                <b data-weekly-average-score>--%</b>
               </div>
 
-              <button class="btn-outline">Xem chi tiết</button>
+              <button class="btn-outline" type="button" data-weekly-progress-details>
+                Xem chi tiết
+              </button>
             </div>
 
             <div class="card">
@@ -233,19 +241,21 @@
 
               <p><b>Điểm mạnh</b></p>
 
-              <div class="skill-tags">
-                <span class="green-tag">Phân số</span>
-                <span class="green-tag">Hình học</span>
+              <div class="skill-tags" data-student-strength-list>
+                <span class="green-tag" data-student-strength-item>--</span>
+                <span class="green-tag" data-student-strength-item>--</span>
               </div>
 
               <p><b>Cần cải thiện</b></p>
 
-              <div class="skill-tags">
-                <span class="red-tag">Tỉ số</span>
-                <span class="red-tag">Đo lường</span>
+              <div class="skill-tags" data-student-weakness-list>
+                <span class="red-tag" data-student-weakness-item>--</span>
+                <span class="red-tag" data-student-weakness-item>--</span>
               </div>
 
-              <button class="btn-outline">Xem phân tích</button>
+              <button class="btn-outline" type="button" data-open-ai-coach>
+                Xem phân tích
+              </button>
             </div>
           </div>
 
@@ -253,20 +263,26 @@
             <div class="card">
               <div class="card-header">
                 <h3>📚 Bài giáo viên giao</h3>
-                <a href="#">Xem tất cả</a>
+                <button type="button" class="link-button" data-open-assignments>
+                  Xem tất cả
+                </button>
               </div>
 
-              <div class="home-assignment-list">
-                <div class="home-assignment-item">
-                  <h4>Ôn tập Anh</h4>
+              <div class="home-assignment-list" data-student-home-assignments>
+                <div class="home-assignment-item" data-student-home-assignment-item>
+                  <h4 data-student-home-assignment-title>--</h4>
 
-                  <span class="tag-orange"> Chưa làm </span>
+                  <span class="tag-orange" data-student-home-assignment-status>
+                    Chưa làm
+                  </span>
                 </div>
 
-                <div class="home-assignment-item">
-                  <h4>Luyện tập Toán</h4>
+                <div class="home-assignment-item" data-student-home-assignment-item>
+                  <h4 data-student-home-assignment-title>--</h4>
 
-                  <span class="tag-green"> Đã làm </span>
+                  <span class="tag-green" data-student-home-assignment-status>
+                    Đã làm
+                  </span>
                 </div>
               </div>
             </div>
