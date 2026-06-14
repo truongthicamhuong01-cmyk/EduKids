@@ -20,12 +20,13 @@
     }
   }
 
-  function normalizeAssignment(doc, classId) {
+  function normalizeAssignment(doc) {
     const data = typeof doc.data === "function" ? doc.data() || {} : doc || {};
+    const dueDate = String(data.dueDate || "").trim();
 
     return {
       id: doc.id || data.id || "",
-      classId: data.classId || classId || "",
+      classId: data.classId || "",
       className: data.className || "",
       classCode: data.classCode || "",
       teacherId: data.teacherId || "",
@@ -33,7 +34,7 @@
       title: data.title || "",
       description: data.description || "",
       subject: data.subject || "",
-      dueDate: data.dueDate || "",
+      dueDate: dueDate || null,
       totalQuestions: Number(data.totalQuestions || data.questionCount || 0),
       questionCount: Number(data.questionCount || data.totalQuestions || 0),
       status: data.status || "active",
@@ -115,84 +116,6 @@
     );
   }
 
-  function listenAssignments(classIds, onChange) {
-    const firestore = getFirestore();
-    const ids = Array.isArray(classIds)
-      ? classIds.map((value) => String(value || "").trim()).filter(Boolean)
-      : [];
-
-    if (!firestore) {
-      onChange([], [
-        {
-          message: "Firestore chưa sẵn sàng.",
-        },
-      ]);
-      return () => {};
-    }
-
-    if (ids.length === 0) {
-      onChange([], []);
-      return () => {};
-    }
-
-    const activeClassIds = ids;
-    const classAssignments = new Map();
-    const errorMap = new Map();
-    const unsubscribers = [];
-
-    const emit = () => {
-      const merged = [];
-
-      for (const [classId, items] of classAssignments.entries()) {
-        items.forEach((item) => {
-          merged.push({
-            ...item,
-            classId: item.classId || classId,
-          });
-        });
-      }
-
-      onChange(sortAssignments(merged), Array.from(errorMap.values()));
-    };
-
-    activeClassIds.forEach((classId) => {
-      const query = firestore
-        .collection("assignments")
-        .where("classId", "==", classId);
-
-      const unsubscribe = query.onSnapshot(
-        (snapshot) => {
-          const assignments = sortAssignments(
-            snapshot.docs.map((doc) => normalizeAssignment(doc, classId)),
-          );
-
-          classAssignments.set(classId, assignments);
-          errorMap.delete(classId);
-          emit();
-        },
-        (error) => {
-          console.warn(`Assignment listener failed for class ${classId}:`, error);
-          classAssignments.set(classId, []);
-          errorMap.set(classId, {
-            classId,
-            message: error?.message || "Không thể tải bài tập của lớp này",
-          });
-          emit();
-        },
-      );
-
-      unsubscribers.push(unsubscribe);
-    });
-
-    return () => {
-      unsubscribers.forEach((unsubscribe) => {
-        if (typeof unsubscribe === "function") {
-          unsubscribe();
-        }
-      });
-    };
-  }
-
   async function createAssignment(payload) {
     const api = window.EduKidsApi?.requestWithAuth;
 
@@ -212,6 +135,5 @@
     createAssignment,
     getTeacherAssignments,
     listenTeacherAssignments,
-    listenAssignments,
   };
 })();

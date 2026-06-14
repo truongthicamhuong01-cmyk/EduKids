@@ -1941,6 +1941,8 @@ const studentAssignmentClassState = {
 
 let manualAssignmentFormBound = false;
 let teacherAssignmentsUnsubscribe = null;
+let currentAssignments = [];
+let currentAssignmentId = "";
 let createMethod = "manual";
 
 function getCurrentUserId() {
@@ -1951,6 +1953,401 @@ function getCurrentUserId() {
 
 function getAssignmentService() {
   return window.EduKidsAssignmentService || null;
+}
+
+function normalizeStudentAssignmentRecord(assignment, fallbackClassId = "") {
+  if (!assignment || typeof assignment !== "object") {
+    return null;
+  }
+
+  const status = String(assignment.status || "").trim().toLowerCase() || "pending";
+  const dueDate = assignment.dueDate === "" ? null : assignment.dueDate || null;
+
+  return {
+    id: String(
+      assignment.id ||
+        assignment.assignmentId ||
+        assignment.docId ||
+        "",
+    ).trim(),
+    classId: String(assignment.classId || fallbackClassId || "").trim(),
+    className: String(assignment.className || assignment.class || "").trim(),
+    title: String(assignment.title || "").trim(),
+    description: String(assignment.description || "").trim(),
+    subject: String(assignment.subject || "").trim(),
+    dueDate,
+    status,
+    createdAt: assignment.createdAt || "",
+    updatedAt: assignment.updatedAt || "",
+    questions: Array.isArray(assignment.questions) ? assignment.questions : [],
+  };
+}
+
+function normalizeStudentAssignmentStatus(assignment) {
+  const rawStatus = String(assignment?.status || "").trim().toLowerCase();
+
+  if (
+    rawStatus === "doing" ||
+    rawStatus === "in_progress" ||
+    rawStatus === "in-progress" ||
+    rawStatus === "started"
+  ) {
+    return "doing";
+  }
+
+  if (
+    rawStatus === "done" ||
+    rawStatus === "completed" ||
+    rawStatus === "complete" ||
+    rawStatus === "submitted" ||
+    rawStatus === "finished"
+  ) {
+    return "done";
+  }
+
+  if (
+    rawStatus === "pending" ||
+    rawStatus === "active" ||
+    rawStatus === "assigned" ||
+    rawStatus === "todo" ||
+    rawStatus === "to-do" ||
+    rawStatus === "not_started" ||
+    rawStatus === "not-started"
+  ) {
+    return "pending";
+  }
+
+  return "pending";
+}
+
+function formatStudentAssignmentStatusLabel(statusKey) {
+  if (statusKey === "doing") {
+    return "Đang làm";
+  }
+
+  if (statusKey === "done") {
+    return "Hoàn thành";
+  }
+
+  if (statusKey === "pending") {
+    return "Chưa làm";
+  }
+
+  return "--";
+}
+
+function getStudentAssignmentActionLabel(statusKey) {
+  if (statusKey === "doing") {
+    return "Tiếp tục";
+  }
+
+  if (statusKey === "done") {
+    return "Xem lại";
+  }
+
+  return "Làm bài";
+}
+
+function getStudentAssignmentIcon(assignment) {
+  const subject = String(assignment?.subject || "").toLowerCase();
+
+  if (subject.includes("english") || subject.includes("anh")) {
+    return {
+      className: "english",
+      label: "ABC",
+    };
+  }
+
+  if (
+    subject.includes("math") ||
+    subject.includes("toán") ||
+    subject.includes("toan")
+  ) {
+    return {
+      className: "math",
+      label: "➗",
+    };
+  }
+
+  return {
+    className: "math",
+    label: "📘",
+  };
+}
+
+function getAssignmentsPageLists() {
+  const page = getAssignmentsPageRoot();
+
+  if (!page) {
+    return [];
+  }
+
+  return Array.from(page.querySelectorAll(".assignment-tab")).map((tab) => ({
+    tab,
+    status: String(tab.dataset.assignmentStatus || tab.id || "").trim(),
+    list: tab.querySelector(".assignment-list"),
+  }));
+}
+
+function renderStudentAssignmentEmptyState(list, title, description) {
+  if (!list) {
+    return;
+  }
+
+  list.innerHTML = `
+    <div class="assignment-empty">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(description)}</p>
+    </div>
+  `;
+}
+
+function renderStudentAssignmentCard(assignment) {
+  const statusKey = normalizeStudentAssignmentStatus(assignment);
+  const actionLabel = getStudentAssignmentActionLabel(statusKey);
+  const icon = getStudentAssignmentIcon(assignment);
+  const dueDateText = assignment?.dueDate
+    ? `Hạn nộp: ${formatAssignmentDate(assignment.dueDate)}`
+    : "--";
+  const descriptionText = assignment?.description || "--";
+  const classLabel =
+    assignment?.className ||
+    studentAssignmentClassState.classes.find(
+      (classroom) => classroom.id === assignment?.classId,
+    )?.name ||
+    studentAssignmentClassState.classes.find(
+      (classroom) => classroom.id === assignment?.classId,
+    )?.className ||
+    assignment?.classId ||
+    "--";
+
+  return `
+    <article
+      class="assignment-item ${currentAssignmentId === assignment.id ? "is-active" : ""}"
+      data-assignment-id="${escapeHtml(assignment.id)}"
+      data-assignment-class-id="${escapeHtml(assignment.classId || "")}"
+      data-assignment-status="${escapeHtml(statusKey)}"
+    >
+      <div class="assignment-left">
+        <div class="subject-icon ${escapeHtml(icon.className)}">${escapeHtml(icon.label)}</div>
+
+        <div class="assignment-info">
+          <h3>${escapeHtml(assignment.title || "--")}</h3>
+          <p>${escapeHtml(descriptionText)}</p>
+          <small>${escapeHtml(dueDateText)}</small>
+          <div class="assignment-source">
+            <span>Lớp: ${escapeHtml(classLabel)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="assignment-right">
+        <span class="status ${escapeHtml(statusKey)}">${escapeHtml(formatStudentAssignmentStatusLabel(statusKey))}</span>
+        <button
+          type="button"
+          class="action-btn"
+          data-assignment-action="${escapeHtml(statusKey)}"
+        >
+          ${escapeHtml(actionLabel)}
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function renderStudentAssignmentTabs(assignments) {
+  const pageLists = getAssignmentsPageLists();
+
+  if (pageLists.length === 0) {
+    return;
+  }
+
+  const groupedAssignments = {
+    pending: [],
+    doing: [],
+    done: [],
+  };
+
+  assignments.forEach((assignment) => {
+    const statusKey = normalizeStudentAssignmentStatus(assignment);
+    groupedAssignments[statusKey].push(assignment);
+  });
+
+  pageLists.forEach(({ status, list }) => {
+    if (!list) {
+      return;
+    }
+
+    const tabAssignments = groupedAssignments[status] || [];
+
+    if (tabAssignments.length === 0) {
+      renderStudentAssignmentEmptyState(
+        list,
+        "Chưa có bài tập",
+        "Danh sách bài tập sẽ xuất hiện ở đây khi giáo viên giao bài cho lớp này.",
+      );
+      return;
+    }
+
+    list.innerHTML = tabAssignments.map(renderStudentAssignmentCard).join("");
+  });
+}
+
+function syncCurrentStudentAssignmentSelection(assignmentId) {
+  const normalizedId = String(assignmentId || "").trim();
+
+  currentAssignmentId = normalizedId;
+
+  const selectedAssignment =
+    currentAssignments.find((assignment) => assignment.id === normalizedId) ||
+    null;
+
+  if (selectedAssignment) {
+    window.EduKidsCurrentAssignment = selectedAssignment;
+  } else {
+    delete window.EduKidsCurrentAssignment;
+  }
+
+  renderStudentAssignmentTabs(currentAssignments);
+}
+
+function openStudentAssignmentDetail(assignmentId) {
+  const normalizedId = String(assignmentId || "").trim();
+
+  if (!normalizedId) {
+    return;
+  }
+
+  const assignment =
+    currentAssignments.find((item) => item.id === normalizedId) || null;
+
+  if (!assignment) {
+    return;
+  }
+
+  syncCurrentStudentAssignmentSelection(normalizedId);
+
+  const page = getAssignmentsPageRoot();
+
+  if (!page) {
+    return;
+  }
+
+  const targetCard = Array.from(
+    page.querySelectorAll("[data-assignment-id]"),
+  ).find((node) => node.dataset.assignmentId === normalizedId);
+
+  if (targetCard && typeof targetCard.scrollIntoView === "function") {
+    targetCard.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+}
+
+function updateStudentAssignmentFeed(assignments, errors = []) {
+  const normalizedAssignments = Array.isArray(assignments)
+    ? assignments
+        .map((assignment) => normalizeStudentAssignmentRecord(assignment))
+        .filter((assignment) => assignment && assignment.id)
+    : [];
+
+  currentAssignments = normalizedAssignments;
+
+  if (
+    !currentAssignmentId ||
+    !currentAssignments.some((assignment) => assignment.id === currentAssignmentId)
+  ) {
+    currentAssignmentId = currentAssignments[0]?.id || "";
+  }
+
+  if (currentAssignmentId) {
+    const selectedAssignment = currentAssignments.find(
+      (assignment) => assignment.id === currentAssignmentId,
+    );
+
+    if (selectedAssignment) {
+      window.EduKidsCurrentAssignment = selectedAssignment;
+    }
+  } else {
+    delete window.EduKidsCurrentAssignment;
+  }
+
+  renderStudentAssignmentTabs(currentAssignments);
+
+  if (errors.length > 0) {
+    const firstError = errors.find((error) => error?.message);
+
+    if (firstError?.message) {
+      showToast(firstError.message, "error");
+    }
+  }
+}
+
+function buildStudentAssignmentsQuery() {
+  const selectedClassId = String(studentAssignmentClassState.selectedClassId || "").trim();
+  const classIds = uniqueClassroomValues(
+    studentAssignmentClassState.classes.map((classroom) => classroom?.id),
+  );
+  const params = new URLSearchParams();
+
+  if (selectedClassId) {
+    params.set("selectedClassId", selectedClassId);
+  }
+
+  if (classIds.length > 0) {
+    params.set("classIds", classIds.join(","));
+  }
+
+  const query = params.toString();
+
+  return query ? `/api/assignments/student?${query}` : "/api/assignments/student";
+}
+
+async function loadStudentAssignmentsFromAPI() {
+  const api = window.EduKidsApi?.requestWithAuth;
+
+  if (typeof api !== "function") {
+    throw new Error("Assignment API is unavailable");
+  }
+
+  const response = await api(buildStudentAssignmentsQuery(), {
+    method: "GET",
+  });
+
+  return Array.isArray(response?.data) ? response.data : [];
+}
+
+async function refreshStudentAssignmentsFeed() {
+  if (getCurrentRole() !== "student") {
+    return;
+  }
+
+  const assignmentsRoot = getAssignmentsPageRoot();
+
+  if (assignmentsRoot) {
+    assignmentsRoot.setAttribute("aria-busy", "true");
+  }
+
+  try {
+    const assignments = await loadStudentAssignmentsFromAPI();
+
+    if (assignmentsRoot) {
+      assignmentsRoot.setAttribute("aria-busy", "false");
+    }
+
+    updateStudentAssignmentFeed(assignments, []);
+  } catch (error) {
+    if (assignmentsRoot) {
+      assignmentsRoot.setAttribute("aria-busy", "false");
+    }
+
+    currentAssignments = [];
+    currentAssignmentId = "";
+    delete window.EduKidsCurrentAssignment;
+    renderStudentAssignmentTabs([]);
+    showToast(
+      error.message || "Không thể tải bài tập từ máy chủ.",
+      "error",
+    );
+  }
 }
 
 function createManualQuestion(index = 1) {
@@ -2122,6 +2519,46 @@ function getClassroomStudentNames(classroom) {
   return uniqueClassroomValues(displayValues).slice(0, 50);
 }
 
+function getClassroomStudentCards(classroom) {
+  const studentIds = Array.isArray(classroom?.students)
+    ? classroom.students
+    : Array.isArray(classroom?.studentIds)
+      ? classroom.studentIds
+      : Array.isArray(classroom?.members)
+        ? classroom.members
+        : [];
+
+  return uniqueClassroomValues(studentIds.map((student) => {
+    if (student && typeof student === "object") {
+      return JSON.stringify({
+        id: student.id || student.uid || student.userId || "",
+        avatar: student.avatar || student.photoURL || "",
+        name:
+          student.username ||
+          student.fullName ||
+          student.name ||
+          student.displayName ||
+          student.id ||
+          "",
+      });
+    }
+
+    return JSON.stringify({
+      id: String(student || "").trim(),
+      avatar: "",
+      name: String(student || "").trim(),
+    });
+  }))
+    .map((item) => {
+      try {
+        return JSON.parse(item);
+      } catch (error) {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
 function formatClassroomPercentage(value) {
   const numeric = Number(value);
 
@@ -2152,7 +2589,7 @@ function renderClassroomStudentList(classroom) {
     return;
   }
 
-  const studentNames = getClassroomStudentNames(classroom);
+  const studentCards = getClassroomStudentCards(classroom);
 
   if (!classroom) {
     renderClassroomEmptyState(
@@ -2163,7 +2600,7 @@ function renderClassroomStudentList(classroom) {
     return;
   }
 
-  if (studentNames.length === 0) {
+  if (studentCards.length === 0) {
     renderClassroomEmptyState(
       studentList,
       "Lớp này chưa có học sinh",
@@ -2174,15 +2611,26 @@ function renderClassroomStudentList(classroom) {
 
   studentList.innerHTML = `
     <div class="classroom-student-chips">
-      ${studentNames
-        .map(
-          (studentId, index) => `
+      ${studentCards
+        .map((student, index) => {
+          const fallbackAvatar = index % 2 === 0 ? "boy.png" : "girl.png";
+          const avatarSrc = student.avatar
+            ? student.avatar.startsWith("assets/")
+              ? student.avatar
+              : `assets/userAvatar/${student.avatar}`
+            : `assets/userAvatar/${fallbackAvatar}`;
+
+          return `
             <div class="classroom-student-chip">
-              <span>${index + 1}</span>
-              <strong>${escapeHtml(studentId)}</strong>
+              <img
+                class="classroom-student-avatar"
+                src="${escapeHtml(avatarSrc)}"
+                alt="${escapeHtml(student.name || "Học sinh")}"
+              />
+              <strong>${escapeHtml(student.name || student.id || "Học sinh")}</strong>
             </div>
-          `,
-        )
+          `;
+        })
         .join("")}
     </div>
   `;
@@ -2643,6 +3091,7 @@ function setStudentAssignmentActiveClass(classId) {
 
   studentAssignmentClassState.selectedClassId = normalizedClassId;
   renderStudentClassSwitcher();
+  void refreshStudentAssignmentsFeed();
 }
 
 async function loadStudentAssignmentClasses(preferredClassId = "") {
@@ -2704,7 +3153,9 @@ async function loadStudentAssignmentClasses(preferredClassId = "") {
 }
 
 async function refreshStudentAssignmentClasses(preferredClassId = "") {
-  return loadStudentAssignmentClasses(preferredClassId);
+  const classes = await loadStudentAssignmentClasses(preferredClassId);
+  await refreshStudentAssignmentsFeed();
+  return classes;
 }
 
 async function handleStudentJoinClass() {
@@ -2736,6 +3187,7 @@ async function handleStudentJoinClass() {
 function bindStudentAssignmentControlsOnce() {
   const switcher = getStudentClassSwitcher();
   const joinButton = getJoinClassActionButton();
+  const assignmentsPage = getAssignmentsPageRoot();
 
   if (switcher && !switcher.dataset.bound) {
     switcher.dataset.bound = "true";
@@ -2760,6 +3212,34 @@ function bindStudentAssignmentControlsOnce() {
         setStudentAssignmentActiveClass(classId);
         closeStudentClassSwitcherMenu();
       }
+    });
+  }
+
+  if (assignmentsPage && !assignmentsPage.dataset.assignmentControlsBound) {
+    assignmentsPage.dataset.assignmentControlsBound = "true";
+
+    assignmentsPage.addEventListener("click", (event) => {
+      const assignmentAction = event.target.closest("[data-assignment-action]");
+      const assignmentCard = event.target.closest("[data-assignment-id]");
+
+      if (!assignmentCard) {
+        return;
+      }
+
+      const assignmentId = String(
+        assignmentCard.dataset.assignmentId || "",
+      ).trim();
+
+      if (!assignmentId) {
+        return;
+      }
+
+      if (assignmentAction) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      openStudentAssignmentDetail(assignmentId);
     });
   }
 
@@ -2791,6 +3271,7 @@ async function initializeStudentAssignmentPage() {
 
   bindStudentAssignmentControlsOnce();
   await loadStudentAssignmentClasses();
+  await refreshStudentAssignmentsFeed();
 }
 
 function resetManualAssignmentState() {
@@ -3753,6 +4234,9 @@ function handleLogout() {
   studentAssignmentClassState.classes = [];
   studentAssignmentClassState.selectedClassId = "";
   studentAssignmentClassState.loading = false;
+  currentAssignments = [];
+  currentAssignmentId = "";
+  delete window.EduKidsCurrentAssignment;
   resetManualAssignmentState();
   setAuthMode(true);
   renderAuthScreen("login");

@@ -4084,6 +4084,15 @@ img.profile-skeleton {
   margin-bottom: 12px;
 }
 
+.assignment-item.is-active {
+  border-color: #818cf8;
+  box-shadow: 0 14px 30px rgba(79, 70, 229, 0.12);
+}
+
+.assignment-item[data-assignment-id] {
+  cursor: pointer;
+}
+
 .action-btn {
   background: var(--primary);
   color: white;
