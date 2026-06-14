@@ -5,6 +5,7 @@ const {
   getStudentAssignments,
   submitAssignment,
   getAssignmentSubmissions,
+  getAssignmentById,
 } = require("../controllers/assignmentController");
 
 const router = express.Router();
