@@ -4,6 +4,27 @@ const ApiError = require("../utils/apiError");
 const classesCollection = db.collection("classes");
 const assignmentsCollection = db.collection("assignments");
 
+function uniqueStrings(values) {
+  return Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [])
+        .map((value) => String(value || "").trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function chunkArray(values, size = 10) {
+  const chunks = [];
+  const list = Array.isArray(values) ? values : [];
+
+  for (let index = 0; index < list.length; index += size) {
+    chunks.push(list.slice(index, index + size));
+  }
+
+  return chunks;
+}
+
 function normalizeQuestions(questions) {
   if (!Array.isArray(questions)) {
     return [];
@@ -50,6 +71,49 @@ function normalizeSubjectLabel(subject) {
   }
 
   return "";
+}
+
+function normalizeAssignmentDoc(doc, fallbackClassId = "") {
+  if (!doc) {
+    return null;
+  }
+
+  const data =
+    typeof doc.data === "function"
+      ? doc.data() || {}
+      : doc && typeof doc === "object"
+        ? doc
+        : {};
+  const resolvedStatus = String(data.status || "").trim().toLowerCase() || "active";
+  const dueDate = String(data.dueDate || "").trim();
+
+  return {
+    id: String(doc.id || data.id || "").trim(),
+    classId: String(data.classId || fallbackClassId || "").trim(),
+    className: String(data.className || "").trim(),
+    classCode: String(data.classCode || "").trim(),
+    teacherId: String(data.teacherId || "").trim(),
+    teacherName: String(data.teacherName || "").trim(),
+    title: String(data.title || "").trim(),
+    description: String(data.description || "").trim(),
+    subject: String(data.subject || "").trim(),
+    dueDate: dueDate || null,
+    status: resolvedStatus || "active",
+    createdAt: String(data.createdAt || "").trim(),
+    updatedAt: String(data.updatedAt || "").trim(),
+    questions: Array.isArray(data.questions) ? data.questions : [],
+    totalQuestions: Number(data.totalQuestions || data.questionCount || 0),
+    questionCount: Number(data.questionCount || data.totalQuestions || 0),
+  };
+}
+
+function sortAssignments(assignments) {
+  return [...assignments].sort((left, right) => {
+    const leftTime = Date.parse(left.createdAt || left.updatedAt || "") || 0;
+    const rightTime = Date.parse(right.createdAt || right.updatedAt || "") || 0;
+
+    return rightTime - leftTime;
+  });
 }
 
 async function createAssignment({
@@ -146,6 +210,38 @@ async function createAssignment({
   return assignmentData;
 }
 
+async function getAssignmentsByClassIds(classIds) {
+  const normalizedClassIds = uniqueStrings(classIds);
+
+  if (normalizedClassIds.length === 0) {
+    return [];
+  }
+
+  const snapshots = await Promise.all(
+    chunkArray(normalizedClassIds, 10).map((batchIds) =>
+      assignmentsCollection.where("classId", "in", batchIds).get(),
+    ),
+  );
+
+  const assignments = [];
+
+  snapshots.forEach((snapshot) => {
+    snapshot.docs.forEach((doc) => {
+      const assignment = normalizeAssignmentDoc(doc);
+
+      if (assignment) {
+        assignments.push(assignment);
+      }
+    });
+  });
+
+  return sortAssignments(
+    assignments.filter((assignment) => assignment.status === "active"),
+  );
+}
+
 module.exports = {
   createAssignment,
+  getAssignmentsByClassIds,
+  normalizeAssignmentDoc,
 };

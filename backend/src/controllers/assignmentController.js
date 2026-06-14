@@ -3,7 +3,53 @@ const ApiError = require("../utils/apiError");
 const successResponse = require("../utils/apiResponse");
 const { normalizeString } = require("../utils/validators");
 const { findUserById } = require("../services/userService");
-const { createAssignment: createAssignmentService } = require("../services/assignmentService");
+const { getStudentClasses } = require("../services/classService");
+const {
+  createAssignment: createAssignmentService,
+  getAssignmentsByClassIds,
+} = require("../services/assignmentService");
+
+function uniqueStrings(values) {
+  return Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [])
+        .map((value) => String(value || "").trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function parseClassIds(value) {
+  if (Array.isArray(value)) {
+    return uniqueStrings(value);
+  }
+
+  if (typeof value === "string") {
+    return uniqueStrings(value.split(","));
+  }
+
+  return [];
+}
+
+async function resolveStudentClassIds(userId, userProfile = null) {
+  if (!userId) {
+    return [];
+  }
+
+  const profile = userProfile || (await findUserById(userId));
+  const directClassIds = uniqueStrings([
+    ...(Array.isArray(profile?.classIds) ? profile.classIds : []),
+    ...(Array.isArray(profile?.joinedClasses) ? profile.joinedClasses : []),
+  ]);
+
+  if (directClassIds.length > 0) {
+    return directClassIds;
+  }
+
+  const classes = await getStudentClasses(userId);
+
+  return uniqueStrings(classes.map((classroom) => classroom?.id));
+}
 
 const createAssignment = asyncHandler(async (req, res) => {
   console.log("[EduKids][assignmentController] createAssignment called", {
@@ -65,6 +111,53 @@ const createAssignment = asyncHandler(async (req, res) => {
   return successResponse(res, 201, "Assignment created successfully", result);
 });
 
+const getStudentAssignments = asyncHandler(async (req, res) => {
+  const userId = req.user?.userId || req.user?.uid || "";
+
+  if (!userId) {
+    throw new ApiError(401, "Unauthorized");
+  }
+
+  const userProfile = await findUserById(userId);
+
+  if (!userProfile) {
+    throw new ApiError(404, "User profile not found");
+  }
+
+  if (userProfile.role !== "student") {
+    throw new ApiError(403, "Only students can load student assignments");
+  }
+
+  const allowedClassIds = await resolveStudentClassIds(userId, userProfile);
+  const requestedSelectedClassId = normalizeString(req.query.selectedClassId);
+  const requestedClassIds = parseClassIds(req.query.classIds);
+
+  let finalClassIds = [];
+
+  if (requestedSelectedClassId && allowedClassIds.includes(requestedSelectedClassId)) {
+    finalClassIds = [requestedSelectedClassId];
+  } else if (requestedSelectedClassId) {
+    finalClassIds = allowedClassIds;
+  } else if (requestedClassIds.length > 0) {
+    finalClassIds = requestedClassIds.filter((classId) => allowedClassIds.includes(classId));
+  } else {
+    finalClassIds = allowedClassIds;
+  }
+
+  const assignments = await getAssignmentsByClassIds(finalClassIds);
+
+  console.log("[EduKids][assignmentController] getStudentAssignments success", {
+    userId,
+    requestedSelectedClassId,
+    requestedClassCount: requestedClassIds.length,
+    classCount: finalClassIds.length,
+    assignmentCount: Array.isArray(assignments) ? assignments.length : 0,
+  });
+
+  return successResponse(res, 200, "Student assignments fetched successfully", assignments);
+});
+
 module.exports = {
   createAssignment,
+  getStudentAssignments,
 };
