@@ -470,16 +470,17 @@ function changePage(pageId) {
     void syncStudentRecentWrongAnswers(getCurrentAuthUser());
   }
 
-  if (role === "teacher" && targetPageId !== "manage" && currentTeacherAssignmentDetail.visible) {
+  if (
+    role === "teacher" &&
+    targetPageId !== "manage" &&
+    currentTeacherAssignmentDetail.visible
+  ) {
     closeTeacherAssignmentDetail();
   }
 
   const profilePageType = getProfilePageType(targetPageId);
 
-  if (
-    profilePageType &&
-    typeof ensureProfileLoaded === "function"
-  ) {
+  if (profilePageType && typeof ensureProfileLoaded === "function") {
     void ensureProfileLoaded(targetPageId);
   }
 
@@ -520,6 +521,10 @@ function changePage(pageId) {
     typeof initializeClassroomPage === "function"
   ) {
     void initializeClassroomPage();
+  }
+
+  if (targetPageId === "teacher-dashboard" && role === "teacher") {
+    void syncTeacherDashboard(getCurrentAuthUser());
   }
 }
 
@@ -815,9 +820,10 @@ function getStudentProgressStats(profile) {
   }
 
   const legacyLevel = Number(stats.level);
-  const level = Number.isFinite(legacyLevel) && legacyLevel > 0
-    ? Math.floor(legacyLevel)
-    : 1;
+  const level =
+    Number.isFinite(legacyLevel) && legacyLevel > 0
+      ? Math.floor(legacyLevel)
+      : 1;
 
   return {
     level,
@@ -849,9 +855,15 @@ function getStudentGrade(profile) {
 }
 
 function pickRandomItem(items, excludedIds = []) {
-  const excluded = new Set((Array.isArray(excludedIds) ? excludedIds : []).map((value) => String(value || "").trim()).filter(Boolean));
+  const excluded = new Set(
+    (Array.isArray(excludedIds) ? excludedIds : [])
+      .map((value) => String(value || "").trim())
+      .filter(Boolean),
+  );
   const candidates = (Array.isArray(items) ? items : []).filter((item) => {
-    const key = String(item?.topicId || item?.id || item?.topicName || item?.name || "").trim();
+    const key = String(
+      item?.topicId || item?.id || item?.topicName || item?.name || "",
+    ).trim();
     return key && !excluded.has(key);
   });
 
@@ -930,16 +942,28 @@ function calculateWeeklyProgress(activityLogs) {
     return total;
   }, 0);
 
-  const totalQuestions = recentLogs.reduce((total, entry) => total + toQuestionCount(entry), 0);
+  const totalQuestions = recentLogs.reduce(
+    (total, entry) => total + toQuestionCount(entry),
+    0,
+  );
   const scoredEntries = recentLogs
     .map((entry) => ({
       score: toNormalizedScore(entry),
       questions: toQuestionCount(entry),
     }))
     .filter((entry) => Number.isFinite(entry.score) && entry.questions > 0);
-  const totalScore = scoredEntries.reduce((sum, entry) => sum + (entry.score * entry.questions), 0);
-  const answeredQuestions = scoredEntries.reduce((sum, entry) => sum + entry.questions, 0);
-  const averageScore = answeredQuestions > 0 ? Number((totalScore / answeredQuestions).toFixed(1)) : 0;
+  const totalScore = scoredEntries.reduce(
+    (sum, entry) => sum + entry.score * entry.questions,
+    0,
+  );
+  const answeredQuestions = scoredEntries.reduce(
+    (sum, entry) => sum + entry.questions,
+    0,
+  );
+  const averageScore =
+    answeredQuestions > 0
+      ? Number((totalScore / answeredQuestions).toFixed(1))
+      : 0;
 
   return {
     studyTime,
@@ -957,11 +981,17 @@ function formatRecommendationText(prefix, topicName, suffix = "") {
 }
 
 function renderStudentStudyRecommendations(recommendations) {
-  const practiceText = document.querySelector("[data-home-study-text='practice']");
+  const practiceText = document.querySelector(
+    "[data-home-study-text='practice']",
+  );
   const reviewText = document.querySelector("[data-home-study-text='review']");
   const newText = document.querySelector("[data-home-study-text='new']");
-  const practiceBadge = document.querySelector("[data-home-study-badge='practice']");
-  const reviewBadge = document.querySelector("[data-home-study-badge='review']");
+  const practiceBadge = document.querySelector(
+    "[data-home-study-badge='practice']",
+  );
+  const reviewBadge = document.querySelector(
+    "[data-home-study-badge='review']",
+  );
   const newBadge = document.querySelector("[data-home-study-badge='new']");
 
   const practice = recommendations?.practice || null;
@@ -981,9 +1011,7 @@ function renderStudentStudyRecommendations(recommendations) {
   }
 
   if (newText) {
-    newText.textContent = fresh
-      ? `5 câu ${fresh.topicName}`
-      : "5 câu --";
+    newText.textContent = fresh ? `5 câu ${fresh.topicName}` : "5 câu --";
   }
 
   if (practiceBadge) {
@@ -1006,7 +1034,9 @@ function buildStudentRecommendationSet(topics = []) {
     if (leftAccuracy !== rightAccuracy) {
       return leftAccuracy - rightAccuracy;
     }
-    return String(left?.topicName || left?.name || "").localeCompare(String(right?.topicName || right?.name || ""));
+    return String(left?.topicName || left?.name || "").localeCompare(
+      String(right?.topicName || right?.name || ""),
+    );
   });
 
   const practice = sorted[0] || null;
@@ -1016,12 +1046,19 @@ function buildStudentRecommendationSet(topics = []) {
   return {
     practice,
     review,
-    new: fresh || pickRandomItem(sorted, [practice?.topicId]) || review || practice || null,
+    new:
+      fresh ||
+      pickRandomItem(sorted, [practice?.topicId]) ||
+      review ||
+      practice ||
+      null,
   };
 }
 
 async function fetchStudentRecommendationTopics(profile) {
-  const cacheKey = String(profile?.uid || profile?.userId || profile?.id || "").trim();
+  const cacheKey = String(
+    profile?.uid || profile?.userId || profile?.id || "",
+  ).trim();
   const grade = getStudentGrade(profile);
   const cacheId = `${cacheKey}:${grade}`;
   const cached = studentRecommendationCache.get(cacheId);
@@ -1035,13 +1072,18 @@ async function fetchStudentRecommendationTopics(profile) {
   try {
     const responses = await Promise.all(
       subjects.map((subject) =>
-        apiRequestWithAuth(`/api/quiz/topics?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`, {
-          method: "GET",
-        }),
+        apiRequestWithAuth(
+          `/api/quiz/topics?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`,
+          {
+            method: "GET",
+          },
+        ),
       ),
     );
 
-    const topics = responses.flatMap((response) => Array.isArray(response.data) ? response.data : []);
+    const topics = responses.flatMap((response) =>
+      Array.isArray(response.data) ? response.data : [],
+    );
     const selected = buildStudentRecommendationSet(topics);
     studentRecommendationCache.set(cacheId, selected);
     return selected;
@@ -1103,13 +1145,18 @@ function getAssignmentHomeStatusClass(statusKey) {
 
 function buildStudentHomeAssignments(assignments) {
   const sorted = [...(Array.isArray(assignments) ? assignments : [])]
-    .sort((left, right) => getAssignmentSortTime(right) - getAssignmentSortTime(left))
+    .sort(
+      (left, right) =>
+        getAssignmentSortTime(right) - getAssignmentSortTime(left),
+    )
     .map((assignment) => ({
       ...assignment,
       statusKey: getAssignmentHomeStatus(assignment),
     }));
 
-  const pending = sorted.filter((assignment) => assignment.statusKey === "pending");
+  const pending = sorted.filter(
+    (assignment) => assignment.statusKey === "pending",
+  );
   const doing = sorted.filter((assignment) => assignment.statusKey === "doing");
   const done = sorted.filter((assignment) => assignment.statusKey === "done");
 
@@ -1122,7 +1169,10 @@ function buildStudentHomeAssignments(assignments) {
     selected.push(firstPending);
   }
 
-  if (secondAssignment && (!firstPending || secondAssignment.id !== firstPending.id)) {
+  if (
+    secondAssignment &&
+    (!firstPending || secondAssignment.id !== firstPending.id)
+  ) {
     selected.push(secondAssignment);
   }
 
@@ -1183,9 +1233,7 @@ function renderStudentRecentWrongAnswers(progress) {
 
   if (description) {
     description.textContent =
-      recentWrongCount > 0
-        ? `Câu sai gần đây: ${recentWrongCount}`
-        : "0 câu sai";
+      recentWrongCount > 0 ? `Luyện lại để ghi nhớ tốt hơn nhé!` : "0 câu sai";
   }
 
   if (button) {
@@ -1196,7 +1244,9 @@ function renderStudentRecentWrongAnswers(progress) {
 }
 
 async function fetchStudentRecentWrongAnswers(profile) {
-  const cacheKey = String(profile?.uid || profile?.userId || profile?.id || "").trim();
+  const cacheKey = String(
+    profile?.uid || profile?.userId || profile?.id || "",
+  ).trim();
   const cached = studentRecentWrongAnswersCache.get(cacheKey);
 
   if (cached) {
@@ -1237,11 +1287,19 @@ async function fetchStudentRecentWrongAnswers(profile) {
       records.push({
         id: doc.id,
         wrongCount: Number(data.wrongCount) || 0,
-        submittedAt: data.submittedAt || data.gradedAt || data.updatedAt || data.createdAt || "",
+        submittedAt:
+          data.submittedAt ||
+          data.gradedAt ||
+          data.updatedAt ||
+          data.createdAt ||
+          "",
       });
     });
   } catch (error) {
-    console.warn("Không thể tải lịch sử bài làm để tính câu sai gần đây:", error);
+    console.warn(
+      "Không thể tải lịch sử bài làm để tính câu sai gần đây:",
+      error,
+    );
   }
 
   try {
@@ -1295,7 +1353,9 @@ function renderStudentHomeAssignments(assignments) {
   statusNodes.forEach((node, index) => {
     const assignment = selectedAssignments[index];
     const statusKey = assignment ? assignment.statusKey : "pending";
-    node.textContent = assignment ? getAssignmentHomeStatusLabel(statusKey) : "Chưa làm";
+    node.textContent = assignment
+      ? getAssignmentHomeStatusLabel(statusKey)
+      : "Chưa làm";
     node.className = getAssignmentHomeStatusClass(statusKey);
   });
 }
@@ -1305,7 +1365,9 @@ async function syncStudentHomeAssignments(profile) {
     return;
   }
 
-  const cacheKey = String(profile?.uid || profile?.userId || profile?.id || "").trim();
+  const cacheKey = String(
+    profile?.uid || profile?.userId || profile?.id || "",
+  ).trim();
   const cached = studentHomeAssignmentCache.get(cacheKey);
 
   if (cached && Array.isArray(cached.assignments)) {
@@ -1313,9 +1375,10 @@ async function syncStudentHomeAssignments(profile) {
     return;
   }
 
-  const assignments = Array.isArray(currentAssignments) && currentAssignments.length > 0
-    ? currentAssignments
-    : await loadStudentAssignmentsFromAPI().catch(() => []);
+  const assignments =
+    Array.isArray(currentAssignments) && currentAssignments.length > 0
+      ? currentAssignments
+      : await loadStudentAssignmentsFromAPI().catch(() => []);
 
   const selectedAssignments = buildStudentHomeAssignments(assignments);
   studentHomeAssignmentCache.set(cacheKey, {
@@ -1325,7 +1388,9 @@ async function syncStudentHomeAssignments(profile) {
 }
 
 async function fetchStudentStrengthWeaknessTopics(profile) {
-  const cacheKey = String(profile?.uid || profile?.userId || profile?.id || "").trim();
+  const cacheKey = String(
+    profile?.uid || profile?.userId || profile?.id || "",
+  ).trim();
   const grade = getStudentGrade(profile);
   const cacheId = `${cacheKey}:${grade}:strength-weakness`;
   const cached = studentStrengthWeaknessCache.get(cacheId);
@@ -1399,7 +1464,9 @@ function renderStudentStrengthWeakness(profile, payload = null) {
   );
 
   const strengths = Array.isArray(payload?.strengths) ? payload.strengths : [];
-  const weaknesses = Array.isArray(payload?.weaknesses) ? payload.weaknesses : [];
+  const weaknesses = Array.isArray(payload?.weaknesses)
+    ? payload.weaknesses
+    : [];
 
   strengthNodes.forEach((node, index) => {
     const topic = strengths[index];
@@ -1422,7 +1489,9 @@ async function syncStudentStrengthWeakness(profile) {
 }
 
 function invalidateStudentHomeAssignmentCache(profile) {
-  const cacheKey = String(profile?.uid || profile?.userId || profile?.id || "").trim();
+  const cacheKey = String(
+    profile?.uid || profile?.userId || profile?.id || "",
+  ).trim();
 
   if (cacheKey) {
     studentHomeAssignmentCache.delete(cacheKey);
@@ -1430,7 +1499,9 @@ function invalidateStudentHomeAssignmentCache(profile) {
 }
 
 async function fetchStudentWeeklyActivityLogs(profile) {
-  const cacheKey = String(profile?.uid || profile?.userId || profile?.id || "").trim();
+  const cacheKey = String(
+    profile?.uid || profile?.userId || profile?.id || "",
+  ).trim();
   const cached = studentWeeklyProgressCache.get(cacheKey);
 
   if (cached) {
@@ -1467,14 +1538,22 @@ async function fetchStudentWeeklyActivityLogs(profile) {
       logs.push({
         id: doc.id,
         type: "assignment",
-        submittedAt: data.submittedAt || data.gradedAt || data.updatedAt || data.createdAt || "",
+        submittedAt:
+          data.submittedAt ||
+          data.gradedAt ||
+          data.updatedAt ||
+          data.createdAt ||
+          "",
         totalQuestions: Number(data.totalQuestions) || 0,
         score: data.score ?? null,
         studyMinutes: Number(data.studyMinutes) || 0,
       });
     });
   } catch (error) {
-    console.warn("Không thể tải assignment submissions cho tiến độ tuần:", error);
+    console.warn(
+      "Không thể tải assignment submissions cho tiến độ tuần:",
+      error,
+    );
   }
 
   try {
@@ -1488,7 +1567,8 @@ async function fetchStudentWeeklyActivityLogs(profile) {
       logs.push({
         id: doc.id,
         type: "topic-progress",
-        updatedAt: data.updatedAt || data.accuracyUpdatedAt || data.createdAt || "",
+        updatedAt:
+          data.updatedAt || data.accuracyUpdatedAt || data.createdAt || "",
         totalQuestions: Number(data.totalAnswered) || 0,
         score: data.percentage ?? null,
         studyMinutes: Number(data.studyMinutes) || 0,
@@ -1516,7 +1596,9 @@ async function syncStudentWeeklyProgress(profile) {
   }
 
   const studyTimeNode = root.querySelector("[data-weekly-study-time]");
-  const totalQuestionsNode = root.querySelector("[data-weekly-total-questions]");
+  const totalQuestionsNode = root.querySelector(
+    "[data-weekly-total-questions]",
+  );
   const averageScoreNode = root.querySelector("[data-weekly-average-score]");
 
   if (studyTimeNode) {
@@ -1642,7 +1724,10 @@ function renderStudentHomeOverview(profile, activityLogs = null) {
       : Number(profile?.stats?.streak) || 0;
   const currentExp = progressStats.currentExp;
   const requiredExp = Math.max(progressStats.requiredExp, 1);
-  const expPercent = Math.max(0, Math.min(100, (currentExp / requiredExp) * 100));
+  const expPercent = Math.max(
+    0,
+    Math.min(100, (currentExp / requiredExp) * 100),
+  );
 
   if (greeting) {
     greeting.textContent = displayName
@@ -1835,6 +1920,24 @@ function renderTeacherProfile(profile) {
   }
 }
 
+async function syncTeacherDashboard(profile = null, forceRefresh = true) {
+  if (normalizeRole(profile?.role || getCurrentRole()) !== "teacher") {
+    return;
+  }
+
+  renderTeacherDashboardFallback(profile || getCurrentAuthUser());
+  const dashboardData = await fetchTeacherDashboardData(profile, {
+    forceRefresh,
+  });
+
+  if (dashboardData) {
+    renderTeacherDashboard(dashboardData.profile || profile || getCurrentAuthUser());
+    return;
+  }
+
+  renderTeacherDashboard(profile || getCurrentAuthUser());
+}
+
 function updateSidebarProfileCards(profile) {
   renderSidebarProfileCards(profile);
 }
@@ -1879,12 +1982,14 @@ async function fetchStudentActivityLogs(profile) {
         ...(doc.data() || {}),
       }))
       .sort((left, right) => {
-        const leftTime = Date.parse(
-          left.submittedAt || left.completedAt || left.createdAt || "",
-        ) || 0;
-        const rightTime = Date.parse(
-          right.submittedAt || right.completedAt || right.createdAt || "",
-        ) || 0;
+        const leftTime =
+          Date.parse(
+            left.submittedAt || left.completedAt || left.createdAt || "",
+          ) || 0;
+        const rightTime =
+          Date.parse(
+            right.submittedAt || right.completedAt || right.createdAt || "",
+          ) || 0;
 
         return rightTime - leftTime;
       });
@@ -1918,8 +2023,12 @@ async function syncStudentProgress(profile) {
 
   if (
     bootstrapState.currentUser &&
-    String(bootstrapState.currentUser.uid || bootstrapState.currentUser.userId || bootstrapState.currentUser.id || "").trim() ===
-      cacheKey
+    String(
+      bootstrapState.currentUser.uid ||
+        bootstrapState.currentUser.userId ||
+        bootstrapState.currentUser.id ||
+        "",
+    ).trim() === cacheKey
   ) {
     bootstrapState.currentUser = resolvedProfile;
     window.EduKidsCurrentUser = resolvedProfile;
@@ -2358,7 +2467,9 @@ function getStudentTopicImage(topic) {
 
 function getTopicAccuracySummary(topic) {
   return (
-    window.EduKidsTopicAccuracyService?.normalizeTopicAccuracySummary(topic) || {
+    window.EduKidsTopicAccuracyService?.normalizeTopicAccuracySummary(
+      topic,
+    ) || {
       totalAnswered: 0,
       totalCorrect: 0,
       percentage: 0,
@@ -2368,8 +2479,9 @@ function getTopicAccuracySummary(topic) {
 
 function getTopicAccuracyProgressClass(percentage) {
   return (
-    window.EduKidsTopicAccuracyService?.getTopicAccuracyProgressClass(percentage) ||
-    "is-red"
+    window.EduKidsTopicAccuracyService?.getTopicAccuracyProgressClass(
+      percentage,
+    ) || "is-red"
   );
 }
 
@@ -2860,7 +2972,10 @@ async function refreshStudentQuizTopics() {
     studentQuizState.topicsMessage = "";
     renderStudentTopicCards();
   } catch (error) {
-    console.warn("[EduKids][studentQuiz] Unable to refresh topic accuracy:", error);
+    console.warn(
+      "[EduKids][studentQuiz] Unable to refresh topic accuracy:",
+      error,
+    );
   }
 }
 
@@ -3171,6 +3286,18 @@ const currentTeacherAssignmentDetail = {
   loadingStudentId: "",
   requestId: 0,
 };
+const teacherDashboardState = {
+  loading: false,
+  loaded: false,
+  teacherId: "",
+  data: null,
+  pendingPromise: null,
+};
+const isDevelopmentBuild =
+  Boolean(import.meta?.env?.DEV) ||
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1" ||
+  window.location.hostname === "::1";
 let createMethod = "manual";
 
 function getCurrentUserId() {
@@ -3184,7 +3311,10 @@ function getAssignmentService() {
 }
 
 function getFirestoreInstance() {
-  if (!window.firebase?.apps?.length || typeof window.firebase.app !== "function") {
+  if (
+    !window.firebase?.apps?.length ||
+    typeof window.firebase.app !== "function"
+  ) {
     return null;
   }
 
@@ -3256,7 +3386,9 @@ function getTeacherAssignmentClassroomStudentCount(classroom) {
     return uniqueStudents.length;
   }
 
-  const studentCount = Number(classroom.studentCount ?? classroom.studentsCount ?? 0);
+  const studentCount = Number(
+    classroom.studentCount ?? classroom.studentsCount ?? 0,
+  );
 
   return Number.isFinite(studentCount) ? studentCount : 0;
 }
@@ -3268,13 +3400,11 @@ function getTeacherAssignmentClassroomById(classId) {
     return null;
   }
 
-  return (
-    Array.isArray(teacherAssignmentSubmissionState.classes)
-      ? teacherAssignmentSubmissionState.classes.find(
-          (classroom) => classroom.id === normalizedClassId,
-        )
-      : null
-  );
+  return Array.isArray(teacherAssignmentSubmissionState.classes)
+    ? teacherAssignmentSubmissionState.classes.find(
+        (classroom) => classroom.id === normalizedClassId,
+      )
+    : null;
 }
 
 function getTeacherAssignmentSubmittedStudentsCount(assignmentId) {
@@ -3284,9 +3414,10 @@ function getTeacherAssignmentSubmittedStudentsCount(assignmentId) {
     return 0;
   }
 
-  const submissions = teacherAssignmentSubmissionState.submissionsByAssignmentId.get(
-    normalizedAssignmentId,
-  );
+  const submissions =
+    teacherAssignmentSubmissionState.submissionsByAssignmentId.get(
+      normalizedAssignmentId,
+    );
 
   if (!Array.isArray(submissions) || submissions.length === 0) {
     return 0;
@@ -3297,7 +3428,10 @@ function getTeacherAssignmentSubmittedStudentsCount(assignmentId) {
   ).length;
 }
 
-function calculateTeacherAssignmentProgressPercent(submittedStudents, totalStudents) {
+function calculateTeacherAssignmentProgressPercent(
+  submittedStudents,
+  totalStudents,
+) {
   const submitted = Number(submittedStudents) || 0;
   const total = Number(totalStudents) || 0;
 
@@ -3325,7 +3459,9 @@ function getTeacherAssignmentProgressClass(percent) {
 function getTeacherAssignmentProgressSummary(assignment) {
   const classroom = getTeacherAssignmentClassroomById(assignment?.classId);
   const totalStudents = getTeacherAssignmentClassroomStudentCount(classroom);
-  const submittedStudents = getTeacherAssignmentSubmittedStudentsCount(assignment?.id);
+  const submittedStudents = getTeacherAssignmentSubmittedStudentsCount(
+    assignment?.id,
+  );
   const progressPercent = calculateTeacherAssignmentProgressPercent(
     submittedStudents,
     totalStudents,
@@ -3365,7 +3501,9 @@ async function deleteTeacherAssignmentById(assignmentId) {
   }
 
   const batch = firestore.batch();
-  const assignmentRef = firestore.collection("assignments").doc(normalizedAssignmentId);
+  const assignmentRef = firestore
+    .collection("assignments")
+    .doc(normalizedAssignmentId);
   const submissionsQuery = await firestore
     .collection("assignment_submissions")
     .where("assignmentId", "==", normalizedAssignmentId)
@@ -3398,14 +3536,18 @@ async function handleDeleteTeacherAssignment(assignment) {
 
   try {
     await deleteTeacherAssignmentById(normalizedAssignmentId);
-    teacherAssignmentSubmissionState.submissionsByAssignmentId.delete(normalizedAssignmentId);
-    teacherAssignmentSubmissionState.assignments = teacherAssignmentSubmissionState.assignments.filter(
-      (item) => String(item?.id || "").trim() !== normalizedAssignmentId,
+    teacherAssignmentSubmissionState.submissionsByAssignmentId.delete(
+      normalizedAssignmentId,
     );
+    teacherAssignmentSubmissionState.assignments =
+      teacherAssignmentSubmissionState.assignments.filter(
+        (item) => String(item?.id || "").trim() !== normalizedAssignmentId,
+      );
 
     if (
-      String(teacherAssignmentSubmissionState.selectedAssignmentId || "").trim() ===
-      normalizedAssignmentId
+      String(
+        teacherAssignmentSubmissionState.selectedAssignmentId || "",
+      ).trim() === normalizedAssignmentId
     ) {
       teacherAssignmentSubmissionState.selectedAssignmentId = "";
       teacherAssignmentSubmissionState.submissions = [];
@@ -3433,10 +3575,15 @@ function getTeacherAssignmentFilteredAssignments(assignments) {
   const searchQuery = normalizeTeacherManageSearchValue(
     teacherAssignmentSubmissionState.searchQuery,
   );
-  const selectedClassId = String(teacherAssignmentSubmissionState.classFilter || "").trim();
+  const selectedClassId = String(
+    teacherAssignmentSubmissionState.classFilter || "",
+  ).trim();
 
   return normalizedAssignments.filter((assignment) => {
-    if (selectedClassId && String(assignment?.classId || "").trim() !== selectedClassId) {
+    if (
+      selectedClassId &&
+      String(assignment?.classId || "").trim() !== selectedClassId
+    ) {
       return false;
     }
 
@@ -3449,20 +3596,32 @@ function getTeacherAssignmentFilteredAssignments(assignments) {
 }
 
 function syncTeacherAssignmentFilterControls() {
-  const searchInput = document.querySelector("#manage [data-teacher-assignment-search]");
-  const classSelect = document.querySelector("#manage [data-teacher-assignment-class-filter]");
+  const searchInput = document.querySelector(
+    "#manage [data-teacher-assignment-search]",
+  );
+  const classSelect = document.querySelector(
+    "#manage [data-teacher-assignment-class-filter]",
+  );
 
-  if (searchInput && searchInput.value !== teacherAssignmentSubmissionState.searchQuery) {
+  if (
+    searchInput &&
+    searchInput.value !== teacherAssignmentSubmissionState.searchQuery
+  ) {
     searchInput.value = teacherAssignmentSubmissionState.searchQuery;
   }
 
-  if (classSelect && classSelect.value !== teacherAssignmentSubmissionState.classFilter) {
+  if (
+    classSelect &&
+    classSelect.value !== teacherAssignmentSubmissionState.classFilter
+  ) {
     classSelect.value = teacherAssignmentSubmissionState.classFilter;
   }
 }
 
 function renderTeacherAssignmentClassFilterOptions() {
-  const classSelect = document.querySelector("#manage [data-teacher-assignment-class-filter]");
+  const classSelect = document.querySelector(
+    "#manage [data-teacher-assignment-class-filter]",
+  );
 
   if (!classSelect) {
     return;
@@ -3471,8 +3630,12 @@ function renderTeacherAssignmentClassFilterOptions() {
   const classes = Array.isArray(teacherAssignmentSubmissionState.classes)
     ? teacherAssignmentSubmissionState.classes
     : [];
-  const currentSelectedClassId = String(teacherAssignmentSubmissionState.classFilter || "").trim();
-  const availableClassIds = new Set(classes.map((classroom) => String(classroom?.id || "").trim()));
+  const currentSelectedClassId = String(
+    teacherAssignmentSubmissionState.classFilter || "",
+  ).trim();
+  const availableClassIds = new Set(
+    classes.map((classroom) => String(classroom?.id || "").trim()),
+  );
   const nextSelectedClassId =
     currentSelectedClassId && availableClassIds.has(currentSelectedClassId)
       ? currentSelectedClassId
@@ -3487,7 +3650,8 @@ function renderTeacherAssignmentClassFilterOptions() {
         ? classes
             .map((classroom) => {
               const classId = String(classroom?.id || "").trim();
-              const classLabel = classroom?.name || classroom?.className || classId || "Lớp học";
+              const classLabel =
+                classroom?.name || classroom?.className || classId || "Lớp học";
 
               return `
                 <option value="${escapeHtml(classId)}">${escapeHtml(classLabel)}</option>
@@ -3514,7 +3678,9 @@ async function loadTeacherAssignmentClasses() {
     return teacherAssignmentSubmissionState.classes;
   }
 
-  const classSelect = document.querySelector("#manage [data-teacher-assignment-class-filter]");
+  const classSelect = document.querySelector(
+    "#manage [data-teacher-assignment-class-filter]",
+  );
 
   teacherAssignmentSubmissionState.classesLoading = true;
 
@@ -3540,7 +3706,10 @@ async function loadTeacherAssignmentClasses() {
     teacherAssignmentSubmissionState.classesLoaded = true;
     renderTeacherAssignmentClassFilterOptions();
     syncTeacherAssignmentFilterControls();
-    if (Array.isArray(teacherAssignmentSubmissionState.assignments) && teacherAssignmentSubmissionState.assignments.length > 0) {
+    if (
+      Array.isArray(teacherAssignmentSubmissionState.assignments) &&
+      teacherAssignmentSubmissionState.assignments.length > 0
+    ) {
       renderTeacherAssignmentSubmissionsView(
         teacherAssignmentSubmissionState.assignments,
         teacherAssignmentSubmissionState.submissions,
@@ -3555,7 +3724,10 @@ async function loadTeacherAssignmentClasses() {
     teacherAssignmentSubmissionState.classesLoaded = true;
     renderTeacherAssignmentClassFilterOptions();
     syncTeacherAssignmentFilterControls();
-    if (Array.isArray(teacherAssignmentSubmissionState.assignments) && teacherAssignmentSubmissionState.assignments.length > 0) {
+    if (
+      Array.isArray(teacherAssignmentSubmissionState.assignments) &&
+      teacherAssignmentSubmissionState.assignments.length > 0
+    ) {
       renderTeacherAssignmentSubmissionsView(
         teacherAssignmentSubmissionState.assignments,
         teacherAssignmentSubmissionState.submissions,
@@ -3579,7 +3751,8 @@ async function hydrateTeacherAssignmentSubmissionCache(assignments = []) {
     return;
   }
 
-  const requestToken = teacherAssignmentSubmissionState.assignmentsHydrationToken + 1;
+  const requestToken =
+    teacherAssignmentSubmissionState.assignmentsHydrationToken + 1;
   teacherAssignmentSubmissionState.assignmentsHydrationToken = requestToken;
 
   const service = getAssignmentService();
@@ -3591,8 +3764,12 @@ async function hydrateTeacherAssignmentSubmissionCache(assignments = []) {
   const missingAssignments = normalizedAssignments.filter((assignment) => {
     const normalizedAssignmentId = String(assignment.id || "").trim();
     return (
-      !teacherAssignmentSubmissionState.submissionsByAssignmentId.has(normalizedAssignmentId) &&
-      !teacherAssignmentSubmissionState.submissionsLoadingByAssignmentId.has(normalizedAssignmentId)
+      !teacherAssignmentSubmissionState.submissionsByAssignmentId.has(
+        normalizedAssignmentId,
+      ) &&
+      !teacherAssignmentSubmissionState.submissionsLoadingByAssignmentId.has(
+        normalizedAssignmentId,
+      )
     );
   });
 
@@ -3613,15 +3790,22 @@ async function hydrateTeacherAssignmentSubmissionCache(assignments = []) {
       );
 
       try {
-        const submissions = await service.fetchAssignmentSubmissions(normalizedAssignmentId);
+        const submissions = await service.fetchAssignmentSubmissions(
+          normalizedAssignmentId,
+        );
 
-        if (teacherAssignmentSubmissionState.assignmentsHydrationToken !== requestToken) {
+        if (
+          teacherAssignmentSubmissionState.assignmentsHydrationToken !==
+          requestToken
+        ) {
           return;
         }
 
         const normalizedSubmissions = Array.isArray(submissions)
           ? submissions
-              .map((submission) => normalizeTeacherAssignmentSubmissionRecord(submission))
+              .map((submission) =>
+                normalizeTeacherAssignmentSubmissionRecord(submission),
+              )
               .filter(Boolean)
           : [];
 
@@ -3647,7 +3831,9 @@ async function hydrateTeacherAssignmentSubmissionCache(assignments = []) {
     }),
   );
 
-  if (teacherAssignmentSubmissionState.assignmentsHydrationToken !== requestToken) {
+  if (
+    teacherAssignmentSubmissionState.assignmentsHydrationToken !== requestToken
+  ) {
     return;
   }
 
@@ -3667,7 +3853,9 @@ function bindTeacherAssignmentFilterControlsOnce() {
   }
 
   manageRoot.addEventListener("input", (event) => {
-    const searchInput = event.target.closest("[data-teacher-assignment-search]");
+    const searchInput = event.target.closest(
+      "[data-teacher-assignment-search]",
+    );
 
     if (!searchInput) {
       return;
@@ -3683,7 +3871,9 @@ function bindTeacherAssignmentFilterControlsOnce() {
   });
 
   manageRoot.addEventListener("change", (event) => {
-    const classSelect = event.target.closest("[data-teacher-assignment-class-filter]");
+    const classSelect = event.target.closest(
+      "[data-teacher-assignment-class-filter]",
+    );
 
     if (!classSelect) {
       return;
@@ -3709,7 +3899,9 @@ function getStudentAssignmentFeedNodes() {
   }
 
   return Array.from(
-    page.querySelectorAll("h1, .assignments-toolbar, .assignment-tabs, .assignment-tab"),
+    page.querySelectorAll(
+      "h1, .assignments-toolbar, .assignment-tabs, .assignment-tab",
+    ),
   );
 }
 
@@ -3722,7 +3914,10 @@ function setStudentAssignmentFeedVisibility(isVisible) {
 function getStudentAssignmentSelectedAnswer(questionIndex) {
   const normalizedQuestionIndex = Number(questionIndex);
 
-  if (!Number.isInteger(normalizedQuestionIndex) || normalizedQuestionIndex < 0) {
+  if (
+    !Number.isInteger(normalizedQuestionIndex) ||
+    normalizedQuestionIndex < 0
+  ) {
     return "";
   }
 
@@ -3735,9 +3930,14 @@ function getStudentAssignmentSelectedAnswer(questionIndex) {
 
 function setStudentAssignmentSelectedAnswer(questionIndex, selected) {
   const normalizedQuestionIndex = Number(questionIndex);
-  const normalizedSelected = String(selected || "").trim().toUpperCase();
+  const normalizedSelected = String(selected || "")
+    .trim()
+    .toUpperCase();
 
-  if (!Number.isInteger(normalizedQuestionIndex) || normalizedQuestionIndex < 0) {
+  if (
+    !Number.isInteger(normalizedQuestionIndex) ||
+    normalizedQuestionIndex < 0
+  ) {
     return;
   }
 
@@ -3746,7 +3946,8 @@ function setStudentAssignmentSelectedAnswer(questionIndex, selected) {
   );
 
   if (existingIndex >= 0) {
-    studentAssignmentDetailState.answers[existingIndex].selected = normalizedSelected;
+    studentAssignmentDetailState.answers[existingIndex].selected =
+      normalizedSelected;
   } else {
     studentAssignmentDetailState.answers.push({
       questionIndex: normalizedQuestionIndex,
@@ -3760,15 +3961,15 @@ function normalizeStudentAssignmentRecord(assignment, fallbackClassId = "") {
     return null;
   }
 
-  const status = String(assignment.status || "").trim().toLowerCase() || "pending";
+  const status =
+    String(assignment.status || "")
+      .trim()
+      .toLowerCase() || "pending";
   const dueDate = assignment.dueDate === "" ? null : assignment.dueDate || null;
 
   return {
     id: String(
-      assignment.id ||
-        assignment.assignmentId ||
-        assignment.docId ||
-        "",
+      assignment.id || assignment.assignmentId || assignment.docId || "",
     ).trim(),
     classId: String(assignment.classId || fallbackClassId || "").trim(),
     className: String(assignment.className || assignment.class || "").trim(),
@@ -3781,12 +3982,18 @@ function normalizeStudentAssignmentRecord(assignment, fallbackClassId = "") {
     updatedAt: assignment.updatedAt || "",
     questions: Array.isArray(assignment.questions) ? assignment.questions : [],
     submissionStatus:
-      String(assignment.submissionStatus || "").trim().toLowerCase() || "",
+      String(assignment.submissionStatus || "")
+        .trim()
+        .toLowerCase() || "",
     submissionId: String(assignment.submissionId || "").trim(),
     submittedAt: assignment.submittedAt || "",
     score: assignment.score ?? null,
-    correctCount: Number.isFinite(Number(assignment.correctCount)) ? Number(assignment.correctCount) : null,
-    wrongCount: Number.isFinite(Number(assignment.wrongCount)) ? Number(assignment.wrongCount) : null,
+    correctCount: Number.isFinite(Number(assignment.correctCount))
+      ? Number(assignment.correctCount)
+      : null,
+    wrongCount: Number.isFinite(Number(assignment.wrongCount))
+      ? Number(assignment.wrongCount)
+      : null,
     totalQuestions: Number.isFinite(Number(assignment.totalQuestions))
       ? Number(assignment.totalQuestions)
       : Number.isFinite(Number(assignment.questionCount))
@@ -3796,6 +4003,46 @@ function normalizeStudentAssignmentRecord(assignment, fallbackClassId = "") {
           : null,
     gradedAt: assignment.gradedAt || "",
   };
+}
+
+function parseStudentAssignmentDueDateTimestamp(dueDate) {
+  const rawDueDate = String(dueDate || "").trim();
+
+  if (!rawDueDate) {
+    return null;
+  }
+
+  const normalizedDueDate =
+    rawDueDate.includes(" ") && !rawDueDate.includes("T")
+      ? rawDueDate.replace(" ", "T")
+      : rawDueDate;
+  const parsedTime = Date.parse(normalizedDueDate);
+
+  return Number.isFinite(parsedTime) ? parsedTime : null;
+}
+
+function isStudentAssignmentPastDue(assignment, now = Date.now()) {
+  const dueTimestamp = parseStudentAssignmentDueDateTimestamp(
+    assignment?.dueDate,
+  );
+
+  if (dueTimestamp === null) {
+    return false;
+  }
+
+  return dueTimestamp < now;
+}
+
+function shouldHideStudentAssignmentFromFeed(assignment) {
+  if (!assignment) {
+    return true;
+  }
+
+  if (normalizeStudentAssignmentStatus(assignment) === "done") {
+    return false;
+  }
+
+  return isStudentAssignmentPastDue(assignment);
 }
 
 function normalizeStudentAssignmentQuestionOptions(question) {
@@ -3808,8 +4055,12 @@ function normalizeStudentAssignmentQuestionOptions(question) {
       .map((option, index) => {
         if (option && typeof option === "object") {
           return {
-            label: String(option.label || String.fromCharCode(65 + index)).trim().toUpperCase(),
-            text: String(option.text || option.answer || option.value || "").trim(),
+            label: String(option.label || String.fromCharCode(65 + index))
+              .trim()
+              .toUpperCase(),
+            text: String(
+              option.text || option.answer || option.value || "",
+            ).trim(),
           };
         }
 
@@ -3828,8 +4079,9 @@ function normalizeStudentAssignmentQuestionOptions(question) {
 function getCurrentStudentAssignment() {
   if (currentAssignmentId) {
     const selectedAssignment =
-      currentAssignments.find((assignment) => assignment.id === currentAssignmentId) ||
-      null;
+      currentAssignments.find(
+        (assignment) => assignment.id === currentAssignmentId,
+      ) || null;
 
     if (selectedAssignment) {
       return selectedAssignment;
@@ -3884,7 +4136,8 @@ function normalizeAssignmentAnswerPayload(value, questionIndex = null) {
   if (typeof value === "object") {
     const normalized = {
       questionIndex:
-        Number.isInteger(Number(value.questionIndex)) && Number(value.questionIndex) >= 0
+        Number.isInteger(Number(value.questionIndex)) &&
+        Number(value.questionIndex) >= 0
           ? Number(value.questionIndex)
           : Number.isInteger(Number(value.index)) && Number(value.index) >= 0
             ? Number(value.index)
@@ -3948,13 +4201,12 @@ function getAssignmentAnswersFromElement(root) {
         fallbackIndex,
     ).trim();
     const numericQuestionIndex = Number(rawQuestionIndex);
-    const normalizedQuestionIndex = Number.isInteger(numericQuestionIndex) && numericQuestionIndex >= 0
-      ? numericQuestionIndex
-      : fallbackIndex;
+    const normalizedQuestionIndex =
+      Number.isInteger(numericQuestionIndex) && numericQuestionIndex >= 0
+        ? numericQuestionIndex
+        : fallbackIndex;
     const questionId = String(
-      block.dataset.questionId ||
-        block.dataset.assignmentQuestionId ||
-        "",
+      block.dataset.questionId || block.dataset.assignmentQuestionId || "",
     ).trim();
 
     const selectedButton = block.querySelector(
@@ -3986,7 +4238,9 @@ function getAssignmentAnswersFromElement(root) {
         }
 
         answers.push(payload);
-        seenQuestionIndexes.add(String(payload.questionIndex ?? normalizedQuestionIndex));
+        seenQuestionIndexes.add(
+          String(payload.questionIndex ?? normalizedQuestionIndex),
+        );
         if (questionId) {
           seenQuestionIds.add(questionId);
         }
@@ -4017,7 +4271,9 @@ function getAssignmentAnswersFromElement(root) {
         }
 
         answers.push(payload);
-        seenQuestionIndexes.add(String(payload.questionIndex ?? normalizedQuestionIndex));
+        seenQuestionIndexes.add(
+          String(payload.questionIndex ?? normalizedQuestionIndex),
+        );
         if (questionId) {
           seenQuestionIds.add(questionId);
         }
@@ -4025,7 +4281,9 @@ function getAssignmentAnswersFromElement(root) {
       return;
     }
 
-    const checkedCheckbox = block.querySelector("input[type='checkbox']:checked");
+    const checkedCheckbox = block.querySelector(
+      "input[type='checkbox']:checked",
+    );
 
     if (checkedCheckbox) {
       const payload = normalizeAssignmentAnswerPayload(
@@ -4048,7 +4306,9 @@ function getAssignmentAnswersFromElement(root) {
         }
 
         answers.push(payload);
-        seenQuestionIndexes.add(String(payload.questionIndex ?? normalizedQuestionIndex));
+        seenQuestionIndexes.add(
+          String(payload.questionIndex ?? normalizedQuestionIndex),
+        );
         if (questionId) {
           seenQuestionIds.add(questionId);
         }
@@ -4074,7 +4334,9 @@ function getAssignmentAnswersFromElement(root) {
         }
 
         answers.push(payload);
-        seenQuestionIndexes.add(String(payload.questionIndex ?? normalizedQuestionIndex));
+        seenQuestionIndexes.add(
+          String(payload.questionIndex ?? normalizedQuestionIndex),
+        );
         if (questionId) {
           seenQuestionIds.add(questionId);
         }
@@ -4102,7 +4364,9 @@ function getAssignmentAnswersFromElement(root) {
         }
 
         answers.push(payload);
-        seenQuestionIndexes.add(String(payload.questionIndex ?? normalizedQuestionIndex));
+        seenQuestionIndexes.add(
+          String(payload.questionIndex ?? normalizedQuestionIndex),
+        );
         if (questionId) {
           seenQuestionIds.add(questionId);
         }
@@ -4136,7 +4400,8 @@ function getAssignmentAnswersFromElement(root) {
       {
         questionIndex: questionIndexValue,
         selected: value,
-        questionId: field.dataset.questionId || field.dataset.assignmentQuestionId || "",
+        questionId:
+          field.dataset.questionId || field.dataset.assignmentQuestionId || "",
       },
       Number(questionIndexValue),
     );
@@ -4167,7 +4432,10 @@ function getAssignmentAnswersFromElement(root) {
   });
 }
 
-function collectStudentAssignmentAnswers(assignment, root = getStudentAssignmentWorkRoot()) {
+function collectStudentAssignmentAnswers(
+  assignment,
+  root = getStudentAssignmentWorkRoot(),
+) {
   const explicitAnswers =
     Array.isArray(assignment?.answers) && assignment.answers.length > 0
       ? assignment.answers
@@ -4189,7 +4457,11 @@ function collectStudentAssignmentAnswers(assignment, root = getStudentAssignment
     .filter(Boolean);
 }
 
-function setStudentAssignmentSubmitButtonState(button, isLoading, originalLabel = "") {
+function setStudentAssignmentSubmitButtonState(
+  button,
+  isLoading,
+  originalLabel = "",
+) {
   if (!button) {
     return;
   }
@@ -4201,7 +4473,10 @@ function setStudentAssignmentSubmitButtonState(button, isLoading, originalLabel 
   button.disabled = isLoading;
   button.textContent = isLoading
     ? "Đang nộp..."
-    : button.dataset.originalLabel || originalLabel || button.textContent || "Nộp bài";
+    : button.dataset.originalLabel ||
+      originalLabel ||
+      button.textContent ||
+      "Nộp bài";
 }
 
 function markStudentAssignmentAsSubmitted(assignmentId, submission = null) {
@@ -4218,27 +4493,39 @@ function markStudentAssignmentAsSubmitted(assignmentId, submission = null) {
 
     return {
       ...assignment,
-      status: String(submission?.status || "graded").trim().toLowerCase() || "graded",
+      status:
+        String(submission?.status || "graded")
+          .trim()
+          .toLowerCase() || "graded",
       submissionStatus: "graded",
       submissionId: String(submission?.id || "").trim(),
       submittedAt: submission?.submittedAt || new Date().toISOString(),
       score: submission?.score ?? null,
-      correctCount: Number.isFinite(Number(submission?.correctCount)) ? Number(submission.correctCount) : null,
-      wrongCount: Number.isFinite(Number(submission?.wrongCount)) ? Number(submission.wrongCount) : null,
-      totalQuestions: Number.isFinite(Number(submission?.totalQuestions)) ? Number(submission.totalQuestions) : null,
+      correctCount: Number.isFinite(Number(submission?.correctCount))
+        ? Number(submission.correctCount)
+        : null,
+      wrongCount: Number.isFinite(Number(submission?.wrongCount))
+        ? Number(submission.wrongCount)
+        : null,
+      totalQuestions: Number.isFinite(Number(submission?.totalQuestions))
+        ? Number(submission.totalQuestions)
+        : null,
       gradedAt: submission?.gradedAt || "",
     };
   });
 
   const updatedAssignment =
-    currentAssignments.find((assignment) => assignment.id === normalizedAssignmentId) || null;
+    currentAssignments.find(
+      (assignment) => assignment.id === normalizedAssignmentId,
+    ) || null;
 
   if (updatedAssignment) {
     window.EduKidsCurrentAssignment = updatedAssignment;
 
     if (
       studentAssignmentDetailState.assignment &&
-      String(studentAssignmentDetailState.assignment.id || "").trim() === normalizedAssignmentId
+      String(studentAssignmentDetailState.assignment.id || "").trim() ===
+        normalizedAssignmentId
     ) {
       studentAssignmentDetailState.assignment = updatedAssignment;
     }
@@ -4270,33 +4557,45 @@ function normalizeTeacherAssignmentSubmissionRecord(submission) {
     totalQuestions: Number.isFinite(Number(submission.totalQuestions))
       ? Number(submission.totalQuestions)
       : null,
-    status: String(submission.status || "").trim().toLowerCase() || "submitted",
+    status:
+      String(submission.status || "")
+        .trim()
+        .toLowerCase() || "submitted",
   };
 }
 
-function renderTeacherAssignmentSubmissionsView(assignments, submissions = [], loading = false, error = "") {
+function renderTeacherAssignmentSubmissionsView(
+  assignments,
+  submissions = [],
+  loading = false,
+  error = "",
+) {
   const list = document.querySelector("#manage .manage-list");
 
   if (!list) {
     return;
   }
 
-  const normalizedAssignments = getTeacherAssignmentFilteredAssignments(assignments);
-  const assignmentCards = normalizedAssignments.length > 0
-    ? normalizedAssignments
-        .map((assignment) => {
-          const questionCount =
-            Number(assignment.totalQuestions || assignment.questionCount) ||
-            (Array.isArray(assignment.questions)
-              ? assignment.questions.length
-              : 0);
-          const progressSummary = getTeacherAssignmentProgressSummary(assignment);
-          const progressPercent = progressSummary.progressPercent;
-          const isActive =
-            String(teacherAssignmentSubmissionState.selectedAssignmentId || "").trim() ===
-            String(assignment.id || "").trim();
+  const normalizedAssignments =
+    getTeacherAssignmentFilteredAssignments(assignments);
+  const assignmentCards =
+    normalizedAssignments.length > 0
+      ? normalizedAssignments
+          .map((assignment) => {
+            const questionCount =
+              Number(assignment.totalQuestions || assignment.questionCount) ||
+              (Array.isArray(assignment.questions)
+                ? assignment.questions.length
+                : 0);
+            const progressSummary =
+              getTeacherAssignmentProgressSummary(assignment);
+            const progressPercent = progressSummary.progressPercent;
+            const isActive =
+              String(
+                teacherAssignmentSubmissionState.selectedAssignmentId || "",
+              ).trim() === String(assignment.id || "").trim();
 
-          return `
+            return `
             <article class="manage-card ${isActive ? "is-active" : ""}">
               <div class="manage-card-top">
                 <div>
@@ -4340,16 +4639,16 @@ function renderTeacherAssignmentSubmissionsView(assignments, submissions = [], l
               </div>
             </article>
           `;
-        })
-        .join("")
-    : Array.isArray(assignments) && assignments.length > 0
-      ? `
+          })
+          .join("")
+      : Array.isArray(assignments) && assignments.length > 0
+        ? `
         <div class="manage-empty-state">
           <h3>Không tìm thấy bài tập phù hợp.</h3>
           <p>Hãy thử đổi từ khóa tìm kiếm hoặc chọn lớp khác.</p>
         </div>
       `
-      : `
+        : `
       <div class="manage-empty-state">
         <h3>Chưa có bài tập nào.</h3>
         <p>Bài tập sẽ được xuất hiện ở đây sau khi bạn lưu.</p>
@@ -4369,7 +4668,9 @@ function renderTeacherAssignmentSubmissionsView(assignments, submissions = [], l
 }
 
 function normalizeTeacherSubmissionStatusKey(submission) {
-  const rawStatus = String(submission?.status || "").trim().toLowerCase();
+  const rawStatus = String(submission?.status || "")
+    .trim()
+    .toLowerCase();
 
   if (
     rawStatus === "doing" ||
@@ -4418,7 +4719,11 @@ function getTeacherSubmissionStatusClass(statusKey) {
 }
 
 function getTeacherSubmissionScoreText(submission) {
-  if (submission?.score === null || typeof submission?.score === "undefined" || submission?.score === "") {
+  if (
+    submission?.score === null ||
+    typeof submission?.score === "undefined" ||
+    submission?.score === ""
+  ) {
     return "--";
   }
 
@@ -4426,7 +4731,11 @@ function getTeacherSubmissionScoreText(submission) {
 }
 
 function normalizeTeacherQuestionChoices(question) {
-  if (!question || typeof question !== "object" || !Array.isArray(question.options)) {
+  if (
+    !question ||
+    typeof question !== "object" ||
+    !Array.isArray(question.options)
+  ) {
     return [];
   }
 
@@ -4435,8 +4744,12 @@ function normalizeTeacherQuestionChoices(question) {
       const label = String.fromCharCode(65 + index);
 
       if (option && typeof option === "object") {
-        const text = String(option.text || option.answer || option.value || "").trim();
-        const normalizedValue = String(option.value || option.text || option.answer || text || "").trim();
+        const text = String(
+          option.text || option.answer || option.value || "",
+        ).trim();
+        const normalizedValue = String(
+          option.value || option.text || option.answer || text || "",
+        ).trim();
 
         return {
           label,
@@ -4459,11 +4772,10 @@ function normalizeTeacherQuestionChoices(question) {
 
 function normalizeTeacherQuestionCorrectLabel(question) {
   const direct = String(
-    question?.correctAnswer ||
-      question?.answer ||
-      question?.correct ||
-      "",
-  ).trim().toUpperCase();
+    question?.correctAnswer || question?.answer || question?.correct || "",
+  )
+    .trim()
+    .toUpperCase();
 
   if (!direct) {
     return "";
@@ -4475,8 +4787,12 @@ function normalizeTeacherQuestionCorrectLabel(question) {
 
   const choices = normalizeTeacherQuestionChoices(question);
   const matched = choices.find((choice) => {
-    const normalizedText = String(choice.text || "").trim().toUpperCase();
-    const normalizedValue = String(choice.value || "").trim().toUpperCase();
+    const normalizedText = String(choice.text || "")
+      .trim()
+      .toUpperCase();
+    const normalizedValue = String(choice.value || "")
+      .trim()
+      .toUpperCase();
 
     return normalizedText === direct || normalizedValue === direct;
   });
@@ -4528,10 +4844,17 @@ function normalizeTeacherSelectedLabel(answer, question) {
 
   const choices = normalizeTeacherQuestionChoices(question);
   const matched = choices.find((choice) => {
-    const normalizedText = String(choice.text || "").trim().toUpperCase();
-    const normalizedValue = String(choice.value || "").trim().toUpperCase();
+    const normalizedText = String(choice.text || "")
+      .trim()
+      .toUpperCase();
+    const normalizedValue = String(choice.value || "")
+      .trim()
+      .toUpperCase();
 
-    return normalizedText === normalizedAnswer || normalizedValue === normalizedAnswer;
+    return (
+      normalizedText === normalizedAnswer ||
+      normalizedValue === normalizedAnswer
+    );
   });
 
   return matched?.label || normalizedAnswer;
@@ -4546,8 +4869,12 @@ function getTeacherAnswerDisplayText(answer, question) {
 
   const choices = normalizeTeacherQuestionChoices(question);
   const matchedChoice = choices.find((choice) => {
-    const normalizedText = String(choice.text || "").trim().toUpperCase();
-    const normalizedValue = String(choice.value || "").trim().toUpperCase();
+    const normalizedText = String(choice.text || "")
+      .trim()
+      .toUpperCase();
+    const normalizedValue = String(choice.value || "")
+      .trim()
+      .toUpperCase();
 
     return (
       normalizedText === normalizedAnswer ||
@@ -4563,7 +4890,11 @@ function getTeacherAnswerDisplayText(answer, question) {
   return normalizedAnswer;
 }
 
-function getTeacherSubmissionAnswerByIndex(submission, question, questionIndex) {
+function getTeacherSubmissionAnswerByIndex(
+  submission,
+  question,
+  questionIndex,
+) {
   const answers = Array.isArray(submission?.answers) ? submission.answers : [];
 
   if (answers.length === 0) {
@@ -4608,16 +4939,26 @@ function getTeacherSubmissionAnswerByIndex(submission, question, questionIndex) 
 }
 
 function buildTeacherSubmissionQuestionReviews(assignment, submission) {
-  const questions = Array.isArray(assignment?.questions) ? assignment.questions : [];
+  const questions = Array.isArray(assignment?.questions)
+    ? assignment.questions
+    : [];
 
   return questions.map((question, questionIndex) => {
-    const answer = getTeacherSubmissionAnswerByIndex(submission, question, questionIndex);
+    const answer = getTeacherSubmissionAnswerByIndex(
+      submission,
+      question,
+      questionIndex,
+    );
     const studentLabel = normalizeTeacherSelectedLabel(answer, question);
     const correctLabel = normalizeTeacherQuestionCorrectLabel(question);
-    const isCorrect = Boolean(studentLabel && correctLabel && studentLabel === correctLabel);
+    const isCorrect = Boolean(
+      studentLabel && correctLabel && studentLabel === correctLabel,
+    );
     const choices = normalizeTeacherQuestionChoices(question);
     const studentAnswerText = getTeacherAnswerDisplayText(answer, question);
-    const correctChoice = choices.find((choice) => choice.label === correctLabel);
+    const correctChoice = choices.find(
+      (choice) => choice.label === correctLabel,
+    );
     const correctAnswerText = correctChoice
       ? `${correctChoice.label}. ${correctChoice.text}`
       : correctLabel || "--";
@@ -4625,7 +4966,10 @@ function buildTeacherSubmissionQuestionReviews(assignment, submission) {
     return {
       questionIndex,
       questionNumber: questionIndex + 1,
-      questionText: String(question?.question || question?.text || question?.content || "--").trim() || "--",
+      questionText:
+        String(
+          question?.question || question?.text || question?.content || "--",
+        ).trim() || "--",
       studentAnswerText,
       correctAnswerText,
       isCorrect,
@@ -4647,24 +4991,40 @@ function normalizeTeacherStudentProfile(student = {}) {
         student?.id ||
         "",
     ).trim(),
-    username: String(student?.username || student?.name || student?.fullName || "").trim(),
-    avatar: String(student?.avatar || student?.photoURL || student?.profilePicture || "").trim(),
+    username: String(
+      student?.username || student?.name || student?.fullName || "",
+    ).trim(),
+    avatar: String(
+      student?.avatar || student?.photoURL || student?.profilePicture || "",
+    ).trim(),
   };
 }
 
-function normalizeTeacherAssignmentStudentRecord(student, submission = null, profile = null) {
+function normalizeTeacherAssignmentStudentRecord(
+  student,
+  submission = null,
+  profile = null,
+) {
   const normalizedProfile = normalizeTeacherStudentProfile(profile || student);
-  const normalizedSubmission = normalizeTeacherAssignmentSubmissionRecord(submission);
+  const normalizedSubmission =
+    normalizeTeacherAssignmentSubmissionRecord(submission);
   const statusKey = normalizedSubmission
     ? normalizeTeacherSubmissionStatusKey(normalizedSubmission)
     : "pending";
 
   return {
-    id: String(student?.id || student?.studentId || normalizedSubmission?.studentId || "").trim(),
+    id: String(
+      student?.id ||
+        student?.studentId ||
+        normalizedSubmission?.studentId ||
+        "",
+    ).trim(),
     name:
       normalizedProfile.name ||
       normalizedSubmission?.studentName ||
-      String(student?.name || student?.fullName || student?.username || "").trim() ||
+      String(
+        student?.name || student?.fullName || student?.username || "",
+      ).trim() ||
       normalizedSubmission?.studentId ||
       "--",
     username:
@@ -4687,8 +5047,12 @@ function normalizeTeacherAssignmentStudentRecord(student, submission = null, pro
 
 function getTeacherAssignmentTotalStudents(classStudents, submissions) {
   const studentIds = uniqueClassroomValues([
-    ...((Array.isArray(classStudents) ? classStudents : []).map((student) => student?.id)),
-    ...((Array.isArray(submissions) ? submissions : []).map((submission) => submission?.studentId)),
+    ...(Array.isArray(classStudents) ? classStudents : []).map(
+      (student) => student?.id,
+    ),
+    ...(Array.isArray(submissions) ? submissions : []).map(
+      (submission) => submission?.studentId,
+    ),
   ]);
 
   return studentIds.length;
@@ -4696,7 +5060,9 @@ function getTeacherAssignmentTotalStudents(classStudents, submissions) {
 
 function getTeacherAssignmentSummaryStats(rows) {
   const normalizedRows = Array.isArray(rows) ? rows : [];
-  const submittedRows = normalizedRows.filter((row) => row.statusKey === "submitted");
+  const submittedRows = normalizedRows.filter(
+    (row) => row.statusKey === "submitted",
+  );
   const doingRows = normalizedRows.filter((row) => row.statusKey === "doing");
   const scoreValues = submittedRows
     .map((row) => Number(row.score))
@@ -4715,7 +5081,9 @@ function getTeacherAssignmentSummaryStats(rows) {
 function getTeacherAssignmentSelectedStudentId() {
   const detail = currentTeacherAssignmentDetail;
   const assignment = detail.assignment;
-  const studentRows = Array.isArray(detail.studentRows) ? detail.studentRows : [];
+  const studentRows = Array.isArray(detail.studentRows)
+    ? detail.studentRows
+    : [];
 
   if (!assignment) {
     return "";
@@ -4728,7 +5096,9 @@ function getTeacherAssignmentSelectedStudentId() {
     return detail.selectedStudentId;
   }
 
-  const firstSubmitted = studentRows.find((row) => row.statusKey === "submitted");
+  const firstSubmitted = studentRows.find(
+    (row) => row.statusKey === "submitted",
+  );
 
   if (firstSubmitted) {
     return firstSubmitted.id;
@@ -4744,7 +5114,8 @@ function renderTeacherStudentSubmission(studentRow = null) {
     assignment,
     studentRow?.submission || detail.selectedSubmission || null,
   );
-  const selectedProfile = studentRow?.profile || detail.selectedStudentProfile || null;
+  const selectedProfile =
+    studentRow?.profile || detail.selectedStudentProfile || null;
   const avatarPath =
     selectedProfile?.avatar ||
     studentRow?.avatar ||
@@ -4758,7 +5129,9 @@ function renderTeacherStudentSubmission(studentRow = null) {
   const submittedAt = studentRow?.submittedAt
     ? formatDateTime(studentRow.submittedAt)
     : "--";
-  const scoreText = studentRow ? getTeacherSubmissionScoreText(studentRow) : "--";
+  const scoreText = studentRow
+    ? getTeacherSubmissionScoreText(studentRow)
+    : "--";
   const correctCount = studentRow?.correctCount;
   const wrongCount = studentRow?.wrongCount;
   const questionCount = questionReviews.length;
@@ -4855,9 +5228,15 @@ function renderTeacherAssignmentDetail() {
   }
 
   const assignment = detail.assignment;
-  const studentRows = Array.isArray(detail.studentRows) ? detail.studentRows : [];
-  const classStudents = Array.isArray(detail.classStudents) ? detail.classStudents : [];
-  const submissions = Array.isArray(detail.submissions) ? detail.submissions : [];
+  const studentRows = Array.isArray(detail.studentRows)
+    ? detail.studentRows
+    : [];
+  const classStudents = Array.isArray(detail.classStudents)
+    ? detail.classStudents
+    : [];
+  const submissions = Array.isArray(detail.submissions)
+    ? detail.submissions
+    : [];
   const selectedStudentId = getTeacherAssignmentSelectedStudentId();
   const selectedRow =
     studentRows.find((row) => row.id === selectedStudentId) ||
@@ -4868,12 +5247,12 @@ function renderTeacherAssignmentDetail() {
     classStudents,
     submissions,
   );
-  const unansweredCount = Math.max(totalStudents - stats.submittedCount - stats.doingCount, 0);
+  const unansweredCount = Math.max(
+    totalStudents - stats.submittedCount - stats.doingCount,
+    0,
+  );
   const topicText = String(
-    assignment.topic ||
-      assignment.description ||
-      assignment.subject ||
-      "",
+    assignment.topic || assignment.description || assignment.subject || "",
   ).trim();
   const classLabel =
     assignment.className ||
@@ -4883,9 +5262,13 @@ function renderTeacherAssignmentDetail() {
     "--";
   const subjectLabel = assignment.subject || "--";
   const dateAssigned = formatAssignmentDate(assignment.createdAt);
-  const dueDate = assignment.dueDate ? formatAssignmentDate(assignment.dueDate) : "--";
+  const dueDate = assignment.dueDate
+    ? formatAssignmentDate(assignment.dueDate)
+    : "--";
   const maxScore = 10;
-  const averageScore = Number.isFinite(stats.averageScore) ? stats.averageScore.toFixed(1) : "0.0";
+  const averageScore = Number.isFinite(stats.averageScore)
+    ? stats.averageScore.toFixed(1)
+    : "0.0";
 
   console.log("[TeacherAssignmentDetail]", {
     assignment,
@@ -5008,9 +5391,10 @@ function renderTeacherAssignmentDetail() {
                     ? studentRows
                         .map((row, index) => {
                           const isActive = row.id === selectedRow?.id;
-                          const scoreDisplay = row.statusKey === "submitted"
-                            ? getTeacherSubmissionScoreText(row)
-                            : "--";
+                          const scoreDisplay =
+                            row.statusKey === "submitted"
+                              ? getTeacherSubmissionScoreText(row)
+                              : "--";
                           const submittedAtText = row.submittedAt
                             ? formatDateTime(row.submittedAt)
                             : "--";
@@ -5023,11 +5407,14 @@ function renderTeacherAssignmentDetail() {
                                   <img
                                     src="${escapeHtml(
                                       row.avatar ||
-                                        (window.EduKidsProfileService?.getAvatarPathFromProfile
-                                          ? window.EduKidsProfileService.getAvatarPathFromProfile({
-                                              role: "student",
-                                              gender: "male",
-                                            })
+                                        (window.EduKidsProfileService
+                                          ?.getAvatarPathFromProfile
+                                          ? window.EduKidsProfileService.getAvatarPathFromProfile(
+                                              {
+                                                role: "student",
+                                                gender: "male",
+                                              },
+                                            )
                                           : "assets/userAvatar/boy.png"),
                                     )}"
                                     alt="${escapeHtml(row.name || "Học sinh")}"
@@ -5095,7 +5482,9 @@ async function selectTeacherAssignmentStudent(studentId) {
   const detail = currentTeacherAssignmentDetail;
   const normalizedStudentId = String(studentId || "").trim();
   const requestId = detail.requestId;
-  const studentRows = Array.isArray(detail.studentRows) ? detail.studentRows : [];
+  const studentRows = Array.isArray(detail.studentRows)
+    ? detail.studentRows
+    : [];
 
   if (!detail.visible || !detail.assignment || !normalizedStudentId) {
     return;
@@ -5105,8 +5494,10 @@ async function selectTeacherAssignmentStudent(studentId) {
   detail.loadingStudentId = normalizedStudentId;
   renderTeacherAssignmentDetail();
 
-  const cachedSubmission = detail.submissionByStudentId.get(normalizedStudentId) || null;
-  const cachedProfile = detail.profileByStudentId.get(normalizedStudentId) || null;
+  const cachedSubmission =
+    detail.submissionByStudentId.get(normalizedStudentId) || null;
+  const cachedProfile =
+    detail.profileByStudentId.get(normalizedStudentId) || null;
   const [submission, profile] = await Promise.all([
     cachedSubmission?.answers?.length
       ? Promise.resolve(cachedSubmission)
@@ -5119,7 +5510,9 @@ async function selectTeacherAssignmentStudent(studentId) {
     cachedProfile
       ? Promise.resolve(cachedProfile)
       : window.EduKidsProfileService?.fetchProfileById
-        ? window.EduKidsProfileService.fetchProfileById(normalizedStudentId).catch(() => null)
+        ? window.EduKidsProfileService.fetchProfileById(
+            normalizedStudentId,
+          ).catch(() => null)
         : Promise.resolve(null),
   ]);
 
@@ -5135,9 +5528,12 @@ async function selectTeacherAssignmentStudent(studentId) {
     detail.profileByStudentId.set(normalizedStudentId, profile);
   }
 
-  const selectedSubmission = submission || detail.submissionByStudentId.get(normalizedStudentId) || null;
-  const selectedProfile = profile || detail.profileByStudentId.get(normalizedStudentId) || null;
-  const existingRow = studentRows.find((row) => row.id === normalizedStudentId) || null;
+  const selectedSubmission =
+    submission || detail.submissionByStudentId.get(normalizedStudentId) || null;
+  const selectedProfile =
+    profile || detail.profileByStudentId.get(normalizedStudentId) || null;
+  const existingRow =
+    studentRows.find((row) => row.id === normalizedStudentId) || null;
   const selectedRow = normalizeTeacherAssignmentStudentRecord(
     existingRow || {
       id: normalizedStudentId,
@@ -5163,8 +5559,14 @@ async function selectTeacherAssignmentStudent(studentId) {
 }
 
 function normalizeStudentAssignmentStatus(assignment) {
-  const rawSubmissionStatus = String(assignment?.submissionStatus || "").trim().toLowerCase();
-  const rawStatus = rawSubmissionStatus || String(assignment?.status || "").trim().toLowerCase();
+  const rawSubmissionStatus = String(assignment?.submissionStatus || "")
+    .trim()
+    .toLowerCase();
+  const rawStatus =
+    rawSubmissionStatus ||
+    String(assignment?.status || "")
+      .trim()
+      .toLowerCase();
 
   if (
     rawStatus === "doing" ||
@@ -5202,13 +5604,19 @@ function normalizeStudentAssignmentStatus(assignment) {
 }
 
 function getAssignmentDetailStatusValue(assignment) {
-  const submissionStatus = String(assignment?.submissionStatus || "").trim().toLowerCase();
+  const submissionStatus = String(assignment?.submissionStatus || "")
+    .trim()
+    .toLowerCase();
 
   if (submissionStatus) {
     return submissionStatus;
   }
 
-  return String(assignment?.status || "").trim().toLowerCase() || "pending";
+  return (
+    String(assignment?.status || "")
+      .trim()
+      .toLowerCase() || "pending"
+  );
 }
 
 function getAssignmentDetailStatusLabel(assignment) {
@@ -5277,7 +5685,11 @@ function getAssignmentDetailScoreBadgeText(assignment) {
     return "";
   }
 
-  if (assignment?.score === null || typeof assignment?.score === "undefined" || assignment?.score === "") {
+  if (
+    assignment?.score === null ||
+    typeof assignment?.score === "undefined" ||
+    assignment?.score === ""
+  ) {
     return "";
   }
 
@@ -5291,18 +5703,29 @@ function normalizeAssignmentDetailRecord(assignment) {
 
   return {
     ...assignment,
-    id: String(assignment.id || assignment.assignmentId || assignment.docId || "").trim(),
+    id: String(
+      assignment.id || assignment.assignmentId || assignment.docId || "",
+    ).trim(),
     classId: String(assignment.classId || "").trim(),
     title: String(assignment.title || "").trim(),
     description: String(assignment.description || "").trim(),
     dueDate: assignment.dueDate === "" ? "" : assignment.dueDate || "",
-    status: String(assignment.status || "").trim().toLowerCase() || "active",
+    status:
+      String(assignment.status || "")
+        .trim()
+        .toLowerCase() || "active",
     submissionStatus:
-      String(assignment.submissionStatus || "").trim().toLowerCase() || "",
+      String(assignment.submissionStatus || "")
+        .trim()
+        .toLowerCase() || "",
     submittedAt: assignment.submittedAt || "",
     score: assignment.score ?? null,
-    correctCount: Number.isFinite(Number(assignment.correctCount)) ? Number(assignment.correctCount) : null,
-    wrongCount: Number.isFinite(Number(assignment.wrongCount)) ? Number(assignment.wrongCount) : null,
+    correctCount: Number.isFinite(Number(assignment.correctCount))
+      ? Number(assignment.correctCount)
+      : null,
+    wrongCount: Number.isFinite(Number(assignment.wrongCount))
+      ? Number(assignment.wrongCount)
+      : null,
     totalQuestions: Number.isFinite(Number(assignment.totalQuestions))
       ? Number(assignment.totalQuestions)
       : Number.isFinite(Number(assignment.questionCount))
@@ -5316,7 +5739,9 @@ function normalizeAssignmentDetailRecord(assignment) {
 }
 
 function formatStudentAssignmentStatusLabel(statusKey, assignment = null) {
-  const rawSubmissionStatus = String(assignment?.submissionStatus || "").trim().toLowerCase();
+  const rawSubmissionStatus = String(assignment?.submissionStatus || "")
+    .trim()
+    .toLowerCase();
 
   if (statusKey === "doing") {
     return "Đang làm";
@@ -5350,13 +5775,19 @@ function getStudentAssignmentActionLabel(statusKey) {
 }
 
 function getStudentAssignmentScoreBadgeText(assignment) {
-  const rawSubmissionStatus = String(assignment?.submissionStatus || "").trim().toLowerCase();
+  const rawSubmissionStatus = String(assignment?.submissionStatus || "")
+    .trim()
+    .toLowerCase();
 
   if (rawSubmissionStatus !== "graded") {
     return "";
   }
 
-  if (assignment?.score === null || typeof assignment?.score === "undefined" || assignment?.score === "") {
+  if (
+    assignment?.score === null ||
+    typeof assignment?.score === "undefined" ||
+    assignment?.score === ""
+  ) {
     return "";
   }
 
@@ -5550,7 +5981,9 @@ function openStudentAssignmentDetail(assignmentId) {
     return;
   }
 
-  const previousAssignmentId = String(studentAssignmentDetailState.assignment?.id || "").trim();
+  const previousAssignmentId = String(
+    studentAssignmentDetailState.assignment?.id || "",
+  ).trim();
 
   currentAssignmentId = normalizedId;
   studentAssignmentDetailState.visible = true;
@@ -5576,7 +6009,10 @@ function updateStudentAssignmentFeed(assignments, errors = []) {
   const normalizedAssignments = Array.isArray(assignments)
     ? assignments
         .map((assignment) => normalizeStudentAssignmentRecord(assignment))
-        .filter((assignment) => assignment && assignment.id)
+        .filter(
+          (assignment) =>
+            assignment && assignment.id && !shouldHideStudentAssignmentFromFeed(assignment),
+        )
     : [];
 
   currentAssignments = normalizedAssignments;
@@ -5584,7 +6020,9 @@ function updateStudentAssignmentFeed(assignments, errors = []) {
 
   if (
     !currentAssignmentId ||
-    !currentAssignments.some((assignment) => assignment.id === currentAssignmentId)
+    !currentAssignments.some(
+      (assignment) => assignment.id === currentAssignmentId,
+    )
   ) {
     currentAssignmentId = currentAssignments[0]?.id || "";
   }
@@ -5619,16 +6057,21 @@ function findAssignmentInCurrentState(assignmentId) {
     return null;
   }
 
-  const studentAssignments = Array.isArray(currentAssignments) ? currentAssignments : [];
+  const studentAssignments = Array.isArray(currentAssignments)
+    ? currentAssignments
+    : [];
   const fromStudentState =
-    studentAssignments.find((assignment) => assignment.id === normalizedAssignmentId) ||
-    null;
+    studentAssignments.find(
+      (assignment) => assignment.id === normalizedAssignmentId,
+    ) || null;
 
   if (fromStudentState) {
     return fromStudentState;
   }
 
-  const teacherAssignments = Array.isArray(teacherAssignmentSubmissionState.assignments)
+  const teacherAssignments = Array.isArray(
+    teacherAssignmentSubmissionState.assignments,
+  )
     ? teacherAssignmentSubmissionState.assignments
     : [];
   const fromTeacherState =
@@ -5642,7 +6085,8 @@ function findAssignmentInCurrentState(assignmentId) {
 
   if (
     window.EduKidsCurrentAssignment &&
-    String(window.EduKidsCurrentAssignment.id || "").trim() === normalizedAssignmentId
+    String(window.EduKidsCurrentAssignment.id || "").trim() ===
+      normalizedAssignmentId
   ) {
     return window.EduKidsCurrentAssignment;
   }
@@ -5700,7 +6144,9 @@ function getAssignmentDetailContext(assignment) {
               : "Chưa mở",
     scoreBadgeText: getAssignmentDetailScoreBadgeText(assignment),
     footerHint:
-      statusValue === "graded" && assignment?.score !== null && typeof assignment?.score !== "undefined"
+      statusValue === "graded" &&
+      assignment?.score !== null &&
+      typeof assignment?.score !== "undefined"
         ? `Điểm: ${String(assignment.score)}`
         : "",
     primaryActionDisabled: false,
@@ -5732,7 +6178,9 @@ function renderAssignmentDetail(assignment) {
   const scoreBadgeText = context.scoreBadgeText;
   const statusClass =
     getCurrentRole() === "teacher"
-      ? String(assignment.status || "").trim().toLowerCase() || "active"
+      ? String(assignment.status || "")
+          .trim()
+          .toLowerCase() || "active"
       : normalizeStudentAssignmentStatus(assignment);
   const dueDateText = assignment.dueDate
     ? formatAssignmentDate(assignment.dueDate)
@@ -5815,14 +6263,16 @@ async function openTeacherAssignmentDetail(assignmentId) {
   detail.submissionByStudentId = new Map();
   detail.profileByStudentId = new Map();
   detail.loadingStudentId = "";
-  teacherAssignmentSubmissionState.selectedAssignmentId = normalizedAssignmentId;
+  teacherAssignmentSubmissionState.selectedAssignmentId =
+    normalizedAssignmentId;
   teacherAssignmentSubmissionState.error = "";
   teacherAssignmentSubmissionState.loading = true;
   teacherAssignmentSubmissionState.submissions = [];
-  teacherAssignmentSubmissionState.assignments = Array.isArray(teacherAssignmentSubmissionState.assignments) &&
+  teacherAssignmentSubmissionState.assignments =
+    Array.isArray(teacherAssignmentSubmissionState.assignments) &&
     teacherAssignmentSubmissionState.assignments.length
-    ? teacherAssignmentSubmissionState.assignments
-    : [detail.assignment];
+      ? teacherAssignmentSubmissionState.assignments
+      : [detail.assignment];
 
   setTeacherAssignmentDetailVisibility(true);
   renderTeacherAssignmentDetail();
@@ -5830,9 +6280,13 @@ async function openTeacherAssignmentDetail(assignmentId) {
   try {
     const [submissionSummary, classListResponse] = await Promise.all([
       window.EduKidsAssignmentService?.fetchAssignmentSubmissions
-        ? window.EduKidsAssignmentService.fetchAssignmentSubmissions(normalizedAssignmentId).catch(() => [])
+        ? window.EduKidsAssignmentService.fetchAssignmentSubmissions(
+            normalizedAssignmentId,
+          ).catch(() => [])
         : Promise.resolve([]),
-      apiRequestWithAuth("/api/classes/my", { method: "GET" }).catch(() => ({ data: [] })),
+      apiRequestWithAuth("/api/classes/my", { method: "GET" }).catch(() => ({
+        data: [],
+      })),
     ]);
 
     if (!detail.visible || detail.requestId !== requestId) {
@@ -5841,7 +6295,9 @@ async function openTeacherAssignmentDetail(assignmentId) {
 
     const normalizedSubmissions = Array.isArray(submissionSummary)
       ? submissionSummary
-          .map((submission) => normalizeTeacherAssignmentSubmissionRecord(submission))
+          .map((submission) =>
+            normalizeTeacherAssignmentSubmissionRecord(submission),
+          )
           .filter((submission) => submission && submission.studentId)
       : [];
 
@@ -5850,15 +6306,20 @@ async function openTeacherAssignmentDetail(assignmentId) {
     teacherAssignmentSubmissionState.error = "";
 
     const classInfo = Array.isArray(classListResponse?.data)
-      ? sortClassroomRecords(classListResponse.data.map(normalizeClassroomRecord).filter(Boolean)).find(
-          (classroom) => classroom.id === detail.assignment.classId,
-        ) || null
+      ? sortClassroomRecords(
+          classListResponse.data.map(normalizeClassroomRecord).filter(Boolean),
+        ).find((classroom) => classroom.id === detail.assignment.classId) ||
+        null
       : null;
 
     detail.classInfo = classInfo;
     detail.classStudents = getClassroomStudentCards(classInfo);
-    const classStudents = Array.isArray(detail.classStudents) ? detail.classStudents : [];
-    const submissions = Array.isArray(normalizedSubmissions) ? normalizedSubmissions : [];
+    const classStudents = Array.isArray(detail.classStudents)
+      ? detail.classStudents
+      : [];
+    const submissions = Array.isArray(normalizedSubmissions)
+      ? normalizedSubmissions
+      : [];
 
     const rosterStudentIds = uniqueClassroomValues([
       ...classStudents.map((student) => student.id),
@@ -5869,7 +6330,9 @@ async function openTeacherAssignmentDetail(assignmentId) {
     const profilePairs = await Promise.all(
       rosterStudentIds.map(async (studentId) => {
         if (profileService?.fetchProfileById) {
-          const profile = await profileService.fetchProfileById(studentId).catch(() => null);
+          const profile = await profileService
+            .fetchProfileById(studentId)
+            .catch(() => null);
           return [studentId, profile];
         }
 
@@ -5891,12 +6354,23 @@ async function openTeacherAssignmentDetail(assignmentId) {
       const classStudent =
         classStudents.find((student) => student.id === studentId) || null;
       const submission = submissionMap.get(studentId) || null;
-      const profile = detail.profileByStudentId.get(studentId) || classStudent || null;
+      const profile =
+        detail.profileByStudentId.get(studentId) || classStudent || null;
       const row = normalizeTeacherAssignmentStudentRecord(
         {
           id: studentId,
-          name: classStudent?.name || submission?.studentName || profile?.name || profile?.fullName || profile?.username || studentId,
-          username: profile?.username || classStudent?.name || submission?.studentName || "",
+          name:
+            classStudent?.name ||
+            submission?.studentName ||
+            profile?.name ||
+            profile?.fullName ||
+            profile?.username ||
+            studentId,
+          username:
+            profile?.username ||
+            classStudent?.name ||
+            submission?.studentName ||
+            "",
           avatar: classStudent?.avatar || profile?.avatar || "",
         },
         submission,
@@ -5910,8 +6384,14 @@ async function openTeacherAssignmentDetail(assignmentId) {
     });
 
     studentRows.sort((left, right) => {
-      const leftRank = left.statusKey === "submitted" ? 0 : left.statusKey === "doing" ? 1 : 2;
-      const rightRank = right.statusKey === "submitted" ? 0 : right.statusKey === "doing" ? 1 : 2;
+      const leftRank =
+        left.statusKey === "submitted" ? 0 : left.statusKey === "doing" ? 1 : 2;
+      const rightRank =
+        right.statusKey === "submitted"
+          ? 0
+          : right.statusKey === "doing"
+            ? 1
+            : 2;
 
       if (leftRank !== rightRank) {
         return leftRank - rightRank;
@@ -5990,7 +6470,9 @@ async function loadAssignmentSubmissionsForDetail(assignmentId) {
 }
 
 function buildStudentAssignmentsQuery() {
-  const selectedClassId = String(studentAssignmentClassState.selectedClassId || "").trim();
+  const selectedClassId = String(
+    studentAssignmentClassState.selectedClassId || "",
+  ).trim();
   const classIds = uniqueClassroomValues(
     studentAssignmentClassState.classes.map((classroom) => classroom?.id),
   );
@@ -6006,7 +6488,9 @@ function buildStudentAssignmentsQuery() {
 
   const query = params.toString();
 
-  return query ? `/api/assignments/student?${query}` : "/api/assignments/student";
+  return query
+    ? `/api/assignments/student?${query}`
+    : "/api/assignments/student";
 }
 
 async function loadStudentAssignmentsFromAPI() {
@@ -6051,10 +6535,7 @@ async function refreshStudentAssignmentsFeed() {
     currentAssignmentId = "";
     delete window.EduKidsCurrentAssignment;
     renderStudentAssignmentTabs([]);
-    showToast(
-      error.message || "Không thể tải bài tập từ máy chủ.",
-      "error",
-    );
+    showToast(error.message || "Không thể tải bài tập từ máy chủ.", "error");
   }
 }
 
@@ -6073,25 +6554,35 @@ function renderStudentAssignmentDetail(assignment) {
 
   const statusKey = normalizeStudentAssignmentStatus(assignment);
   const isReadOnly = statusKey === "done";
-  const questionList = Array.isArray(assignment.questions) ? assignment.questions : [];
+  const questionList = Array.isArray(assignment.questions)
+    ? assignment.questions
+    : [];
   const actionLabel = isReadOnly ? "Xem lại" : "Nộp bài";
-  const dueDateText = assignment.dueDate ? formatAssignmentDate(assignment.dueDate) : "--";
+  const dueDateText = assignment.dueDate
+    ? formatAssignmentDate(assignment.dueDate)
+    : "--";
   const scoreText =
-    assignment.score === null || typeof assignment.score === "undefined" || assignment.score === ""
+    assignment.score === null ||
+    typeof assignment.score === "undefined" ||
+    assignment.score === ""
       ? "--"
       : String(assignment.score);
   const correctCountText =
-    Number.isFinite(Number(assignment.correctCount)) && Number.isFinite(Number(assignment.totalQuestions))
+    Number.isFinite(Number(assignment.correctCount)) &&
+    Number.isFinite(Number(assignment.totalQuestions))
       ? `${Number(assignment.correctCount)} / ${Number(assignment.totalQuestions)}`
       : "--";
-  const wrongCountText =
-    Number.isFinite(Number(assignment.wrongCount))
-      ? String(Number(assignment.wrongCount))
-      : "--";
+  const wrongCountText = Number.isFinite(Number(assignment.wrongCount))
+    ? String(Number(assignment.wrongCount))
+    : "--";
   const classLabel =
     assignment.className ||
-    studentAssignmentClassState.classes.find((classroom) => classroom.id === assignment.classId)?.name ||
-    studentAssignmentClassState.classes.find((classroom) => classroom.id === assignment.classId)?.className ||
+    studentAssignmentClassState.classes.find(
+      (classroom) => classroom.id === assignment.classId,
+    )?.name ||
+    studentAssignmentClassState.classes.find(
+      (classroom) => classroom.id === assignment.classId,
+    )?.className ||
     assignment.classId ||
     "--";
 
@@ -6119,26 +6610,31 @@ function renderStudentAssignmentDetail(assignment) {
           <div class="assignment-detail-row"><span>Mô tả</span><strong>${escapeHtml(assignment.description || "--")}</strong></div>
           <div class="assignment-detail-row"><span>Hạn nộp</span><strong>${escapeHtml(dueDateText)}</strong></div>
           <div class="assignment-detail-row"><span>Lớp</span><strong>${escapeHtml(classLabel)}</strong></div>
-          ${isReadOnly || Number.isFinite(Number(assignment.score))
-            ? `
+          ${
+            isReadOnly || Number.isFinite(Number(assignment.score))
+              ? `
               <div class="assignment-detail-row"><span>Điểm</span><strong>${escapeHtml(scoreText)}</strong></div>
               <div class="assignment-detail-row"><span>Đúng</span><strong>${escapeHtml(correctCountText)}</strong></div>
               <div class="assignment-detail-row"><span>Sai</span><strong>${escapeHtml(wrongCountText)}</strong></div>
             `
-            : ""}
+              : ""
+          }
         </div>
 
         <div class="quiz-question-list ${isReadOnly ? "is-submitted" : ""}">
-          ${questionList.length === 0
-            ? `
+          ${
+            questionList.length === 0
+              ? `
               <div class="quiz-empty">Bài tập này chưa có câu hỏi.</div>
             `
-            : questionList
-                .map((question, questionIndex) => {
-                  const selected = getStudentAssignmentSelectedAnswer(questionIndex);
-                  const options = normalizeStudentAssignmentQuestionOptions(question);
+              : questionList
+                  .map((question, questionIndex) => {
+                    const selected =
+                      getStudentAssignmentSelectedAnswer(questionIndex);
+                    const options =
+                      normalizeStudentAssignmentQuestionOptions(question);
 
-                  return `
+                    return `
                     <article class="quiz-question-card" data-question-block data-assignment-question-index="${questionIndex}">
                       <div class="quiz-question-meta">Câu ${questionIndex + 1}</div>
                       <h3 class="quiz-question-text">${escapeHtml(question.question || "--")}</h3>
@@ -6163,8 +6659,9 @@ function renderStudentAssignmentDetail(assignment) {
                       </div>
                     </article>
                   `;
-                })
-                .join("")}
+                  })
+                  .join("")
+          }
         </div>
 
         <div class="quiz-actions">
@@ -6264,7 +6761,10 @@ async function submitStudentAssignment(trigger = null) {
     if (submissionResult?.profile) {
       applyLatestCurrentUser(submissionResult.profile);
     }
-    const updatedAssignment = markStudentAssignmentAsSubmitted(assignment.id, submissionResult);
+    const updatedAssignment = markStudentAssignmentAsSubmitted(
+      assignment.id,
+      submissionResult,
+    );
 
     if (updatedAssignment) {
       studentAssignmentDetailState.assignment = updatedAssignment;
@@ -6325,17 +6825,27 @@ function normalizeClassroomRecord(classroom) {
 
   return {
     id: String(classroom.id || classroom.classId || "").trim(),
-    name: String(classroom.name || classroom.className || "Chưa đặt tên").trim(),
+    name: String(
+      classroom.name || classroom.className || "Chưa đặt tên",
+    ).trim(),
     className: String(classroom.className || classroom.name || "").trim(),
     classCode: String(classroom.classCode || classroom.code || "").trim(),
     teacherId: String(classroom.teacherId || "").trim(),
-    teacherName: String(classroom.teacherName || classroom.teacherUsername || "").trim(),
+    teacherName: String(
+      classroom.teacherName || classroom.teacherUsername || "",
+    ).trim(),
     students: Array.isArray(classroom.students) ? classroom.students : [],
     studentIds: Array.isArray(classroom.studentIds) ? classroom.studentIds : [],
     members: Array.isArray(classroom.members) ? classroom.members : [],
-    studentCount: Number(classroom.studentCount ?? classroom.studentsCount ?? 0) || 0,
+    studentCount:
+      Number(classroom.studentCount ?? classroom.studentsCount ?? 0) || 0,
     createdAt: classroom.createdAt || "",
-    averageScore: classroom.averageScore ?? classroom.average ?? classroom.averagePercent ?? classroom.avgScore ?? "",
+    averageScore:
+      classroom.averageScore ??
+      classroom.average ??
+      classroom.averagePercent ??
+      classroom.avgScore ??
+      "",
     completionRate:
       classroom.completionRate ??
       classroom.completion ??
@@ -6346,12 +6856,14 @@ function normalizeClassroomRecord(classroom) {
 }
 
 function sortClassroomRecords(classrooms) {
-  return [...(Array.isArray(classrooms) ? classrooms : [])].sort((left, right) => {
-    const leftTime = Date.parse(left.createdAt || "") || 0;
-    const rightTime = Date.parse(right.createdAt || "") || 0;
+  return [...(Array.isArray(classrooms) ? classrooms : [])].sort(
+    (left, right) => {
+      const leftTime = Date.parse(left.createdAt || "") || 0;
+      const rightTime = Date.parse(right.createdAt || "") || 0;
 
-    return rightTime - leftTime;
-  });
+      return rightTime - leftTime;
+    },
+  );
 }
 
 function uniqueClassroomValues(values) {
@@ -6523,14 +7035,18 @@ function getJoinClassActionButton() {
 }
 
 function getStudentClassSwitcherButton() {
-  return document.querySelector("#student-class-switcher .student-class-switcher-btn");
+  return document.querySelector(
+    "#student-class-switcher .student-class-switcher-btn",
+  );
 }
 
 function getSelectedClassroom() {
   return (
     classroomState.classes.find(
       (classroom) => classroom.id === classroomState.selectedClassId,
-    ) || classroomState.classes[0] || null
+    ) ||
+    classroomState.classes[0] ||
+    null
   );
 }
 
@@ -6553,8 +7069,12 @@ function getClassroomStudentNames(classroom) {
 function getClassroomStudentDisplayName(student) {
   if (student && typeof student === "object") {
     return (
-      String(student.fullName || student.name || student.username || "").trim() ||
-      String(student.userId || student.uid || student.studentId || student.id || "").trim()
+      String(
+        student.fullName || student.name || student.username || "",
+      ).trim() ||
+      String(
+        student.userId || student.uid || student.studentId || student.id || "",
+      ).trim()
     );
   }
 
@@ -6577,7 +7097,9 @@ function getClassroomStudentAvatarPath(student) {
     );
   }
 
-  const avatar = String(student.avatar || student.photoURL || student.profilePicture || "").trim();
+  const avatar = String(
+    student.avatar || student.photoURL || student.profilePicture || "",
+  ).trim();
 
   if (!avatar) {
     return fallbackAvatar;
@@ -6599,27 +7121,29 @@ function getClassroomStudentCards(classroom) {
         ? classroom.members
         : [];
 
-  return uniqueClassroomValues(studentIds.map((student) => {
-    if (student && typeof student === "object") {
-      return JSON.stringify({
-        id: String(
-          student.id ||
-            student.studentId ||
-            student.userId ||
-            student.uid ||
-            "",
-        ).trim(),
-        avatar: getClassroomStudentAvatarPath(student),
-        name: getClassroomStudentDisplayName(student),
-      });
-    }
+  return uniqueClassroomValues(
+    studentIds.map((student) => {
+      if (student && typeof student === "object") {
+        return JSON.stringify({
+          id: String(
+            student.id ||
+              student.studentId ||
+              student.userId ||
+              student.uid ||
+              "",
+          ).trim(),
+          avatar: getClassroomStudentAvatarPath(student),
+          name: getClassroomStudentDisplayName(student),
+        });
+      }
 
-    return JSON.stringify({
-      id: String(student || "").trim(),
-      avatar: "assets/userAvatar/boy.png",
-      name: String(student || "").trim(),
-    });
-  }))
+      return JSON.stringify({
+        id: String(student || "").trim(),
+        avatar: "assets/userAvatar/boy.png",
+        name: String(student || "").trim(),
+      });
+    }),
+  )
     .map((item) => {
       try {
         return JSON.parse(item);
@@ -6746,7 +7270,8 @@ function renderClassroomDetails(classroom) {
   }
 
   if (nameNode) {
-    nameNode.textContent = classroom.name || classroom.className || "Chưa đặt tên";
+    nameNode.textContent =
+      classroom.name || classroom.className || "Chưa đặt tên";
   }
 
   if (codeNode) {
@@ -6782,7 +7307,8 @@ function renderClassroomListPanel() {
   const panel = getClassroomListPanel();
   const joinedClassList = getJoinedClassListPanel();
   const classes = classroomState.classes;
-  const selectedClassId = classroomState.selectedClassId || classes[0]?.id || "";
+  const selectedClassId =
+    classroomState.selectedClassId || classes[0]?.id || "";
   const selectedClass =
     classes.find((classroom) => classroom.id === selectedClassId) ||
     classes[0] ||
@@ -6880,7 +7406,10 @@ async function loadClassroomData(preferredClassId = "") {
 
     classroomState.classes = classes;
 
-    if (preferredClassId && classes.some((item) => item.id === preferredClassId)) {
+    if (
+      preferredClassId &&
+      classes.some((item) => item.id === preferredClassId)
+    ) {
       classroomState.selectedClassId = preferredClassId;
     } else if (
       classroomState.selectedClassId &&
@@ -6923,9 +7452,7 @@ async function handleCreateClassroom() {
     return;
   }
 
-  const name = String(
-    window.prompt("Nhập tên lớp học") || "",
-  ).trim();
+  const name = String(window.prompt("Nhập tên lớp học") || "").trim();
 
   if (!name) {
     return;
@@ -6945,7 +7472,9 @@ async function handleCreateClassroom() {
     });
 
     showToast("Đã tạo lớp thành công.", "success");
-    await refreshClassroomData(response?.data?.id || response?.data?.classId || "");
+    await refreshClassroomData(
+      response?.data?.id || response?.data?.classId || "",
+    );
   } catch (error) {
     showToast(error.message || "Không thể tạo lớp.", "error");
   }
@@ -6953,7 +7482,9 @@ async function handleCreateClassroom() {
 
 async function handleJoinClassroom() {
   const input = getClassroomJoinInput();
-  const classCode = String(input?.value || "").trim().toUpperCase();
+  const classCode = String(input?.value || "")
+    .trim()
+    .toUpperCase();
 
   if (!classCode) {
     showToast("Vui lòng nhập mã lớp.", "error");
@@ -7027,9 +7558,10 @@ async function deleteCurrentClassroom() {
     return;
   }
 
-  const firestore = window.firebase?.app && typeof window.firebase.firestore === "function"
-    ? window.firebase.app().firestore()
-    : null;
+  const firestore =
+    window.firebase?.app && typeof window.firebase.firestore === "function"
+      ? window.firebase.app().firestore()
+      : null;
 
   if (!firestore) {
     showToast("Không thể xóa lớp lúc này.", "error");
@@ -7039,7 +7571,9 @@ async function deleteCurrentClassroom() {
   try {
     await firestore.collection("classes").doc(classId).delete();
     showToast("Đã xóa lớp.", "success");
-    classroomState.classes = classroomState.classes.filter((item) => item.id !== classId);
+    classroomState.classes = classroomState.classes.filter(
+      (item) => item.id !== classId,
+    );
     classroomState.selectedClassId = classroomState.classes[0]?.id || "";
     renderClassroomListPanel();
   } catch (error) {
@@ -7114,7 +7648,9 @@ function bindClassroomControlsOnce() {
         return;
       }
 
-      const classroomId = String(classroomButton.dataset.classroomId || "").trim();
+      const classroomId = String(
+        classroomButton.dataset.classroomId || "",
+      ).trim();
 
       if (!classroomId) {
         return;
@@ -7134,8 +7670,11 @@ async function initializeClassroomPage() {
 function getSelectedStudentAssignmentClass() {
   return (
     studentAssignmentClassState.classes.find(
-      (classroom) => classroom.id === studentAssignmentClassState.selectedClassId,
-    ) || studentAssignmentClassState.classes[0] || null
+      (classroom) =>
+        classroom.id === studentAssignmentClassState.selectedClassId,
+    ) ||
+    studentAssignmentClassState.classes[0] ||
+    null
   );
 }
 
@@ -7184,7 +7723,8 @@ function renderStudentClassSwitcher() {
           ? `<button type="button" disabled>Chưa có lớp đã tham gia</button>`
           : classes
               .map((classroom) => {
-                const isActive = classroom.id === studentAssignmentClassState.selectedClassId;
+                const isActive =
+                  classroom.id === studentAssignmentClassState.selectedClassId;
                 return `
                   <button
                     type="button"
@@ -7239,11 +7779,16 @@ async function loadStudentAssignmentClasses(preferredClassId = "") {
 
     studentAssignmentClassState.classes = classes;
 
-    if (preferredClassId && classes.some((item) => item.id === preferredClassId)) {
+    if (
+      preferredClassId &&
+      classes.some((item) => item.id === preferredClassId)
+    ) {
       studentAssignmentClassState.selectedClassId = preferredClassId;
     } else if (
       studentAssignmentClassState.selectedClassId &&
-      classes.some((item) => item.id === studentAssignmentClassState.selectedClassId)
+      classes.some(
+        (item) => item.id === studentAssignmentClassState.selectedClassId,
+      )
     ) {
       // keep current selection
     } else {
@@ -7278,9 +7823,7 @@ async function refreshStudentAssignmentClasses(preferredClassId = "") {
 }
 
 async function handleStudentJoinClass() {
-  const classCode = String(
-    window.prompt("Nhập mã lớp") || "",
-  )
+  const classCode = String(window.prompt("Nhập mã lớp") || "")
     .trim()
     .toUpperCase();
 
@@ -7410,16 +7953,18 @@ function bindStudentAssignmentControlsOnce() {
       }
 
       event.preventDefault();
-      void submitStudentAssignment(submitForm.querySelector(
-        [
-          "button[data-assignment-submit]",
-          "button[data-action='submit-assignment']",
-          "button[data-action='submit-assignment-form']",
-          "button.assignment-submit-btn",
-          "button.submit-assignment-btn",
-          "input[type='submit'][data-assignment-submit]",
-        ].join(","),
-      ));
+      void submitStudentAssignment(
+        submitForm.querySelector(
+          [
+            "button[data-assignment-submit]",
+            "button[data-action='submit-assignment']",
+            "button[data-action='submit-assignment-form']",
+            "button.assignment-submit-btn",
+            "button.submit-assignment-btn",
+            "input[type='submit'][data-assignment-submit]",
+          ].join(","),
+        ),
+      );
     });
   }
 
@@ -7656,6 +8201,740 @@ function formatAssignmentDate(value) {
   return date.toLocaleDateString("vi-VN");
 }
 
+function formatRelativeTime(value) {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (!value || Number.isNaN(date.getTime())) {
+    return "--";
+  }
+
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMinutes < 1) {
+    return "Vừa xong";
+  }
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} phút trước`;
+  }
+
+  if (diffHours < 24) {
+    return `${diffHours} giờ trước`;
+  }
+
+  if (diffDays === 1) {
+    return "Hôm qua";
+  }
+
+  if (diffDays < 7) {
+    return `${diffDays} ngày trước`;
+  }
+
+  return date.toLocaleDateString("vi-VN");
+}
+
+function logTeacherDashboardStep(label, startTime = 0, details = "") {
+  if (!isDevelopmentBuild) {
+    return;
+  }
+
+  const elapsedMs =
+    Number.isFinite(Number(startTime)) && startTime > 0
+    ? Math.max(0, Math.round(performance.now() - startTime))
+    : 0;
+
+  const suffix = details ? `: ${details}` : "";
+  console.log(
+    `[Dashboard] ${label}${suffix}${startTime > 0 ? ` (${elapsedMs}ms)` : ""}`,
+  );
+}
+
+function startTeacherDashboardTimer() {
+  return isDevelopmentBuild ? performance.now() : 0;
+}
+
+function getTeacherDashboardRoot() {
+  return document.querySelector("#teacher-dashboard .teacher-dashboard-page");
+}
+
+function getTeacherDashboardGreetingNode() {
+  return document.querySelector("[data-teacher-dashboard-greeting]");
+}
+
+function getTeacherDashboardAvatarNode() {
+  return document.querySelector("[data-teacher-dashboard-avatar]");
+}
+
+function getTeacherDashboardStatNode(key) {
+  return document.querySelector(`[data-teacher-dashboard-${key}]`);
+}
+
+function getTeacherDashboardActivityListNode() {
+  return document.querySelector("[data-teacher-dashboard-activity-list]");
+}
+
+function getTeacherDashboardAttentionListNode() {
+  return document.querySelector("[data-teacher-dashboard-attention-list]");
+}
+
+function getTeacherDashboardDateValue(record) {
+  return (
+    getActivityLogDateValue(record) ||
+    getActivityLogDateValue({
+      createdAt: record?.createdAt,
+      updatedAt: record?.updatedAt,
+      submittedAt: record?.submittedAt,
+      gradedAt: record?.gradedAt,
+      timestamp: record?.timestamp,
+      time: record?.time,
+      date: record?.date,
+    })
+  );
+}
+
+function uniqueTeacherDashboardStudents(classrooms) {
+  const studentRecords = [];
+  const seenIds = new Set();
+
+  (Array.isArray(classrooms) ? classrooms : []).forEach((classroom) => {
+    const students = Array.isArray(classroom?.students)
+      ? classroom.students
+      : Array.isArray(classroom?.studentIds)
+        ? classroom.studentIds
+        : Array.isArray(classroom?.members)
+          ? classroom.members
+          : [];
+
+    students.forEach((student) => {
+      const studentId =
+        student && typeof student === "object"
+          ? String(
+              student.id ||
+                student.studentId ||
+                student.userId ||
+                student.uid ||
+                student.username ||
+                student.name ||
+                "",
+            ).trim()
+          : String(student || "").trim();
+
+      if (!studentId || seenIds.has(studentId)) {
+        return;
+      }
+
+      seenIds.add(studentId);
+      studentRecords.push({
+        id: studentId,
+        classroomId: String(classroom?.id || "").trim(),
+      });
+    });
+  });
+
+  return studentRecords;
+}
+
+function calculateTotalStudents(classrooms) {
+  return uniqueTeacherDashboardStudents(classrooms).length;
+}
+
+function calculateTotalClasses(classrooms) {
+  return uniqueClassroomValues(
+    (Array.isArray(classrooms) ? classrooms : [])
+      .map((classroom) => String(classroom?.id || "").trim())
+      .filter(Boolean),
+  ).length;
+}
+
+function calculateTotalAssignments(assignments) {
+  return uniqueClassroomValues(
+    (Array.isArray(assignments) ? assignments : [])
+      .filter(
+        (assignment) =>
+          normalizeTeacherDashboardAssignmentStatus(assignment?.status) !== "",
+      )
+      .map((assignment) => String(assignment?.id || "").trim())
+      .filter(Boolean),
+  ).length;
+}
+
+function calculateCompletionRate(
+  assignments,
+  submissionsByAssignmentId = new Map(),
+  classrooms = [],
+) {
+  const normalizedAssignments = Array.isArray(assignments) ? assignments : [];
+  let totalAssigned = 0;
+  let totalCompleted = 0;
+
+  normalizedAssignments.forEach((assignment) => {
+    const classroom = getTeacherDashboardClassroomById(
+      classrooms,
+      assignment?.classId,
+    );
+    const classStudents = getTeacherAssignmentClassroomStudentCount(classroom);
+    const assignedStudents = Math.max(0, classStudents);
+    const submissions = submissionsByAssignmentId.get(String(assignment?.id || "").trim()) || [];
+    const completedStudents = uniqueClassroomValues(
+      submissions.map((submission) => String(submission?.studentId || "").trim()),
+    ).length;
+
+    totalAssigned += assignedStudents;
+    totalCompleted += Math.min(completedStudents, assignedStudents || completedStudents);
+  });
+
+  if (totalAssigned <= 0) {
+    return 0;
+  }
+
+  return Math.round((totalCompleted / totalAssigned) * 100);
+}
+
+function getTeacherDashboardClassroomStudentCount(classroom) {
+  if (!classroom) {
+    return 0;
+  }
+
+  return getTeacherAssignmentClassroomStudentCount(classroom);
+}
+
+function getTeacherDashboardClassroomById(classrooms, classId) {
+  const normalizedClassId = String(classId || "").trim();
+
+  if (!normalizedClassId) {
+    return null;
+  }
+
+  return (Array.isArray(classrooms) ? classrooms : []).find(
+    (classroom) => String(classroom?.id || "").trim() === normalizedClassId,
+  ) || null;
+}
+
+function normalizeTeacherDashboardAssignmentStatus(status) {
+  const normalized = String(status || "").trim().toLowerCase();
+
+  if (normalized === "deleted" || normalized === "archived") {
+    return "";
+  }
+
+  return normalized || "active";
+}
+
+function getTeacherDashboardSubmissionMap(submissionsByAssignmentId) {
+  return submissionsByAssignmentId instanceof Map
+    ? submissionsByAssignmentId
+    : new Map();
+}
+
+function getTeacherDashboardAssignmentSummary(assignment, classrooms, submissionsByAssignmentId) {
+  const classInfo = getTeacherDashboardClassroomById(classrooms, assignment?.classId);
+  const totalStudents = getTeacherDashboardClassroomStudentCount(classInfo);
+  const submissions = getTeacherDashboardSubmissionMap(submissionsByAssignmentId).get(
+    String(assignment?.id || "").trim(),
+  ) || [];
+  const submittedStudents = uniqueClassroomValues(
+    submissions.map((submission) => String(submission?.studentId || "").trim()),
+  ).length;
+  const completionRate = totalStudents > 0 ? Math.round((submittedStudents / totalStudents) * 100) : 0;
+
+  return {
+    classInfo,
+    totalStudents,
+    submittedStudents,
+    completionRate,
+  };
+}
+
+function getTeacherDashboardActivityIcon(type) {
+  if (type === "submission") {
+    return "📝";
+  }
+
+  if (type === "achievement") {
+    return "🏅";
+  }
+
+  if (type === "assignment") {
+    return "📄";
+  }
+
+  return "📚";
+}
+
+function buildTeacherDashboardActivityItems({
+  profile,
+  assignments = [],
+  submissionsByAssignmentId = new Map(),
+}) {
+  const assignmentMap = new Map(
+    (Array.isArray(assignments) ? assignments : []).map((assignment) => [
+      String(assignment?.id || "").trim(),
+      assignment,
+    ]),
+  );
+  const activityItems = [];
+
+  assignmentMap.forEach((assignment) => {
+    const createdAt = getTeacherDashboardDateValue(assignment);
+
+    if (!createdAt) {
+      return;
+    }
+
+    activityItems.push({
+      type: "assignment",
+      time: createdAt,
+      icon: getTeacherDashboardActivityIcon("assignment"),
+      avatar: getProfileAvatar(profile),
+      text: `Bạn vừa tạo bài "${assignment.title || "Bài tập"}"`,
+    });
+  });
+
+  getTeacherDashboardSubmissionMap(submissionsByAssignmentId).forEach(
+    (submissions, assignmentId) => {
+      const assignment = assignmentMap.get(String(assignmentId || "").trim());
+      if (!assignment || !Array.isArray(submissions)) {
+        return;
+      }
+
+      submissions.forEach((submission) => {
+        const submissionTime = getTeacherDashboardDateValue(submission);
+
+        if (!submissionTime) {
+          return;
+        }
+
+        const studentName = String(
+          submission?.studentName || submission?.studentId || "Học sinh",
+        ).trim();
+
+        activityItems.push({
+          type: "submission",
+          time: submissionTime,
+          icon: getTeacherDashboardActivityIcon("submission"),
+          avatar: "assets/userAvatar/boy.png",
+          text: `${studentName} đã nộp bài "${assignment.title || "Bài tập"}"`,
+        });
+      });
+    },
+  );
+
+  return activityItems
+    .filter((item) => item && item.time)
+    .sort((left, right) => right.time.getTime() - left.time.getTime())
+    .slice(0, 10);
+}
+
+function buildTeacherDashboardAttentionItems({
+  assignments = [],
+  classrooms = [],
+  submissionsByAssignmentId = new Map(),
+}) {
+  const sortedAssignments = [...(Array.isArray(assignments) ? assignments : [])]
+    .map((assignment) => {
+      const summary = getTeacherDashboardAssignmentSummary(
+        assignment,
+        classrooms,
+        submissionsByAssignmentId,
+      );
+      return {
+        ...assignment,
+        summary,
+        completionRate: summary.completionRate,
+      };
+    })
+    .filter((assignment) => String(assignment?.status || "active").toLowerCase() !== "deleted")
+    .sort((left, right) => {
+      const leftRate = Number(left.completionRate) || 0;
+      const rightRate = Number(right.completionRate) || 0;
+
+      if (leftRate !== rightRate) {
+        return leftRate - rightRate;
+      }
+
+      const leftTime = Date.parse(left.createdAt || left.updatedAt || "") || 0;
+      const rightTime = Date.parse(right.createdAt || right.updatedAt || "") || 0;
+      return rightTime - leftTime;
+    });
+
+  const belowNinety = sortedAssignments.filter((assignment) => (Number(assignment.completionRate) || 0) < 90);
+  const sourceAssignments =
+    belowNinety.length > 0
+      ? belowNinety.slice(0, 3)
+      : [...sortedAssignments]
+          .sort((left, right) => {
+            const leftTime = Date.parse(left.createdAt || left.updatedAt || "") || 0;
+            const rightTime = Date.parse(right.createdAt || right.updatedAt || "") || 0;
+            return rightTime - leftTime;
+          })
+          .slice(0, 3);
+
+  return sourceAssignments.map((assignment) => {
+    const summary = assignment.summary || getTeacherDashboardAssignmentSummary(
+      assignment,
+      classrooms,
+      submissionsByAssignmentId,
+    );
+    const totalStudents = summary.totalStudents || 0;
+    const submittedStudents = summary.submittedStudents || 0;
+    const completionRate = summary.completionRate || 0;
+
+    return {
+      id: assignment.id,
+      title: assignment.title || "Bài tập",
+      totalStudents,
+      submittedStudents,
+      completionRate,
+      completionLabel:
+        totalStudents > 0
+          ? `${submittedStudents}/${totalStudents} học sinh hoàn thành`
+          : "Chưa có dữ liệu học sinh",
+      progressWidth: `${Math.max(0, Math.min(completionRate, 100))}%`,
+      compact: completionRate >= 90,
+    };
+  });
+}
+
+async function fetchTeacherDashboardData(profile = null, { forceRefresh = false } = {}) {
+  const teacherId = String(
+    profile?.uid || profile?.userId || profile?.id || getCurrentUserId() || "",
+  ).trim();
+
+  if (!teacherId) {
+    return null;
+  }
+
+  if (
+    teacherDashboardState.loaded &&
+    teacherDashboardState.teacherId === teacherId &&
+    teacherDashboardState.data &&
+    !forceRefresh
+  ) {
+    return teacherDashboardState.data;
+  }
+
+  if (
+    teacherDashboardState.loading &&
+    teacherDashboardState.teacherId === teacherId &&
+    teacherDashboardState.pendingPromise
+  ) {
+    return teacherDashboardState.pendingPromise;
+  }
+
+  teacherDashboardState.loading = true;
+  teacherDashboardState.teacherId = teacherId;
+  const dashboardStart = startTeacherDashboardTimer();
+
+  const requestPromise = (async () => {
+    try {
+      const service = getAssignmentService();
+      const [resolvedProfile, classesResponse, assignmentsResponse] = await Promise.all([
+        window.EduKidsProfileService?.fetchCurrentProfile
+          ? window.EduKidsProfileService.fetchCurrentProfile().catch(() => profile)
+          : Promise.resolve(profile),
+        apiRequestWithAuth("/api/classes/my", { method: "GET" }).catch(() => ({ data: [] })),
+        service?.getTeacherAssignments
+          ? service.getTeacherAssignments(teacherId).catch(() => [])
+          : Promise.resolve([]),
+      ]);
+
+      const classrooms = sortClassroomRecords(
+        Array.isArray(classesResponse?.data)
+          ? classesResponse.data.map(normalizeClassroomRecord).filter(Boolean)
+          : [],
+      );
+      logTeacherDashboardStep(
+        "classes loaded",
+        dashboardStart,
+        `${classrooms.length}`,
+      );
+
+      const studentIds = uniqueClassroomValues(
+        uniqueTeacherDashboardStudents(classrooms).map((record) => record.id),
+      );
+      logTeacherDashboardStep(
+        "students loaded",
+        dashboardStart,
+        `${studentIds.length}`,
+      );
+
+      const assignments = (Array.isArray(assignmentsResponse)
+        ? assignmentsResponse
+        : [])
+        .map((assignment) => ({
+          ...assignment,
+          status: normalizeTeacherDashboardAssignmentStatus(assignment?.status),
+        }))
+        .filter((assignment) => Boolean(String(assignment?.status || "").trim()));
+      logTeacherDashboardStep(
+        "assignments loaded",
+        dashboardStart,
+        `${assignments.length}`,
+      );
+
+      const submissionsEntries = await Promise.all(
+        assignments.map(async (assignment) => {
+          const assignmentId = String(assignment?.id || "").trim();
+
+          if (!assignmentId || !service?.fetchAssignmentSubmissions) {
+            return [assignmentId, []];
+          }
+
+          const submissions = await service.fetchAssignmentSubmissions(assignmentId).catch(() => []);
+          return [assignmentId, Array.isArray(submissions) ? submissions : []];
+        }),
+      );
+      const submissionsByAssignmentId = new Map(submissionsEntries);
+      const dashboardData = {
+        profile: resolvedProfile || profile || getCurrentAuthUser(),
+        classrooms,
+        assignments,
+        submissionsByAssignmentId,
+        totalStudents: calculateTotalStudents(classrooms),
+        totalClasses: calculateTotalClasses(classrooms),
+        totalAssignments: calculateTotalAssignments(assignments),
+        completionRate: calculateCompletionRate(
+          assignments,
+          submissionsByAssignmentId,
+          classrooms,
+        ),
+        activities: buildTeacherDashboardActivityItems({
+          profile: resolvedProfile || profile || getCurrentAuthUser(),
+          assignments,
+          submissionsByAssignmentId,
+        }),
+        attentionItems: buildTeacherDashboardAttentionItems({
+          assignments,
+          classrooms,
+          submissionsByAssignmentId,
+        }),
+      };
+
+      logTeacherDashboardStep(
+        "dashboard build completed",
+        dashboardStart,
+        `${dashboardData.totalStudents} students, ${dashboardData.totalClasses} classes, ${dashboardData.totalAssignments} assignments`,
+      );
+
+      teacherDashboardState.data = dashboardData;
+      teacherDashboardState.loaded = true;
+      return dashboardData;
+    } catch (error) {
+      console.warn("Không thể tải dữ liệu tổng quan giáo viên:", error);
+      return null;
+    } finally {
+      teacherDashboardState.loading = false;
+      teacherDashboardState.pendingPromise = null;
+    }
+  })();
+
+  teacherDashboardState.pendingPromise = requestPromise;
+  return requestPromise;
+}
+
+function renderTeacherDashboardFallback(profile = null) {
+  const greetingNode = getTeacherDashboardGreetingNode();
+  const avatarNode = getTeacherDashboardAvatarNode();
+  const totalStudentsNode = getTeacherDashboardStatNode("total-students");
+  const totalClassesNode = getTeacherDashboardStatNode("total-classes");
+  const totalAssignmentsNode = getTeacherDashboardStatNode("total-assignments");
+  const completionRateNode = getTeacherDashboardStatNode("completion-rate");
+  const activityListNode = getTeacherDashboardActivityListNode();
+  const attentionListNode = getTeacherDashboardAttentionListNode();
+
+  if (greetingNode) {
+    greetingNode.textContent = "Xin chào 👋";
+  }
+
+  if (avatarNode) {
+    avatarNode.alt = "Giáo viên";
+    avatarNode.src = getProfileAvatar(profile || getCurrentAuthUser());
+  }
+
+  if (totalStudentsNode) {
+    totalStudentsNode.textContent = "--";
+  }
+
+  if (totalClassesNode) {
+    totalClassesNode.textContent = "--";
+  }
+
+  if (totalAssignmentsNode) {
+    totalAssignmentsNode.textContent = "--";
+  }
+
+  if (completionRateNode) {
+    completionRateNode.textContent = "--";
+  }
+
+  if (activityListNode) {
+    activityListNode.innerHTML = `
+      <article class="teacher-activity-item">
+        <img src="/assets/userAvatar/boy.png" alt="" />
+        <div>
+          <p>Đang tải hoạt động...</p>
+          <span>--</span>
+        </div>
+      </article>
+    `;
+  }
+
+  if (attentionListNode) {
+    attentionListNode.innerHTML = `
+      <article class="attention-card">
+        <div class="attention-card-head">
+          <h3>Đang tải...</h3>
+          <p>--</p>
+        </div>
+
+        <div class="attention-progress">
+          <div class="attention-progress-fill" style="width: 0%"></div>
+        </div>
+
+        <span>--</span>
+      </article>
+    `;
+  }
+}
+
+function renderTeacherDashboard(profile = null) {
+  if (normalizeRole(profile?.role || getCurrentRole()) !== "teacher") {
+    return;
+  }
+
+  const dashboardRoot = getTeacherDashboardRoot();
+
+  if (!dashboardRoot) {
+    return;
+  }
+
+  const greetingNode = getTeacherDashboardGreetingNode();
+  const avatarNode = getTeacherDashboardAvatarNode();
+  const totalStudentsNode = getTeacherDashboardStatNode("total-students");
+  const totalClassesNode = getTeacherDashboardStatNode("total-classes");
+  const totalAssignmentsNode = getTeacherDashboardStatNode("total-assignments");
+  const completionRateNode = getTeacherDashboardStatNode("completion-rate");
+  const activityListNode = getTeacherDashboardActivityListNode();
+  const attentionListNode = getTeacherDashboardAttentionListNode();
+  const displayName = String(
+    profile?.fullName || profile?.name || profile?.username || "",
+  ).trim();
+  const avatarSrc =
+    window.EduKidsProfileService?.getAvatarPathFromProfile?.(profile) ||
+    getProfileAvatar(profile);
+  const dashboardData = teacherDashboardState.data;
+
+  if (greetingNode) {
+    greetingNode.textContent = displayName
+      ? `Xin chào, ${displayName} 👋`
+      : "Xin chào 👋";
+  }
+
+  if (avatarNode) {
+    avatarNode.src = avatarSrc;
+    avatarNode.alt = displayName ? displayName : "Giáo viên";
+    avatarNode.onerror = function handleTeacherAvatarError() {
+      avatarNode.onerror = null;
+      avatarNode.src = getProfileAvatar(profile);
+    };
+  }
+
+  if (totalStudentsNode) {
+    totalStudentsNode.textContent = formatStatValue(dashboardData?.totalStudents);
+  }
+
+  if (totalClassesNode) {
+    totalClassesNode.textContent = formatStatValue(dashboardData?.totalClasses);
+  }
+
+  if (totalAssignmentsNode) {
+    totalAssignmentsNode.textContent = formatStatValue(dashboardData?.totalAssignments);
+  }
+
+  if (completionRateNode) {
+    completionRateNode.textContent = `${formatStatValue(dashboardData?.completionRate)}%`;
+  }
+
+  if (activityListNode) {
+    const activities = Array.isArray(dashboardData?.activities)
+      ? dashboardData.activities
+      : [];
+
+    if (activities.length === 0) {
+      activityListNode.innerHTML = `
+        <article class="teacher-activity-item">
+          <img src="assets/userAvatar/boy.png" alt="" />
+          <div>
+            <p>Chưa có hoạt động gần đây.</p>
+            <span>--</span>
+          </div>
+        </article>
+      `;
+    } else {
+      activityListNode.innerHTML = activities
+        .map((activity) => {
+          const avatarSrc = activity.avatar || "assets/userAvatar/boy.png";
+          return `
+            <article class="teacher-activity-item">
+              <img src="${escapeHtml(avatarSrc)}" alt="" onerror="this.onerror=null;this.src='assets/userAvatar/boy.png';" />
+              <div>
+                <p>${escapeHtml(`${activity.icon ? `${activity.icon} ` : ""}${activity.text}`)}</p>
+                <span>${escapeHtml(formatRelativeTime(activity.time))}</span>
+              </div>
+            </article>
+          `;
+        })
+        .join("");
+    }
+  }
+
+  if (attentionListNode) {
+    const attentionItems = Array.isArray(dashboardData?.attentionItems)
+      ? dashboardData.attentionItems
+      : [];
+
+    if (attentionItems.length === 0) {
+      attentionListNode.innerHTML = `
+        <article class="attention-card">
+          <div class="attention-card-head">
+            <h3>Chưa có bài tập</h3>
+            <p>--</p>
+          </div>
+
+          <div class="attention-progress">
+            <div class="attention-progress-fill" style="width: 0%"></div>
+          </div>
+
+          <span>Không có dữ liệu bài tập</span>
+        </article>
+      `;
+    } else {
+      attentionListNode.innerHTML = attentionItems
+        .map((item, index) => {
+          const isCompact = Boolean(item.compact) || index >= 2;
+          return `
+            <article class="attention-card ${isCompact ? "attention-card-compact" : ""}">
+              <div class="attention-card-head">
+                <h3>${escapeHtml(item.title)}</h3>
+                <p>${escapeHtml(item.completionLabel)}</p>
+              </div>
+
+              <div class="attention-progress">
+                <div class="attention-progress-fill" style="width: ${escapeHtml(item.progressWidth)}"></div>
+              </div>
+
+              <span>${escapeHtml(`${formatStatValue(item.submittedStudents)} học sinh hoàn thành`)}</span>
+            </article>
+          `;
+        })
+        .join("");
+    }
+  }
+}
+
 function formatAssignmentStatusLabel(status) {
   const normalized = String(status || "").toLowerCase();
 
@@ -7763,7 +9042,10 @@ function renderManualQuestionList() {
     return;
   }
 
-  if (!Array.isArray(manualAssignmentState.questions) || manualAssignmentState.questions.length === 0) {
+  if (
+    !Array.isArray(manualAssignmentState.questions) ||
+    manualAssignmentState.questions.length === 0
+  ) {
     manualAssignmentState.questions = [createManualQuestion(1)];
   }
 
@@ -7928,7 +9210,9 @@ async function loadManualAssignmentClasses() {
 
     if (
       manualAssignmentState.classId &&
-      !classes.some((classroom) => classroom.id === manualAssignmentState.classId)
+      !classes.some(
+        (classroom) => classroom.id === manualAssignmentState.classId,
+      )
     ) {
       manualAssignmentState.classId = classes[0]?.id || "";
     }
@@ -8184,7 +9468,8 @@ async function refreshTeacherAssignments() {
       teacherAssignmentSubmissionState.selectedAssignmentId &&
       !teacherAssignmentSubmissionState.assignments.some(
         (assignment) =>
-          assignment.id === teacherAssignmentSubmissionState.selectedAssignmentId,
+          assignment.id ===
+          teacherAssignmentSubmissionState.selectedAssignmentId,
       )
     ) {
       teacherAssignmentSubmissionState.selectedAssignmentId = "";
@@ -8241,7 +9526,8 @@ async function fetchAndRenderAssignmentSubmissions(assignmentId) {
     return;
   }
 
-  teacherAssignmentSubmissionState.selectedAssignmentId = normalizedAssignmentId;
+  teacherAssignmentSubmissionState.selectedAssignmentId =
+    normalizedAssignmentId;
   teacherAssignmentSubmissionState.loading = true;
   teacherAssignmentSubmissionState.error = "";
   teacherAssignmentSubmissionState.submissions = [];
@@ -8327,7 +9613,8 @@ async function initializeManualAssignmentBuilder() {
     if (removeButton) {
       const block = removeButton.closest("[data-question-block]");
       const nextQuestions = manualAssignmentState.questions.filter(
-        (_, index) => !block || index !== Number(block.dataset.questionIndex) - 1,
+        (_, index) =>
+          !block || index !== Number(block.dataset.questionIndex) - 1,
       );
 
       manualAssignmentState.questions = nextQuestions.length
@@ -9428,16 +10715,27 @@ function bindAppEventsOnce() {
       "#manage [data-teacher-assignment-detail-root]",
     );
     const assignmentBackButton = event.target.closest("[data-assignment-back]");
-    if (assignmentBackButton && studentDetailRoot?.contains(assignmentBackButton)) {
+    if (
+      assignmentBackButton &&
+      studentDetailRoot?.contains(assignmentBackButton)
+    ) {
       event.preventDefault();
       closeStudentAssignmentDetail();
       return;
     }
 
-    const teacherBackButton = event.target.closest("[data-teacher-assignment-back]");
-    const teacherCloseButton = event.target.closest("[data-teacher-assignment-close]");
-    const teacherStudentViewButton = event.target.closest("[data-teacher-student-view]");
-    const teacherStudentRow = event.target.closest("[data-teacher-student-row]");
+    const teacherBackButton = event.target.closest(
+      "[data-teacher-assignment-back]",
+    );
+    const teacherCloseButton = event.target.closest(
+      "[data-teacher-assignment-close]",
+    );
+    const teacherStudentViewButton = event.target.closest(
+      "[data-teacher-student-view]",
+    );
+    const teacherStudentRow = event.target.closest(
+      "[data-teacher-student-row]",
+    );
 
     if (
       (teacherBackButton || teacherCloseButton) &&
@@ -9452,7 +10750,9 @@ function bindAppEventsOnce() {
       teacherStudentViewButton &&
       teacherDetailRoot?.contains(teacherStudentViewButton)
     ) {
-      const studentId = String(teacherStudentViewButton.dataset.studentId || "").trim();
+      const studentId = String(
+        teacherStudentViewButton.dataset.studentId || "",
+      ).trim();
 
       if (studentId) {
         event.preventDefault();
@@ -9463,7 +10763,9 @@ function bindAppEventsOnce() {
     }
 
     if (teacherStudentRow && teacherDetailRoot?.contains(teacherStudentRow)) {
-      const studentId = String(teacherStudentRow.dataset.studentId || "").trim();
+      const studentId = String(
+        teacherStudentRow.dataset.studentId || "",
+      ).trim();
 
       if (studentId) {
         event.preventDefault();
@@ -9473,18 +10775,27 @@ function bindAppEventsOnce() {
       return;
     }
 
-    const assignmentOptionButton = event.target.closest(
-      "[data-option-label]",
-    );
+    const assignmentOptionButton = event.target.closest("[data-option-label]");
 
-    if (assignmentOptionButton && studentDetailRoot?.contains(assignmentOptionButton)) {
-      const selected = String(assignmentOptionButton.dataset.optionLabel || "").trim();
-      const questionBlock = assignmentOptionButton.closest("[data-question-block]");
+    if (
+      assignmentOptionButton &&
+      studentDetailRoot?.contains(assignmentOptionButton)
+    ) {
+      const selected = String(
+        assignmentOptionButton.dataset.optionLabel || "",
+      ).trim();
+      const questionBlock = assignmentOptionButton.closest(
+        "[data-question-block]",
+      );
       const questionIndex = Number(
         questionBlock?.dataset.assignmentQuestionIndex || "",
       );
 
-      if (Number.isInteger(questionIndex) && selected && !assignmentOptionButton.disabled) {
+      if (
+        Number.isInteger(questionIndex) &&
+        selected &&
+        !assignmentOptionButton.disabled
+      ) {
         setStudentAssignmentSelectedAnswer(questionIndex, selected);
         const currentAssignment = studentAssignmentDetailState.assignment;
 
@@ -9535,7 +10846,9 @@ function bindAppEventsOnce() {
       return;
     }
 
-    const assignmentDeleteButton = event.target.closest("[data-assignment-delete-id]");
+    const assignmentDeleteButton = event.target.closest(
+      "[data-assignment-delete-id]",
+    );
     if (assignmentDeleteButton) {
       const assignmentId = String(
         assignmentDeleteButton.dataset.assignmentDeleteId || "",
@@ -9567,7 +10880,9 @@ function bindAppEventsOnce() {
       return;
     }
 
-    const weeklyProgressButton = event.target.closest("[data-weekly-progress-details]");
+    const weeklyProgressButton = event.target.closest(
+      "[data-weekly-progress-details]",
+    );
     if (weeklyProgressButton) {
       changePage("progress");
       return;
@@ -9579,7 +10894,9 @@ function bindAppEventsOnce() {
       return;
     }
 
-    const openAssignmentsButton = event.target.closest("[data-open-assignments]");
+    const openAssignmentsButton = event.target.closest(
+      "[data-open-assignments]",
+    );
     if (openAssignmentsButton) {
       changePage("assignments");
       return;
@@ -9639,6 +10956,7 @@ function initApp(user) {
   void syncStudentStrengthWeakness(user);
   void syncStudentHomeAssignments(user);
   void syncStudentRecentWrongAnswers(user);
+  void syncTeacherDashboard(user);
 }
 
 function initializeAuth() {

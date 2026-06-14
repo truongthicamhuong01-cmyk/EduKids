@@ -1075,14 +1075,15 @@
           <div class="teacher-dashboard-page">
             <header class="teacher-dashboard-header">
               <div class="teacher-dashboard-heading">
-                <h1>Xin chào, Cô Lan 👋</h1>
+                <h1 data-teacher-dashboard-greeting>Xin chào 👋</h1>
               </div>
 
               <div class="teacher-dashboard-actions">
                 <img
                   class="teacher-dashboard-avatar"
-                    src="/assets/userAvatar/femaleteacher.png"
-                  alt="Cô Lan"
+                  data-teacher-dashboard-avatar
+                  src="/assets/userAvatar/femaleteacher.png"
+                  alt="Giáo viên"
                 />
               </div>
             </header>
@@ -1090,25 +1091,25 @@
             <div class="teacher-dashboard-stats">
               <article class="teacher-stat-card teacher-stat-card-purple">
                 <div class="teacher-stat-icon">👥</div>
-                <strong>32</strong>
+                <strong data-teacher-dashboard-total-students>--</strong>
                 <span>Học sinh</span>
               </article>
 
               <article class="teacher-stat-card teacher-stat-card-blue">
                 <div class="teacher-stat-icon">🎓</div>
-                <strong>4</strong>
+                <strong data-teacher-dashboard-total-classes>--</strong>
                 <span>Lớp học</span>
               </article>
 
               <article class="teacher-stat-card teacher-stat-card-pink">
                 <div class="teacher-stat-icon">📄</div>
-                <strong>8</strong>
+                <strong data-teacher-dashboard-total-assignments>--</strong>
                 <span>Bài tập</span>
               </article>
 
               <article class="teacher-stat-card teacher-stat-card-sky">
                 <div class="teacher-stat-icon">✓</div>
-                <strong>78%</strong>
+                <strong data-teacher-dashboard-completion-rate>--</strong>
                 <span>Hoàn thành</span>
               </article>
             </div>
@@ -1117,28 +1118,12 @@
               <section class="teacher-dashboard-panel teacher-activity-panel">
                 <h2>Hoạt động gần đây</h2>
 
-                <div class="teacher-activity-list">
-                  <article class="teacher-activity-item">
-                    <img src="/assets/userAvatar/femaleteacher.png" alt="" />
-                    <div>
-                      <p>Vy đã hoàn thành bài "Phân số"</p>
-                      <span>12 phút trước</span>
-                    </div>
-                  </article>
-
+                <div class="teacher-activity-list" data-teacher-dashboard-activity-list>
                   <article class="teacher-activity-item">
                     <img src="/assets/userAvatar/boy.png" alt="" />
                     <div>
-                      <p>Minh đã nộp bài "Grammar"</p>
-                      <span>13 phút trước</span>
-                    </div>
-                  </article>
-
-                  <article class="teacher-activity-item">
-                    <img src="/assets/userAvatar/femaleteacher.png" alt="" />
-                    <div>
-                      <p>Bạn vừa tạo bài "Ôn tập Tỉ số"</p>
-                      <span>19 phút trước</span>
+                      <p>Đang tải hoạt động...</p>
+                      <span>--</span>
                     </div>
                   </article>
                 </div>
@@ -1147,53 +1132,21 @@
               <section class="teacher-dashboard-panel teacher-attention-panel">
                 <h2>Bài tập cần chú ý</h2>
 
-                <div class="teacher-attention-list">
+                <div class="teacher-attention-list" data-teacher-dashboard-attention-list>
                   <article class="attention-card">
                     <div class="attention-card-head">
-                      <h3>Ôn tập Phân số</h3>
-                      <p>16/30 học sinh hoàn thành</p>
+                      <h3>Đang tải...</h3>
+                      <p>--</p>
                     </div>
 
                     <div class="attention-progress">
                       <div
                         class="attention-progress-fill"
-                        style="width: 53%"
+                        style="width: 0%"
                       ></div>
                     </div>
 
-                    <span>16 học sinh hoàn thành</span>
-                  </article>
-
-                  <article class="attention-card">
-                    <div class="attention-card-head">
-                      <h3>Grammar Unit 1</h3>
-                      <p>12/30 học sinh hoàn thành</p>
-                    </div>
-
-                    <div class="attention-progress">
-                      <div
-                        class="attention-progress-fill"
-                        style="width: 40%"
-                      ></div>
-                    </div>
-
-                    <span>12 học sinh hoàn thành</span>
-                  </article>
-
-                  <article class="attention-card attention-card-compact">
-                    <div class="attention-card-head">
-                      <h3>Ôn tập Tỉ số</h3>
-                      <p>9/30 học sinh hoàn thành</p>
-                    </div>
-
-                    <div class="attention-progress">
-                      <div
-                        class="attention-progress-fill"
-                        style="width: 30%"
-                      ></div>
-                    </div>
-
-                    <span>9 học sinh hoàn thành</span>
+                    <span>--</span>
                   </article>
                 </div>
               </section>

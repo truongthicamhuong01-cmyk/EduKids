@@ -26,6 +26,7 @@
 
 body {
   font-family: var(--font-sans);
+  font-size: 14px;
   background: var(--bg);
   color: var(--text);
   overflow-x: hidden;
@@ -113,8 +114,8 @@ body.auth-mode .app {
 }
 
 .sidebar-brand-icon {
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   border-radius: 18px;
   flex: none;
   display: grid;
@@ -144,7 +145,7 @@ body.auth-mode .app {
   display: inline-flex;
   align-items: baseline;
   gap: 0;
-  font-size: 30px;
+  font-size: 31px;
   line-height: 1;
   font-weight: 900;
   letter-spacing: -0.04em;
@@ -161,7 +162,7 @@ body.auth-mode .app {
 
 .sidebar-brand-tagline {
   margin-top: 4px;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.25;
   font-weight: 600;
   color: #516076;
@@ -5009,6 +5010,12 @@ img.profile-skeleton {
   color: #6b7280;
   margin-top: -12px;
   margin-bottom: 24px;
+  font-size: 18px;
+}
+
+#progress h1 {
+  font-size: 32px;
+  line-height: 1.15;
 }
 
 .progress-layout {
@@ -5028,6 +5035,8 @@ img.profile-skeleton {
 .progress-summary-card h3,
 .progress-chart-card h3 {
   margin-bottom: 20px;
+  font-size: 24px;
+  line-height: 1.2;
 }
 
 .overview-item {
@@ -5050,11 +5059,16 @@ img.profile-skeleton {
 
 .overview-item small {
   color: #64748b;
+  font-size: 16px;
 }
 
 .overview-item h4 {
   margin-top: 4px;
   font-size: 26px;
+}
+
+#progress .overview-item span {
+  font-size: 38px;
 }
 
 /* ===== BAR CHART ===== */
@@ -5103,7 +5117,7 @@ img.profile-skeleton {
 .bar-item span {
   margin-top: 10px;
 
-  font-size: 12px;
+  font-size: 14px;
 
   color: #64748b;
 }
@@ -5142,11 +5156,12 @@ img.profile-skeleton {
 .coach-header h1 {
   color: #5b21b6;
   margin-bottom: 12px;
+  font-size: 34px;
 }
 
 .coach-header p {
   color: #4c1d95;
-  font-size: 18px;
+  font-size: 19px;
 }
 
 .coach-robot {
@@ -6579,7 +6594,10 @@ img.profile-skeleton {
   font-weight: 800;
 }
 
-#manage .teacher-assignment-question-card.is-wrong .teacher-assignment-question-head span {
+#manage
+  .teacher-assignment-question-card.is-wrong
+  .teacher-assignment-question-head
+  span {
   background: #fde9e9;
   color: #dd3838;
 }
@@ -6615,11 +6633,15 @@ img.profile-skeleton {
   font-weight: 800;
 }
 
-#manage .teacher-assignment-question-card.is-correct .teacher-assignment-question-result {
+#manage
+  .teacher-assignment-question-card.is-correct
+  .teacher-assignment-question-result {
   color: #1e9147;
 }
 
-#manage .teacher-assignment-question-card.is-wrong .teacher-assignment-question-result {
+#manage
+  .teacher-assignment-question-card.is-wrong
+  .teacher-assignment-question-result {
   color: #d93e3e;
 }
 
@@ -7661,17 +7683,17 @@ body.sidebar-open {
   }
 
   .sidebar-brand-icon {
-    width: 48px;
-    height: 48px;
+    width: 50px;
+    height: 50px;
     border-radius: 16px;
   }
 
   .sidebar-brand-title {
-    font-size: 26px;
+    font-size: 27px;
   }
 
   .sidebar-brand-tagline {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .sidebar nav {
