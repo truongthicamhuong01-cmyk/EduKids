@@ -1968,6 +1968,7 @@ const currentTeacherAssignmentDetail = {
   classInfo: null,
   classStudents: [],
   submissions: [],
+  studentRows: [],
   selectedStudentId: "",
   selectedSubmission: null,
   selectedStudentProfile: null,
@@ -2977,6 +2978,7 @@ function getTeacherAssignmentSummaryStats(rows) {
 function getTeacherAssignmentSelectedStudentId() {
   const detail = currentTeacherAssignmentDetail;
   const assignment = detail.assignment;
+  const studentRows = Array.isArray(detail.studentRows) ? detail.studentRows : [];
 
   if (!assignment) {
     return "";
@@ -2984,18 +2986,18 @@ function getTeacherAssignmentSelectedStudentId() {
 
   if (
     detail.selectedStudentId &&
-    detail.studentRows.some((row) => row.id === detail.selectedStudentId)
+    studentRows.some((row) => row.id === detail.selectedStudentId)
   ) {
     return detail.selectedStudentId;
   }
 
-  const firstSubmitted = detail.studentRows.find((row) => row.statusKey === "submitted");
+  const firstSubmitted = studentRows.find((row) => row.statusKey === "submitted");
 
   if (firstSubmitted) {
     return firstSubmitted.id;
   }
 
-  return detail.studentRows[0]?.id || "";
+  return studentRows[0]?.id || "";
 }
 
 function renderTeacherStudentSubmission(studentRow = null) {
@@ -3116,15 +3118,18 @@ function renderTeacherAssignmentDetail() {
   }
 
   const assignment = detail.assignment;
+  const studentRows = Array.isArray(detail.studentRows) ? detail.studentRows : [];
+  const classStudents = Array.isArray(detail.classStudents) ? detail.classStudents : [];
+  const submissions = Array.isArray(detail.submissions) ? detail.submissions : [];
   const selectedStudentId = getTeacherAssignmentSelectedStudentId();
   const selectedRow =
-    detail.studentRows.find((row) => row.id === selectedStudentId) ||
-    detail.studentRows[0] ||
+    studentRows.find((row) => row.id === selectedStudentId) ||
+    studentRows[0] ||
     null;
-  const stats = getTeacherAssignmentSummaryStats(detail.studentRows);
+  const stats = getTeacherAssignmentSummaryStats(studentRows);
   const totalStudents = getTeacherAssignmentTotalStudents(
-    detail.classStudents,
-    detail.submissions,
+    classStudents,
+    submissions,
   );
   const unansweredCount = Math.max(totalStudents - stats.submittedCount - stats.doingCount, 0);
   const topicText = String(
@@ -3144,6 +3149,14 @@ function renderTeacherAssignmentDetail() {
   const dueDate = assignment.dueDate ? formatAssignmentDate(assignment.dueDate) : "--";
   const maxScore = 10;
   const averageScore = Number.isFinite(stats.averageScore) ? stats.averageScore.toFixed(1) : "0.0";
+
+  console.log("[TeacherAssignmentDetail]", {
+    assignment,
+    questions: assignment?.questions,
+    submissions,
+    students: studentRows,
+    classes: classStudents,
+  });
 
   root.hidden = false;
   root.innerHTML = `
@@ -3254,8 +3267,8 @@ function renderTeacherAssignmentDetail() {
               </thead>
               <tbody>
                 ${
-                  detail.studentRows.length > 0
-                    ? detail.studentRows
+                  studentRows.length > 0
+                    ? studentRows
                         .map((row, index) => {
                           const isActive = row.id === selectedRow?.id;
                           const scoreDisplay = row.statusKey === "submitted"
@@ -3345,6 +3358,7 @@ async function selectTeacherAssignmentStudent(studentId) {
   const detail = currentTeacherAssignmentDetail;
   const normalizedStudentId = String(studentId || "").trim();
   const requestId = detail.requestId;
+  const studentRows = Array.isArray(detail.studentRows) ? detail.studentRows : [];
 
   if (!detail.visible || !detail.assignment || !normalizedStudentId) {
     return;
@@ -3386,7 +3400,7 @@ async function selectTeacherAssignmentStudent(studentId) {
 
   const selectedSubmission = submission || detail.submissionByStudentId.get(normalizedStudentId) || null;
   const selectedProfile = profile || detail.profileByStudentId.get(normalizedStudentId) || null;
-  const existingRow = detail.studentRows.find((row) => row.id === normalizedStudentId) || null;
+  const existingRow = studentRows.find((row) => row.id === normalizedStudentId) || null;
   const selectedRow = normalizeTeacherAssignmentStudentRecord(
     existingRow || {
       id: normalizedStudentId,
@@ -3404,7 +3418,7 @@ async function selectTeacherAssignmentStudent(studentId) {
 
   detail.selectedSubmission = selectedSubmission;
   detail.selectedStudentProfile = selectedProfile;
-  detail.studentRows = detail.studentRows.map((row) =>
+  detail.studentRows = studentRows.map((row) =>
     row.id === normalizedStudentId ? { ...row, ...selectedRow } : row,
   );
   detail.loadingStudentId = "";
@@ -3867,16 +3881,20 @@ function findAssignmentInCurrentState(assignmentId) {
     return null;
   }
 
+  const studentAssignments = Array.isArray(currentAssignments) ? currentAssignments : [];
   const fromStudentState =
-    currentAssignments.find((assignment) => assignment.id === normalizedAssignmentId) ||
+    studentAssignments.find((assignment) => assignment.id === normalizedAssignmentId) ||
     null;
 
   if (fromStudentState) {
     return fromStudentState;
   }
 
+  const teacherAssignments = Array.isArray(teacherAssignmentSubmissionState.assignments)
+    ? teacherAssignmentSubmissionState.assignments
+    : [];
   const fromTeacherState =
-    teacherAssignmentSubmissionState.assignments.find(
+    teacherAssignments.find(
       (assignment) => assignment.id === normalizedAssignmentId,
     ) || null;
 
@@ -4052,6 +4070,7 @@ async function openTeacherAssignmentDetail(assignmentId) {
   detail.classInfo = null;
   detail.classStudents = [];
   detail.submissions = [];
+  detail.studentRows = [];
   detail.selectedStudentId = "";
   detail.selectedSubmission = null;
   detail.selectedStudentProfile = null;
@@ -4062,7 +4081,8 @@ async function openTeacherAssignmentDetail(assignmentId) {
   teacherAssignmentSubmissionState.error = "";
   teacherAssignmentSubmissionState.loading = true;
   teacherAssignmentSubmissionState.submissions = [];
-  teacherAssignmentSubmissionState.assignments = teacherAssignmentSubmissionState.assignments.length
+  teacherAssignmentSubmissionState.assignments = Array.isArray(teacherAssignmentSubmissionState.assignments) &&
+    teacherAssignmentSubmissionState.assignments.length
     ? teacherAssignmentSubmissionState.assignments
     : [detail.assignment];
 
@@ -4099,10 +4119,12 @@ async function openTeacherAssignmentDetail(assignmentId) {
 
     detail.classInfo = classInfo;
     detail.classStudents = getClassroomStudentCards(classInfo);
+    const classStudents = Array.isArray(detail.classStudents) ? detail.classStudents : [];
+    const submissions = Array.isArray(normalizedSubmissions) ? normalizedSubmissions : [];
 
     const rosterStudentIds = uniqueClassroomValues([
-      ...detail.classStudents.map((student) => student.id),
-      ...normalizedSubmissions.map((submission) => submission.studentId),
+      ...classStudents.map((student) => student.id),
+      ...submissions.map((submission) => submission.studentId),
     ]);
 
     const profileService = window.EduKidsProfileService;
@@ -4124,12 +4146,12 @@ async function openTeacherAssignmentDetail(assignmentId) {
     });
 
     const submissionMap = new Map(
-      normalizedSubmissions.map((submission) => [submission.studentId, submission]),
+      submissions.map((submission) => [submission.studentId, submission]),
     );
 
     const studentRows = rosterStudentIds.map((studentId, index) => {
       const classStudent =
-        detail.classStudents.find((student) => student.id === studentId) || null;
+        classStudents.find((student) => student.id === studentId) || null;
       const submission = submissionMap.get(studentId) || null;
       const profile = detail.profileByStudentId.get(studentId) || classStudent || null;
       const row = normalizeTeacherAssignmentStudentRecord(
@@ -4208,6 +4230,7 @@ function closeTeacherAssignmentDetail() {
   detail.classInfo = null;
   detail.classStudents = [];
   detail.submissions = [];
+  detail.studentRows = [];
   detail.selectedStudentId = "";
   detail.selectedSubmission = null;
   detail.selectedStudentProfile = null;
