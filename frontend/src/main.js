@@ -2059,6 +2059,16 @@ function normalizeStudentAssignmentRecord(assignment, fallbackClassId = "") {
     submissionId: String(assignment.submissionId || "").trim(),
     submittedAt: assignment.submittedAt || "",
     score: assignment.score ?? null,
+    correctCount: Number.isFinite(Number(assignment.correctCount)) ? Number(assignment.correctCount) : null,
+    wrongCount: Number.isFinite(Number(assignment.wrongCount)) ? Number(assignment.wrongCount) : null,
+    totalQuestions: Number.isFinite(Number(assignment.totalQuestions))
+      ? Number(assignment.totalQuestions)
+      : Number.isFinite(Number(assignment.questionCount))
+        ? Number(assignment.questionCount)
+        : Array.isArray(assignment.questions)
+          ? assignment.questions.length
+          : null,
+    gradedAt: assignment.gradedAt || "",
   };
 }
 
@@ -2472,7 +2482,7 @@ function markStudentAssignmentAsSubmitted(assignmentId, submission = null) {
   const normalizedAssignmentId = String(assignmentId || "").trim();
 
   if (!normalizedAssignmentId) {
-    return;
+    return null;
   }
 
   currentAssignments = currentAssignments.map((assignment) => {
@@ -2482,10 +2492,15 @@ function markStudentAssignmentAsSubmitted(assignmentId, submission = null) {
 
     return {
       ...assignment,
-      status: String(submission?.status || "submitted").trim().toLowerCase() || "submitted",
+      status: String(submission?.status || "graded").trim().toLowerCase() || "graded",
+      submissionStatus: "graded",
       submissionId: String(submission?.id || "").trim(),
       submittedAt: submission?.submittedAt || new Date().toISOString(),
       score: submission?.score ?? null,
+      correctCount: Number.isFinite(Number(submission?.correctCount)) ? Number(submission.correctCount) : null,
+      wrongCount: Number.isFinite(Number(submission?.wrongCount)) ? Number(submission.wrongCount) : null,
+      totalQuestions: Number.isFinite(Number(submission?.totalQuestions)) ? Number(submission.totalQuestions) : null,
+      gradedAt: submission?.gradedAt || "",
     };
   });
 
@@ -2494,9 +2509,17 @@ function markStudentAssignmentAsSubmitted(assignmentId, submission = null) {
 
   if (updatedAssignment) {
     window.EduKidsCurrentAssignment = updatedAssignment;
+
+    if (
+      studentAssignmentDetailState.assignment &&
+      String(studentAssignmentDetailState.assignment.id || "").trim() === normalizedAssignmentId
+    ) {
+      studentAssignmentDetailState.assignment = updatedAssignment;
+    }
   }
 
   renderStudentAssignmentTabs(currentAssignments);
+  return updatedAssignment;
 }
 
 function normalizeTeacherAssignmentSubmissionRecord(submission) {
@@ -2665,6 +2688,7 @@ function normalizeStudentAssignmentStatus(assignment) {
     rawStatus === "completed" ||
     rawStatus === "complete" ||
     rawStatus === "submitted" ||
+    rawStatus === "graded" ||
     rawStatus === "finished"
   ) {
     return "done";
@@ -2785,6 +2809,16 @@ function normalizeAssignmentDetailRecord(assignment) {
       String(assignment.submissionStatus || "").trim().toLowerCase() || "",
     submittedAt: assignment.submittedAt || "",
     score: assignment.score ?? null,
+    correctCount: Number.isFinite(Number(assignment.correctCount)) ? Number(assignment.correctCount) : null,
+    wrongCount: Number.isFinite(Number(assignment.wrongCount)) ? Number(assignment.wrongCount) : null,
+    totalQuestions: Number.isFinite(Number(assignment.totalQuestions))
+      ? Number(assignment.totalQuestions)
+      : Number.isFinite(Number(assignment.questionCount))
+        ? Number(assignment.questionCount)
+        : Array.isArray(assignment.questions)
+          ? assignment.questions.length
+          : null,
+    gradedAt: assignment.gradedAt || "",
     questions: Array.isArray(assignment.questions) ? assignment.questions : [],
   };
 }
@@ -3442,6 +3476,18 @@ function renderStudentAssignmentDetail(assignment) {
   const questionList = Array.isArray(assignment.questions) ? assignment.questions : [];
   const actionLabel = isReadOnly ? "Xem lại" : "Nộp bài";
   const dueDateText = assignment.dueDate ? formatAssignmentDate(assignment.dueDate) : "--";
+  const scoreText =
+    assignment.score === null || typeof assignment.score === "undefined" || assignment.score === ""
+      ? "--"
+      : String(assignment.score);
+  const correctCountText =
+    Number.isFinite(Number(assignment.correctCount)) && Number.isFinite(Number(assignment.totalQuestions))
+      ? `${Number(assignment.correctCount)} / ${Number(assignment.totalQuestions)}`
+      : "--";
+  const wrongCountText =
+    Number.isFinite(Number(assignment.wrongCount))
+      ? String(Number(assignment.wrongCount))
+      : "--";
   const classLabel =
     assignment.className ||
     studentAssignmentClassState.classes.find((classroom) => classroom.id === assignment.classId)?.name ||
@@ -3473,6 +3519,13 @@ function renderStudentAssignmentDetail(assignment) {
           <div class="assignment-detail-row"><span>Mô tả</span><strong>${escapeHtml(assignment.description || "--")}</strong></div>
           <div class="assignment-detail-row"><span>Hạn nộp</span><strong>${escapeHtml(dueDateText)}</strong></div>
           <div class="assignment-detail-row"><span>Lớp</span><strong>${escapeHtml(classLabel)}</strong></div>
+          ${isReadOnly || Number.isFinite(Number(assignment.score))
+            ? `
+              <div class="assignment-detail-row"><span>Điểm</span><strong>${escapeHtml(scoreText)}</strong></div>
+              <div class="assignment-detail-row"><span>Đúng</span><strong>${escapeHtml(correctCountText)}</strong></div>
+              <div class="assignment-detail-row"><span>Sai</span><strong>${escapeHtml(wrongCountText)}</strong></div>
+            `
+            : ""}
         </div>
 
         <div class="quiz-question-list ${isReadOnly ? "is-submitted" : ""}">
@@ -3607,9 +3660,29 @@ async function submitStudentAssignment(trigger = null) {
       },
     });
 
-    markStudentAssignmentAsSubmitted(assignment.id, response.data || null);
+    const submissionResult = response.data || null;
+    const updatedAssignment = markStudentAssignmentAsSubmitted(assignment.id, submissionResult);
+
+    if (updatedAssignment) {
+      studentAssignmentDetailState.assignment = updatedAssignment;
+      window.EduKidsCurrentAssignment = updatedAssignment;
+      renderStudentAssignmentDetail(updatedAssignment);
+    }
+
     showToast("Đã nộp bài thành công.", "success");
     await refreshStudentAssignmentsFeed();
+
+    const refreshedCurrentAssignment = getCurrentStudentAssignment();
+
+    if (
+      studentAssignmentDetailState.visible &&
+      refreshedCurrentAssignment?.id &&
+      String(refreshedCurrentAssignment.id) === String(assignment.id)
+    ) {
+      studentAssignmentDetailState.assignment = refreshedCurrentAssignment;
+      window.EduKidsCurrentAssignment = refreshedCurrentAssignment;
+      renderStudentAssignmentDetail(refreshedCurrentAssignment);
+    }
   } catch (error) {
     showToast(error.message || "Không thể nộp bài tập.", "error");
   } finally {

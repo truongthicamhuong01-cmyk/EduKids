@@ -60,12 +60,58 @@ function normalizeQuestions(questions) {
   );
 }
 
+function normalizeChoiceLabel(index = 0) {
+  return String.fromCharCode(65 + index);
+}
+
+function normalizeQuestionChoices(question) {
+  if (!question || typeof question !== "object" || !Array.isArray(question.options)) {
+    return [];
+  }
+
+  return question.options
+    .map((option, index) => {
+      if (option && typeof option === "object") {
+        return {
+          label: normalizeScoringText(option.label || normalizeChoiceLabel(index)),
+          text: String(option.text || option.answer || option.value || "").trim(),
+          value: String(option.value || option.text || option.answer || "").trim(),
+        };
+      }
+
+      return {
+        label: normalizeScoringText(normalizeChoiceLabel(index)),
+        text: String(option || "").trim(),
+        value: String(option || "").trim(),
+      };
+    })
+    .filter((option) => option.text);
+}
+
 function normalizeScoringText(value) {
   return String(value || "").trim().toUpperCase();
 }
 
 function normalizeQuestionCorrectAnswer(question) {
-  return normalizeScoringText(question?.correctAnswer || question?.answer || "");
+  const directAnswer = normalizeScoringText(question?.correctAnswer || question?.answer || question?.correct || "");
+
+  if (!directAnswer) {
+    return "";
+  }
+
+  if (/^[A-Z]$/.test(directAnswer)) {
+    return directAnswer;
+  }
+
+  const choices = normalizeQuestionChoices(question);
+  const matchedChoice = choices.find((choice) => {
+    const normalizedText = normalizeScoringText(choice.text);
+    const normalizedValue = normalizeScoringText(choice.value);
+
+    return normalizedText === directAnswer || normalizedValue === directAnswer;
+  });
+
+  return matchedChoice?.label || directAnswer;
 }
 
 function normalizeSubmissionAnswer(answer) {
@@ -91,6 +137,28 @@ function normalizeSubmissionAnswer(answer) {
       answer.option ??
       "",
   );
+}
+
+function normalizeSelectedAnswerLabel(answer, question) {
+  const normalizedSelected = normalizeSubmissionAnswer(answer);
+
+  if (!normalizedSelected) {
+    return "";
+  }
+
+  if (/^[A-Z]$/.test(normalizedSelected)) {
+    return normalizedSelected;
+  }
+
+  const choices = normalizeQuestionChoices(question);
+  const matchedChoice = choices.find((choice) => {
+    const normalizedText = normalizeScoringText(choice.text);
+    const normalizedValue = normalizeScoringText(choice.value);
+
+    return normalizedText === normalizedSelected || normalizedValue === normalizedSelected;
+  });
+
+  return matchedChoice?.label || normalizedSelected;
 }
 
 function normalizeSubmissionAnswers(answers) {
@@ -138,7 +206,7 @@ function gradeAssignmentSubmission(assignment, answers) {
 
   questions.forEach((question, index) => {
     const correctAnswer = normalizeQuestionCorrectAnswer(question);
-    const selectedAnswer = normalizeScoringText(answerMap.get(index));
+    const selectedAnswer = normalizeSelectedAnswerLabel(answerMap.get(index), question);
 
     if (correctAnswer && selectedAnswer && selectedAnswer === correctAnswer) {
       correctCount += 1;
@@ -167,6 +235,10 @@ function applySubmissionResultToAssignment(assignment, submission = null) {
       submissionStatus: "pending",
       submittedAt: "",
       score: null,
+      correctCount: null,
+      wrongCount: null,
+      totalQuestions: Number(assignment.totalQuestions || assignment.questionCount || (Array.isArray(assignment.questions) ? assignment.questions.length : 0)) || 0,
+      gradedAt: "",
     };
   }
 
@@ -181,6 +253,12 @@ function applySubmissionResultToAssignment(assignment, submission = null) {
     submittedAt: submission.submittedAt || "",
     score: hasGradedScore ? Number(submission.score) : submission.score ?? null,
     status: hasGradedScore ? "done" : assignment.status,
+    correctCount: Number.isFinite(Number(submission.correctCount)) ? Number(submission.correctCount) : null,
+    wrongCount: Number.isFinite(Number(submission.wrongCount)) ? Number(submission.wrongCount) : null,
+    totalQuestions: Number.isFinite(Number(submission.totalQuestions))
+      ? Number(submission.totalQuestions)
+      : Number(assignment.totalQuestions || assignment.questionCount || (Array.isArray(assignment.questions) ? assignment.questions.length : 0)) || 0,
+    gradedAt: submission.gradedAt || "",
   };
 }
 
