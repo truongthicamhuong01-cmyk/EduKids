@@ -1998,6 +1998,23 @@ function getAssignmentService() {
   return window.EduKidsAssignmentService || null;
 }
 
+function getFirestoreInstance() {
+  if (!window.firebase?.apps?.length || typeof window.firebase.app !== "function") {
+    return null;
+  }
+
+  if (typeof window.firebase.firestore !== "function") {
+    return null;
+  }
+
+  try {
+    return window.firebase.app().firestore();
+  } catch (error) {
+    console.warn("Unable to initialize Firestore:", error);
+    return null;
+  }
+}
+
 function normalizeTeacherManageSearchValue(value) {
   return String(value || "")
     .normalize("NFD")
@@ -2147,6 +2164,83 @@ function getTeacherAssignmentClassLabel(assignment) {
     assignment?.classId ||
     "Lớp học"
   );
+}
+
+async function deleteTeacherAssignmentById(assignmentId) {
+  const normalizedAssignmentId = String(assignmentId || "").trim();
+
+  if (!normalizedAssignmentId) {
+    throw new Error("assignmentId is required");
+  }
+
+  const firestore = getFirestoreInstance();
+
+  if (!firestore) {
+    throw new Error("Firestore is unavailable");
+  }
+
+  const batch = firestore.batch();
+  const assignmentRef = firestore.collection("assignments").doc(normalizedAssignmentId);
+  const submissionsQuery = await firestore
+    .collection("assignment_submissions")
+    .where("assignmentId", "==", normalizedAssignmentId)
+    .get();
+
+  submissionsQuery.docs.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+
+  batch.delete(assignmentRef);
+
+  await batch.commit();
+}
+
+async function handleDeleteTeacherAssignment(assignment) {
+  const normalizedAssignmentId = String(assignment?.id || "").trim();
+
+  if (!normalizedAssignmentId) {
+    showToast("Không tìm thấy bài tập để xóa.", "error");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Xóa bài tập "${assignment.title || "Bài tập"}"? Hành động này không thể hoàn tác.`,
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await deleteTeacherAssignmentById(normalizedAssignmentId);
+    teacherAssignmentSubmissionState.submissionsByAssignmentId.delete(normalizedAssignmentId);
+    teacherAssignmentSubmissionState.assignments = teacherAssignmentSubmissionState.assignments.filter(
+      (item) => String(item?.id || "").trim() !== normalizedAssignmentId,
+    );
+
+    if (
+      String(teacherAssignmentSubmissionState.selectedAssignmentId || "").trim() ===
+      normalizedAssignmentId
+    ) {
+      teacherAssignmentSubmissionState.selectedAssignmentId = "";
+      teacherAssignmentSubmissionState.submissions = [];
+    }
+
+    showToast("Đã xóa bài tập.", "success");
+    renderTeacherAssignmentSubmissionsView(
+      teacherAssignmentSubmissionState.assignments,
+      teacherAssignmentSubmissionState.submissions,
+      teacherAssignmentSubmissionState.loading,
+      teacherAssignmentSubmissionState.error,
+    );
+
+    if (currentTeacherAssignmentDetail.visible) {
+      closeTeacherAssignmentDetail();
+    }
+  } catch (error) {
+    console.warn("Không thể xóa bài tập:", error);
+    showToast(error.message || "Không thể xóa bài tập.", "error");
+  }
 }
 
 function getTeacherAssignmentFilteredAssignments(assignments) {
@@ -3043,6 +3137,14 @@ function renderTeacherAssignmentSubmissionsView(assignments, submissions = [], l
               </div>
 
               <div class="manage-card-actions">
+                <button
+                  type="button"
+                  class="manage-delete-btn"
+                  data-assignment-delete-id="${escapeHtml(assignment.id)}"
+                >
+                  <span aria-hidden="true">🗑</span>
+                  <span>Xóa bài tập</span>
+                </button>
                 <button
                   type="button"
                   class="manage-detail-btn"
@@ -5117,6 +5219,10 @@ function getClassroomCopyButton() {
   return document.querySelector(".classroom-copy-btn");
 }
 
+function getClassroomDeleteButton() {
+  return document.querySelector("[data-classroom-delete]");
+}
+
 function getClassroomToggleButton() {
   return document.querySelector(".classroom-toggle-btn");
 }
@@ -5414,9 +5520,14 @@ function renderClassroomDetails(classroom) {
   const averageNode = getClassroomStatAverage();
   const completionNode = getClassroomStatCompletion();
   const createButton = getClassroomCreateButton();
+  const deleteButton = getClassroomDeleteButton();
 
   if (createButton) {
     createButton.hidden = getCurrentRole() !== "teacher";
+  }
+
+  if (deleteButton) {
+    deleteButton.hidden = getCurrentRole() !== "teacher" || !classroom;
   }
 
   if (!classroom) {
@@ -5708,11 +5819,51 @@ async function copyCurrentClassroomCode() {
   }
 }
 
+async function deleteCurrentClassroom() {
+  const selectedClass = getSelectedClassroom();
+  const classId = String(selectedClass?.id || "").trim();
+
+  if (!classId) {
+    showToast("Chưa có lớp để xóa.", "error");
+    return;
+  }
+
+  const className = selectedClass?.name || selectedClass?.className || classId;
+  const confirmed = window.confirm(
+    `Xóa lớp "${className}"? Hành động này không thể hoàn tác.`,
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  const firestore = window.firebase?.app && typeof window.firebase.firestore === "function"
+    ? window.firebase.app().firestore()
+    : null;
+
+  if (!firestore) {
+    showToast("Không thể xóa lớp lúc này.", "error");
+    return;
+  }
+
+  try {
+    await firestore.collection("classes").doc(classId).delete();
+    showToast("Đã xóa lớp.", "success");
+    classroomState.classes = classroomState.classes.filter((item) => item.id !== classId);
+    classroomState.selectedClassId = classroomState.classes[0]?.id || "";
+    renderClassroomListPanel();
+  } catch (error) {
+    console.warn("Không thể xóa lớp:", error);
+    showToast(error.message || "Không thể xóa lớp.", "error");
+  }
+}
+
 function bindClassroomControlsOnce() {
   const createButton = getClassroomCreateButton();
   const joinButton = getClassroomJoinButton();
   const joinInput = getClassroomJoinInput();
   const copyButton = getClassroomCopyButton();
+  const deleteButton = getClassroomDeleteButton();
   const toggleButton = getClassroomToggleButton();
   const dropdown = document.querySelector(".classroom-dropdown");
   const classroomPage = document.getElementById("classroom");
@@ -5745,6 +5896,13 @@ function bindClassroomControlsOnce() {
     copyButton.dataset.bound = "true";
     copyButton.addEventListener("click", () => {
       void copyCurrentClassroomCode();
+    });
+  }
+
+  if (deleteButton && !deleteButton.dataset.bound) {
+    deleteButton.dataset.bound = "true";
+    deleteButton.addEventListener("click", () => {
+      void deleteCurrentClassroom();
     });
   }
 
@@ -8184,6 +8342,26 @@ function bindAppEventsOnce() {
 
       event.preventDefault();
       await openTeacherAssignmentDetail(assignmentId);
+      return;
+    }
+
+    const assignmentDeleteButton = event.target.closest("[data-assignment-delete-id]");
+    if (assignmentDeleteButton) {
+      const assignmentId = String(
+        assignmentDeleteButton.dataset.assignmentDeleteId || "",
+      ).trim();
+      const assignment = teacherAssignmentSubmissionState.assignments.find(
+        (item) => String(item?.id || "").trim() === assignmentId,
+      );
+
+      if (!assignment) {
+        showToast("Không tìm thấy bài tập để xóa.", "error");
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      await handleDeleteTeacherAssignment(assignment);
       return;
     }
 

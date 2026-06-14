@@ -1197,6 +1197,36 @@
                   <span>+</span>
                   <span>Tạo lớp</span>
                 </button>
+              </div>
+            </div>
+
+            <div class="classroom-layout">
+              <div id="classroom-list-panel" class="classroom-list-panel">
+                <div class="classroom-empty-state">
+                  <h3>Đang tải lớp học...</h3>
+                  <p>Hệ thống sẽ đồng bộ lớp học thật từ Firestore.</p>
+                </div>
+              </div>
+
+              <div class="classroom-detail-panel">
+                <div class="classroom-detail-header">
+                  <div>
+                    <h2 id="classroom-detail-name">Chưa có lớp nào</h2>
+                    <p id="classroom-detail-code">Mã lớp: --</p>
+                  </div>
+
+                  <div class="classroom-detail-actions">
+                    <button class="classroom-delete-btn" type="button" data-classroom-delete>
+                      <span aria-hidden="true">🗑</span>
+                      <span>Xóa lớp</span>
+                    </button>
+
+                    <button class="classroom-copy-btn" type="button">
+                      <span>📄</span>
+                      <span>Sao chép mã lớp</span>
+                    </button>
+                  </div>
+                </div>
 
                 <div class="classroom-join-wrapper">
                   <button
@@ -1234,29 +1264,6 @@
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="classroom-layout">
-              <div id="classroom-list-panel" class="classroom-list-panel">
-                <div class="classroom-empty-state">
-                  <h3>Đang tải lớp học...</h3>
-                  <p>Hệ thống sẽ đồng bộ lớp học thật từ Firestore.</p>
-                </div>
-              </div>
-
-              <div class="classroom-detail-panel">
-                <div class="classroom-detail-header">
-                  <div>
-                    <h2 id="classroom-detail-name">Chưa có lớp nào</h2>
-                    <p id="classroom-detail-code">Mã lớp: --</p>
-                  </div>
-
-                  <button class="classroom-copy-btn" type="button">
-                    <span>📄</span>
-                    <span>Sao chép mã lớp</span>
-                  </button>
                 </div>
 
                 <div class="classroom-students-section">

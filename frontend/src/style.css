@@ -2180,16 +2180,22 @@ td {
 .classroom-list-panel {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
+}
+
+.classroom-card-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
 }
 
 .classroom-card {
   width: 100%;
-  border: 1px solid #dbd4ee;
+  border: 1px solid #cfc3ea;
   border-radius: 18px;
   padding: 18px 20px;
   background: #fff;
-  box-shadow: 0 10px 22px rgba(95, 83, 141, 0.08);
+  box-shadow: 0 10px 22px rgba(95, 83, 141, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2259,6 +2265,13 @@ td {
   margin-bottom: 16px;
 }
 
+.classroom-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .classroom-detail-header h2 {
   font-size: 22px;
   margin-bottom: 4px;
@@ -2280,6 +2293,24 @@ td {
   color: #5d4ecb;
   font-weight: 700;
   cursor: pointer;
+}
+
+.classroom-delete-btn {
+  border: 1px solid #f0b3b3;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff2f2;
+  color: #c73a3a;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.classroom-delete-btn:hover {
+  background: #ffe8e8;
+  border-color: #e59b9b;
 }
 
 .classroom-copy-btn:disabled {
@@ -5946,6 +5977,7 @@ img.profile-skeleton {
 #manage .manage-card-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
   margin-top: 10px;
 }
 
@@ -5961,10 +5993,36 @@ img.profile-skeleton {
   cursor: pointer;
   font-family: inherit;
   box-shadow: 0 3px 8px rgba(74, 103, 239, 0.08);
+  min-width: 104px;
+  min-height: 34px;
 }
 
 #manage .manage-detail-btn:hover {
   background: #eff4ff;
+}
+
+#manage .manage-delete-btn {
+  border: 1px solid #f0b3b3;
+  border-radius: 12px;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff2f2;
+  color: #c73a3a;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 3px 8px rgba(199, 58, 58, 0.08);
+  min-width: 104px;
+  min-height: 34px;
+}
+
+#manage .manage-delete-btn:hover {
+  background: #ffe8e8;
+  border-color: #e59b9b;
 }
 
 #manage.is-detail-open .manage-header,
@@ -7670,6 +7728,7 @@ body.sidebar-open {
   .classroom-create-btn,
   .classroom-toggle-btn,
   .classroom-copy-btn,
+  .manage-delete-btn,
   .classroom-join-form button,
   .classroom-card-action,
   .mission-action,
