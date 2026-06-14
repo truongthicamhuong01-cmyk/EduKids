@@ -11,6 +11,7 @@ const {
   getAssignmentById,
   getSubmissionByStudent,
   getSubmissionsByAssignmentId,
+  applySubmissionResultToAssignment,
 } = require("../services/assignmentService");
 
 function uniqueStrings(values) {
@@ -219,10 +220,17 @@ const submitAssignment = asyncHandler(async (req, res) => {
   return successResponse(
     res,
     200,
-      existingSubmission
+    existingSubmission
       ? "Assignment resubmitted successfully"
       : "Assignment submitted successfully",
-    submission,
+    {
+      status: "done",
+      score: submission.score,
+      correctCount: submission.correctCount,
+      wrongCount: submission.wrongCount,
+      totalQuestions: submission.totalQuestions,
+      gradedAt: submission.gradedAt,
+    },
   );
 });
 
@@ -260,18 +268,36 @@ const getAssignmentSubmissions = asyncHandler(async (req, res) => {
   }
 
   const submissions = await getSubmissionsByAssignmentId(assignmentId);
+  const studentIds = uniqueStrings(submissions.map((submission) => submission.studentId));
+  const studentProfiles = await Promise.all(studentIds.map((studentId) => findUserById(studentId)));
+  const studentNameById = new Map(
+    studentProfiles
+      .filter(Boolean)
+      .map((profile) => [
+        String(profile.id || profile.uid || "").trim(),
+        String(profile.fullName || profile.name || profile.username || "").trim(),
+      ]),
+  );
+  const sanitizedSubmissions = submissions.map((submission) => ({
+    studentId: submission.studentId,
+    studentName: studentNameById.get(submission.studentId) || "",
+    score: submission.score ?? null,
+    correctCount: submission.correctCount ?? null,
+    wrongCount: submission.wrongCount ?? null,
+    submittedAt: submission.submittedAt || "",
+  }));
 
   console.log("[EduKids][assignmentController] getAssignmentSubmissions success", {
     teacherId: userId,
     assignmentId,
-    submissionCount: Array.isArray(submissions) ? submissions.length : 0,
+    submissionCount: Array.isArray(sanitizedSubmissions) ? sanitizedSubmissions.length : 0,
   });
 
   return successResponse(
     res,
     200,
     "Assignment submissions fetched successfully",
-    submissions,
+    sanitizedSubmissions,
   );
 });
 
@@ -319,20 +345,7 @@ const getAssignmentByIdController = asyncHandler(async (req, res) => {
   }
 
   const submission = await getSubmissionByStudent(assignmentId, userId);
-  const normalizedAssignment = submission
-    ? {
-        ...assignment,
-        submissionStatus: submission.status || "submitted",
-        submissionId: submission.id,
-        submittedAt: submission.submittedAt,
-        score: submission.score ?? null,
-      }
-    : {
-        ...assignment,
-        submissionStatus: "pending",
-        submittedAt: "",
-        score: null,
-      };
+  const normalizedAssignment = applySubmissionResultToAssignment(assignment, submission);
 
   return successResponse(
     res,

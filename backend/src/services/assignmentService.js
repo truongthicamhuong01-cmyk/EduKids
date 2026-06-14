@@ -57,7 +57,131 @@ function normalizeQuestions(questions) {
         question.correctAnswer &&
         Array.isArray(question.options) &&
         question.options.length >= 4,
-    );
+  );
+}
+
+function normalizeScoringText(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function normalizeQuestionCorrectAnswer(question) {
+  return normalizeScoringText(question?.correctAnswer || question?.answer || "");
+}
+
+function normalizeSubmissionAnswer(answer) {
+  if (answer === null || typeof answer === "undefined") {
+    return "";
+  }
+
+  if (typeof answer === "string" || typeof answer === "number" || typeof answer === "boolean") {
+    return normalizeScoringText(answer);
+  }
+
+  if (typeof answer !== "object") {
+    return "";
+  }
+
+  return normalizeScoringText(
+    answer.selected ??
+      answer.answer ??
+      answer.correctAnswer ??
+      answer.value ??
+      answer.text ??
+      answer.label ??
+      answer.option ??
+      "",
+  );
+}
+
+function normalizeSubmissionAnswers(answers) {
+  if (!Array.isArray(answers)) {
+    return [];
+  }
+
+  return answers
+    .map((answer, index) => {
+      const normalizedValue = normalizeSubmissionAnswer(answer);
+
+      if (!normalizedValue) {
+        return null;
+      }
+
+      const questionIndex =
+        typeof answer === "object" && answer !== null && Number.isFinite(Number(answer.questionIndex))
+          ? Number(answer.questionIndex)
+          : index;
+
+      return {
+        questionIndex,
+        selected: normalizedValue,
+      };
+    })
+    .filter(Boolean);
+}
+
+function gradeAssignmentSubmission(assignment, answers) {
+  const questions = Array.isArray(assignment?.questions) ? assignment.questions : [];
+  const normalizedAnswers = normalizeSubmissionAnswers(answers);
+  const answerMap = new Map();
+
+  normalizedAnswers.forEach((answer, index) => {
+    const explicitIndex = Number.isFinite(Number(answer.questionIndex))
+      ? Number(answer.questionIndex)
+      : index;
+
+    if (!answerMap.has(explicitIndex)) {
+      answerMap.set(explicitIndex, answer.selected);
+    }
+  });
+
+  let correctCount = 0;
+
+  questions.forEach((question, index) => {
+    const correctAnswer = normalizeQuestionCorrectAnswer(question);
+    const selectedAnswer = normalizeScoringText(answerMap.get(index));
+
+    if (correctAnswer && selectedAnswer && selectedAnswer === correctAnswer) {
+      correctCount += 1;
+    }
+  });
+
+  const totalQuestions = questions.length;
+  const wrongCount = Math.max(totalQuestions - correctCount, 0);
+
+  return {
+    correctCount,
+    wrongCount,
+    totalQuestions,
+    score: correctCount,
+  };
+}
+
+function applySubmissionResultToAssignment(assignment, submission = null) {
+  if (!assignment) {
+    return null;
+  }
+
+  if (!submission) {
+    return {
+      ...assignment,
+      submissionStatus: "pending",
+      submittedAt: "",
+      score: null,
+    };
+  }
+
+  const hasGradedScore =
+    submission.status === "graded" &&
+    Number.isFinite(Number(submission.score));
+
+  return {
+    ...assignment,
+    submissionStatus: submission.status || "submitted",
+    submissionId: submission.id,
+    submittedAt: submission.submittedAt || "",
+    score: hasGradedScore ? Number(submission.score) : submission.score ?? null,
+    status: hasGradedScore ? "done" : assignment.status,
+  };
 }
 
 function normalizeSubjectLabel(subject) {
@@ -127,8 +251,12 @@ function normalizeSubmissionDoc(doc) {
     studentId: String(data.studentId || "").trim(),
     answers: Array.isArray(data.answers) ? data.answers : [],
     submittedAt: String(data.submittedAt || "").trim(),
+    gradedAt: String(data.gradedAt || "").trim(),
     status: String(data.status || "").trim().toLowerCase() || "submitted",
     score: data.score ?? null,
+    correctCount: Number.isFinite(Number(data.correctCount)) ? Number(data.correctCount) : null,
+    wrongCount: Number.isFinite(Number(data.wrongCount)) ? Number(data.wrongCount) : null,
+    totalQuestions: Number.isFinite(Number(data.totalQuestions)) ? Number(data.totalQuestions) : null,
   };
 }
 
@@ -357,10 +485,13 @@ async function createSubmission({
     throw new ApiError(400, "classId does not match this assignment");
   }
 
+  const grading = gradeAssignmentSubmission(assignment, normalizedAnswers);
+
   const submissionRef = assignmentSubmissionsCollection.doc(
     `${normalizedAssignmentId}_${normalizedStudentId}`,
   );
   const submittedAt = new Date().toISOString();
+  const gradedAt = submittedAt;
   const submissionData = {
     id: submissionRef.id,
     assignmentId: normalizedAssignmentId,
@@ -368,8 +499,12 @@ async function createSubmission({
     studentId: normalizedStudentId,
     answers: normalizedAnswers,
     submittedAt,
-    status: "submitted",
-    score: null,
+    gradedAt,
+    status: "graded",
+    score: grading.score,
+    correctCount: grading.correctCount,
+    wrongCount: grading.wrongCount,
+    totalQuestions: grading.totalQuestions,
   };
 
   await submissionRef.set(submissionData, { merge: true });
@@ -428,22 +563,7 @@ async function getAssignmentsByClassIds(classIds, studentId = "") {
   const mergedAssignments = activeAssignments.map((assignment) => {
     const submission = submissionsByAssignmentId.get(assignment.id);
 
-    if (!submission) {
-      return {
-        ...assignment,
-        submissionStatus: "pending",
-        submittedAt: "",
-        score: null,
-      };
-    }
-
-    return {
-      ...assignment,
-      submissionStatus: submission.status || "submitted",
-      submissionId: submission.id,
-      submittedAt: submission.submittedAt,
-      score: submission.score ?? null,
-    };
+    return applySubmissionResultToAssignment(assignment, submission);
   });
 
   return sortAssignments(mergedAssignments);
@@ -457,4 +577,7 @@ module.exports = {
   getSubmissionByStudent,
   getSubmissionsByAssignmentId,
   normalizeAssignmentDoc,
+  applySubmissionResultToAssignment,
+  gradeAssignmentSubmission,
+  normalizeSubmissionDoc,
 };
