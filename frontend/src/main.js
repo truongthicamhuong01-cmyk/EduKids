@@ -1103,6 +1103,60 @@ function getStudentTopicAccuracy(topic) {
   return Math.max(0, Math.min(100, Number(topic?.percentage) || 0));
 }
 
+function getTopicAccuracyValue(topic) {
+  if (!topic || typeof topic !== "object") {
+    return null;
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(topic, "percentage")) {
+    return null;
+  }
+
+  const percentage = Number(topic.percentage);
+
+  if (!Number.isFinite(percentage)) {
+    return null;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(percentage)));
+}
+
+function sortTopicsByAccuracy(topicAccuracies, direction = "desc") {
+  const multiplier = direction === "asc" ? 1 : -1;
+
+  return [...(Array.isArray(topicAccuracies) ? topicAccuracies : [])]
+    .filter((topic) => getTopicAccuracyValue(topic) !== null)
+    .sort((left, right) => {
+      const diff =
+        (getStudentTopicAccuracy(left) - getStudentTopicAccuracy(right)) *
+        multiplier;
+
+      if (diff !== 0) {
+        return diff;
+      }
+
+      return getStudentTopicSortName(left).localeCompare(
+        getStudentTopicSortName(right),
+      );
+    });
+}
+
+function getStrengthTopics(topicAccuracies) {
+  return sortTopicsByAccuracy(topicAccuracies, "desc").slice(0, 2);
+}
+
+function getWeaknessTopics(topicAccuracies, excludedTopics = []) {
+  const excludedKeys = new Set(
+    (Array.isArray(excludedTopics) ? excludedTopics : [])
+      .map((topic) => getStudentTopicSortName(topic))
+      .filter(Boolean),
+  );
+
+  return sortTopicsByAccuracy(topicAccuracies, "asc")
+    .filter((topic) => !excludedKeys.has(getStudentTopicSortName(topic)))
+    .slice(0, 2);
+}
+
 function getAssignmentSortTime(assignment) {
   return (
     Date.parse(
@@ -1392,46 +1446,21 @@ async function fetchStudentStrengthWeaknessTopics(profile) {
     profile?.uid || profile?.userId || profile?.id || "",
   ).trim();
   const grade = getStudentGrade(profile);
-  const cacheId = `${cacheKey}:${grade}:strength-weakness`;
+  const subjectKey = String(studentQuizState.subject || "").trim();
+  const topicsKey = String(studentQuizState.loadedTopicsKey || "").trim();
+  const cacheId = `${cacheKey}:${grade}:${subjectKey}:${topicsKey}:strength-weakness`;
   const cached = studentStrengthWeaknessCache.get(cacheId);
 
   if (cached) {
     return cached;
   }
 
-  const subjects = ["math", "english"];
-
   try {
-    const responses = await Promise.all(
-      subjects.map((subject) =>
-        apiRequestWithAuth(
-          `/api/quiz/topics?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`,
-          {
-            method: "GET",
-          },
-        ),
-      ),
-    );
-
-    const topics = responses.flatMap((response) =>
-      Array.isArray(response.data) ? response.data : [],
-    );
-
-    const sorted = [...topics].sort((left, right) => {
-      const accuracyDiff =
-        getStudentTopicAccuracy(right) - getStudentTopicAccuracy(left);
-
-      if (accuracyDiff !== 0) {
-        return accuracyDiff;
-      }
-
-      return getStudentTopicSortName(left).localeCompare(
-        getStudentTopicSortName(right),
-      );
-    });
-
-    const strengths = sorted.slice(0, 2);
-    const weaknesses = [...sorted].reverse().slice(0, 2);
+    const topics = Array.isArray(studentQuizState.topics)
+      ? studentQuizState.topics
+      : await fetchStudentQuizTopics();
+    const strengths = getStrengthTopics(topics);
+    const weaknesses = getWeaknessTopics(topics, strengths);
 
     const result = {
       strengths,
@@ -1470,12 +1499,46 @@ function renderStudentStrengthWeakness(profile, payload = null) {
 
   strengthNodes.forEach((node, index) => {
     const topic = strengths[index];
-    node.textContent = topic ? getStudentTopicSortName(topic) : "--";
+    const topicName = topic ? getStudentTopicSortName(topic) : "--";
+    const accuracy = topic ? getTopicAccuracyValue(topic) : null;
+    node.textContent = topicName;
+
+    const skillLine = node.closest(".skill-line");
+    const fill = skillLine?.querySelector(".skill-fill");
+    const valueNode = skillLine?.querySelector("b");
+
+    if (fill) {
+      fill.classList.remove("green");
+      fill.classList.add("red");
+      fill.style.width = `${accuracy ?? 0}%`;
+      fill.style.backgroundColor = accuracy !== null ? "#EF4444" : "#D1D5DB";
+    }
+
+    if (valueNode) {
+      valueNode.textContent = `${accuracy ?? 0}% đúng`;
+    }
   });
 
   weaknessNodes.forEach((node, index) => {
     const topic = weaknesses[index];
-    node.textContent = topic ? getStudentTopicSortName(topic) : "--";
+    const topicName = topic ? getStudentTopicSortName(topic) : "--";
+    const accuracy = topic ? getTopicAccuracyValue(topic) : null;
+    node.textContent = topicName;
+
+    const skillLine = node.closest(".skill-line");
+    const fill = skillLine?.querySelector(".skill-fill");
+    const valueNode = skillLine?.querySelector("b");
+
+    if (fill) {
+      fill.classList.remove("red");
+      fill.classList.add("green");
+      fill.style.width = `${accuracy ?? 0}%`;
+      fill.style.backgroundColor = accuracy !== null ? "#22C55E" : "#D1D5DB";
+    }
+
+    if (valueNode) {
+      valueNode.textContent = `${accuracy ?? 0}% đúng`;
+    }
   });
 }
 
@@ -2967,10 +3030,12 @@ async function refreshStudentQuizTopics() {
   }
 
   try {
+    studentStrengthWeaknessCache.clear();
     studentQuizState.topics = await fetchStudentQuizTopics();
     studentQuizState.loadedTopicsKey = currentTopicsKey;
     studentQuizState.topicsMessage = "";
     renderStudentTopicCards();
+    void syncStudentStrengthWeakness(getCurrentAuthUser());
   } catch (error) {
     console.warn(
       "[EduKids][studentQuiz] Unable to refresh topic accuracy:",
@@ -3057,7 +3122,9 @@ async function submitStudentQuiz() {
       : [];
     studentQuizState.reviewVisible = true;
     renderStudentQuizFlow();
+    studentStrengthWeaknessCache.clear();
     void refreshStudentQuizTopics();
+    void syncStudentStrengthWeakness(getCurrentAuthUser());
     showToast("Đã nộp quiz thành công.", "success");
     scrollToElement("student-result-screen");
   } catch (error) {
