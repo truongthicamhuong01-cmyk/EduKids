@@ -63,15 +63,7 @@ import { API_BASE_URL } from "../config.js";
 
       return `assets/userAvatar/${avatar}`;
     }
-
-    const role = profile?.role === "teacher" ? "teacher" : "student";
-    const gender = profile?.gender === "female" ? "female" : "male";
-
-    if (role === "teacher") {
-      return `assets/userAvatar/${gender === "female" ? "femaleteacher.png" : "maleteacher.png"}`;
-    }
-
-    return `assets/userAvatar/${gender === "female" ? "girl.png" : "boy.png"}`;
+    return "";
   }
 
   async function fetchProfileById(userId) {
@@ -105,56 +97,7 @@ import { API_BASE_URL } from "../config.js";
       return null;
     }
 
-    const stats =
-      profile.stats && typeof profile.stats === "object" ? profile.stats : {};
-    const role = profile.role || "";
-    const isTeacher = role === "teacher";
-    const defaultStats = isTeacher
-      ? {
-          totalClasses: 0,
-          assignmentsCreated: 0,
-          studentsManaged: 0,
-          averageScore: 0,
-        }
-      : {
-        level: 1,
-        exp: 0,
-        streak: 0,
-        lastStudyDate: null,
-        completedQuestions: 0,
-        studyMinutes: 0,
-      };
-
-    const normalizedStats =
-      Object.keys(stats).length === 0
-        ? defaultStats
-        : {
-            ...stats,
-          };
-
-    if (Object.keys(stats).length > 0) {
-      Object.keys(defaultStats).forEach((key) => {
-        if (
-          !Object.prototype.hasOwnProperty.call(normalizedStats, key) ||
-          normalizedStats[key] === undefined ||
-          normalizedStats[key] === null
-        ) {
-          normalizedStats[key] = defaultStats[key];
-        }
-      });
-
-      if (!Object.prototype.hasOwnProperty.call(stats, "exp")) {
-        delete normalizedStats.exp;
-      } else {
-        normalizedStats.exp = Number(normalizedStats.exp) || 0;
-      }
-
-      if (!Object.prototype.hasOwnProperty.call(stats, "lastStudyDate")) {
-        delete normalizedStats.lastStudyDate;
-      } else {
-        normalizedStats.lastStudyDate = stats.lastStudyDate || null;
-      }
-    }
+    const stats = profile.stats && typeof profile.stats === "object" ? { ...profile.stats } : {};
 
     return {
       ...profile,
@@ -175,7 +118,7 @@ import { API_BASE_URL } from "../config.js";
       note: profile.note || "",
       createdAt: profile.createdAt || "",
       updatedAt: profile.updatedAt || profile.createdAt || "",
-      stats: normalizedStats,
+      stats,
       subjects: Array.isArray(profile.subjects) ? profile.subjects : [],
       classTags: Array.isArray(profile.classTags) ? profile.classTags : [],
       activityLogs: Array.isArray(profile.activityLogs) ? profile.activityLogs : [],

@@ -791,12 +791,7 @@ function getProfileAvatar(profile) {
 
     return `assets/userAvatar/${avatar}`;
   }
-
-  if (profile?.role === "teacher") {
-    return `assets/userAvatar/${profile?.gender === "female" ? "femaleteacher.png" : "maleteacher.png"}`;
-  }
-
-  return `assets/userAvatar/${profile?.gender === "female" ? "girl.png" : "boy.png"}`;
+  return "";
 }
 
 function formatRoleLabel(role) {
@@ -828,7 +823,24 @@ function formatDateTime(value) {
 
   return new Intl.DateTimeFormat("vi-VN", {
     dateStyle: "medium",
-    timeStyle: "short",
+  }).format(date);
+}
+
+function formatDateOnly(value) {
+  if (!value) {
+    return "--";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "--";
+  }
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   }).format(date);
 }
 
@@ -2192,23 +2204,34 @@ function applyProfileSkeleton(pageType, isLoading) {
 
 function renderStudentSubjectProgress(profile) {
   const subjects = Array.isArray(profile?.subjects) ? profile.subjects : [];
-  const subjectMap = new Map(
-    subjects.map((subject) => [subject.name, Number(subject.progress) || 0]),
-  );
+  const rows = document.querySelectorAll(".student-profile-subject-row");
 
-  document.querySelectorAll("[data-student-subject]").forEach((node) => {
-    const name = node.dataset.studentSubject;
-    const progress = subjectMap.get(name) ?? 0;
-    node.style.width = `${Math.max(0, Math.min(progress, 100))}%`;
+  rows.forEach((row, index) => {
+    const subject = subjects[index];
+    const nameNode = row.querySelector(".student-profile-subject-name");
+    const fillNode = row.querySelector("[data-student-subject]");
+    const percentNode = row.querySelector("[data-student-subject-percent]");
+
+    if (!subject) {
+      if (nameNode) nameNode.textContent = "--";
+      if (fillNode) fillNode.style.width = "0%";
+      if (percentNode) percentNode.textContent = "--";
+      return;
+    }
+
+    const subjectName = String(subject.name || subject.topicName || "--").trim() || "--";
+    const progress = Math.max(0, Math.min(Number(subject.progress) || 0, 100));
+
+    if (nameNode) nameNode.textContent = subjectName;
+    if (fillNode) {
+      fillNode.style.width = `${progress}%`;
+      fillNode.dataset.studentSubject = subjectName;
+    }
+    if (percentNode) {
+      percentNode.textContent = `${progress}%`;
+      percentNode.dataset.studentSubjectPercent = subjectName;
+    }
   });
-
-  document
-    .querySelectorAll("[data-student-subject-percent]")
-    .forEach((node) => {
-      const name = node.dataset.studentSubjectPercent;
-      const progress = subjectMap.get(name) ?? 0;
-      node.textContent = `${Math.max(0, Math.min(progress, 100))}%`;
-    });
 }
 
 function renderStudentHomeOverview(profile, activityLogs = null) {
@@ -2327,7 +2350,7 @@ function renderStudentProfile(profile) {
   if (role) role.textContent = formatRoleLabel(profile?.role);
   if (code) code.textContent = profile?.userCode || "--";
   if (className) className.textContent = profile?.className || "--";
-  if (createdAt) createdAt.textContent = formatDateTime(profile?.createdAt);
+  if (createdAt) createdAt.textContent = formatDateOnly(profile?.createdAt);
   if (level) level.textContent = formatStatValue(progressStats.level);
 
   if (streak) {
@@ -2391,7 +2414,7 @@ function renderTeacherProfile(profile) {
   if (role) role.textContent = formatRoleLabel(profile?.role);
   if (code) code.textContent = profile?.userCode || "--";
   if (school) school.textContent = profile?.school || "--";
-  if (createdAt) createdAt.textContent = formatDateTime(profile?.createdAt);
+  if (createdAt) createdAt.textContent = formatDateOnly(profile?.createdAt);
   if (fullName) {
     fullName.textContent = profile?.name || profile?.fullName || "--";
   }
@@ -2402,7 +2425,7 @@ function renderTeacherProfile(profile) {
   if (address) address.textContent = profile?.address || "--";
   if (note) note.textContent = profile?.note || "--";
   if (extra) extra.textContent = profile?.note || profile?.address || "--";
-  if (birthdate) birthdate.textContent = formatDateTime(profile?.createdAt);
+  if (birthdate) birthdate.textContent = formatDateOnly(profile?.createdAt);
   if (email) email.textContent = profile?.email || "--";
 
   const stats = profile?.stats || {};
