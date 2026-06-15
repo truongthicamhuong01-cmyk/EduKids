@@ -13023,7 +13023,7 @@ function renderAdminAuthModal() {
           </button>
         </div>
 
-        <form class="auth-modal-form" data-admin-auth-form novalidate>
+        <form id="admin-auth-form" class="auth-modal-form" data-admin-auth-form novalidate>
           ${renderPasswordField({
             id: "admin-login-password",
             name: "password",
@@ -13059,19 +13059,19 @@ function renderLoginScreen() {
   return `
     <section class="auth-shell">
       <div class="auth-stage">
+        <div class="auth-form-head">
+          <div class="auth-badge">ĐĂNG NHẬP</div>
+          <button
+            type="button"
+            class="auth-admin-button"
+            data-admin-auth-open
+          >
+            ⚙️ Quản trị
+          </button>
+        </div>
+
         <div class="auth-card">
           ${renderAuthBrand()}
-
-          <div class="auth-form-head">
-            <h2 class="auth-title">ĐĂNG NHẬP</h2>
-            <button
-              type="button"
-              class="auth-admin-button"
-              data-admin-auth-open
-            >
-              ⚙️ Quản trị
-            </button>
-          </div>
 
           <form class="auth-form" id="auth-form" data-view="login" novalidate>
 
@@ -13349,6 +13349,7 @@ function openAdminAuthModal() {
     return;
   }
 
+  console.log("[EduKids][admin] open modal");
   modal.hidden = false;
   modal.classList.add("is-open");
   clearAdminAuthFeedback();
@@ -13379,6 +13380,7 @@ function closeAdminAuthModal() {
 }
 
 function goToAdminDashboard() {
+  console.log("[EduKids][admin] navigate /admin");
   window.history.pushState({}, "", "/admin");
   setAdminMode(true);
   bindAdminEventsOnce();
@@ -13399,7 +13401,12 @@ function showLoginScreen() {
 
 function syncCurrentRouteState() {
   if (isAdminRoute()) {
+    console.log("[EduKids][admin] route guard", {
+      path: window.location.pathname,
+      authenticated: isAdminAuthenticated(),
+    });
     if (!isAdminAuthenticated()) {
+      console.log("[EduKids][admin] redirect to login");
       redirectToLoginRoute();
       showLoginScreen();
       return;
@@ -13639,11 +13646,16 @@ function bindAuthRootEventsOnce() {
       return;
     }
 
-    if (form.id === "admin-auth-form") {
+    if (form.matches("[data-admin-auth-form]")) {
       event.preventDefault();
       clearAdminAuthFeedback();
 
       const password = form.elements.password?.value?.trim();
+
+      console.log("[EduKids][admin] submit attempt", {
+        hasPassword: Boolean(password),
+        path: window.location.pathname,
+      });
 
       if (!password) {
         setAdminAuthFeedback("Vui lòng nhập mật khẩu quản trị.", "error");
@@ -13653,11 +13665,16 @@ function bindAuthRootEventsOnce() {
       try {
         setAdminAuthFeedback("Đang xác thực quản trị...", "success");
 
-        await apiRequest("/api/admin/login", {
+        const result = await apiRequest("/api/admin/login", {
           password,
         });
 
+        console.log("[EduKids][admin] api response", result);
         setAdminAuthenticated(true);
+        console.log("[EduKids][admin] localStorage set", {
+          key: ADMIN_AUTH_KEY,
+          value: localStorage.getItem(ADMIN_AUTH_KEY),
+        });
         closeAdminAuthModal();
         goToAdminDashboard();
       } catch (error) {
