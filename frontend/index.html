@@ -1580,117 +1580,119 @@
         </section>
 
         <section id="stats" class="page">
-          <div class="teacher-stats-page">
-            <h1>Thống kê</h1>
-
-            <section class="teacher-stats-card teacher-stats-topics-card">
-              <h2>
-                Chủ đề yếu nhất của lớp
-                <span>(Trung bình tỉ lệ đúng)</span>
-              </h2>
-
-              <div class="teacher-stats-bars">
-                <div class="teacher-stats-bar-row">
-                  <span class="teacher-stats-bar-label">Phân số</span>
-                  <div class="teacher-stats-bar-track">
-                    <div
-                      class="teacher-stats-bar-fill teacher-stats-bar-fill-green"
-                      style="width: 90%"
-                    ></div>
-                  </div>
-                  <span
-                    class="teacher-stats-bar-value teacher-stats-bar-value-green"
-                    >90%</span
-                  >
-                </div>
-
-                <div class="teacher-stats-bar-row">
-                  <span class="teacher-stats-bar-label">Tỉ số</span>
-                  <div class="teacher-stats-bar-track">
-                    <div
-                      class="teacher-stats-bar-fill teacher-stats-bar-fill-red"
-                      style="width: 40%"
-                    ></div>
-                  </div>
-                  <span
-                    class="teacher-stats-bar-value teacher-stats-bar-value-red"
-                    >40%</span
-                  >
-                </div>
-
-                <div class="teacher-stats-bar-row">
-                  <span class="teacher-stats-bar-label">Hình học</span>
-                  <div class="teacher-stats-bar-track">
-                    <div
-                      class="teacher-stats-bar-fill teacher-stats-bar-fill-orange"
-                      style="width: 70%"
-                    ></div>
-                  </div>
-                  <span
-                    class="teacher-stats-bar-value teacher-stats-bar-value-orange"
-                    >70%</span
-                  >
-                </div>
-
-                <div class="teacher-stats-bar-row">
-                  <span class="teacher-stats-bar-label">Đo lường</span>
-                  <div class="teacher-stats-bar-track">
-                    <div
-                      class="teacher-stats-bar-fill teacher-stats-bar-fill-yellow"
-                      style="width: 60%"
-                    ></div>
-                  </div>
-                  <span
-                    class="teacher-stats-bar-value teacher-stats-bar-value-yellow"
-                    >60%</span
-                  >
+          <div class="teacher-stats-page teacher-stats-v2" aria-busy="true">
+            <header class="teacher-stats-hero">
+              <div class="teacher-stats-brand">
+                <div class="teacher-stats-hero-copy">
+                  <h1>Thống kê lớp học</h1>
+                  <p>Xem chi tiết tình hình học tập của học sinh theo lớp</p>
                 </div>
               </div>
-            </section>
 
-            <section class="teacher-stats-card teacher-stats-questions-card">
-              <h2>Những câu hỏi nhiều học sinh sai</h2>
-
-              <div class="teacher-stats-table">
-                <div class="teacher-stats-table-head">
-                  <span>Câu hỏi</span>
-                  <span>Chủ đề</span>
-                  <span>Tỉ lệ sai</span>
-                </div>
-
-                <div class="teacher-stats-table-row">
-                  <span>Câu 12</span>
-                  <span>Tỉ số</span>
-                  <span
-                    ><strong class="teacher-stats-badge teacher-stats-badge-red"
-                      >80%</strong
-                    ></span
+              <div class="teacher-stats-controls">
+                <label class="teacher-stats-control">
+                  <span>Chọn lớp</span>
+                  <select
+                    id="teacher-stats-class-select"
+                    class="teacher-stats-select"
+                    aria-label="Chọn lớp"
                   >
-                </div>
+                    <option value="">Đang tải lớp...</option>
+                  </select>
+                </label>
 
-                <div class="teacher-stats-table-row">
-                  <span>Câu 18</span>
-                  <span>Hình học</span>
-                  <span
-                    ><strong
-                      class="teacher-stats-badge teacher-stats-badge-orange"
-                      >65%</strong
-                    ></span
+                <label class="teacher-stats-control">
+                  <span>Bộ lọc thời gian</span>
+                  <select
+                    id="teacher-stats-range-select"
+                    class="teacher-stats-select"
+                    aria-label="Bộ lọc thời gian"
                   >
-                </div>
+                    <option value="7d">7 ngày gần nhất</option>
+                    <option value="30d">30 ngày gần nhất</option>
+                    <option value="90d">90 ngày gần nhất</option>
+                    <option value="all">Tất cả</option>
+                  </select>
+                </label>
 
-                <div class="teacher-stats-table-row">
-                  <span>Câu 7</span>
-                  <span>Đo lường</span>
-                  <span
-                    ><strong
-                      class="teacher-stats-badge teacher-stats-badge-yellow"
-                      >55%</strong
-                    ></span
-                  >
-                </div>
+                <button
+                  id="teacher-stats-refresh-btn"
+                  class="teacher-stats-refresh-btn"
+                  type="button"
+                  aria-label="Làm mới dữ liệu"
+                >
+                  <span aria-hidden="true">↻</span>
+                </button>
               </div>
-            </section>
+            </header>
+
+            <div class="teacher-stats-grid">
+              <section class="teacher-stats-card teacher-stats-card-assignment">
+                <div class="teacher-stats-card-head">
+                  <h2>Tình trạng bài tập đã giao</h2>
+                  <span class="teacher-stats-card-icon is-orange" aria-hidden="true">🗒</span>
+                </div>
+                <div class="teacher-stats-card-body">
+                  <div id="teacher-stats-assignment-table" class="teacher-stats-table"></div>
+                </div>
+                <button
+                  class="teacher-stats-link-button is-purple"
+                  type="button"
+                  data-teacher-stats-assignment-toggle
+                  hidden
+                >
+                  Xem thêm
+                </button>
+              </section>
+
+              <section class="teacher-stats-card teacher-stats-card-table">
+                <div class="teacher-stats-card-head">
+                  <h2>Top học sinh nổi bật</h2>
+                  <span class="teacher-stats-card-icon is-blue" aria-hidden="true">🏆</span>
+                </div>
+                <div class="teacher-stats-card-body">
+                  <div id="teacher-stats-top-students" class="teacher-stats-table"></div>
+                </div>
+                <button class="teacher-stats-link-button is-blue" type="button" disabled>
+                  Xem tất cả <span aria-hidden="true">→</span>
+                </button>
+              </section>
+
+              <section class="teacher-stats-card teacher-stats-card-table">
+                <div class="teacher-stats-card-head">
+                  <h2>Học sinh cần hỗ trợ</h2>
+                  <span class="teacher-stats-card-icon is-red" aria-hidden="true">☹</span>
+                </div>
+                <div class="teacher-stats-card-body">
+                  <div id="teacher-stats-support-students" class="teacher-stats-table"></div>
+                </div>
+                <button class="teacher-stats-link-button is-red" type="button" disabled>
+                  Xem tất cả <span aria-hidden="true">→</span>
+                </button>
+              </section>
+
+              <section class="teacher-stats-card teacher-stats-card-line">
+                <div class="teacher-stats-card-head">
+                  <h2>Điểm trung bình theo thời gian</h2>
+                  <span class="teacher-stats-card-info" aria-hidden="true">?</span>
+                </div>
+                <div class="teacher-stats-card-body">
+                  <div id="teacher-stats-line-chart" class="teacher-stats-chart"></div>
+                </div>
+              </section>
+
+              <section class="teacher-stats-card teacher-stats-card-ai">
+                <div class="teacher-stats-card-head">
+                  <h2>AI phân tích lớp học</h2>
+                  <span class="teacher-stats-card-icon is-ai" aria-hidden="true">AI</span>
+                </div>
+                <div class="teacher-stats-card-body">
+                  <div id="teacher-stats-ai-analysis"></div>
+                </div>
+              </section>
+            </div>
+
+            <section id="teacher-stats-summary" class="teacher-stats-summary"></section>
           </div>
         </section>
         <section id="teacher-profile" class="page">

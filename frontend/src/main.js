@@ -531,6 +531,14 @@ function changePage(pageId) {
     void initializeClassroomPage();
   }
 
+  if (
+    targetPageId === "stats" &&
+    role === "teacher" &&
+    typeof initializeTeacherStatsPage === "function"
+  ) {
+    void initializeTeacherStatsPage();
+  }
+
   if (targetPageId === "teacher-dashboard" && role === "teacher") {
     void syncTeacherDashboard(getCurrentAuthUser());
   }
@@ -566,6 +574,7 @@ const profileState = {
 
 const studentProgressCache = new Map();
 const studentRecommendationCache = new Map();
+const classroomStudentProfileCache = new Map();
 const studentWeeklyProgressCache = new Map();
 const studentStrengthWeaknessCache = new Map();
 const studentHomeAssignmentCache = new Map();
@@ -3869,6 +3878,18 @@ const teacherDashboardState = {
   data: null,
   pendingPromise: null,
 };
+const teacherStatsState = {
+  loading: false,
+  loaded: false,
+  teacherId: "",
+  selectedClassId: "",
+  selectedRange: "7d",
+  assignmentExpanded: false,
+  data: null,
+  pendingPromise: null,
+  renderToken: 0,
+};
+const teacherStatsViewCache = new Map();
 const isDevelopmentBuild =
   Boolean(import.meta?.env?.DEV) ||
   window.location.hostname === "localhost" ||
@@ -6889,7 +6910,7 @@ async function openTeacherAssignmentDetail(assignmentId) {
       : null;
 
     detail.classInfo = classInfo;
-    detail.classStudents = getClassroomStudentCards(classInfo);
+    detail.classStudents = await getClassroomStudentCards(classInfo);
     const classStudents = Array.isArray(detail.classStudents)
       ? detail.classStudents
       : [];
@@ -7657,6 +7678,49 @@ function getClassroomStudentDisplayName(student) {
   return String(student || "").trim();
 }
 
+function getClassroomStudentId(student) {
+  if (student && typeof student === "object") {
+    return String(
+      student.id || student.studentId || student.userId || student.uid || "",
+    ).trim();
+  }
+
+  return String(student || "").trim();
+}
+
+async function resolveClassroomStudentProfile(student) {
+  const studentId = getClassroomStudentId(student);
+
+  if (!studentId) {
+    return null;
+  }
+
+  if (student && typeof student === "object" && String(student.fullName || student.name || "").trim()) {
+    return student;
+  }
+
+  if (classroomStudentProfileCache.has(studentId)) {
+    return classroomStudentProfileCache.get(studentId);
+  }
+
+  const service = window.EduKidsProfileService;
+
+  if (!service?.fetchProfileById) {
+    return null;
+  }
+
+  try {
+    const profile = await service.fetchProfileById(studentId);
+    if (profile) {
+      classroomStudentProfileCache.set(studentId, profile);
+    }
+    return profile;
+  } catch (error) {
+    console.warn("Không thể tải hồ sơ học sinh:", error);
+    return null;
+  }
+}
+
 function getClassroomStudentAvatarPath(student) {
   const fallbackAvatar = "assets/userAvatar/boy.png";
 
@@ -7688,7 +7752,7 @@ function getClassroomStudentAvatarPath(student) {
   return `assets/userAvatar/${avatar}`;
 }
 
-function getClassroomStudentCards(classroom) {
+async function getClassroomStudentCards(classroom) {
   const studentIds = Array.isArray(classroom?.students)
     ? classroom.students
     : Array.isArray(classroom?.studentIds)
@@ -7697,26 +7761,25 @@ function getClassroomStudentCards(classroom) {
         ? classroom.members
         : [];
 
+  const resolvedStudents = await Promise.all(
+    studentIds.map((student) => resolveClassroomStudentProfile(student)),
+  );
+
   return uniqueClassroomValues(
-    studentIds.map((student) => {
-      if (student && typeof student === "object") {
-        return JSON.stringify({
-          id: String(
-            student.id ||
-              student.studentId ||
-              student.userId ||
-              student.uid ||
-              "",
-          ).trim(),
-          avatar: getClassroomStudentAvatarPath(student),
-          name: getClassroomStudentDisplayName(student),
-        });
-      }
+    resolvedStudents.map((student, index) => {
+      const fallbackStudent = studentIds[index];
+      const resolvedStudent = student || fallbackStudent;
+      const studentId = getClassroomStudentId(resolvedStudent);
+      const fullName =
+        getClassroomStudentDisplayName(resolvedStudent) ||
+        getClassroomStudentDisplayName(fallbackStudent);
 
       return JSON.stringify({
-        id: String(student || "").trim(),
-        avatar: "assets/userAvatar/boy.png",
-        name: String(student || "").trim(),
+        id: studentId,
+        avatar:
+          getClassroomStudentAvatarPath(resolvedStudent) ||
+          "assets/userAvatar/boy.png",
+        name: fullName || studentId || "Học sinh",
       });
     }),
   )
@@ -7753,14 +7816,14 @@ function renderClassroomEmptyState(panel, title, description) {
   `;
 }
 
-function renderClassroomStudentList(classroom) {
+async function renderClassroomStudentList(classroom) {
   const studentList = getClassroomStudentList();
 
   if (!studentList) {
     return;
   }
 
-  const studentCards = getClassroomStudentCards(classroom);
+  const studentCards = await getClassroomStudentCards(classroom);
 
   if (!classroom) {
     renderClassroomEmptyState(
@@ -7876,7 +7939,7 @@ function renderClassroomDetails(classroom) {
     );
   }
 
-  renderClassroomStudentList(classroom);
+  void renderClassroomStudentList(classroom);
 }
 
 function renderClassroomListPanel() {
@@ -9508,6 +9571,1080 @@ function renderTeacherDashboard(profile = null) {
         })
         .join("");
     }
+  }
+}
+
+function getFirestoreDb() {
+  if (
+    !window.firebase?.apps?.length ||
+    typeof window.firebase.app !== "function" ||
+    typeof window.firebase.firestore !== "function"
+  ) {
+    return null;
+  }
+
+  try {
+    return window.firebase.app().firestore();
+  } catch (error) {
+    console.warn("Không thể khởi tạo Firestore cho thống kê giáo viên:", error);
+    return null;
+  }
+}
+
+function getTeacherStatsRoot() {
+  return document.querySelector("#stats .teacher-stats-v2");
+}
+
+function getTeacherStatsClassSelect() {
+  return document.getElementById("teacher-stats-class-select");
+}
+
+function getTeacherStatsRangeSelect() {
+  return document.getElementById("teacher-stats-range-select");
+}
+
+function getTeacherStatsRefreshButton() {
+  return document.getElementById("teacher-stats-refresh-btn");
+}
+
+function getTeacherStatsLineChartNode() {
+  return document.getElementById("teacher-stats-line-chart");
+}
+
+function getTeacherStatsTopStudentsNode() {
+  return document.getElementById("teacher-stats-top-students");
+}
+
+function getTeacherStatsSupportStudentsNode() {
+  return document.getElementById("teacher-stats-support-students");
+}
+
+function getTeacherStatsAssignmentTableNode() {
+  return document.getElementById("teacher-stats-assignment-table");
+}
+
+function getTeacherStatsAssignmentToggleButton() {
+  return document.querySelector("[data-teacher-stats-assignment-toggle]");
+}
+
+function getTeacherStatsAiNode() {
+  return document.getElementById("teacher-stats-ai-analysis");
+}
+
+function getTeacherStatsSummaryNode() {
+  return document.getElementById("teacher-stats-summary");
+}
+
+function getTeacherStatsClassStudents(classroom) {
+  const rawStudents = Array.isArray(classroom?.students)
+    ? classroom.students
+    : Array.isArray(classroom?.studentIds)
+      ? classroom.studentIds
+      : Array.isArray(classroom?.members)
+        ? classroom.members
+        : [];
+
+  return uniqueClassroomValues(
+    rawStudents.map((student) =>
+      String(
+        student && typeof student === "object"
+          ? student.id || student.studentId || student.userId || student.uid || ""
+          : student || "",
+      ).trim(),
+    ),
+  );
+}
+
+function getTeacherStatsClassName(classroom) {
+  return String(classroom?.name || classroom?.className || "Lớp học").trim();
+}
+
+function getTeacherStatsScore10(submission) {
+  const directScore = Number(submission?.score);
+
+  if (Number.isFinite(directScore)) {
+    return Math.max(0, Math.min(10, directScore));
+  }
+
+  const correctCount = Number(submission?.correctCount || submission?.correctAnswers);
+  const totalQuestions = Number(submission?.totalQuestions || submission?.questionCount);
+
+  if (Number.isFinite(correctCount) && Number.isFinite(totalQuestions) && totalQuestions > 0) {
+    return Math.max(0, Math.min(10, Number(((correctCount / totalQuestions) * 10).toFixed(1))));
+  }
+
+  return null;
+}
+
+function getTeacherStatsDateValue(value) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getTeacherStatsDateKey(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
+function isTeacherStatsDateInRange(date, rangeKey) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  if (rangeKey === "all") {
+    return true;
+  }
+
+  const daysByRange = {
+    "7d": 7,
+    "30d": 30,
+    "90d": 90,
+  };
+  const days = daysByRange[rangeKey] || 7;
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (days - 1));
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+
+  return date >= start && date <= end;
+}
+
+function getTeacherStatsRangeLabel(rangeKey) {
+  if (rangeKey === "30d") {
+    return "30 ngày gần nhất";
+  }
+
+  if (rangeKey === "90d") {
+    return "90 ngày gần nhất";
+  }
+
+  if (rangeKey === "all") {
+    return "Tất cả";
+  }
+
+  return "7 ngày gần nhất";
+}
+
+function getTeacherStatsAverage(values) {
+  const validValues = (Array.isArray(values) ? values : [])
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value));
+
+  if (validValues.length === 0) {
+    return null;
+  }
+
+  return Number(
+    (validValues.reduce((sum, value) => sum + value, 0) / validValues.length).toFixed(1),
+  );
+}
+
+async function loadTeacherStatsStudentTopics(studentIds = []) {
+  const firestore = getFirestoreDb();
+
+  if (!firestore) {
+    return new Map();
+  }
+
+  const entries = await Promise.all(
+    uniqueClassroomValues(studentIds).map(async (studentId) => {
+      try {
+        const snapshot = await firestore
+          .collection("user_progress")
+          .doc(studentId)
+          .collection("topics")
+          .get();
+
+        return [
+          studentId,
+          snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...(doc.data() || {}),
+          })),
+        ];
+      } catch (error) {
+        console.warn("Không thể tải topic progress:", error);
+        return [studentId, []];
+      }
+    }),
+  );
+
+  return new Map(entries);
+}
+
+function getTeacherStatsRankedRows(rows, limit = 5) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const paddedRows = [];
+
+  for (let index = 0; index < limit; index += 1) {
+    const row = safeRows[index] || null;
+
+    if (!row) {
+      paddedRows.push(null);
+      continue;
+    }
+
+    paddedRows.push(row);
+  }
+
+  return paddedRows;
+}
+
+function buildTeacherStatsViewModel(rawData, rangeKey = "7d") {
+  if (!rawData || typeof rawData !== "object") {
+    return null;
+  }
+
+  const classroom = rawData.classroom || null;
+  const studentRows = Array.isArray(rawData.studentRows) ? rawData.studentRows : [];
+  const studentIds = studentRows.map((student) => student.id).filter(Boolean);
+  const assignments = Array.isArray(rawData.assignments) ? rawData.assignments : [];
+  const submissionsByAssignmentId =
+    rawData.submissionsByAssignmentId instanceof Map
+      ? rawData.submissionsByAssignmentId
+      : new Map();
+  const topicProgressByStudentId =
+    rawData.topicProgressByStudentId instanceof Map
+      ? rawData.topicProgressByStudentId
+      : new Map();
+  const allSubmissions = assignments.flatMap((assignment) =>
+    Array.isArray(submissionsByAssignmentId.get(String(assignment.id || "").trim()))
+      ? submissionsByAssignmentId.get(String(assignment.id || "").trim())
+      : [],
+  );
+
+  const filteredSubmissions = allSubmissions.filter((submission) => {
+    const date =
+      getTeacherStatsDateValue(submission?.submittedAt) ||
+      getTeacherStatsDateValue(submission?.gradedAt) ||
+      getTeacherStatsDateValue(submission?.createdAt);
+
+    return isTeacherStatsDateInRange(date, rangeKey);
+  });
+
+  const timelineMap = new Map();
+  filteredSubmissions.forEach((submission) => {
+    const date =
+      getTeacherStatsDateValue(submission?.submittedAt) ||
+      getTeacherStatsDateValue(submission?.gradedAt) ||
+      getTeacherStatsDateValue(submission?.createdAt);
+    const score = getTeacherStatsScore10(submission);
+
+    if (!date || !Number.isFinite(score)) {
+      return;
+    }
+
+    const dateKey = getTeacherStatsDateKey(date);
+    const bucket = timelineMap.get(dateKey) || [];
+    bucket.push(score);
+    timelineMap.set(dateKey, bucket);
+  });
+
+  const timelineEntries = Array.from(timelineMap.entries())
+    .map(([dateKey, scores]) => {
+      const date = new Date(`${dateKey}T00:00:00`);
+      return {
+        date,
+        label: new Intl.DateTimeFormat("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+        }).format(date),
+        score: getTeacherStatsAverage(scores),
+      };
+    })
+    .filter((entry) => Number.isFinite(Number(entry.score)))
+    .sort((left, right) => left.date - right.date);
+
+  const studentScoreMap = new Map();
+  filteredSubmissions.forEach((submission) => {
+    const studentId = String(submission?.studentId || "").trim();
+    const score = getTeacherStatsScore10(submission);
+
+    if (!studentId || !Number.isFinite(score)) {
+      return;
+    }
+
+    const bucket = studentScoreMap.get(studentId) || [];
+    bucket.push(score);
+    studentScoreMap.set(studentId, bucket);
+  });
+
+  const studentAverages = studentRows
+    .map((student) => {
+      const scores = studentScoreMap.get(student.id) || [];
+      const averageScore = getTeacherStatsAverage(scores);
+
+      return {
+        ...student,
+        averageScore,
+        attempts: scores.length,
+      };
+    })
+    .filter((student) => Number.isFinite(Number(student.averageScore)));
+
+  const topStudents = [...studentAverages]
+    .sort((left, right) => (Number(right.averageScore) || 0) - (Number(left.averageScore) || 0))
+    .slice(0, 5);
+
+  const topicBuckets = new Map();
+  studentIds.forEach((studentId) => {
+    const topics = topicProgressByStudentId.get(studentId) || [];
+
+    topics
+      .filter((topic) => {
+        const date =
+          getTeacherStatsDateValue(topic?.updatedAt) ||
+          getTeacherStatsDateValue(topic?.accuracyUpdatedAt) ||
+          getTeacherStatsDateValue(topic?.createdAt);
+        return isTeacherStatsDateInRange(date, rangeKey);
+      })
+      .forEach((topic) => {
+        const topicKey = String(topic.topicName || topic.title || topic.topicId || "").trim();
+        const accuracy = Number(topic.percentage);
+
+        if (!topicKey || !Number.isFinite(accuracy)) {
+          return;
+        }
+
+        const bucket = topicBuckets.get(topicKey) || [];
+        bucket.push(Math.max(0, Math.min(100, accuracy)));
+        topicBuckets.set(topicKey, bucket);
+      });
+  });
+
+  const weakestTopic = Array.from(topicBuckets.entries())
+    .map(([topicName, values]) => ({
+      topicName,
+      percentage: getTeacherStatsAverage(values) ?? 0,
+    }))
+    .filter((item) => Number.isFinite(Number(item.percentage)))
+    .sort((left, right) => (left.percentage || 0) - (right.percentage || 0))[0] || null;
+
+  const assignmentRows = assignments.map((assignment) => {
+    const submissions = (submissionsByAssignmentId.get(String(assignment.id || "").trim()) || []).filter(
+      (submission) => {
+        const date =
+          getTeacherStatsDateValue(submission?.submittedAt) ||
+          getTeacherStatsDateValue(submission?.gradedAt) ||
+          getTeacherStatsDateValue(submission?.createdAt);
+        return isTeacherStatsDateInRange(date, rangeKey);
+      },
+    );
+
+    const completedStudentIds = uniqueClassroomValues(
+      submissions.map((submission) => String(submission?.studentId || "").trim()),
+    );
+    const totalStudents = studentRows.length;
+    const completedCount = completedStudentIds.length;
+    const pendingCount = Math.max(0, totalStudents - completedCount);
+    const completionRate = totalStudents > 0 ? Math.round((completedCount / totalStudents) * 100) : 0;
+
+    return {
+      id: assignment.id,
+      title: String(assignment.title || "Bài tập").trim(),
+      completedCount,
+      pendingCount,
+      completionRate,
+      createdAt: assignment.createdAt || "",
+    };
+  }).sort((left, right) => Date.parse(right.createdAt || "") - Date.parse(left.createdAt || ""));
+
+  const overallAverageScore = getTeacherStatsAverage(
+    filteredSubmissions.map((submission) => getTeacherStatsScore10(submission)).filter((value) => Number.isFinite(value)),
+  );
+  const totalCompletedAssignments = assignmentRows.reduce((sum, row) => sum + row.completedCount, 0);
+  const totalAssignments = assignmentRows.length;
+  const assignmentCompletionRate = assignmentRows.length
+    ? Math.round(
+        assignmentRows.reduce((sum, row) => sum + row.completionRate, 0) / assignmentRows.length,
+      )
+    : 0;
+  const averageStudyMinutes = getTeacherStatsAverage(
+    studentRows.map((student) => Number(student.profile?.stats?.studyMinutes || 0)),
+  );
+  const topStudentIds = new Set(topStudents.map((student) => student.id));
+  const supportStudentsFiltered = studentAverages.filter((student) => !topStudentIds.has(student.id));
+  const supportStudents = [...supportStudentsFiltered]
+    .sort((left, right) => (Number(left.averageScore) || 0) - (Number(right.averageScore) || 0))
+    .slice(0, 5);
+  const supportStudentCount = supportStudentsFiltered.filter((student) => Number(student.averageScore) < 5).length;
+  const className = getTeacherStatsClassName(classroom);
+
+  return {
+    className,
+    rangeLabel: getTeacherStatsRangeLabel(rangeKey),
+    totalStudents: studentRows.length,
+    totalAssignments,
+    overallAverageScore,
+    assignmentCompletionRate,
+    averageStudyMinutes,
+    supportStudentCount,
+    weakestTopic,
+    timelineEntries,
+    topStudents,
+    supportStudents,
+    assignmentRows,
+    studentAverages,
+    classStudents: studentRows,
+  };
+}
+
+function renderTeacherStatsSkeleton() {
+  const lineChartNode = getTeacherStatsLineChartNode();
+  const topStudentsNode = getTeacherStatsTopStudentsNode();
+  const supportStudentsNode = getTeacherStatsSupportStudentsNode();
+  const assignmentTableNode = getTeacherStatsAssignmentTableNode();
+  const aiNode = getTeacherStatsAiNode();
+  const summaryNode = getTeacherStatsSummaryNode();
+
+  const skeleton = `<div class="teacher-stats-skeleton" style="height: 100%; min-height: 240px;"></div>`;
+
+  if (lineChartNode) lineChartNode.innerHTML = skeleton;
+  if (topStudentsNode) topStudentsNode.innerHTML = skeleton;
+  if (supportStudentsNode) supportStudentsNode.innerHTML = skeleton;
+  if (assignmentTableNode) assignmentTableNode.innerHTML = skeleton;
+  if (aiNode) aiNode.innerHTML = skeleton;
+  if (summaryNode) summaryNode.innerHTML = `<div class="teacher-stats-skeleton" style="min-height: 116px; width: 100%;"></div>`;
+}
+
+function renderTeacherStatsEmpty(message = "Chưa có dữ liệu thống kê.") {
+  const empty = `<div class="teacher-stats-chart-empty">${escapeHtml(message)}</div>`;
+  const lineChartNode = getTeacherStatsLineChartNode();
+  const topStudentsNode = getTeacherStatsTopStudentsNode();
+  const supportStudentsNode = getTeacherStatsSupportStudentsNode();
+  const assignmentTableNode = getTeacherStatsAssignmentTableNode();
+  const aiNode = getTeacherStatsAiNode();
+  const summaryNode = getTeacherStatsSummaryNode();
+  const assignmentToggleButton = getTeacherStatsAssignmentToggleButton();
+
+  if (lineChartNode) lineChartNode.innerHTML = empty;
+  if (topStudentsNode) topStudentsNode.innerHTML = empty;
+  if (supportStudentsNode) supportStudentsNode.innerHTML = empty;
+  if (assignmentTableNode) assignmentTableNode.innerHTML = empty;
+  if (aiNode) {
+    aiNode.innerHTML = `
+      <div class="teacher-stats-chart-empty">
+        <div>
+          <strong>Chưa có dữ liệu</strong>
+          <p>${escapeHtml(message)}</p>
+        </div>
+      </div>
+    `;
+  }
+  if (summaryNode) summaryNode.innerHTML = empty;
+  if (assignmentToggleButton) {
+    assignmentToggleButton.hidden = true;
+  }
+}
+
+function buildTeacherStatsLineChartSvg(entries) {
+  const safeEntries = Array.isArray(entries) ? entries : [];
+
+  if (safeEntries.length === 0) {
+    return "";
+  }
+
+  const width = 960;
+  const height = 340;
+  const leftPad = 60;
+  const rightPad = 24;
+  const topPad = 28;
+  const bottomPad = 66;
+  const chartWidth = width - leftPad - rightPad;
+  const chartHeight = height - topPad - bottomPad;
+  const points = safeEntries.map((entry, index) => {
+    const ratio = safeEntries.length === 1 ? 0.5 : index / (safeEntries.length - 1);
+    const x = leftPad + ratio * chartWidth;
+    const score = Number(entry.score) || 0;
+    const y = topPad + (1 - score / 10) * chartHeight;
+    return { ...entry, x, y, score };
+  });
+
+  const lines = [];
+  for (let tick = 0; tick <= 5; tick += 1) {
+    const value = tick * 2;
+    const y = topPad + (1 - value / 10) * chartHeight;
+    lines.push(`
+      <line x1="${leftPad}" x2="${width - rightPad}" y1="${y}" y2="${y}" class="teacher-stats-chart-grid" />
+      <text x="${leftPad - 8}" y="${y + 4}" text-anchor="end" class="teacher-stats-chart-axis-label">${value}</text>
+    `);
+  }
+
+  const path = points
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+    .join(" ");
+
+  const areaPath = `
+    M ${points[0].x} ${height - bottomPad}
+    ${points.map((point) => `L ${point.x} ${point.y}`).join(" ")}
+    L ${points[points.length - 1].x} ${height - bottomPad}
+    Z
+  `;
+
+  const circles = points
+    .map(
+      (point) => `
+        <circle cx="${point.x}" cy="${point.y}" r="6.5" class="teacher-stats-chart-point" />
+        <text x="${point.x}" y="${point.y - 16}" text-anchor="middle" class="teacher-stats-chart-value">${point.score.toFixed(1)}</text>
+        <text x="${point.x}" y="${height - 20}" text-anchor="middle" class="teacher-stats-chart-axis-label">${escapeHtml(point.label)}</text>
+      `,
+    )
+    .join("");
+
+  return `
+    <svg viewBox="0 0 ${width} ${height}" class="teacher-stats-chart-svg" role="img" aria-label="Biểu đồ điểm trung bình theo thời gian">
+      <defs>
+        <linearGradient id="teacher-stats-line-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="rgba(37, 99, 235, 0.22)" />
+          <stop offset="100%" stop-color="rgba(37, 99, 235, 0.02)" />
+        </linearGradient>
+      </defs>
+      ${lines.join("")}
+      <path d="${areaPath}" fill="url(#teacher-stats-line-gradient)" />
+      <path d="${path}" fill="none" class="teacher-stats-chart-line" />
+      ${circles}
+    </svg>
+    <div class="teacher-stats-chart-legend">
+      <span><i></i> Điểm trung bình</span>
+    </div>
+  `;
+}
+
+function renderTeacherStatsTableRows(rows, kind = "top") {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const rowsWithPlaceholders = getTeacherStatsRankedRows(safeRows, 5);
+
+  return `
+    <div class="teacher-stats-table-head">
+      <span>#</span>
+      <span>Học sinh</span>
+      <span>Điểm trung bình</span>
+    </div>
+    ${rowsWithPlaceholders
+      .map((row, index) => {
+        if (!row) {
+          return `
+            <div class="teacher-stats-table-row">
+              <span class="teacher-stats-table-rank">${index + 1}</span>
+              <span class="teacher-stats-table-name">--</span>
+              <span class="teacher-stats-table-score">--</span>
+            </div>
+          `;
+        }
+
+        const medal = kind === "top" && index < 3 ? ["🥇", "🥈", "🥉"][index] : "";
+        return `
+          <div class="teacher-stats-table-row">
+            <span class="teacher-stats-table-rank ${medal ? "is-medal" : ""}">${medal || index + 1}</span>
+            <span class="teacher-stats-table-name">${escapeHtml(row.fullName || row.name || "Học sinh")}</span>
+            <span class="teacher-stats-table-score">${escapeHtml(formatStatValue(row.averageScore))}</span>
+          </div>
+        `;
+      })
+      .join("")}
+  `;
+}
+
+function renderTeacherStatsAssignments(rows) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const visibleRows = teacherStatsState.assignmentExpanded
+    ? safeRows
+    : safeRows.slice(0, 5);
+  const showToggle = safeRows.length > 5;
+
+  if (safeRows.length === 0) {
+    return `
+      <div class="teacher-stats-chart-empty">
+        <div>
+          <strong>Chưa có bài tập</strong>
+          <p>Không có bài tập phù hợp với lớp đang chọn.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="teacher-stats-table-head teacher-stats-table-head-assignment">
+      <span>Bài tập</span>
+      <span>Đã làm</span>
+      <span>Chưa làm</span>
+      <span>Tỉ lệ hoàn thành</span>
+    </div>
+    ${visibleRows
+      .map(
+        (row) => `
+          <div class="teacher-stats-table-row teacher-stats-table-row-assignment">
+            <span class="teacher-stats-table-name">${escapeHtml(row.title)}</span>
+            <span>${escapeHtml(String(row.completedCount))}</span>
+            <span>${escapeHtml(String(row.pendingCount))}</span>
+            <span class="teacher-stats-progress-label is-centered">${escapeHtml(String(row.completionRate))}%</span>
+          </div>
+        `,
+      )
+      .join("")}
+    ${showToggle ? `
+      <button class="teacher-stats-link-button is-purple" type="button" data-teacher-stats-assignment-toggle>
+        ${teacherStatsState.assignmentExpanded ? "Thu gọn" : "Xem thêm"}
+      </button>
+    ` : ""}
+  `;
+}
+
+function renderTeacherStatsAi(viewModel) {
+  if (!viewModel) {
+    return `
+      <div class="teacher-stats-chart-empty">
+        <div>
+          <strong>Chưa có dữ liệu</strong>
+          <p>Hãy chọn lớp khác hoặc làm mới dữ liệu.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  const averageScore = Number.isFinite(Number(viewModel.overallAverageScore))
+    ? Number(viewModel.overallAverageScore).toFixed(1)
+    : "--";
+  const weakestTopicName = viewModel.weakestTopic?.topicName || "--";
+  const weakestTopicAccuracy = Number.isFinite(Number(viewModel.weakestTopic?.percentage))
+    ? `${Number(viewModel.weakestTopic.percentage).toFixed(0)}%`
+    : "--";
+  const completionRate = `${viewModel.assignmentCompletionRate || 0}%`;
+  const supportStudentCount = viewModel.supportStudentCount || 0;
+  const recommendationTopic = weakestTopicName !== "--" ? weakestTopicName : "chủ đề yếu nhất";
+  const weakerNote = viewModel.weakestTopic
+    ? `Chủ đề yếu nhất là ${weakestTopicName} (${weakestTopicAccuracy}).`
+    : "Chưa có đủ dữ liệu chủ đề để phân tích.";
+
+  return `
+    <div class="teacher-stats-ai-layout">
+      <div>
+        <p class="teacher-stats-ai-lead">
+          Trong lớp ${escapeHtml(viewModel.className)}, điểm trung bình đang ở mức <strong>${escapeHtml(averageScore)}</strong>.
+        </p>
+
+        <ul class="teacher-stats-ai-list">
+          <li><span class="teacher-stats-ai-dot is-red">×</span><span>${escapeHtml(weakerNote)}</span></li>
+          <li><span class="teacher-stats-ai-dot is-orange">!</span><span>Có <strong>${escapeHtml(String(supportStudentCount))}</strong> học sinh cần được hỗ trợ thêm.</span></li>
+          <li><span class="teacher-stats-ai-dot is-green">✓</span><span>Tỉ lệ hoàn thành bài tập trung bình là <strong>${escapeHtml(completionRate)}</strong>.</span></li>
+        </ul>
+
+        <div class="teacher-stats-ai-suggestion">
+          <strong>Đề xuất:</strong> Nên giao thêm bài luyện tập về ${escapeHtml(recommendationTopic)} và theo dõi nhóm học sinh có điểm trung bình thấp.
+        </div>
+      </div>
+
+      <div class="teacher-stats-ai-illustration" aria-hidden="true">
+        <svg viewBox="0 0 220 220" role="presentation">
+          <defs>
+            <linearGradient id="stats-robot-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#eef4ff"/>
+              <stop offset="100%" stop-color="#ffffff"/>
+            </linearGradient>
+          </defs>
+          <circle cx="110" cy="110" r="84" fill="url(#stats-robot-bg)" />
+          <ellipse cx="110" cy="158" rx="36" ry="28" fill="#dce8ff" />
+          <rect x="62" y="66" width="96" height="92" rx="32" fill="#ffffff" stroke="#d8e4ff" stroke-width="4" />
+          <rect x="74" y="78" width="72" height="56" rx="20" fill="#2962ff" />
+          <circle cx="96" cy="100" r="9" fill="#0f172a" />
+          <circle cx="124" cy="100" r="9" fill="#0f172a" />
+          <path d="M92 118c6 8 30 8 36 0" fill="none" stroke="#0f172a" stroke-width="6" stroke-linecap="round" />
+          <circle cx="62" cy="74" r="10" fill="#7ea7ff" />
+          <circle cx="158" cy="74" r="10" fill="#7ea7ff" />
+          <circle cx="44" cy="160" r="8" fill="#7ea7ff" />
+          <circle cx="176" cy="160" r="8" fill="#7ea7ff" />
+          <circle cx="56" cy="144" r="7" fill="#8fb2ff" />
+          <circle cx="164" cy="144" r="7" fill="#8fb2ff" />
+        </svg>
+      </div>
+    </div>
+  `;
+}
+
+function renderTeacherStatsSummary(viewModel) {
+  if (!viewModel) {
+    return `
+      <div class="teacher-stats-chart-empty">
+        <div>
+          <strong>Chưa có dữ liệu</strong>
+          <p>Không thể tạo phần tổng quan vì chưa có dữ liệu lớp.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  const items = [
+    {
+      label: "Tổng số học sinh",
+      value: formatStatValue(viewModel.totalStudents),
+      iconClass: "is-blue",
+      icon: "👥",
+    },
+    {
+      label: "Tỉ lệ hoàn thành TB",
+      value: `${formatStatValue(viewModel.assignmentCompletionRate)}%`,
+      iconClass: "is-green",
+      icon: "✓",
+    },
+    {
+      label: "Điểm trung bình lớp",
+      value: formatStatValue(viewModel.overallAverageScore),
+      iconClass: "is-yellow",
+      icon: "★",
+    },
+    {
+      label: "Bài tập đã giao",
+      value: formatStatValue(viewModel.totalAssignments),
+      iconClass: "is-indigo",
+      icon: "▮▮",
+    },
+    {
+      label: "Thời gian học TB/ngày",
+      value: `${formatStatValue(viewModel.averageStudyMinutes)} phút`,
+      iconClass: "is-pink",
+      icon: "◔",
+    },
+  ];
+
+  return items
+    .map(
+      (item) => `
+        <article class="teacher-stats-summary-item">
+          <span class="teacher-stats-summary-icon ${item.iconClass}" aria-hidden="true">${item.icon}</span>
+          <div class="teacher-stats-summary-copy">
+            <span>${escapeHtml(item.label)}</span>
+            <strong${item.label === "Thời gian học TB/ngày" ? ' class="is-small"' : ""}>${escapeHtml(item.value)}</strong>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderTeacherStatsPageState(viewModel) {
+  const root = getTeacherStatsRoot();
+  if (!root) {
+    return;
+  }
+
+  const classSelect = getTeacherStatsClassSelect();
+  const rangeSelect = getTeacherStatsRangeSelect();
+  const lineChartNode = getTeacherStatsLineChartNode();
+  const topStudentsNode = getTeacherStatsTopStudentsNode();
+  const supportStudentsNode = getTeacherStatsSupportStudentsNode();
+  const assignmentTableNode = getTeacherStatsAssignmentTableNode();
+  const aiNode = getTeacherStatsAiNode();
+  const summaryNode = getTeacherStatsSummaryNode();
+
+  if (classSelect && Array.isArray(teacherStatsState.data?.classes)) {
+    const classes = teacherStatsState.data.classes;
+    classSelect.innerHTML = classes
+      .map(
+        (classroom) =>
+          `<option value="${escapeHtml(classroom.id)}">${escapeHtml(getTeacherStatsClassName(classroom))}</option>`,
+      )
+      .join("");
+    if (teacherStatsState.selectedClassId) {
+      classSelect.value = teacherStatsState.selectedClassId;
+    }
+  }
+
+  if (rangeSelect) {
+    rangeSelect.value = teacherStatsState.selectedRange;
+  }
+
+  if (!viewModel) {
+    renderTeacherStatsEmpty("Chưa có dữ liệu thống kê cho lớp này.");
+    return;
+  }
+
+  if (lineChartNode) {
+    lineChartNode.innerHTML = viewModel.timelineEntries.length
+      ? buildTeacherStatsLineChartSvg(viewModel.timelineEntries)
+      : `<div class="teacher-stats-chart-empty"><div><strong>Không có dữ liệu</strong><p>Chưa có bài làm trong khoảng thời gian này.</p></div></div>`;
+  }
+
+  if (topStudentsNode) {
+    topStudentsNode.innerHTML = renderTeacherStatsTableRows(viewModel.topStudents, "top");
+  }
+
+  if (supportStudentsNode) {
+    supportStudentsNode.innerHTML = renderTeacherStatsTableRows(viewModel.supportStudents, "support");
+  }
+
+  if (assignmentTableNode) {
+    assignmentTableNode.innerHTML = renderTeacherStatsAssignments(viewModel.assignmentRows);
+  }
+
+  if (aiNode) {
+    aiNode.innerHTML = renderTeacherStatsAi(viewModel);
+  }
+
+  if (summaryNode) {
+    summaryNode.innerHTML = renderTeacherStatsSummary(viewModel);
+  }
+
+  const assignmentToggleButton = getTeacherStatsAssignmentToggleButton();
+  if (assignmentToggleButton) {
+    assignmentToggleButton.hidden = !(Array.isArray(viewModel.assignmentRows) && viewModel.assignmentRows.length > 5);
+  }
+}
+
+function bindTeacherStatsControls() {
+  const root = getTeacherStatsRoot();
+
+  if (!root || root.dataset.bound === "true") {
+    return;
+  }
+
+  root.dataset.bound = "true";
+
+  const classSelect = getTeacherStatsClassSelect();
+  const rangeSelect = getTeacherStatsRangeSelect();
+  const refreshButton = getTeacherStatsRefreshButton();
+
+  if (classSelect) {
+    classSelect.addEventListener("change", (event) => {
+      const value = String(event.target.value || "").trim();
+      teacherStatsState.selectedClassId = value;
+      void loadTeacherStatsData({ selectedClassId: value, forceRefresh: true });
+    });
+  }
+
+  if (rangeSelect) {
+    rangeSelect.addEventListener("change", (event) => {
+      teacherStatsState.selectedRange = String(event.target.value || "7d").trim() || "7d";
+      teacherStatsState.assignmentExpanded = false;
+      const viewModel = buildTeacherStatsViewModel(teacherStatsState.data, teacherStatsState.selectedRange);
+      renderTeacherStatsPageState(viewModel);
+    });
+  }
+
+  if (refreshButton) {
+    refreshButton.addEventListener("click", () => {
+      teacherStatsState.assignmentExpanded = false;
+      void loadTeacherStatsData({
+        selectedClassId: teacherStatsState.selectedClassId,
+        forceRefresh: true,
+      });
+    });
+  }
+
+  root.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-teacher-stats-assignment-toggle]");
+
+    if (!button) {
+      return;
+    }
+
+    teacherStatsState.assignmentExpanded = !teacherStatsState.assignmentExpanded;
+    const viewModel = buildTeacherStatsViewModel(teacherStatsState.data, teacherStatsState.selectedRange);
+    renderTeacherStatsPageState(viewModel);
+  });
+}
+
+async function loadTeacherStatsData({ selectedClassId = "", forceRefresh = false } = {}) {
+  const teacher = getCurrentAuthUser();
+  if (normalizeRole(teacher?.role) !== "teacher") {
+    return null;
+  }
+
+  const teacherId = String(teacher?.uid || teacher?.userId || teacher?.id || "").trim();
+
+  if (!teacherId) {
+    return null;
+  }
+
+  if (
+    teacherStatsState.loading &&
+    teacherStatsState.teacherId === teacherId &&
+    teacherStatsState.pendingPromise
+  ) {
+    return teacherStatsState.pendingPromise;
+  }
+
+  if (
+    teacherStatsState.loaded &&
+    teacherStatsState.teacherId === teacherId &&
+    teacherStatsState.data &&
+    !forceRefresh
+  ) {
+    if (selectedClassId) {
+      teacherStatsState.selectedClassId = selectedClassId;
+    }
+
+    return teacherStatsState.data;
+  }
+
+  teacherStatsState.loading = true;
+  teacherStatsState.teacherId = teacherId;
+  const requestToken = teacherStatsState.renderToken + 1;
+  teacherStatsState.renderToken = requestToken;
+
+  const requestPromise = (async () => {
+    try {
+      const [classesResponse, assignmentsResponse] = await Promise.all([
+        apiRequestWithAuth("/api/classes/my", { method: "GET" }).catch(() => ({ data: [] })),
+        getAssignmentService()?.getTeacherAssignments
+          ? getAssignmentService().getTeacherAssignments(teacherId).catch(() => [])
+          : Promise.resolve([]),
+      ]);
+
+      const classes = sortClassroomRecords(
+        Array.isArray(classesResponse?.data)
+          ? classesResponse.data
+              .map(normalizeClassroomRecord)
+              .filter(
+                (classroom) =>
+                  classroom &&
+                  (classroom.teacherId === teacherId || !classroom.teacherId),
+              )
+          : [],
+      );
+
+      const initialClassId =
+        selectedClassId ||
+        teacherStatsState.selectedClassId ||
+        classes[0]?.id ||
+        "";
+      const classroom =
+        classes.find((item) => item.id === initialClassId) ||
+        classes[0] ||
+        null;
+
+      if (!classroom) {
+        const emptyData = {
+          classes,
+          classroom: null,
+          studentRows: [],
+          assignments: [],
+          submissionsByAssignmentId: new Map(),
+          topicProgressByStudentId: new Map(),
+        };
+        teacherStatsState.data = emptyData;
+        teacherStatsState.loaded = true;
+        teacherStatsState.selectedClassId = "";
+        return emptyData;
+      }
+
+      const studentCards = await getClassroomStudentCards(classroom);
+      const studentIds = uniqueClassroomValues(studentCards.map((student) => student.id));
+      const profileService = window.EduKidsProfileService;
+      const studentProfiles = await Promise.all(
+        studentIds.map(async (studentId) => {
+          if (!profileService?.fetchProfileById) {
+            return [studentId, null];
+          }
+
+          const profile = await profileService.fetchProfileById(studentId).catch(() => null);
+          return [studentId, profile];
+        }),
+      );
+
+      const studentProfileById = new Map(studentProfiles);
+      const studentRows = studentCards.map((card) => {
+        const profile = studentProfileById.get(card.id) || null;
+        return {
+          id: card.id,
+          fullName:
+            profile?.fullName ||
+            profile?.name ||
+            card.name ||
+            profile?.username ||
+            "Học sinh",
+          avatar: profile?.avatar || card.avatar || "",
+          profile,
+        };
+      });
+
+      const classAssignments = (Array.isArray(assignmentsResponse) ? assignmentsResponse : [])
+        .filter((assignment) => String(assignment?.classId || "").trim() === classroom.id)
+        .map((assignment) => ({
+          ...assignment,
+          id: String(assignment.id || "").trim(),
+        }))
+        .filter((assignment) => Boolean(assignment.id));
+
+      const submissionsEntries = await Promise.all(
+        classAssignments.map(async (assignment) => {
+          if (!getAssignmentService()?.fetchAssignmentSubmissions) {
+            return [assignment.id, []];
+          }
+
+          const submissions = await getAssignmentService()
+            .fetchAssignmentSubmissions(assignment.id)
+            .catch(() => []);
+          return [assignment.id, Array.isArray(submissions) ? submissions : []];
+        }),
+      );
+
+      const topicProgressByStudentId = await loadTeacherStatsStudentTopics(studentIds);
+
+      const nextData = {
+        classes,
+        classroom,
+        studentRows,
+        assignments: classAssignments,
+        submissionsByAssignmentId: new Map(submissionsEntries),
+        topicProgressByStudentId,
+      };
+
+      if (teacherStatsState.renderToken !== requestToken) {
+        return nextData;
+      }
+
+      teacherStatsState.data = nextData;
+      teacherStatsState.loaded = true;
+      teacherStatsState.selectedClassId = classroom.id;
+      return nextData;
+    } catch (error) {
+      console.warn("Không thể tải thống kê giáo viên:", error);
+      return null;
+    } finally {
+      teacherStatsState.loading = false;
+      teacherStatsState.pendingPromise = null;
+    }
+  })();
+
+  teacherStatsState.pendingPromise = requestPromise;
+  const data = await requestPromise;
+
+  if (data) {
+    const viewModel = buildTeacherStatsViewModel(
+      data,
+      teacherStatsState.selectedRange || "7d",
+    );
+    renderTeacherStatsPageState(viewModel);
+  } else {
+    renderTeacherStatsEmpty("Không thể tải dữ liệu thống kê.");
+  }
+
+  return data;
+}
+
+async function initializeTeacherStatsPage(forceRefresh = false) {
+  if (normalizeRole(getCurrentRole()) !== "teacher") {
+    return;
+  }
+
+  bindTeacherStatsControls();
+  renderTeacherStatsSkeleton();
+  const data = await loadTeacherStatsData({
+    selectedClassId: teacherStatsState.selectedClassId,
+    forceRefresh,
+  });
+
+  if (!data) {
+    renderTeacherStatsEmpty("Không tìm thấy dữ liệu thống kê cho giáo viên.");
   }
 }
 
