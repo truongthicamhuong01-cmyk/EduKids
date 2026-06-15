@@ -3,6 +3,7 @@ const ApiError = require("../utils/apiError");
 const successResponse = require("../utils/apiResponse");
 const { normalizeString } = require("../utils/validators");
 const { generateAssignmentQuestions } = require("../services/assignmentAiService");
+const { readSystemSettings } = require("../services/systemSettingsService");
 
 const generateAssignmentAiQuestions = asyncHandler(async (req, res) => {
   if (!req.user) {
@@ -11,6 +12,18 @@ const generateAssignmentAiQuestions = asyncHandler(async (req, res) => {
 
   if (req.user.role !== "teacher") {
     throw new ApiError(403, "Only teachers can generate AI assignment questions");
+  }
+
+  const systemSettings = await readSystemSettings();
+  if (systemSettings?.maintenance?.enabled) {
+    throw new ApiError(
+      503,
+      systemSettings.maintenance.message || "Hệ thống đang bảo trì, vui lòng quay lại sau.",
+    );
+  }
+
+  if (systemSettings?.ai?.assignmentEnabled === false) {
+    throw new ApiError(403, "AI Assignment is disabled");
   }
 
   const subject = normalizeString(req.body.subject);

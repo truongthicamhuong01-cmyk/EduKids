@@ -18,6 +18,7 @@ function buildAuthUserPayload(user) {
     userCode: user.userCode,
     username: user.username,
     role: user.role,
+    status: user.status || "active",
     fullName: user.fullName,
     name: user.name,
     gender: user.gender,
@@ -83,6 +84,10 @@ async function loginUser({ username, password }) {
 
   if (!isPasswordValid) {
     throw new ApiError(401, "Invalid username or password");
+  }
+
+  if (String(user.status || "active").toLowerCase() === "locked") {
+    throw new ApiError(403, "Account is locked");
   }
 
   const normalizedUser = await ensureUserCode(user.uid, user);

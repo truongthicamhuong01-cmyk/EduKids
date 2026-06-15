@@ -2068,7 +2068,7 @@
       ></div>
 
       <main class="content admin-content">
-        <section id="admin-overview" class="admin-page active">
+        <section id="admin-overview" class="admin-page active" data-admin-overview-root>
           <header class="admin-hero admin-overview-hero">
             <div class="admin-hero-copy">
               <span class="admin-eyebrow">Bảng điều khiển quản trị</span>
@@ -2079,7 +2079,7 @@
             <div class="admin-hero-summary">
               <div class="admin-hero-summary-pill">
                 <span>●</span>
-                Dữ liệu mẫu
+                Dữ liệu thật
               </div>
               <div class="admin-hero-summary-meta">
                 <strong>Admin Dashboard</strong>
@@ -2092,43 +2092,43 @@
             <article class="admin-kpi-card is-blue">
               <div class="admin-kpi-icon">👨‍🎓</div>
               <small>Tổng học sinh</small>
-              <strong>1.254</strong>
-              <span>+15 so với tuần trước</span>
+              <strong data-admin-overview-stat="total-students">--</strong>
+              <span data-admin-overview-note="total-students">Đang tải dữ liệu</span>
             </article>
 
             <article class="admin-kpi-card is-cyan">
               <div class="admin-kpi-icon">👩‍🏫</div>
               <small>Tổng giáo viên</small>
-              <strong>38</strong>
-              <span>+2 so với tuần trước</span>
+              <strong data-admin-overview-stat="total-teachers">--</strong>
+              <span data-admin-overview-note="total-teachers">Đang tải dữ liệu</span>
             </article>
 
             <article class="admin-kpi-card is-green">
               <div class="admin-kpi-icon">🏫</div>
               <small>Tổng lớp học</small>
-              <strong>52</strong>
-              <span>Ổn định trong tuần này</span>
+              <strong data-admin-overview-stat="total-classes">--</strong>
+              <span data-admin-overview-note="total-classes">Đang tải dữ liệu</span>
             </article>
 
             <article class="admin-kpi-card is-orange">
               <div class="admin-kpi-icon">📝</div>
               <small>Tổng bài tập đã giao</small>
-              <strong>1.842</strong>
-              <span>+120 so với tuần trước</span>
+              <strong data-admin-overview-stat="total-assignments">--</strong>
+              <span data-admin-overview-note="total-assignments">Đang tải dữ liệu</span>
             </article>
 
             <article class="admin-kpi-card is-purple">
               <div class="admin-kpi-icon">🤖</div>
               <small>Lượt sử dụng AI hôm nay</small>
-              <strong>324</strong>
-              <span>Đang tăng nhẹ</span>
+              <strong data-admin-overview-stat="ai-usage-today">--</strong>
+              <span data-admin-overview-note="ai-usage-today">Chưa có log AI</span>
             </article>
 
             <article class="admin-kpi-card is-red">
               <div class="admin-kpi-icon">📊</div>
               <small>Điểm trung bình toàn hệ thống</small>
-              <strong>7.8<span>/10</span></strong>
-              <span>Giữ nhịp ổn định</span>
+              <strong data-admin-overview-stat="average-score">--<span>/10</span></strong>
+              <span data-admin-overview-note="average-score">Đang tải dữ liệu</span>
             </article>
           </div>
 
@@ -2142,58 +2142,13 @@
                 <span class="admin-panel-chip is-blue">Hiện tại</span>
               </div>
 
-              <div class="admin-chart-card">
-                  <svg viewBox="0 0 720 260" class="admin-chart" role="img" aria-label="Lượt làm bài theo ngày">
-                  <defs>
-                    <linearGradient id="admin-workfill" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stop-color="#4f46e5" stop-opacity="0.22" />
-                      <stop offset="100%" stop-color="#4f46e5" stop-opacity="0.02" />
-                    </linearGradient>
-                  </defs>
-                  <g class="admin-chart-grid-lines">
-                    <line x1="48" y1="34" x2="680" y2="34" />
-                    <line x1="48" y1="82" x2="680" y2="82" />
-                    <line x1="48" y1="130" x2="680" y2="130" />
-                    <line x1="48" y1="178" x2="680" y2="178" />
-                    <line x1="48" y1="226" x2="680" y2="226" />
-                  </g>
-                  <g class="admin-chart-ylabels">
-                    <text x="12" y="38">4.000</text>
-                    <text x="12" y="86">3.000</text>
-                    <text x="12" y="134">2.000</text>
-                    <text x="12" y="182">1.000</text>
-                    <text x="24" y="230">0</text>
-                  </g>
-                  <polyline
-                    class="admin-chart-area"
-                    points="48,200 140,148 232,176 324,120 416,182 508,110 600,142 680,108 680,226 48,226"
-                    fill="url(#admin-workfill)"
-                  />
-                  <polyline
-                    class="admin-chart-line"
-                    points="48,200 140,148 232,176 324,120 416,182 508,110 600,142 680,108"
-                  />
-                  <g class="admin-chart-points">
-                    <circle cx="48" cy="200" r="6" />
-                    <circle cx="140" cy="148" r="6" />
-                    <circle cx="232" cy="176" r="6" />
-                    <circle cx="324" cy="120" r="6" />
-                    <circle cx="416" cy="182" r="6" />
-                    <circle cx="508" cy="110" r="6" />
-                    <circle cx="600" cy="142" r="6" />
-                    <circle cx="680" cy="108" r="6" />
-                  </g>
-                  <g class="admin-chart-labels">
-                    <text x="48" y="246">14/05</text>
-                    <text x="140" y="246">15/05</text>
-                    <text x="232" y="246">16/05</text>
-                    <text x="324" y="246">17/05</text>
-                    <text x="416" y="246">18/05</text>
-                    <text x="508" y="246">19/05</text>
-                    <text x="600" y="246">20/05</text>
-                    <text x="680" y="246">21/05</text>
-                  </g>
-                </svg>
+              <div class="admin-chart-card" data-admin-overview-chart-card="work">
+                <div class="admin-empty-state is-large">
+                  <div>
+                    <p>Đang tải dữ liệu</p>
+                    <span>Biểu đồ lượt làm bài sẽ hiển thị khi có dữ liệu từ Firestore.</span>
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -2206,58 +2161,13 @@
                 <span class="admin-panel-chip is-purple">AI</span>
               </div>
 
-              <div class="admin-chart-card is-purple">
-                  <svg viewBox="0 0 720 260" class="admin-chart" role="img" aria-label="Lượt sử dụng AI theo ngày">
-                  <defs>
-                    <linearGradient id="admin-ai-fill" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stop-color="#9333ea" stop-opacity="0.22" />
-                      <stop offset="100%" stop-color="#9333ea" stop-opacity="0.02" />
-                    </linearGradient>
-                  </defs>
-                  <g class="admin-chart-grid-lines is-purple">
-                    <line x1="48" y1="34" x2="680" y2="34" />
-                    <line x1="48" y1="82" x2="680" y2="82" />
-                    <line x1="48" y1="130" x2="680" y2="130" />
-                    <line x1="48" y1="178" x2="680" y2="178" />
-                    <line x1="48" y1="226" x2="680" y2="226" />
-                  </g>
-                  <g class="admin-chart-ylabels">
-                    <text x="12" y="38">500</text>
-                    <text x="12" y="86">400</text>
-                    <text x="12" y="134">300</text>
-                    <text x="12" y="182">200</text>
-                    <text x="24" y="230">0</text>
-                  </g>
-                  <polyline
-                    class="admin-chart-area is-purple"
-                    points="48,186 140,122 232,198 324,128 416,170 508,136 600,112 680,94 680,226 48,226"
-                    fill="url(#admin-ai-fill)"
-                  />
-                  <polyline
-                    class="admin-chart-line is-purple"
-                    points="48,186 140,122 232,198 324,128 416,170 508,136 600,112 680,94"
-                  />
-                  <g class="admin-chart-points is-purple">
-                    <circle cx="48" cy="186" r="6" />
-                    <circle cx="140" cy="122" r="6" />
-                    <circle cx="232" cy="198" r="6" />
-                    <circle cx="324" cy="128" r="6" />
-                    <circle cx="416" cy="170" r="6" />
-                    <circle cx="508" cy="136" r="6" />
-                    <circle cx="600" cy="112" r="6" />
-                    <circle cx="680" cy="94" r="6" />
-                  </g>
-                  <g class="admin-chart-labels">
-                    <text x="48" y="246">14/05</text>
-                    <text x="140" y="246">15/05</text>
-                    <text x="232" y="246">16/05</text>
-                    <text x="324" y="246">17/05</text>
-                    <text x="416" y="246">18/05</text>
-                    <text x="508" y="246">19/05</text>
-                    <text x="600" y="246">20/05</text>
-                    <text x="680" y="246">21/05</text>
-                  </g>
-                </svg>
+              <div class="admin-chart-card is-purple" data-admin-overview-chart-card="ai">
+                <div class="admin-empty-state is-large">
+                  <div>
+                    <p>Chưa có dữ liệu AI</p>
+                    <span>Hệ thống chưa ghi nhận log sử dụng AI nên biểu đồ đang trống.</span>
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -2339,28 +2249,23 @@
                   type="search"
                   placeholder="Tìm theo họ tên hoặc tên đăng nhập..."
                   aria-label="Tìm kiếm học sinh"
+                  data-admin-students-search
                 />
               </label>
 
               <label class="admin-filter-field">
                 <span>Chọn lớp</span>
-                <select aria-label="Lọc theo lớp">
+                <select aria-label="Lọc theo lớp" data-admin-students-class-filter>
                   <option value="">Tất cả lớp</option>
-                  <option>1A</option>
-                  <option>1B</option>
-                  <option>2A</option>
-                  <option>3C</option>
-                  <option>4B</option>
-                  <option>5A</option>
                 </select>
               </label>
 
               <label class="admin-filter-field">
                 <span>Trạng thái</span>
-                <select aria-label="Lọc theo trạng thái">
+                <select aria-label="Lọc theo trạng thái" data-admin-students-status-filter>
                   <option value="">Tất cả trạng thái</option>
-                  <option>Hoạt động</option>
-                  <option>Đã khóa</option>
+                  <option value="active">Hoạt động</option>
+                  <option value="locked">Đã khóa</option>
                 </select>
               </label>
             </header>
@@ -2378,109 +2283,14 @@
                     <th>Thao tác</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody data-admin-students-tbody>
                   <tr>
-                    <td>1</td>
-                    <td class="admin-user-cell">
-                      <div class="admin-user-avatar is-blue">NA</div>
-                      <div>
-                        <strong>Nguyễn Minh An</strong>
-                        <span>Học sinh tiểu học</span>
-                      </div>
-                    </td>
-                    <td>minhan2014</td>
-                    <td>5A</td>
-                    <td>12/08/2023</td>
-                    <td><span class="admin-status-badge is-green">Hoạt động</span></td>
-                    <td>
-                      <div class="admin-action-group">
-                        <button type="button">Xem hồ sơ</button>
-                        <button type="button">Khóa</button>
-                        <button type="button">Xóa</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>2</td>
-                    <td class="admin-user-cell">
-                      <div class="admin-user-avatar is-purple">TB</div>
-                      <div>
-                        <strong>Trần Gia Bảo</strong>
-                        <span>Học sinh tiểu học</span>
-                      </div>
-                    </td>
-                    <td>giabao2013</td>
-                    <td>4B</td>
-                    <td>15/08/2023</td>
-                    <td><span class="admin-status-badge is-green">Hoạt động</span></td>
-                    <td>
-                      <div class="admin-action-group">
-                        <button type="button">Xem hồ sơ</button>
-                        <button type="button">Khóa</button>
-                        <button type="button">Xóa</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>3</td>
-                    <td class="admin-user-cell">
-                      <div class="admin-user-avatar is-red">LQ</div>
-                      <div>
-                        <strong>Lê Quỳnh Chi</strong>
-                        <span>Học sinh tiểu học</span>
-                      </div>
-                    </td>
-                    <td>quynhchi2014</td>
-                    <td>5A</td>
-                    <td>16/08/2023</td>
-                    <td><span class="admin-status-badge is-red">Đã khóa</span></td>
-                    <td>
-                      <div class="admin-action-group">
-                        <button type="button">Xem hồ sơ</button>
-                        <button type="button">Mở khóa</button>
-                        <button type="button">Xóa</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>4</td>
-                    <td class="admin-user-cell">
-                      <div class="admin-user-avatar is-green">PD</div>
-                      <div>
-                        <strong>Phạm Duy Khang</strong>
-                        <span>Học sinh tiểu học</span>
-                      </div>
-                    </td>
-                    <td>duykhang2013</td>
-                    <td>3C</td>
-                    <td>18/08/2023</td>
-                    <td><span class="admin-status-badge is-green">Hoạt động</span></td>
-                    <td>
-                      <div class="admin-action-group">
-                        <button type="button">Xem hồ sơ</button>
-                        <button type="button">Khóa</button>
-                        <button type="button">Xóa</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>5</td>
-                    <td class="admin-user-cell">
-                      <div class="admin-user-avatar is-orange">DH</div>
-                      <div>
-                        <strong>Đỗ Hải Nam</strong>
-                        <span>Học sinh tiểu học</span>
-                      </div>
-                    </td>
-                    <td>hainam2014</td>
-                    <td>4A</td>
-                    <td>20/08/2023</td>
-                    <td><span class="admin-status-badge is-green">Hoạt động</span></td>
-                    <td>
-                      <div class="admin-action-group">
-                        <button type="button">Xem hồ sơ</button>
-                        <button type="button">Khóa</button>
-                        <button type="button">Xóa</button>
+                    <td colspan="7">
+                      <div class="admin-empty-state is-large">
+                        <div>
+                          <p>Đang tải dữ liệu</p>
+                          <span>Danh sách học sinh sẽ được đồng bộ từ Firestore.</span>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -2489,8 +2299,8 @@
             </div>
 
             <footer class="admin-table-footer">
-              <div class="admin-table-summary">
-                Hiển thị 1 đến 5 trong tổng số <strong>1.254</strong> học sinh
+              <div class="admin-table-summary" data-admin-students-summary>
+                Đang tải dữ liệu học sinh...
               </div>
 
               <nav class="admin-pagination" aria-label="Phân trang học sinh">
@@ -2523,15 +2333,15 @@
             <article class="admin-kpi-card is-blue">
               <div class="admin-kpi-icon">👩‍🏫</div>
               <small>Tổng giáo viên</small>
-              <strong>38</strong>
-              <span>+2 so với tuần trước</span>
+              <strong data-admin-teachers-stat="total-teachers">--</strong>
+              <span data-admin-teachers-note="total-teachers">Đang tải dữ liệu</span>
             </article>
 
             <article class="admin-kpi-card is-green">
               <div class="admin-kpi-icon">🏫</div>
               <small>Tổng lớp học</small>
-              <strong>52</strong>
-              <span>Đang hoạt động ổn định</span>
+              <strong data-admin-teachers-stat="total-classes">--</strong>
+              <span data-admin-teachers-note="total-classes">Đang tải dữ liệu</span>
             </article>
           </div>
 
@@ -2561,26 +2371,27 @@
                   type="search"
                   placeholder="Tìm kiếm giáo viên theo tên hoặc email..."
                   aria-label="Tìm kiếm giáo viên"
+                  data-admin-teachers-search
                 />
               </label>
 
               <label class="admin-filter-field">
                 <span>Số lớp quản lý</span>
-                <select aria-label="Lọc theo số lớp">
+                <select aria-label="Lọc theo số lớp" data-admin-teachers-class-filter>
                   <option value="">Tất cả</option>
-                  <option>1 lớp</option>
-                  <option>2 lớp</option>
-                  <option>3 lớp</option>
-                  <option>4 lớp trở lên</option>
+                  <option value="1">1 lớp</option>
+                  <option value="2">2 lớp</option>
+                  <option value="3">3 lớp</option>
+                  <option value="4+">4 lớp trở lên</option>
                 </select>
               </label>
 
               <label class="admin-filter-field">
                 <span>Trạng thái</span>
-                <select aria-label="Lọc theo trạng thái">
+                <select aria-label="Lọc theo trạng thái" data-admin-teachers-status-filter>
                   <option value="">Tất cả trạng thái</option>
-                  <option>Hoạt động</option>
-                  <option>Đã khóa</option>
+                  <option value="active">Hoạt động</option>
+                  <option value="locked">Đã khóa</option>
                 </select>
               </label>
 
@@ -2602,104 +2413,14 @@
                     <th>Thao tác</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody data-admin-teachers-tbody>
                   <tr>
-                    <td>1</td>
-                    <td class="admin-user-cell">
-                      <div class="admin-user-avatar is-blue">TP</div>
-                      <div>
-                        <strong>Trần Phương</strong>
-                        <span>Giáo viên Toán</span>
-                      </div>
-                    </td>
-                    <td>phuong.tran@edukids.vn</td>
-                    <td>3</td>
-                    <td>10/08/2023</td>
-                    <td><span class="admin-status-badge is-green">Hoạt động</span></td>
-                    <td>
-                      <div class="admin-action-group">
-                        <button type="button">Đặt lại mật khẩu</button>
-                        <button type="button" class="is-danger">Khóa</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>2</td>
-                    <td class="admin-user-cell">
-                      <div class="admin-user-avatar is-purple">NL</div>
-                      <div>
-                        <strong>Nguyễn Lan</strong>
-                        <span>Giáo viên Tiếng Anh</span>
-                      </div>
-                    </td>
-                    <td>lan.nguyen@edukids.vn</td>
-                    <td>2</td>
-                    <td>12/08/2023</td>
-                    <td><span class="admin-status-badge is-green">Hoạt động</span></td>
-                    <td>
-                      <div class="admin-action-group">
-                        <button type="button">Đặt lại mật khẩu</button>
-                        <button type="button" class="is-danger">Khóa</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>3</td>
-                    <td class="admin-user-cell">
-                      <div class="admin-user-avatar is-red">VN</div>
-                      <div>
-                        <strong>Võ Ngọc</strong>
-                        <span>Giáo viên Khoa học</span>
-                      </div>
-                    </td>
-                    <td>ngoc.vo@edukids.vn</td>
-                    <td>4</td>
-                    <td>15/08/2023</td>
-                    <td><span class="admin-status-badge is-red">Đã khóa</span></td>
-                    <td>
-                      <div class="admin-action-group">
-                        <button type="button">Đặt lại mật khẩu</button>
-                        <button type="button">Mở khóa</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>4</td>
-                    <td class="admin-user-cell">
-                      <div class="admin-user-avatar is-green">HH</div>
-                      <div>
-                        <strong>Hoàng Hà</strong>
-                        <span>Giáo viên Tiểu học</span>
-                      </div>
-                    </td>
-                    <td>ha.hoang@edukids.vn</td>
-                    <td>1</td>
-                    <td>18/08/2023</td>
-                    <td><span class="admin-status-badge is-green">Hoạt động</span></td>
-                    <td>
-                      <div class="admin-action-group">
-                        <button type="button">Đặt lại mật khẩu</button>
-                        <button type="button" class="is-danger">Khóa</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>5</td>
-                    <td class="admin-user-cell">
-                      <div class="admin-user-avatar is-orange">QM</div>
-                      <div>
-                        <strong>Quách Mai</strong>
-                        <span>Giáo viên STEM</span>
-                      </div>
-                    </td>
-                    <td>mai.quach@edukids.vn</td>
-                    <td>2</td>
-                    <td>20/08/2023</td>
-                    <td><span class="admin-status-badge is-green">Hoạt động</span></td>
-                    <td>
-                      <div class="admin-action-group">
-                        <button type="button">Đặt lại mật khẩu</button>
-                        <button type="button" class="is-danger">Khóa</button>
+                    <td colspan="7">
+                      <div class="admin-empty-state is-large">
+                        <div>
+                          <p>Đang tải dữ liệu</p>
+                          <span>Danh sách giáo viên sẽ được đồng bộ từ Firestore.</span>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -2708,8 +2429,8 @@
             </div>
 
             <footer class="admin-table-footer">
-              <div class="admin-table-summary">
-                Hiển thị 1 đến 5 trong tổng số <strong>38</strong> giáo viên
+              <div class="admin-table-summary" data-admin-teachers-summary>
+                Đang tải dữ liệu giáo viên...
               </div>
 
               <nav class="admin-pagination" aria-label="Phân trang giáo viên">
@@ -2763,19 +2484,20 @@
                 <input
                   type="search"
                   placeholder="Tìm theo tên lớp hoặc giáo viên..."
+                  data-admin-classes-search
                   aria-label="Tìm kiếm lớp học"
                 />
               </label>
 
               <label class="admin-filter-field">
                 <span>Lọc lớp</span>
-                <select aria-label="Lọc lớp học">
+                <select aria-label="Lọc lớp học" data-admin-classes-filter>
                   <option value="">Tất cả khối</option>
-                  <option>Khối 1</option>
-                  <option>Khối 2</option>
-                  <option>Khối 3</option>
-                  <option>Khối 4</option>
-                  <option>Khối 5</option>
+                  <option value="1">Khối 1</option>
+                  <option value="2">Khối 2</option>
+                  <option value="3">Khối 3</option>
+                  <option value="4">Khối 4</option>
+                  <option value="5">Khối 5</option>
                 </select>
               </label>
 
@@ -2784,176 +2506,13 @@
               </button>
             </header>
 
-            <div class="admin-class-grid">
-              <article class="admin-class-card is-blue">
-                <div class="admin-class-card-top">
-                  <div>
-                    <span class="admin-class-badge">Khối 5</span>
-                    <h3>Lớp 5A</h3>
-                    <p>Giáo viên phụ trách</p>
-                  </div>
-                  <div class="admin-class-score">
-                    <strong>8.4</strong>
-                    <span>/10</span>
-                  </div>
+            <div class="admin-class-grid" data-admin-classes-grid>
+              <div class="admin-empty-state is-large">
+                <div>
+                  <p>Đang tải lớp học...</p>
+                  <span>Hệ thống sẽ hiển thị dữ liệu thật từ Firestore.</span>
                 </div>
-
-                <div class="admin-class-card-meta">
-                  <span>👩‍🏫 Cô Phương</span>
-                  <span>👨‍🎓 32 học sinh</span>
-                </div>
-
-                <div class="admin-class-progress">
-                  <div class="admin-class-progress-label">
-                    <span>Điểm trung bình lớp</span>
-                    <strong>8.4/10</strong>
-                  </div>
-                  <div class="admin-class-progress-track">
-                    <div class="admin-class-progress-fill is-blue" style="width: 84%"></div>
-                  </div>
-                </div>
-
-                <div class="admin-class-actions">
-                  <button type="button" class="is-primary">Xem chi tiết</button>
-                  <button type="button">Sửa lớp</button>
-                </div>
-              </article>
-
-              <article class="admin-class-card is-purple">
-                <div class="admin-class-card-top">
-                  <div>
-                    <span class="admin-class-badge">Khối 4</span>
-                    <h3>Lớp 4B</h3>
-                    <p>Giáo viên phụ trách</p>
-                  </div>
-                  <div class="admin-class-score">
-                    <strong>7.9</strong>
-                    <span>/10</span>
-                  </div>
-                </div>
-
-                <div class="admin-class-card-meta">
-                  <span>👩‍🏫 Thầy Nam</span>
-                  <span>👨‍🎓 29 học sinh</span>
-                </div>
-
-                <div class="admin-class-progress">
-                  <div class="admin-class-progress-label">
-                    <span>Điểm trung bình lớp</span>
-                    <strong>7.9/10</strong>
-                  </div>
-                  <div class="admin-class-progress-track">
-                    <div class="admin-class-progress-fill is-purple" style="width: 79%"></div>
-                  </div>
-                </div>
-
-                <div class="admin-class-actions">
-                  <button type="button" class="is-primary">Xem chi tiết</button>
-                  <button type="button">Sửa lớp</button>
-                </div>
-              </article>
-
-              <article class="admin-class-card is-green">
-                <div class="admin-class-card-top">
-                  <div>
-                    <span class="admin-class-badge">Khối 3</span>
-                    <h3>Lớp 3C</h3>
-                    <p>Giáo viên phụ trách</p>
-                  </div>
-                  <div class="admin-class-score">
-                    <strong>8.1</strong>
-                    <span>/10</span>
-                  </div>
-                </div>
-
-                <div class="admin-class-card-meta">
-                  <span>👩‍🏫 Cô Hạnh</span>
-                  <span>👨‍🎓 30 học sinh</span>
-                </div>
-
-                <div class="admin-class-progress">
-                  <div class="admin-class-progress-label">
-                    <span>Điểm trung bình lớp</span>
-                    <strong>8.1/10</strong>
-                  </div>
-                  <div class="admin-class-progress-track">
-                    <div class="admin-class-progress-fill is-green" style="width: 81%"></div>
-                  </div>
-                </div>
-
-                <div class="admin-class-actions">
-                  <button type="button" class="is-primary">Xem chi tiết</button>
-                  <button type="button">Sửa lớp</button>
-                </div>
-              </article>
-
-              <article class="admin-class-card is-orange">
-                <div class="admin-class-card-top">
-                  <div>
-                    <span class="admin-class-badge">Khối 2</span>
-                    <h3>Lớp 2A</h3>
-                    <p>Giáo viên phụ trách</p>
-                  </div>
-                  <div class="admin-class-score">
-                    <strong>7.6</strong>
-                    <span>/10</span>
-                  </div>
-                </div>
-
-                <div class="admin-class-card-meta">
-                  <span>👩‍🏫 Cô Mai</span>
-                  <span>👨‍🎓 26 học sinh</span>
-                </div>
-
-                <div class="admin-class-progress">
-                  <div class="admin-class-progress-label">
-                    <span>Điểm trung bình lớp</span>
-                    <strong>7.6/10</strong>
-                  </div>
-                  <div class="admin-class-progress-track">
-                    <div class="admin-class-progress-fill is-orange" style="width: 76%"></div>
-                  </div>
-                </div>
-
-                <div class="admin-class-actions">
-                  <button type="button" class="is-primary">Xem chi tiết</button>
-                  <button type="button">Sửa lớp</button>
-                </div>
-              </article>
-
-              <article class="admin-class-card is-red">
-                <div class="admin-class-card-top">
-                  <div>
-                    <span class="admin-class-badge">Khối 1</span>
-                    <h3>Lớp 1B</h3>
-                    <p>Giáo viên phụ trách</p>
-                  </div>
-                  <div class="admin-class-score">
-                    <strong>7.4</strong>
-                    <span>/10</span>
-                  </div>
-                </div>
-
-                <div class="admin-class-card-meta">
-                  <span>👩‍🏫 Cô Trang</span>
-                  <span>👨‍🎓 24 học sinh</span>
-                </div>
-
-                <div class="admin-class-progress">
-                  <div class="admin-class-progress-label">
-                    <span>Điểm trung bình lớp</span>
-                    <strong>7.4/10</strong>
-                  </div>
-                  <div class="admin-class-progress-track">
-                    <div class="admin-class-progress-fill is-red" style="width: 74%"></div>
-                  </div>
-                </div>
-
-                <div class="admin-class-actions">
-                  <button type="button" class="is-primary">Xem chi tiết</button>
-                  <button type="button">Sửa lớp</button>
-                </div>
-              </article>
+              </div>
             </div>
           </section>
         </section>
@@ -3011,89 +2570,14 @@
                       <th>Thao tác</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody data-admin-content-topic-body="math">
                     <tr>
-                      <td>
-                        <div class="admin-topic-cell">
-                          <strong>Toán lớp 1</strong>
-                          <span>Khối 1</span>
-                        </div>
-                      </td>
-                      <td>3 version</td>
-                      <td><span class="admin-topic-badge is-green">Đã có version</span></td>
-                      <td>
-                        <div class="admin-topic-actions">
-                          <button type="button">Xem chi tiết</button>
-                          <button type="button">Sửa</button>
-                          <button type="button" class="is-danger">Xóa</button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <div class="admin-topic-cell">
-                          <strong>Toán lớp 2</strong>
-                          <span>Khối 2</span>
-                        </div>
-                      </td>
-                      <td>2 version</td>
-                      <td><span class="admin-topic-badge is-green">Đã có version</span></td>
-                      <td>
-                        <div class="admin-topic-actions">
-                          <button type="button">Xem chi tiết</button>
-                          <button type="button">Sửa</button>
-                          <button type="button" class="is-danger">Xóa</button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <div class="admin-topic-cell">
-                          <strong>Toán lớp 3</strong>
-                          <span>Khối 3</span>
-                        </div>
-                      </td>
-                      <td>1 version</td>
-                      <td><span class="admin-topic-badge is-green">Đã có version</span></td>
-                      <td>
-                        <div class="admin-topic-actions">
-                          <button type="button">Xem chi tiết</button>
-                          <button type="button">Sửa</button>
-                          <button type="button" class="is-danger">Xóa</button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <div class="admin-topic-cell">
-                          <strong>Toán lớp 4</strong>
-                          <span>Khối 4</span>
-                        </div>
-                      </td>
-                      <td>Chưa có version nào</td>
-                      <td><span class="admin-topic-badge is-orange">Chưa có version nào</span></td>
-                      <td>
-                        <div class="admin-topic-actions">
-                          <button type="button">Xem chi tiết</button>
-                          <button type="button">Sửa</button>
-                          <button type="button" class="is-danger">Xóa</button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <div class="admin-topic-cell">
-                          <strong>Toán lớp 5</strong>
-                          <span>Khối 5</span>
-                        </div>
-                      </td>
-                      <td>4 version</td>
-                      <td><span class="admin-topic-badge is-green">Đã có version</span></td>
-                      <td>
-                        <div class="admin-topic-actions">
-                          <button type="button">Xem chi tiết</button>
-                          <button type="button">Sửa</button>
-                          <button type="button" class="is-danger">Xóa</button>
+                      <td colspan="4">
+                        <div class="admin-empty-state is-large">
+                          <div>
+                            <p>Đang tải topic...</p>
+                            <span>Hệ thống đang đồng bộ dữ liệu thật từ Firestore và dịch vụ topic.</span>
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -3118,89 +2602,14 @@
                       <th>Thao tác</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody data-admin-content-topic-body="english">
                     <tr>
-                      <td>
-                        <div class="admin-topic-cell">
-                          <strong>Tiếng Anh lớp 1</strong>
-                          <span>Khối 1</span>
-                        </div>
-                      </td>
-                      <td>2 version</td>
-                      <td><span class="admin-topic-badge is-green">Đã có version</span></td>
-                      <td>
-                        <div class="admin-topic-actions">
-                          <button type="button">Xem chi tiết</button>
-                          <button type="button">Sửa</button>
-                          <button type="button" class="is-danger">Xóa</button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <div class="admin-topic-cell">
-                          <strong>Tiếng Anh lớp 2</strong>
-                          <span>Khối 2</span>
-                        </div>
-                      </td>
-                      <td>3 version</td>
-                      <td><span class="admin-topic-badge is-green">Đã có version</span></td>
-                      <td>
-                        <div class="admin-topic-actions">
-                          <button type="button">Xem chi tiết</button>
-                          <button type="button">Sửa</button>
-                          <button type="button" class="is-danger">Xóa</button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <div class="admin-topic-cell">
-                          <strong>Tiếng Anh lớp 3</strong>
-                          <span>Khối 3</span>
-                        </div>
-                      </td>
-                      <td>1 version</td>
-                      <td><span class="admin-topic-badge is-green">Đã có version</span></td>
-                      <td>
-                        <div class="admin-topic-actions">
-                          <button type="button">Xem chi tiết</button>
-                          <button type="button">Sửa</button>
-                          <button type="button" class="is-danger">Xóa</button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <div class="admin-topic-cell">
-                          <strong>Tiếng Anh lớp 4</strong>
-                          <span>Khối 4</span>
-                        </div>
-                      </td>
-                      <td>Chưa có version nào</td>
-                      <td><span class="admin-topic-badge is-orange">Chưa có version nào</span></td>
-                      <td>
-                        <div class="admin-topic-actions">
-                          <button type="button">Xem chi tiết</button>
-                          <button type="button">Sửa</button>
-                          <button type="button" class="is-danger">Xóa</button>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <div class="admin-topic-cell">
-                          <strong>Tiếng Anh lớp 5</strong>
-                          <span>Khối 5</span>
-                        </div>
-                      </td>
-                      <td>4 version</td>
-                      <td><span class="admin-topic-badge is-green">Đã có version</span></td>
-                      <td>
-                        <div class="admin-topic-actions">
-                          <button type="button">Xem chi tiết</button>
-                          <button type="button">Sửa</button>
-                          <button type="button" class="is-danger">Xóa</button>
+                      <td colspan="4">
+                        <div class="admin-empty-state is-large">
+                          <div>
+                            <p>Đang tải topic...</p>
+                            <span>Hệ thống đang đồng bộ dữ liệu thật từ Firestore và dịch vụ topic.</span>
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -3224,22 +2633,22 @@
             <article class="admin-kpi-card is-blue">
               <div class="admin-kpi-icon">📝</div>
               <small>Tổng bài tập</small>
-              <strong>1.842</strong>
-              <span>Đang được theo dõi</span>
+              <strong data-admin-assignments-stat="total-assignments">0</strong>
+              <span data-admin-assignments-note="total-assignments">Đang được theo dõi</span>
             </article>
 
             <article class="admin-kpi-card is-purple">
               <div class="admin-kpi-icon">👆</div>
               <small>Tổng lượt làm</small>
-              <strong>12.420</strong>
-              <span>+320 so với tuần trước</span>
+              <strong data-admin-assignments-stat="total-submissions">0</strong>
+              <span data-admin-assignments-note="total-submissions">Dữ liệu từ assignment_submissions</span>
             </article>
 
             <article class="admin-kpi-card is-green">
               <div class="admin-kpi-icon">⭐</div>
               <small>Điểm trung bình</small>
-              <strong>7.8<span>/10</span></strong>
-              <span>Giữ nhịp ổn định</span>
+              <strong data-admin-assignments-stat="average-score">0<span>/10</span></strong>
+              <span data-admin-assignments-note="average-score">Tính từ bài nộp đã chấm</span>
             </article>
           </div>
 
@@ -3268,26 +2677,17 @@
                 <input
                   type="search"
                   placeholder="Tìm theo tên bài hoặc giáo viên..."
+                  data-admin-assignments-search
                   aria-label="Tìm kiếm bài tập"
                 />
               </label>
 
               <label class="admin-filter-field">
                 <span>Môn học</span>
-                <select aria-label="Lọc theo môn học">
+                <select aria-label="Lọc theo môn học" data-admin-assignments-subject-filter>
                   <option value="">Tất cả môn</option>
-                  <option>Toán</option>
-                  <option>Tiếng Anh</option>
-                </select>
-              </label>
-
-              <label class="admin-filter-field">
-                <span>Trạng thái</span>
-                <select aria-label="Lọc theo trạng thái">
-                  <option value="">Tất cả</option>
-                  <option>Đang mở</option>
-                  <option>Đã đóng</option>
-                  <option>Đang chấm</option>
+                  <option value="math">Toán</option>
+                  <option value="english">Tiếng Anh</option>
                 </select>
               </label>
 
@@ -3309,104 +2709,14 @@
                     <th>Thao tác</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody data-admin-assignments-tbody>
                   <tr>
-                    <td>1</td>
-                    <td class="admin-assign-cell">
-                      <div>
-                        <strong>Ôn tập phân số</strong>
-                        <span>Lớp 4</span>
-                      </div>
-                    </td>
-                    <td><span class="admin-topic-badge is-green">Toán</span></td>
-                    <td>Cô Phương</td>
-                    <td>320</td>
-                    <td>8.6</td>
-                    <td>
-                      <div class="admin-topic-actions">
-                        <button type="button">Xem chi tiết</button>
-                        <button type="button">Sửa</button>
-                        <button type="button" class="is-danger">Xóa</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>2</td>
-                    <td class="admin-assign-cell">
-                      <div>
-                        <strong>Tiếng Anh Unit 5</strong>
-                        <span>Lớp 3</span>
-                      </div>
-                    </td>
-                    <td><span class="admin-topic-badge is-green">Tiếng Anh</span></td>
-                    <td>Thầy Nam</td>
-                    <td>284</td>
-                    <td>7.9</td>
-                    <td>
-                      <div class="admin-topic-actions">
-                        <button type="button">Xem chi tiết</button>
-                        <button type="button">Sửa</button>
-                        <button type="button" class="is-danger">Xóa</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>3</td>
-                    <td class="admin-assign-cell">
-                      <div>
-                        <strong>Luyện tập tỉ số</strong>
-                        <span>Lớp 5</span>
-                      </div>
-                    </td>
-                    <td><span class="admin-topic-badge is-green">Toán</span></td>
-                    <td>Cô Mai</td>
-                    <td>412</td>
-                    <td>8.1</td>
-                    <td>
-                      <div class="admin-topic-actions">
-                        <button type="button">Xem chi tiết</button>
-                        <button type="button">Sửa</button>
-                        <button type="button" class="is-danger">Xóa</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>4</td>
-                    <td class="admin-assign-cell">
-                      <div>
-                        <strong>Kiểm tra giữa kỳ</strong>
-                        <span>Lớp 2</span>
-                      </div>
-                    </td>
-                    <td><span class="admin-topic-badge is-green">Tiếng Anh</span></td>
-                    <td>Cô Hạnh</td>
-                    <td>510</td>
-                    <td>7.4</td>
-                    <td>
-                      <div class="admin-topic-actions">
-                        <button type="button">Xem chi tiết</button>
-                        <button type="button">Sửa</button>
-                        <button type="button" class="is-danger">Xóa</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>5</td>
-                    <td class="admin-assign-cell">
-                      <div>
-                        <strong>Luyện đọc từ vựng</strong>
-                        <span>Lớp 1</span>
-                      </div>
-                    </td>
-                    <td><span class="admin-topic-badge is-green">Tiếng Anh</span></td>
-                    <td>Cô Trang</td>
-                    <td>198</td>
-                    <td>8.9</td>
-                    <td>
-                      <div class="admin-topic-actions">
-                        <button type="button">Xem chi tiết</button>
-                        <button type="button">Sửa</button>
-                        <button type="button" class="is-danger">Xóa</button>
+                    <td colspan="7">
+                      <div class="admin-empty-state is-large">
+                        <div>
+                          <p>Đang tải bài tập...</p>
+                          <span>Hệ thống đang đồng bộ dữ liệu thật từ Firestore.</span>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -3415,23 +2725,9 @@
             </div>
 
             <footer class="admin-table-footer">
-              <div class="admin-table-summary">
-                Hiển thị 1 đến 5 trong tổng số <strong>1.842</strong> bài tập
+              <div class="admin-table-summary" data-admin-assignments-summary>
+                Đang tải danh sách bài tập...
               </div>
-
-              <nav class="admin-pagination" aria-label="Phân trang bài tập">
-                <button type="button" class="admin-page-btn" aria-label="Trang trước">
-                  ‹
-                </button>
-                <button type="button" class="admin-page-btn is-active">1</button>
-                <button type="button" class="admin-page-btn">2</button>
-                <button type="button" class="admin-page-btn">3</button>
-                <span class="admin-page-ellipsis">...</span>
-                <button type="button" class="admin-page-btn">85</button>
-                <button type="button" class="admin-page-btn" aria-label="Trang sau">
-                  ›
-                </button>
-              </nav>
             </footer>
           </section>
         </section>
@@ -3449,22 +2745,22 @@
             <article class="admin-kpi-card is-blue">
               <div class="admin-kpi-icon">🤖</div>
               <small>Lượt dùng hôm nay</small>
-              <strong>324</strong>
-              <span>Đang tăng đều</span>
+              <strong data-admin-ai-stat="today">0</strong>
+              <span data-admin-ai-note="today">Dữ liệu từ log AI</span>
             </article>
 
             <article class="admin-kpi-card is-purple">
               <div class="admin-kpi-icon">📅</div>
               <small>Lượt dùng tháng này</small>
-              <strong>12.480</strong>
-              <span>+18% so với tháng trước</span>
+              <strong data-admin-ai-stat="month">0</strong>
+              <span data-admin-ai-note="month">Dữ liệu từ log AI</span>
             </article>
 
             <article class="admin-kpi-card is-green">
               <div class="admin-kpi-icon">✅</div>
               <small>Tỷ lệ phản hồi thành công</small>
-              <strong>96.8<span>%</span></strong>
-              <span>Ổn định theo ngày</span>
+              <strong data-admin-ai-stat="success-rate">0<span>%</span></strong>
+              <span data-admin-ai-note="success-rate">Tính từ log phản hồi AI</span>
             </article>
           </div>
 
@@ -3478,58 +2774,13 @@
                 <span class="admin-panel-chip is-purple">AI</span>
               </div>
 
-              <div class="admin-chart-card is-purple admin-ai-chart-card">
-                <svg viewBox="0 0 720 260" class="admin-chart" role="img" aria-label="Sử dụng AI theo ngày">
-                  <defs>
-                    <linearGradient id="admin-tech-fill" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.22" />
-                      <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0.02" />
-                    </linearGradient>
-                  </defs>
-                  <g class="admin-chart-grid-lines is-purple">
-                    <line x1="48" y1="34" x2="680" y2="34" />
-                    <line x1="48" y1="82" x2="680" y2="82" />
-                    <line x1="48" y1="130" x2="680" y2="130" />
-                    <line x1="48" y1="178" x2="680" y2="178" />
-                    <line x1="48" y1="226" x2="680" y2="226" />
-                  </g>
-                  <g class="admin-chart-ylabels">
-                    <text x="12" y="38">500</text>
-                    <text x="12" y="86">400</text>
-                    <text x="12" y="134">300</text>
-                    <text x="12" y="182">200</text>
-                    <text x="24" y="230">0</text>
-                  </g>
-                  <polyline
-                    class="admin-chart-area is-purple"
-                    points="48,188 140,126 232,168 324,116 416,150 508,126 600,104 680,92 680,226 48,226"
-                    fill="url(#admin-tech-fill)"
-                  />
-                  <polyline
-                    class="admin-chart-line is-purple"
-                    points="48,188 140,126 232,168 324,116 416,150 508,126 600,104 680,92"
-                  />
-                  <g class="admin-chart-points is-purple">
-                    <circle cx="48" cy="188" r="6" />
-                    <circle cx="140" cy="126" r="6" />
-                    <circle cx="232" cy="168" r="6" />
-                    <circle cx="324" cy="116" r="6" />
-                    <circle cx="416" cy="150" r="6" />
-                    <circle cx="508" cy="126" r="6" />
-                    <circle cx="600" cy="104" r="6" />
-                    <circle cx="680" cy="92" r="6" />
-                  </g>
-                  <g class="admin-chart-labels">
-                    <text x="48" y="246">14/05</text>
-                    <text x="140" y="246">15/05</text>
-                    <text x="232" y="246">16/05</text>
-                    <text x="324" y="246">17/05</text>
-                    <text x="416" y="246">18/05</text>
-                    <text x="508" y="246">19/05</text>
-                    <text x="600" y="246">20/05</text>
-                    <text x="680" y="246">21/05</text>
-                  </g>
-                </svg>
+              <div class="admin-chart-card is-purple admin-ai-chart-card" data-admin-ai-chart-card>
+                <div class="admin-empty-state is-large">
+                  <div>
+                    <p>Đang tải biểu đồ AI...</p>
+                    <span>Hệ thống sẽ vẽ theo log AI thật khi có dữ liệu.</span>
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -3548,7 +2799,7 @@
                     <strong>AI Coach</strong>
                     <span>Hỗ trợ phân tích học tập cá nhân</span>
                   </div>
-                  <button type="button" class="admin-switch is-on" aria-pressed="true">
+                  <button type="button" class="admin-switch is-on" data-admin-ai-toggle="coach" aria-pressed="true">
                     <span></span>
                   </button>
                 </div>
@@ -3585,7 +2836,7 @@
               </div>
 
               <div class="admin-ai-actions">
-                <button type="button" class="admin-ai-action-btn">
+                <button type="button" class="admin-ai-action-btn" data-admin-ai-action="show-logs">
                   <span class="admin-ai-action-icon">🧾</span>
                   <div>
                     <strong>Xem log AI</strong>
@@ -3593,7 +2844,7 @@
                   </div>
                 </button>
 
-                <button type="button" class="admin-ai-action-btn is-danger">
+                <button type="button" class="admin-ai-action-btn is-danger" data-admin-ai-action="clear-cache">
                   <span class="admin-ai-action-icon">🧹</span>
                   <div>
                     <strong>Xóa cache AI</strong>
@@ -3638,71 +2889,13 @@
                 <div class="admin-panel-head">
                   <div>
                     <h2>Điểm trung bình theo tháng</h2>
-                    <p>Dữ liệu mẫu trong năm học hiện tại</p>
+                    <p>Dữ liệu thật từ các bài nộp hiện có</p>
                   </div>
                   <span class="admin-panel-chip is-blue">Trend</span>
                 </div>
 
-                <div class="admin-chart-card admin-stats-main-chart">
-                  <svg viewBox="0 0 760 280" class="admin-chart" role="img" aria-label="Điểm trung bình theo tháng">
-                    <defs>
-                      <linearGradient id="admin-stats-fill" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stop-color="#4f7bff" stop-opacity="0.22" />
-                        <stop offset="100%" stop-color="#4f7bff" stop-opacity="0.02" />
-                      </linearGradient>
-                    </defs>
-                    <g class="admin-chart-grid-lines">
-                      <line x1="54" y1="36" x2="710" y2="36" />
-                      <line x1="54" y1="84" x2="710" y2="84" />
-                      <line x1="54" y1="132" x2="710" y2="132" />
-                      <line x1="54" y1="180" x2="710" y2="180" />
-                      <line x1="54" y1="228" x2="710" y2="228" />
-                    </g>
-                    <g class="admin-chart-ylabels">
-                      <text x="14" y="40">10</text>
-                      <text x="14" y="88">8</text>
-                      <text x="14" y="136">6</text>
-                      <text x="14" y="184">4</text>
-                      <text x="24" y="232">0</text>
-                    </g>
-                    <polyline
-                      class="admin-chart-area"
-                      points="54,188 112,170 170,156 228,142 286,132 344,120 402,112 460,96 518,88 576,84 634,76 710,70 710,228 54,228"
-                      fill="url(#admin-stats-fill)"
-                    />
-                    <polyline
-                      class="admin-chart-line"
-                      points="54,188 112,170 170,156 228,142 286,132 344,120 402,112 460,96 518,88 576,84 634,76 710,70"
-                    />
-                    <g class="admin-chart-points">
-                      <circle cx="54" cy="188" r="6" />
-                      <circle cx="112" cy="170" r="6" />
-                      <circle cx="170" cy="156" r="6" />
-                      <circle cx="228" cy="142" r="6" />
-                      <circle cx="286" cy="132" r="6" />
-                      <circle cx="344" cy="120" r="6" />
-                      <circle cx="402" cy="112" r="6" />
-                      <circle cx="460" cy="96" r="6" />
-                      <circle cx="518" cy="88" r="6" />
-                      <circle cx="576" cy="84" r="6" />
-                      <circle cx="634" cy="76" r="6" />
-                      <circle cx="710" cy="70" r="6" />
-                    </g>
-                    <g class="admin-chart-labels">
-                      <text x="54" y="262">T1</text>
-                      <text x="112" y="262">T2</text>
-                      <text x="170" y="262">T3</text>
-                      <text x="228" y="262">T4</text>
-                      <text x="286" y="262">T5</text>
-                      <text x="344" y="262">T6</text>
-                      <text x="402" y="262">T7</text>
-                      <text x="460" y="262">T8</text>
-                      <text x="518" y="262">T9</text>
-                      <text x="576" y="262">T10</text>
-                      <text x="634" y="262">T11</text>
-                      <text x="710" y="262">T12</text>
-                    </g>
-                  </svg>
+                <div class="admin-chart-card admin-stats-main-chart" data-admin-stats-chart-card>
+                  <div data-admin-stats-chart="monthly-average"></div>
                 </div>
               </section>
 
@@ -3710,22 +2903,22 @@
                 <article class="admin-panel admin-stats-topic-panel">
                   <div class="admin-panel-head">
                     <div>
-                      <h2>Chủ đề Toán học nhiều nhất</h2>
-                      <p>Top nội dung được học nhiều nhất</p>
+                      <h2>Top chủ đề Toán</h2>
+                      <p>Dữ liệu thật từ tiến trình học của học sinh</p>
                     </div>
                     <span class="admin-panel-chip is-purple">Toán</span>
                   </div>
-                  <div class="admin-stats-topic-card">
+                  <div class="admin-stats-topic-card" data-admin-stats-topic-card="math">
                     <div class="admin-stats-topic-hero">
                       <div class="admin-stats-topic-icon is-purple">➗</div>
                       <div>
-                        <strong>Phép cộng, phép trừ</strong>
-                        <span>trong phạm vi 100</span>
+                        <strong data-admin-stats-topic-title="math">Đang tải...</strong>
+                        <span data-admin-stats-topic-subtitle="math">Đang đồng bộ dữ liệu...</span>
                       </div>
                     </div>
                     <div class="admin-stats-topic-meta">
-                      <span>Lớp 2 - Lớp 3</span>
-                      <strong>1.280 lượt</strong>
+                      <span data-admin-stats-topic-note="math">Chờ dữ liệu</span>
+                      <strong data-admin-stats-topic-value="math">--</strong>
                     </div>
                   </div>
                 </article>
@@ -3733,22 +2926,22 @@
                 <article class="admin-panel admin-stats-topic-panel">
                   <div class="admin-panel-head">
                     <div>
-                      <h2>Chủ đề Tiếng Anh học nhiều nhất</h2>
-                      <p>Top nội dung theo lượt truy cập</p>
+                      <h2>Top chủ đề Tiếng Anh</h2>
+                      <p>Dữ liệu thật từ tiến trình học của học sinh</p>
                     </div>
                     <span class="admin-panel-chip is-blue">English</span>
                   </div>
-                  <div class="admin-stats-topic-card">
+                  <div class="admin-stats-topic-card" data-admin-stats-topic-card="english">
                     <div class="admin-stats-topic-hero">
                       <div class="admin-stats-topic-icon is-blue">ABC</div>
                       <div>
-                        <strong>Từ vựng - Chủ đề</strong>
-                        <span>Gia đình</span>
+                        <strong data-admin-stats-topic-title="english">Đang tải...</strong>
+                        <span data-admin-stats-topic-subtitle="english">Đang đồng bộ dữ liệu...</span>
                       </div>
                     </div>
                     <div class="admin-stats-topic-meta">
-                      <span>Lớp 1 - Lớp 2</span>
-                      <strong>1.042 lượt</strong>
+                      <span data-admin-stats-topic-note="english">Chờ dữ liệu</span>
+                      <strong data-admin-stats-topic-value="english">--</strong>
                     </div>
                   </div>
                 </article>
@@ -3759,7 +2952,7 @@
               <div class="admin-panel-head">
                 <div>
                   <h2>Top 10 lớp có điểm trung bình cao nhất</h2>
-                  <p>Dữ liệu mẫu theo bộ lọc đã chọn</p>
+                  <p>Dữ liệu thật từ các lớp và bài nộp hiện có</p>
                 </div>
                 <span class="admin-panel-chip is-green">Top 10</span>
               </div>
@@ -3775,76 +2968,16 @@
                       <th>Điểm TB</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody data-admin-stats-table-body>
                     <tr>
-                      <td>1</td>
-                      <td><strong>Lớp 5A</strong></td>
-                      <td>Cô Phương</td>
-                      <td>32</td>
-                      <td><span class="admin-stats-score">9.4</span></td>
-                    </tr>
-                    <tr>
-                      <td>2</td>
-                      <td><strong>Lớp 4B</strong></td>
-                      <td>Thầy Nam</td>
-                      <td>29</td>
-                      <td><span class="admin-stats-score">9.1</span></td>
-                    </tr>
-                    <tr>
-                      <td>3</td>
-                      <td><strong>Lớp 5B</strong></td>
-                      <td>Cô Hạnh</td>
-                      <td>31</td>
-                      <td><span class="admin-stats-score">8.9</span></td>
-                    </tr>
-                    <tr>
-                      <td>4</td>
-                      <td><strong>Lớp 3C</strong></td>
-                      <td>Cô Mai</td>
-                      <td>30</td>
-                      <td><span class="admin-stats-score">8.8</span></td>
-                    </tr>
-                    <tr>
-                      <td>5</td>
-                      <td><strong>Lớp 2A</strong></td>
-                      <td>Cô Trang</td>
-                      <td>26</td>
-                      <td><span class="admin-stats-score">8.6</span></td>
-                    </tr>
-                    <tr>
-                      <td>6</td>
-                      <td><strong>Lớp 4A</strong></td>
-                      <td>Thầy Minh</td>
-                      <td>28</td>
-                      <td><span class="admin-stats-score">8.5</span></td>
-                    </tr>
-                    <tr>
-                      <td>7</td>
-                      <td><strong>Lớp 3A</strong></td>
-                      <td>Cô Loan</td>
-                      <td>27</td>
-                      <td><span class="admin-stats-score">8.4</span></td>
-                    </tr>
-                    <tr>
-                      <td>8</td>
-                      <td><strong>Lớp 1B</strong></td>
-                      <td>Cô Hà</td>
-                      <td>24</td>
-                      <td><span class="admin-stats-score">8.2</span></td>
-                    </tr>
-                    <tr>
-                      <td>9</td>
-                      <td><strong>Lớp 2B</strong></td>
-                      <td>Thầy Quân</td>
-                      <td>25</td>
-                      <td><span class="admin-stats-score">8.1</span></td>
-                    </tr>
-                    <tr>
-                      <td>10</td>
-                      <td><strong>Lớp 1A</strong></td>
-                      <td>Cô Ngân</td>
-                      <td>23</td>
-                      <td><span class="admin-stats-score">8.0</span></td>
+                      <td colspan="5">
+                        <div class="admin-empty-state is-large">
+                          <div>
+                            <p>Đang tải dữ liệu lớp học</p>
+                            <span>Hệ thống đang tính top lớp từ dữ liệu bài nộp thực tế.</span>
+                          </div>
+                        </div>
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -3867,7 +3000,7 @@
               <div class="admin-panel-head">
                 <div>
                   <h2>Nhóm Cấu hình</h2>
-                  <p>Kiểm soát các tính năng chính của hệ thống</p>
+                  <p>Kiểm soát đăng ký, AI và trạng thái hệ thống</p>
                 </div>
                 <span class="admin-panel-chip is-blue">Config</span>
               </div>
@@ -3878,7 +3011,7 @@
                     <strong>Cho phép đăng ký tài khoản học sinh</strong>
                     <span>Bật khi cần mở rộng tuyển sinh trên hệ thống</span>
                   </div>
-                  <button type="button" class="admin-switch is-on" aria-pressed="true">
+                  <button type="button" class="admin-switch is-on" data-admin-settings-toggle="registration.student" aria-pressed="true">
                     <span></span>
                   </button>
                 </div>
@@ -3888,17 +3021,47 @@
                     <strong>Cho phép đăng ký tài khoản giáo viên</strong>
                     <span>Kiểm soát quyền tạo tài khoản dành cho giáo viên</span>
                   </div>
-                  <button type="button" class="admin-switch is-on" aria-pressed="true">
+                  <button type="button" class="admin-switch is-on" data-admin-settings-toggle="registration.teacher" aria-pressed="true">
                     <span></span>
                   </button>
                 </div>
 
                 <div class="admin-settings-row">
                   <div>
-                    <strong>Bật/Tắt AI EduKids</strong>
-                    <span>Cho phép toàn bộ các tính năng AI của nền tảng</span>
+                    <strong>Bật/Tắt AI Coach</strong>
+                    <span>Chặn AI Coach khi cần tắt tính năng phân tích học tập</span>
                   </div>
-                  <button type="button" class="admin-switch is-on" aria-pressed="true">
+                  <button type="button" class="admin-switch is-on" data-admin-settings-toggle="ai.coach" aria-pressed="true">
+                    <span></span>
+                  </button>
+                </div>
+
+                <div class="admin-settings-row">
+                  <div>
+                    <strong>Bật/Tắt AI Assignment</strong>
+                    <span>Chặn sinh đề AI cho bài tập khi tính năng không khả dụng</span>
+                  </div>
+                  <button type="button" class="admin-switch is-on" data-admin-settings-toggle="ai.assignment" aria-pressed="true">
+                    <span></span>
+                  </button>
+                </div>
+
+                <div class="admin-settings-row">
+                  <div>
+                    <strong>Bật/Tắt AI Phân tích học tập</strong>
+                    <span>Áp dụng cho các luồng phân tích học tập của hệ thống</span>
+                  </div>
+                  <button type="button" class="admin-switch is-on" data-admin-settings-toggle="ai.learning" aria-pressed="true">
+                    <span></span>
+                  </button>
+                </div>
+
+                <div class="admin-settings-row">
+                  <div>
+                    <strong>Bật/Tắt chế độ bảo trì</strong>
+                    <span>Khi bật, học sinh và giáo viên sẽ thấy màn hình bảo trì</span>
+                  </div>
+                  <button type="button" class="admin-switch" data-admin-settings-toggle="maintenance.enabled" aria-pressed="false">
                     <span></span>
                   </button>
                 </div>
@@ -3908,28 +3071,33 @@
             <section class="admin-panel admin-settings-panel">
               <div class="admin-panel-head">
                 <div>
-                  <h2>Nhóm Sao lưu dữ liệu</h2>
-                  <p>Giữ an toàn và phục hồi dữ liệu hệ thống</p>
+                  <h2>Thông tin hệ thống</h2>
+                  <p>Chỉ đọc, không chỉnh sửa</p>
                 </div>
-                <span class="admin-panel-chip is-purple">Backup</span>
+                <span class="admin-panel-chip is-purple">Info</span>
               </div>
 
-              <div class="admin-settings-actions">
-                <button type="button" class="admin-settings-action-btn">
-                  <span class="admin-settings-action-icon">💾</span>
+              <div class="admin-settings-list">
+                <div class="admin-settings-row">
                   <div>
-                    <strong>Sao lưu dữ liệu</strong>
-                    <span>Tạo bản sao lưu mới cho hệ thống</span>
+                    <strong>Phiên bản EduKids</strong>
+                    <span data-admin-settings-info="version">Đang tải...</span>
                   </div>
-                </button>
+                </div>
 
-                <button type="button" class="admin-settings-action-btn is-secondary">
-                  <span class="admin-settings-action-icon">🗂</span>
+                <div class="admin-settings-row">
                   <div>
-                    <strong>Khôi phục dữ liệu</strong>
-                    <span>Phục hồi từ file sao lưu gần nhất</span>
+                    <strong>Firebase Project ID</strong>
+                    <span data-admin-settings-info="firebaseProjectId">Đang tải...</span>
                   </div>
-                </button>
+                </div>
+
+                <div class="admin-settings-row">
+                  <div>
+                    <strong>Thời gian cập nhật gần nhất</strong>
+                    <span data-admin-settings-info="updatedAt">Đang tải...</span>
+                  </div>
+                </div>
               </div>
             </section>
 
@@ -3937,21 +3105,13 @@
               <div class="admin-panel-head">
                 <div>
                   <h2>Nhóm Quản trị</h2>
-                  <p>Thao tác tài khoản và phiên làm việc Admin</p>
+                  <p>Thao tác phiên đăng nhập của Admin</p>
                 </div>
                 <span class="admin-panel-chip is-orange">Admin</span>
               </div>
 
               <div class="admin-settings-actions">
-                <button type="button" class="admin-settings-action-btn">
-                  <span class="admin-settings-action-icon">🔒</span>
-                  <div>
-                    <strong>Đổi mật khẩu Admin</strong>
-                    <span>Thay đổi mật khẩu tài khoản quản trị</span>
-                  </div>
-                </button>
-
-                <button type="button" class="admin-settings-action-btn is-danger">
+                <button type="button" class="admin-settings-action-btn is-danger" data-admin-settings-action="logout">
                   <span class="admin-settings-action-icon">↩</span>
                   <div>
                     <strong>Đăng xuất Admin</strong>

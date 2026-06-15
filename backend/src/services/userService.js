@@ -1,3 +1,4 @@
+const bcrypt = require("bcrypt");
 const { db } = require("../firebase");
 const ApiError = require("../utils/apiError");
 
@@ -122,6 +123,7 @@ function mapUserDoc(doc) {
     email: data.email || "",
     gender: data.gender || "",
     role: data.role || "",
+    status: data.status || "active",
     avatar: normalizeAvatarFilename(data.avatar || ""),
     createdAt: getFormattedTimestamp(data.createdAt),
     updatedAt: getFormattedTimestamp(data.updatedAt || data.createdAt),
@@ -250,6 +252,7 @@ async function createUser(userData) {
     email: userData.email || "",
     role,
     gender,
+    status: userData.status || "active",
     avatar,
     school: userData.school || "",
     className: userData.className || "",
@@ -343,6 +346,38 @@ async function updateUserById(uid, updates) {
   });
 }
 
+async function resetUserPasswordById(uid, password) {
+  const normalizedUid = String(uid || "").trim();
+  const normalizedPassword = String(password || "").trim();
+
+  if (!normalizedUid) {
+    throw new ApiError(400, "uid is required");
+  }
+
+  if (!normalizedPassword) {
+    throw new ApiError(400, "password is required");
+  }
+
+  const docRef = usersCollection.doc(normalizedUid);
+  const snapshot = await docRef.get();
+
+  if (!snapshot.exists) {
+    throw new ApiError(404, "User document not found");
+  }
+
+  const hashedPassword = await bcrypt.hash(normalizedPassword, 10);
+
+  await docRef.set(
+    {
+      password: hashedPassword,
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true },
+  );
+
+  return true;
+}
+
 module.exports = {
   createUser,
   findUserById,
@@ -352,5 +387,6 @@ module.exports = {
   generateUniqueUserCode,
   getDefaultAvatar,
   mapUserDoc,
+  resetUserPasswordById,
   updateUserById,
 };

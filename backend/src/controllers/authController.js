@@ -3,6 +3,7 @@ const ApiError = require("../utils/apiError");
 const successResponse = require("../utils/apiResponse");
 const { normalizeString, isValidGender, isValidRole } = require("../utils/validators");
 const { loginUser, registerUser } = require("../services/authService");
+const { readSystemSettings } = require("../services/systemSettingsService");
 
 const register = asyncHandler(async (req, res) => {
   console.log("[EduKids][authController] register called", {
@@ -33,6 +34,28 @@ const register = asyncHandler(async (req, res) => {
 
   if (!isValidGender(gender)) {
     throw new ApiError(400, "gender must be either male or female");
+  }
+
+  const systemSettings = await readSystemSettings();
+  if (systemSettings?.maintenance?.enabled) {
+    throw new ApiError(
+      503,
+      systemSettings.maintenance.message || "Hệ thống đang bảo trì, vui lòng quay lại sau.",
+    );
+  }
+
+  if (
+    role === "student" &&
+    systemSettings?.registration?.studentEnabled === false
+  ) {
+    throw new ApiError(403, "Đăng ký học sinh hiện đang bị tắt.");
+  }
+
+  if (
+    role === "teacher" &&
+    systemSettings?.registration?.teacherEnabled === false
+  ) {
+    throw new ApiError(403, "Đăng ký giáo viên hiện đang bị tắt.");
   }
 
   const result = await registerUser({
@@ -69,6 +92,14 @@ const login = asyncHandler(async (req, res) => {
 
   if (!username || !password) {
     throw new ApiError(400, "username and password are required");
+  }
+
+  const systemSettings = await readSystemSettings();
+  if (systemSettings?.maintenance?.enabled) {
+    throw new ApiError(
+      503,
+      systemSettings.maintenance.message || "Hệ thống đang bảo trì, vui lòng quay lại sau.",
+    );
   }
 
   const result = await loginUser({ username, password });

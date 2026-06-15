@@ -3,6 +3,7 @@ const { db } = require("../firebase");
 const ApiError = require("../utils/apiError");
 const { safeJsonParse, readTopicsFile } = require("./aiService");
 const { buildCoachPrompt } = require("./coachPrompt");
+const { readSystemSettings } = require("./systemSettingsService");
 
 const USER_PROGRESS_COLLECTION = db.collection("user_progress");
 const COACH_CACHE_COLLECTION = db.collection("coach_analysis_cache");
@@ -145,6 +146,16 @@ function buildProgressSignature(progressItems) {
     .join("|");
 }
 
+async function readAiSettings() {
+  const settings = await readSystemSettings();
+
+  return {
+    aiCoachEnabled: settings.ai.coachEnabled !== false,
+    aiLearningAnalysisEnabled: settings.ai.learningAnalysisEnabled !== false,
+    cacheRevision: Number(settings.ai.cacheRevision || settings.cacheRevision || 0) || 0,
+  };
+}
+
 async function loadStudentProgress(userId) {
   const normalizedUserId = normalizeText(userId);
 
@@ -209,12 +220,16 @@ async function readCoachCache(userId) {
   return snapshot.data() || null;
 }
 
-function isFreshCoachCache(cacheDoc, signature) {
+function isFreshCoachCache(cacheDoc, signature, cacheRevision = 0) {
   if (!cacheDoc) {
     return false;
   }
 
   if (String(cacheDoc.signature || "") !== signature) {
+    return false;
+  }
+
+  if (Number(cacheDoc.cacheRevision || 0) !== Number(cacheRevision || 0)) {
     return false;
   }
 
@@ -227,12 +242,13 @@ function isFreshCoachCache(cacheDoc, signature) {
   return Date.now() - cachedAt < COACH_CACHE_TTL_MS;
 }
 
-async function saveCoachCache(userId, payload) {
+async function saveCoachCache(userId, payload, cacheRevision = 0) {
   const now = new Date().toISOString();
 
   await COACH_CACHE_COLLECTION.doc(userId).set(
     {
       userId,
+      cacheRevision: Number(cacheRevision) || 0,
       ...payload,
       cachedAt: now,
       updatedAt: now,
@@ -248,6 +264,16 @@ async function analyzeStudentProgress(userId) {
     throw new ApiError(400, "userId is required");
   }
 
+  const aiSettings = await readAiSettings();
+
+  if (aiSettings.aiCoachEnabled === false) {
+    throw new ApiError(403, "AI Coach is disabled");
+  }
+
+  if (aiSettings.aiLearningAnalysisEnabled === false) {
+    throw new ApiError(403, "AI learning analysis is disabled");
+  }
+
   const progressItems = await loadStudentProgress(normalizedUserId);
 
   if (progressItems.length === 0) {
@@ -257,7 +283,9 @@ async function analyzeStudentProgress(userId) {
   const signature = buildProgressSignature(progressItems);
   const cacheDoc = await readCoachCache(normalizedUserId);
 
-  if (isFreshCoachCache(cacheDoc, signature)) {
+  const cacheRevision = Number(aiSettings.cacheRevision) || 0;
+
+  if (isFreshCoachCache(cacheDoc, signature, cacheRevision)) {
     return {
       ...cacheDoc.analysis,
       averageAccuracy: Number(cacheDoc.averageAccuracy) || 0,
@@ -306,7 +334,7 @@ async function analyzeStudentProgress(userId) {
     signature,
   };
 
-  await saveCoachCache(normalizedUserId, payload);
+  await saveCoachCache(normalizedUserId, payload, cacheRevision);
 
   return {
     ...analysis,
@@ -327,4 +355,5 @@ module.exports = {
   calculateAverageAccuracy,
   getCoachLevel,
   buildProgressSignature,
+  readAiSettings,
 };

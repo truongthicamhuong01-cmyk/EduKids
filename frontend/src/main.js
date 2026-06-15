@@ -2,6 +2,15 @@
 import "./firebase-init.js";
 import "./services/profileService.js";
 import "./services/assignmentService.js";
+import "./services/adminOverviewService.js";
+import "./services/adminStudentService.js";
+import "./services/adminTeacherService.js";
+import "./services/adminClassService.js";
+import "./services/adminContentService.js";
+import "./services/adminAssignmentService.js";
+import "./services/adminAiService.js";
+import "./services/systemSettingsService.js";
+import "./services/adminStatsService.js";
 import "./services/topicAccuracyService.js";
 import "./style.css";
 
@@ -55,6 +64,81 @@ let previousPage = ROLE_DEFAULT_PAGES.student;
 let currentPage = ROLE_DEFAULT_PAGES.student;
 let currentAdminPage = ADMIN_DEFAULT_PAGE;
 let currentAdminContentTab = "math";
+const adminOverviewState = {
+  loading: false,
+  loaded: false,
+  data: null,
+  pendingPromise: null,
+};
+const adminStudentsState = {
+  loading: false,
+  loaded: false,
+  data: [],
+  filtered: [],
+  pendingPromise: null,
+  searchQuery: "",
+  classFilter: "",
+  statusFilter: "",
+};
+const adminTeachersState = {
+  loading: false,
+  loaded: false,
+  data: [],
+  filtered: [],
+  pendingPromise: null,
+  searchQuery: "",
+  classCountFilter: "",
+  statusFilter: "",
+};
+const adminClassesState = {
+  loading: false,
+  loaded: false,
+  data: [],
+  filtered: [],
+  pendingPromise: null,
+  searchQuery: "",
+  gradeFilter: "",
+  selectedClassId: "",
+};
+const adminContentState = {
+  loading: false,
+  loaded: false,
+  data: {
+    math: [],
+    english: [],
+  },
+  pendingPromise: null,
+  hasData: false,
+};
+const adminAssignmentsState = {
+  loading: false,
+  loaded: false,
+  data: [],
+  filtered: [],
+  pendingPromise: null,
+  searchQuery: "",
+  subjectFilter: "",
+};
+const adminAiState = {
+  loading: false,
+  loaded: false,
+  data: null,
+  pendingPromise: null,
+};
+const systemSettingsState = {
+  loading: false,
+  loaded: false,
+  data: null,
+  pendingPromise: null,
+  listenerReady: null,
+  unsubscribe: null,
+};
+const adminStatsState = {
+  loading: false,
+  loaded: false,
+  data: null,
+  pendingPromise: null,
+};
 
 function apiRequest(path, payload) {
   return fetch(`${API_BASE_URL}${path}`, {
@@ -489,12 +573,2953 @@ function showAdminContentTab(tabKey) {
   });
 }
 
+function getAdminContentRoot() {
+  return document.getElementById("admin-content");
+}
+
+function getAdminContentPanel(tabKey) {
+  const normalizedTab = tabKey === "english" ? "english" : "math";
+
+  return getAdminContentRoot()?.querySelector(
+    `[data-admin-content-panel="${normalizedTab}"]`,
+  ) || null;
+}
+
+function getAdminContentTopicBody(tabKey) {
+  const normalizedTab = tabKey === "english" ? "english" : "math";
+
+  return getAdminContentRoot()?.querySelector(
+    `[data-admin-content-topic-body="${normalizedTab}"]`,
+  ) || null;
+}
+
+function getAdminContentRowLabel(subject, grade) {
+  const subjectLabel = subject === "english" ? "Tiếng Anh" : "Toán";
+  return `${subjectLabel} lớp ${grade}`;
+}
+
+function getAdminContentStatusLabel(versionCount) {
+  return Number(versionCount) > 0 ? "Đã có version" : "Chưa có version nào";
+}
+
+function getAdminContentStatusClass(versionCount) {
+  return Number(versionCount) > 0 ? "is-green" : "is-orange";
+}
+
+function buildAdminContentRow(bucket) {
+  const versionCount = Math.max(0, Number(bucket?.versionCount) || 0);
+  const statusLabel = getAdminContentStatusLabel(versionCount);
+  const statusClass = getAdminContentStatusClass(versionCount);
+  const topicCount = Array.isArray(bucket?.topics) ? bucket.topics.length : 0;
+
+  return `
+    <tr data-admin-content-row data-admin-content-subject="${escapeHtml(String(bucket?.subject || ""))}" data-admin-content-grade="${escapeHtml(String(bucket?.grade || ""))}">
+      <td>
+        <div class="admin-topic-cell">
+          <strong>${escapeHtml(bucket?.title || getAdminContentRowLabel(bucket?.subject, bucket?.grade))}</strong>
+          <span>${escapeHtml(bucket?.subtitle || `Khối ${bucket?.grade || "--"}`)}</span>
+        </div>
+      </td>
+      <td>${versionCount > 0 ? `${escapeHtml(formatStatValue(versionCount))} version` : "Chưa có version nào"}</td>
+      <td><span class="admin-topic-badge ${escapeHtml(statusClass)}">${escapeHtml(statusLabel)}</span></td>
+      <td>
+        <div class="admin-topic-actions">
+          <button type="button" data-admin-content-action="view" data-admin-content-subject="${escapeHtml(String(bucket?.subject || ""))}" data-admin-content-grade="${escapeHtml(String(bucket?.grade || ""))}">Xem chi tiết</button>
+          <button type="button">Sửa</button>
+          <button type="button" class="is-danger">Xóa</button>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function buildAdminContentEmptyRow(message, description) {
+  return `
+    <tr>
+      <td colspan="4">
+        <div class="admin-empty-state is-large">
+          <div>
+            <p>${escapeHtml(message)}</p>
+            <span>${escapeHtml(description)}</span>
+          </div>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function renderAdminContentPanel(tabKey) {
+  const body = getAdminContentTopicBody(tabKey);
+  const buckets = Array.isArray(adminContentState.data?.[tabKey])
+    ? adminContentState.data[tabKey]
+    : [];
+
+  if (!body) {
+    return;
+  }
+
+  if (adminContentState.loading && !adminContentState.loaded) {
+    body.innerHTML = buildAdminContentEmptyRow(
+      "Đang tải topic...",
+      "Hệ thống đang đồng bộ dữ liệu thật từ Firestore và dịch vụ topic.",
+    );
+    return;
+  }
+
+  if (buckets.length === 0) {
+    body.innerHTML = buildAdminContentEmptyRow(
+      "Chưa có dữ liệu topic",
+      "Chưa có topic hoặc version nào được ghi nhận cho môn học này.",
+    );
+    return;
+  }
+
+  body.innerHTML = buckets.map((bucket) => buildAdminContentRow(bucket)).join("");
+}
+
+function renderAdminContentPage() {
+  renderAdminContentPanel("math");
+  renderAdminContentPanel("english");
+}
+
+function getAdminContentBucket(tabKey, grade) {
+  const normalizedTab = tabKey === "english" ? "english" : "math";
+  const normalizedGrade = String(grade || "").trim();
+
+  return (Array.isArray(adminContentState.data?.[normalizedTab])
+    ? adminContentState.data[normalizedTab]
+    : []
+  ).find((bucket) => String(bucket?.grade || "").trim() === normalizedGrade) || null;
+}
+
+function showAdminContentDetail(tabKey, grade) {
+  const bucket = getAdminContentBucket(tabKey, grade);
+
+  if (!bucket) {
+    showToast("Không tìm thấy topic.", "error");
+    return;
+  }
+
+  const lines = [
+    `Tên topic: ${bucket.title || getAdminContentRowLabel(tabKey, grade)}`,
+    `Số lượng version: ${Number(bucket.versionCount) > 0 ? `${bucket.versionCount} version` : "Chưa có version nào"}`,
+    `Trạng thái: ${bucket.status || getAdminContentStatusLabel(bucket.versionCount)}`,
+    `Số topic con: ${formatStatValue(Array.isArray(bucket.topics) ? bucket.topics.length : 0)}`,
+  ];
+
+  window.alert(lines.join("\n"));
+}
+
+async function syncAdminContent({ forceRefresh = false } = {}) {
+  const root = getAdminContentRoot();
+
+  if (!root) {
+    return null;
+  }
+
+  if (adminContentState.loaded && !forceRefresh) {
+    renderAdminContentPage();
+    return adminContentState.data;
+  }
+
+  if (adminContentState.loading && adminContentState.pendingPromise) {
+    return adminContentState.pendingPromise;
+  }
+
+  adminContentState.loading = true;
+  root.setAttribute("aria-busy", "true");
+  renderAdminContentPage();
+
+  const request = (async () => {
+    try {
+      const service = window.EduKidsAdminContentService;
+      const content =
+        typeof service?.fetchAdminContentData === "function"
+          ? await service.fetchAdminContentData()
+          : { grouped: { math: [], english: [] }, hasData: false };
+
+      adminContentState.data = {
+        math: Array.isArray(content?.grouped?.math) ? content.grouped.math : [],
+        english: Array.isArray(content?.grouped?.english) ? content.grouped.english : [],
+      };
+      adminContentState.hasData = Boolean(content?.hasData);
+      adminContentState.loaded = true;
+      renderAdminContentPage();
+      return adminContentState.data;
+    } catch (error) {
+      console.warn("Không thể tải nội dung học tập:", error);
+      adminContentState.data = {
+        math: [],
+        english: [],
+      };
+      adminContentState.hasData = false;
+      adminContentState.loaded = true;
+      renderAdminContentPage();
+      return adminContentState.data;
+    } finally {
+      adminContentState.loading = false;
+      adminContentState.pendingPromise = null;
+      root.removeAttribute("aria-busy");
+    }
+  })();
+
+  adminContentState.pendingPromise = request;
+  return request;
+}
+
+function getAdminOverviewRoot() {
+  return document.querySelector("#admin-overview[data-admin-overview-root]");
+}
+
+function getAdminOverviewStatNode(key) {
+  if (!key) {
+    return null;
+  }
+
+  return getAdminOverviewRoot()?.querySelector(
+    `[data-admin-overview-stat="${key}"]`,
+  ) || document.querySelector(`[data-admin-overview-stat="${key}"]`);
+}
+
+function getAdminOverviewNoteNode(key) {
+  if (!key) {
+    return null;
+  }
+
+  return getAdminOverviewRoot()?.querySelector(
+    `[data-admin-overview-note="${key}"]`,
+  ) || document.querySelector(`[data-admin-overview-note="${key}"]`);
+}
+
+function getAdminOverviewChartCard(key) {
+  if (!key) {
+    return null;
+  }
+
+  return getAdminOverviewRoot()?.querySelector(
+    `[data-admin-overview-chart-card="${key}"]`,
+  ) || document.querySelector(`[data-admin-overview-chart-card="${key}"]`);
+}
+
+function getAdminChartPalette(chartKey) {
+  if (chartKey === "ai") {
+    return {
+      areaClass: "is-purple",
+      lineClass: "is-purple",
+      gridClass: "is-purple",
+      fillId: "admin-overview-ai-fill",
+      fillStart: "#9333ea",
+      fillEnd: "#9333ea",
+      stroke: "#9333ea",
+    };
+  }
+
+  return {
+    areaClass: "",
+    lineClass: "",
+    gridClass: "",
+    fillId: "admin-overview-work-fill",
+    fillStart: "#4f46e5",
+    fillEnd: "#4f46e5",
+    stroke: "#4f46e5",
+  };
+}
+
+function buildAdminChartSvg(series, { chartKey, ariaLabel }) {
+  const points = Array.isArray(series) ? series : [];
+  const safeSeries = points
+    .map((entry) => ({
+      label: String(entry?.label || "").trim(),
+      value: Math.max(0, Number(entry?.value) || 0),
+    }))
+    .filter((entry) => entry.label);
+
+  if (safeSeries.length === 0 || safeSeries.every((entry) => entry.value <= 0)) {
+    return null;
+  }
+
+  const palette = getAdminChartPalette(chartKey);
+  const width = 720;
+  const height = 260;
+  const leftPad = 48;
+  const rightPad = 40;
+  const topPad = 34;
+  const bottomPad = 34;
+  const chartWidth = width - leftPad - rightPad;
+  const chartHeight = height - topPad - bottomPad;
+  const maxValue = Math.max(...safeSeries.map((entry) => entry.value), 1);
+  const upperBound = Math.max(1, Math.ceil(maxValue / 5) * 5);
+  const pointCount = safeSeries.length;
+  const step = pointCount > 1 ? chartWidth / (pointCount - 1) : 0;
+  const chartPoints = safeSeries.map((entry, index) => {
+    const x = leftPad + step * index;
+    const ratio = upperBound > 0 ? entry.value / upperBound : 0;
+    const y = topPad + (1 - Math.max(0, Math.min(1, ratio))) * chartHeight;
+
+    return {
+      ...entry,
+      x,
+      y,
+    };
+  });
+  const linePoints = chartPoints.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(" ");
+  const areaPoints = [
+    ...chartPoints.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`),
+    `${chartPoints[chartPoints.length - 1].x.toFixed(1)},${height - bottomPad}`,
+    `${chartPoints[0].x.toFixed(1)},${height - bottomPad}`,
+  ].join(" ");
+  const yLabels = Array.from({ length: 5 }, (_, index) => {
+    const ratio = index / 4;
+    const value = Math.round(upperBound * (1 - ratio));
+    const y = topPad + chartHeight * ratio;
+
+    return {
+      value,
+      y,
+    };
+  });
+
+  return `
+    <svg viewBox="0 0 ${width} ${height}" class="admin-chart" role="img" aria-label="${escapeHtml(ariaLabel)}">
+      <defs>
+        <linearGradient id="${palette.fillId}" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="${palette.fillStart}" stop-opacity="0.22" />
+          <stop offset="100%" stop-color="${palette.fillEnd}" stop-opacity="0.02" />
+        </linearGradient>
+      </defs>
+      <g class="admin-chart-grid-lines ${palette.gridClass}">
+        ${yLabels
+          .map(
+            (label) => `<line x1="${leftPad}" y1="${label.y.toFixed(1)}" x2="${width - rightPad}" y2="${label.y.toFixed(1)}" />`,
+          )
+          .join("")}
+      </g>
+      <g class="admin-chart-ylabels">
+        ${yLabels
+          .map(
+            (label) => `<text x="${label.value > 999 ? 8 : 12}" y="${(label.y + 4).toFixed(1)}">${escapeHtml(formatStatValue(label.value))}</text>`,
+          )
+          .join("")}
+      </g>
+      <polyline
+        class="admin-chart-area ${palette.areaClass}"
+        points="${escapeHtml(areaPoints)}"
+        fill="url(#${palette.fillId})"
+      />
+      <polyline
+        class="admin-chart-line ${palette.lineClass}"
+        points="${escapeHtml(linePoints)}"
+      />
+      <g class="admin-chart-points ${palette.lineClass}">
+        ${chartPoints
+          .map(
+            (point) => `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="6" />`,
+          )
+          .join("")}
+      </g>
+      <g class="admin-chart-labels">
+        ${chartPoints
+          .map(
+            (point) => `<text x="${point.x.toFixed(1)}" y="${height - 14}">${escapeHtml(point.label)}</text>`,
+          )
+          .join("")}
+      </g>
+    </svg>
+  `;
+}
+
+function renderAdminOverviewChart(chartKey, series, { ariaLabel, emptyTitle, emptyDescription }) {
+  const card = getAdminOverviewChartCard(chartKey);
+
+  if (!card) {
+    return;
+  }
+
+  const svgMarkup = buildAdminChartSvg(series, {
+    chartKey,
+    ariaLabel,
+  });
+
+  if (!svgMarkup) {
+    card.innerHTML = `
+      <div class="admin-empty-state is-large">
+        <div>
+          <p>${escapeHtml(emptyTitle)}</p>
+          <span>${escapeHtml(emptyDescription)}</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  card.innerHTML = svgMarkup;
+}
+
+function renderAdminOverviewStats(data = null) {
+  const totals = data?.totals || {};
+  const statConfig = [
+    {
+      key: "total-students",
+      value: totals.students,
+      note: `${formatStatValue(totals.students)} tài khoản học sinh`,
+    },
+    {
+      key: "total-teachers",
+      value: totals.teachers,
+      note: `${formatStatValue(totals.teachers)} tài khoản giáo viên`,
+    },
+    {
+      key: "total-classes",
+      value: totals.classes,
+      note: `${formatStatValue(totals.classes)} lớp học`,
+    },
+    {
+      key: "total-assignments",
+      value: totals.assignments,
+      note: `${formatStatValue(totals.assignments)} bài tập`,
+    },
+    {
+      key: "ai-usage-today",
+      value: totals.aiUsageToday,
+      note:
+        Number(totals.aiUsageToday) > 0
+          ? `${formatStatValue(totals.aiUsageToday)} lượt AI hôm nay`
+          : "Chưa có log AI",
+    },
+    {
+      key: "average-score",
+      value: totals.averageScore,
+      note:
+        Number(totals.averageScore) > 0
+          ? "Tính từ kết quả làm bài hiện có"
+          : "Chưa có kết quả làm bài",
+    },
+  ];
+
+  statConfig.forEach((item) => {
+    const statNode = getAdminOverviewStatNode(item.key);
+    const noteNode = getAdminOverviewNoteNode(item.key);
+
+    if (statNode) {
+      if (item.key === "average-score") {
+        statNode.innerHTML = `${escapeHtml(formatStatValue(item.value ?? 0))}<span>/10</span>`;
+      } else {
+        statNode.textContent = formatStatValue(item.value ?? 0);
+      }
+    }
+
+    if (noteNode) {
+      noteNode.textContent = item.note;
+    }
+  });
+}
+
+async function syncAdminOverview({ forceRefresh = false } = {}) {
+  const root = getAdminOverviewRoot();
+
+  if (!root) {
+    return null;
+  }
+
+  if (
+    adminOverviewState.loaded &&
+    adminOverviewState.data &&
+    !forceRefresh
+  ) {
+    renderAdminOverviewStats(adminOverviewState.data);
+    renderAdminOverviewChart("work", adminOverviewState.data?.charts?.workSubmissions || [], {
+      ariaLabel: "Lượt làm bài theo ngày",
+      emptyTitle: "Chưa có dữ liệu làm bài",
+      emptyDescription: "Hệ thống chưa ghi nhận bài làm nào trong 7 ngày gần nhất.",
+    });
+    renderAdminOverviewChart("ai", adminOverviewState.data?.charts?.aiUsage || [], {
+      ariaLabel: "Lượt sử dụng AI theo ngày",
+      emptyTitle: "Chưa có dữ liệu AI",
+      emptyDescription: "Hệ thống chưa có log AI để vẽ biểu đồ.",
+    });
+    return adminOverviewState.data;
+  }
+
+  if (adminOverviewState.loading && adminOverviewState.pendingPromise) {
+    return adminOverviewState.pendingPromise;
+  }
+
+  adminOverviewState.loading = true;
+  root.setAttribute("aria-busy", "true");
+
+  const request = (async () => {
+    try {
+      const service = window.EduKidsAdminOverviewService;
+      const data =
+        typeof service?.fetchAdminOverviewData === "function"
+          ? await service.fetchAdminOverviewData()
+          : null;
+
+      adminOverviewState.data =
+        data || {
+          totals: {
+            students: 0,
+            teachers: 0,
+            classes: 0,
+            assignments: 0,
+            aiUsageToday: 0,
+            averageScore: 0,
+          },
+          charts: {
+            workSubmissions: [],
+            aiUsage: [],
+          },
+        };
+      adminOverviewState.loaded = true;
+
+      renderAdminOverviewStats(adminOverviewState.data);
+      renderAdminOverviewChart(
+        "work",
+        adminOverviewState.data?.charts?.workSubmissions || [],
+        {
+          ariaLabel: "Lượt làm bài theo ngày",
+          emptyTitle: "Chưa có dữ liệu làm bài",
+          emptyDescription: "Hệ thống chưa ghi nhận bài làm nào trong 7 ngày gần nhất.",
+        },
+      );
+      renderAdminOverviewChart(
+        "ai",
+        adminOverviewState.data?.charts?.aiUsage || [],
+        {
+          ariaLabel: "Lượt sử dụng AI theo ngày",
+          emptyTitle: "Chưa có dữ liệu AI",
+          emptyDescription: "Hệ thống chưa có log AI để vẽ biểu đồ.",
+        },
+      );
+
+      return adminOverviewState.data;
+    } catch (error) {
+      console.warn("Không thể tải dữ liệu tổng quan admin:", error);
+      adminOverviewState.data = {
+        totals: {
+          students: 0,
+          teachers: 0,
+          classes: 0,
+          assignments: 0,
+          aiUsageToday: 0,
+          averageScore: 0,
+        },
+        charts: {
+          workSubmissions: [],
+          aiUsage: [],
+        },
+      };
+      renderAdminOverviewStats(adminOverviewState.data);
+      renderAdminOverviewChart("work", [], {
+        ariaLabel: "Lượt làm bài theo ngày",
+        emptyTitle: "Chưa có dữ liệu làm bài",
+        emptyDescription: "Hệ thống chưa ghi nhận bài làm nào trong 7 ngày gần nhất.",
+      });
+      renderAdminOverviewChart("ai", [], {
+        ariaLabel: "Lượt sử dụng AI theo ngày",
+        emptyTitle: "Chưa có dữ liệu AI",
+        emptyDescription: "Hệ thống chưa có log AI để vẽ biểu đồ.",
+      });
+      return adminOverviewState.data;
+    } finally {
+      adminOverviewState.loading = false;
+      adminOverviewState.pendingPromise = null;
+      root.removeAttribute("aria-busy");
+    }
+  })();
+
+  adminOverviewState.pendingPromise = request;
+  return request;
+}
+
+function getAdminStatsRoot() {
+  return document.getElementById("admin-stats");
+}
+
+function getAdminStatsChartCard() {
+  return getAdminStatsRoot()?.querySelector("[data-admin-stats-chart-card]") || null;
+}
+
+function getAdminStatsTopicCard(topicKey) {
+  const normalizedKey = topicKey === "english" ? "english" : "math";
+  return getAdminStatsRoot()?.querySelector(
+    `[data-admin-stats-topic-card="${normalizedKey}"]`,
+  ) || null;
+}
+
+function getAdminStatsTopicNode(topicKey, key) {
+  const normalizedTopicKey = topicKey === "english" ? "english" : "math";
+  return getAdminStatsRoot()?.querySelector(
+    `[data-admin-stats-${key}="${normalizedTopicKey}"]`,
+  ) || null;
+}
+
+function getAdminStatsTableBody() {
+  return getAdminStatsRoot()?.querySelector("[data-admin-stats-table-body]") || null;
+}
+
+function buildAdminStatsEmptyState(message, description) {
+  return `
+    <div class="admin-empty-state is-large">
+      <div>
+        <p>${escapeHtml(message)}</p>
+        <span>${escapeHtml(description)}</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderAdminStatsChart(monthlyAverageScores = [], { loading = false } = {}) {
+  const card = getAdminStatsChartCard();
+
+  if (!card) {
+    return;
+  }
+
+  if (loading) {
+    card.innerHTML = buildAdminStatsEmptyState(
+      "Đang tải dữ liệu thống kê",
+      "Hệ thống đang đồng bộ điểm trung bình theo tháng từ Firestore.",
+    );
+    return;
+  }
+
+  const svgMarkup = buildAdminChartSvg(monthlyAverageScores, {
+    chartKey: "work",
+    ariaLabel: "Điểm trung bình theo tháng",
+  });
+
+  if (!svgMarkup) {
+    card.innerHTML = buildAdminStatsEmptyState(
+      "Chưa có dữ liệu điểm",
+      "Hệ thống chưa ghi nhận đủ bài nộp có điểm để vẽ biểu đồ.",
+    );
+    return;
+  }
+
+  card.innerHTML = svgMarkup;
+}
+
+function renderAdminStatsTopic(topicKey, topic, { loading = false } = {}) {
+  const titleNode = getAdminStatsTopicNode(topicKey, "topic-title");
+  const subtitleNode = getAdminStatsTopicNode(topicKey, "topic-subtitle");
+  const noteNode = getAdminStatsTopicNode(topicKey, "topic-note");
+  const valueNode = getAdminStatsTopicNode(topicKey, "topic-value");
+  const hasTopic = Boolean(topic && topic.title);
+  const title = loading
+    ? "Đang tải dữ liệu..."
+    : hasTopic
+      ? topic.title
+      : "Chưa có dữ liệu";
+  const subtitle = loading
+    ? "Hệ thống đang đồng bộ tiến trình học..."
+    : hasTopic
+      ? topic.subtitle || "Chưa xác định khối"
+      : "Hệ thống chưa ghi nhận tiến trình học.";
+  const note = loading
+    ? "Vui lòng đợi"
+    : hasTopic
+      ? topic.note || "Dữ liệu thật từ hệ thống"
+      : "Không có dữ liệu";
+  const value = loading ? "--" : hasTopic ? topic.value || "--" : "--";
+
+  if (titleNode) {
+    titleNode.textContent = title;
+  }
+
+  if (subtitleNode) {
+    subtitleNode.textContent = subtitle;
+  }
+
+  if (noteNode) {
+    noteNode.textContent = note;
+  }
+
+  if (valueNode) {
+    valueNode.textContent = value;
+  }
+}
+
+function buildAdminStatsTableRow(classroom, index) {
+  const score = Number(classroom?.averageScoreValue);
+  const scoreLabel = Number.isFinite(score) ? score.toFixed(1) : "Chưa có dữ liệu";
+
+  return `
+    <tr data-admin-stats-row data-admin-stats-class-id="${escapeHtml(String(classroom?.id || ""))}">
+      <td>${escapeHtml(String(index + 1))}</td>
+      <td><strong>${escapeHtml(classroom?.name || classroom?.className || "--")}</strong></td>
+      <td>${escapeHtml(classroom?.teacherName || classroom?.teacherUsername || "--")}</td>
+      <td>${escapeHtml(formatStatValue(classroom?.studentCount ?? 0))}</td>
+      <td><span class="admin-stats-score">${escapeHtml(scoreLabel)}</span></td>
+    </tr>
+  `;
+}
+
+function renderAdminStatsTable(topClasses = [], { loading = false } = {}) {
+  const tbody = getAdminStatsTableBody();
+  const rows = Array.isArray(topClasses) ? topClasses : [];
+
+  if (!tbody) {
+    return;
+  }
+
+  if (loading) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5">
+          <div class="admin-empty-state is-large">
+            <div>
+              <p>Đang tải dữ liệu lớp học</p>
+              <span>Hệ thống đang đồng bộ điểm và sĩ số từ Firestore.</span>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  if (rows.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5">
+          <div class="admin-empty-state is-large">
+            <div>
+              <p>Chưa có dữ liệu lớp học</p>
+              <span>Chưa đủ bài nộp có điểm để xếp hạng top lớp.</span>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = rows.map((classroom, index) => buildAdminStatsTableRow(classroom, index)).join("");
+}
+
+function renderAdminStatsPage() {
+  const loading = adminStatsState.loading && !adminStatsState.loaded;
+  const data = adminStatsState.data || {
+    charts: {
+      monthlyAverageScores: [],
+    },
+    topTopics: {
+      math: null,
+      english: null,
+    },
+    topClasses: [],
+  };
+
+  renderAdminStatsChart(data.charts?.monthlyAverageScores || [], { loading });
+  renderAdminStatsTopic("math", data.topTopics?.math || null, { loading });
+  renderAdminStatsTopic("english", data.topTopics?.english || null, { loading });
+  renderAdminStatsTable(data.topClasses || [], { loading });
+}
+
+async function syncAdminStats({ forceRefresh = false } = {}) {
+  const root = getAdminStatsRoot();
+
+  if (!root) {
+    return null;
+  }
+
+  if (adminStatsState.loaded && adminStatsState.data && !forceRefresh) {
+    renderAdminStatsPage();
+    return adminStatsState.data;
+  }
+
+  if (adminStatsState.loading && adminStatsState.pendingPromise) {
+    return adminStatsState.pendingPromise;
+  }
+
+  adminStatsState.loading = true;
+  root.setAttribute("aria-busy", "true");
+  renderAdminStatsPage();
+
+  const request = (async () => {
+    try {
+      const service = window.EduKidsAdminStatsService;
+      const data =
+        typeof service?.fetchAdminStatsData === "function"
+          ? await service.fetchAdminStatsData()
+          : null;
+
+      adminStatsState.data =
+        data || {
+          charts: {
+            monthlyAverageScores: [],
+          },
+          topTopics: {
+            math: null,
+            english: null,
+          },
+          topClasses: [],
+          hasData: false,
+        };
+      adminStatsState.loaded = true;
+      renderAdminStatsPage();
+      return adminStatsState.data;
+    } catch (error) {
+      console.warn("Không thể tải thống kê admin:", error);
+      adminStatsState.data = {
+        charts: {
+          monthlyAverageScores: [],
+        },
+        topTopics: {
+          math: null,
+          english: null,
+        },
+        topClasses: [],
+        hasData: false,
+      };
+      adminStatsState.loaded = true;
+      renderAdminStatsPage();
+      return adminStatsState.data;
+    } finally {
+      adminStatsState.loading = false;
+      adminStatsState.pendingPromise = null;
+      root.removeAttribute("aria-busy");
+    }
+  })();
+
+  adminStatsState.pendingPromise = request;
+  return request;
+}
+
+function getAdminStudentsRoot() {
+  return document.getElementById("admin-students");
+}
+
+function getAdminStudentsSearchInput() {
+  return getAdminStudentsRoot()?.querySelector("[data-admin-students-search]") || null;
+}
+
+function getAdminStudentsClassSelect() {
+  return getAdminStudentsRoot()?.querySelector("[data-admin-students-class-filter]") || null;
+}
+
+function getAdminStudentsStatusSelect() {
+  return getAdminStudentsRoot()?.querySelector("[data-admin-students-status-filter]") || null;
+}
+
+function getAdminStudentsTableBody() {
+  return getAdminStudentsRoot()?.querySelector("tbody") || null;
+}
+
+function getAdminStudentsSummaryNode() {
+  return getAdminStudentsRoot()?.querySelector(".admin-table-summary") || null;
+}
+
+function getAdminTeachersRoot() {
+  return document.getElementById("admin-teachers");
+}
+
+function getAdminTeachersSearchInput() {
+  return getAdminTeachersRoot()?.querySelector("[data-admin-teachers-search]") || null;
+}
+
+function getAdminTeachersClassCountSelect() {
+  return getAdminTeachersRoot()?.querySelector("[data-admin-teachers-class-filter]") || null;
+}
+
+function getAdminTeachersStatusSelect() {
+  return getAdminTeachersRoot()?.querySelector("[data-admin-teachers-status-filter]") || null;
+}
+
+function getAdminTeachersTableBody() {
+  return getAdminTeachersRoot()?.querySelector("[data-admin-teachers-tbody]") || null;
+}
+
+function getAdminTeachersSummaryNode() {
+  return getAdminTeachersRoot()?.querySelector("[data-admin-teachers-summary]") || null;
+}
+
+function getAdminAssignmentsRoot() {
+  return document.getElementById("admin-assignments");
+}
+
+function getAdminAssignmentsSearchInput() {
+  return getAdminAssignmentsRoot()?.querySelector("[data-admin-assignments-search]") || null;
+}
+
+function getAdminAssignmentsSubjectSelect() {
+  return getAdminAssignmentsRoot()?.querySelector("[data-admin-assignments-subject-filter]") || null;
+}
+
+function getAdminAssignmentsTableBody() {
+  return getAdminAssignmentsRoot()?.querySelector("[data-admin-assignments-tbody]") || null;
+}
+
+function getAdminAssignmentsSummaryNode() {
+  return getAdminAssignmentsRoot()?.querySelector("[data-admin-assignments-summary]") || null;
+}
+
+function getAdminAssignmentsStatNode(key) {
+  if (!key) {
+    return null;
+  }
+
+  return getAdminAssignmentsRoot()?.querySelector(
+    `[data-admin-assignments-stat="${key}"]`,
+  ) || document.querySelector(`[data-admin-assignments-stat="${key}"]`);
+}
+
+function getAdminAssignmentsNoteNode(key) {
+  if (!key) {
+    return null;
+  }
+
+  return getAdminAssignmentsRoot()?.querySelector(
+    `[data-admin-assignments-note="${key}"]`,
+  ) || document.querySelector(`[data-admin-assignments-note="${key}"]`);
+}
+
+function getAdminAssignmentById(assignmentId) {
+  const normalizedId = String(assignmentId || "").trim();
+
+  if (!normalizedId) {
+    return null;
+  }
+
+  return (Array.isArray(adminAssignmentsState.data) ? adminAssignmentsState.data : []).find(
+    (assignment) => String(assignment?.id || "").trim() === normalizedId,
+  ) || null;
+}
+
+function getAdminAssignmentSubjectLabel(subject) {
+  const normalized = String(subject || "").trim().toLowerCase();
+
+  if (normalized === "math" || normalized === "toán" || normalized === "toan") {
+    return "Toán";
+  }
+
+  if (
+    normalized === "english" ||
+    normalized === "tiếng anh" ||
+    normalized === "tieng anh"
+  ) {
+    return "Tiếng Anh";
+  }
+
+  return String(subject || "").trim() || "--";
+}
+
+function getAdminAssignmentSubjectKey(subject) {
+  const normalized = String(subject || "").trim().toLowerCase();
+
+  if (normalized === "math" || normalized === "toán" || normalized === "toan") {
+    return "math";
+  }
+
+  if (
+    normalized === "english" ||
+    normalized === "tiếng anh" ||
+    normalized === "tieng anh"
+  ) {
+    return "english";
+  }
+
+  return normalized;
+}
+
+function getAdminAssignmentStatusLabel(status) {
+  const normalized = String(status || "").trim().toLowerCase();
+
+  if (normalized === "closed") {
+    return "Đã đóng";
+  }
+
+  if (normalized === "grading") {
+    return "Đang chấm";
+  }
+
+  return "Đang mở";
+}
+
+function getAdminAssignmentScoreLabel(assignment) {
+  const value = Number(assignment?.averageScoreValue);
+
+  if (!Number.isFinite(value)) {
+    return "Chưa có dữ liệu";
+  }
+
+  return value.toFixed(1);
+}
+
+function getAdminAssignmentScoreWidth(assignment) {
+  const value = Number(assignment?.averageScoreValue);
+
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, value * 10));
+}
+
+function buildAdminAssignmentDetailText(assignment) {
+  if (!assignment) {
+    return "";
+  }
+
+  const scoreLabel = getAdminAssignmentScoreLabel(assignment);
+
+  return [
+    `Tên bài: ${assignment.title || "--"}`,
+    `Môn học: ${getAdminAssignmentSubjectLabel(assignment.subject)}`,
+    `Giáo viên tạo: ${assignment.teacherName || assignment.teacherId || "--"}`,
+    `Số lượt làm: ${formatStatValue(assignment.submissionCount ?? 0)}`,
+    `Điểm trung bình: ${scoreLabel}${Number.isFinite(Number(assignment.averageScoreValue)) ? "/10" : ""}`,
+    `Trạng thái: ${getAdminAssignmentStatusLabel(assignment.status)}`,
+    `Ngày tạo: ${formatDateOnly(assignment.createdAt || "")}`,
+  ].join("\n");
+}
+
+function getAdminClassesRoot() {
+  return document.getElementById("admin-classes");
+}
+
+function getAdminClassesSearchInput() {
+  return getAdminClassesRoot()?.querySelector("[data-admin-classes-search]") || null;
+}
+
+function getAdminClassesFilterSelect() {
+  return getAdminClassesRoot()?.querySelector("[data-admin-classes-filter]") || null;
+}
+
+function getAdminClassesGrid() {
+  return getAdminClassesRoot()?.querySelector("[data-admin-classes-grid]") || null;
+}
+
+function getAdminClassById(classId) {
+  const normalizedId = String(classId || "").trim();
+
+  if (!normalizedId) {
+    return null;
+  }
+
+  return (Array.isArray(adminClassesState.data) ? adminClassesState.data : []).find(
+    (classroom) => String(classroom?.id || "").trim() === normalizedId,
+  ) || null;
+}
+
+function getAdminClassGradeValue(classroom) {
+  const directGrade = String(
+    classroom?.grade ||
+      classroom?.gradeLevel ||
+      classroom?.classGrade ||
+      classroom?.level ||
+      "",
+  ).trim();
+
+  if (directGrade) {
+    const directMatch = directGrade.match(/(\d+)/);
+
+    if (directMatch) {
+      const grade = Number(directMatch[1]);
+      if (Number.isFinite(grade) && grade >= 1 && grade <= 5) {
+        return String(grade);
+      }
+    }
+  }
+
+  const fallbackSource = String(
+    classroom?.name || classroom?.className || "",
+  ).trim();
+  const match = fallbackSource.match(/(\d+)/);
+
+  if (match) {
+    const grade = Number(match[1]);
+    if (Number.isFinite(grade) && grade >= 1 && grade <= 5) {
+      return String(grade);
+    }
+  }
+
+  return "";
+}
+
+function getAdminClassGradeLabel(classroom) {
+  const grade = getAdminClassGradeValue(classroom);
+  return grade ? `Khối ${grade}` : "Chưa xác định";
+}
+
+function getAdminClassAverageValue(classroom) {
+  const value = Number(classroom?.averageScoreValue);
+  return Number.isFinite(value) ? Math.max(0, Math.min(10, value)) : null;
+}
+
+function getAdminClassAverageLabel(classroom) {
+  const value = getAdminClassAverageValue(classroom);
+  return Number.isFinite(value) ? value.toFixed(1) : "Chưa có dữ liệu";
+}
+
+function getAdminClassAverageWidth(classroom) {
+  const value = getAdminClassAverageValue(classroom);
+  return Number.isFinite(value) ? Math.max(0, Math.min(100, value * 10)) : 0;
+}
+
+function getAdminClassColorClass(index) {
+  const colors = ["is-blue", "is-purple", "is-green", "is-orange", "is-red"];
+  return colors[Math.abs(Number(index) || 0) % colors.length];
+}
+
+function buildAdminClassDetailText(classroom) {
+  if (!classroom) {
+    return "";
+  }
+
+  const averageValue = getAdminClassAverageValue(classroom);
+  const averageLabel = getAdminClassAverageLabel(classroom);
+
+  return [
+    `Tên lớp: ${classroom.name || classroom.className || "--"}`,
+    `Khối: ${getAdminClassGradeLabel(classroom)}`,
+    `Giáo viên phụ trách: ${classroom.teacherName || "--"}`,
+    `Số học sinh: ${formatStatValue(classroom.studentCount ?? 0)}`,
+    `Điểm trung bình lớp: ${averageLabel}${Number.isFinite(averageValue) ? "/10" : ""}`,
+    `Số bài làm đã dùng để tính: ${formatStatValue(classroom.averageSampleCount ?? 0)}`,
+    `Ngày tạo: ${formatDateOnly(classroom.createdAt || "")}`,
+  ].join("\n");
+}
+
+function getAdminTeachersStatNode(key) {
+  if (!key) {
+    return null;
+  }
+
+  return getAdminTeachersRoot()?.querySelector(
+    `[data-admin-teachers-stat="${key}"]`,
+  ) || document.querySelector(`[data-admin-teachers-stat="${key}"]`);
+}
+
+function getAdminTeachersNoteNode(key) {
+  if (!key) {
+    return null;
+  }
+
+  return getAdminTeachersRoot()?.querySelector(
+    `[data-admin-teachers-note="${key}"]`,
+  ) || document.querySelector(`[data-admin-teachers-note="${key}"]`);
+}
+
+function getAdminTeacherStatusLabel(status) {
+  return status === "locked" ? "Đã khóa" : "Hoạt động";
+}
+
+function getAdminTeacherStatusClass(status) {
+  return status === "locked" ? "is-red" : "is-green";
+}
+
+function getAdminTeacherActionLabel(status) {
+  return status === "locked" ? "Mở khóa" : "Khóa";
+}
+
+function getAdminTeacherActionName(status) {
+  return status === "locked" ? "unlock" : "lock";
+}
+
+function getAdminTeacherInitials(teacher) {
+  const source = String(
+    teacher?.fullName || teacher?.name || teacher?.email || "",
+  ).trim();
+
+  if (!source) {
+    return "--";
+  }
+
+  const initials = source
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+
+  return initials || "--";
+}
+
+function getAdminTeacherClassCountBucket(classCount) {
+  const total = Math.max(0, Number(classCount) || 0);
+
+  if (total <= 0) {
+    return "0";
+  }
+
+  if (total === 1) {
+    return "1";
+  }
+
+  if (total === 2) {
+    return "2";
+  }
+
+  if (total === 3) {
+    return "3";
+  }
+
+  return "4+";
+}
+
+function buildAdminTeacherRow(teacher, index) {
+  const status = teacher.status === "locked" ? "locked" : "active";
+  const statusLabel = getAdminTeacherStatusLabel(status);
+  const statusClass = getAdminTeacherStatusClass(status);
+  const actionLabel = getAdminTeacherActionLabel(status);
+  const actionName = getAdminTeacherActionName(status);
+  const classCount = Math.max(0, Number(teacher.classCount) || 0);
+  const email = String(teacher.email || "--").trim() || "--";
+
+  return `
+    <tr data-admin-teacher-row data-admin-teacher-id="${escapeHtml(teacher.id)}">
+      <td>${escapeHtml(String(index + 1))}</td>
+      <td class="admin-user-cell">
+        <div class="admin-user-avatar is-purple">${escapeHtml(getAdminTeacherInitials(teacher))}</div>
+        <div>
+          <strong>${escapeHtml(teacher.fullName || teacher.name || "--")}</strong>
+          <span>Giáo viên</span>
+        </div>
+      </td>
+      <td>${escapeHtml(email)}</td>
+      <td>${escapeHtml(formatStatValue(classCount))}</td>
+      <td>${escapeHtml(formatDateOnly(teacher.createdAt || ""))}</td>
+      <td><span class="admin-status-badge ${escapeHtml(statusClass)}">${escapeHtml(statusLabel)}</span></td>
+      <td>
+        <div class="admin-action-group">
+          <button type="button" data-admin-teacher-action="reset-password" data-admin-teacher-id="${escapeHtml(teacher.id)}">Đặt lại mật khẩu</button>
+          <button type="button" class="${actionName === "lock" ? "is-danger" : ""}" data-admin-teacher-action="${escapeHtml(actionName)}" data-admin-teacher-id="${escapeHtml(teacher.id)}">${escapeHtml(actionLabel)}</button>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function filterAdminTeachers(teachers = []) {
+  const query = String(adminTeachersState.searchQuery || "").trim().toLowerCase();
+  const classCountFilter = String(adminTeachersState.classCountFilter || "").trim();
+  const statusFilter = String(adminTeachersState.statusFilter || "").trim().toLowerCase();
+
+  return (Array.isArray(teachers) ? teachers : []).filter((teacher) => {
+    const fullName = String(teacher?.fullName || teacher?.name || "").toLowerCase();
+    const email = String(teacher?.email || "").toLowerCase();
+    const status = String(teacher?.status || "active").toLowerCase();
+    const classBucket = getAdminTeacherClassCountBucket(teacher?.classCount);
+
+    if (query) {
+      const haystack = `${fullName} ${email}`.trim();
+      if (!haystack.includes(query)) {
+        return false;
+      }
+    }
+
+    if (classCountFilter && classBucket !== classCountFilter) {
+      return false;
+    }
+
+    if (statusFilter && status !== statusFilter) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function renderAdminTeachersClassOptions() {
+  const select = getAdminTeachersClassCountSelect();
+
+  if (!select) {
+    return;
+  }
+
+  const currentValue = String(adminTeachersState.classCountFilter || "").trim();
+
+  select.innerHTML = `
+    <option value="">Tất cả</option>
+    <option value="1">1 lớp</option>
+    <option value="2">2 lớp</option>
+    <option value="3">3 lớp</option>
+    <option value="4+">4 lớp trở lên</option>
+  `;
+
+  select.value = currentValue || "";
+}
+
+function renderAdminTeachersStats(teachers = []) {
+  const totalTeachers = Array.isArray(teachers) ? teachers.length : 0;
+  const totalClasses = (Array.isArray(teachers) ? teachers : []).reduce(
+    (sum, teacher) => sum + Math.max(0, Number(teacher?.classCount) || 0),
+    0,
+  );
+
+  const statConfig = [
+    {
+      key: "total-teachers",
+      value: totalTeachers,
+      note: `${formatStatValue(totalTeachers)} tài khoản giáo viên`,
+    },
+    {
+      key: "total-classes",
+      value: totalClasses,
+      note: `${formatStatValue(totalClasses)} lớp đang được quản lý`,
+    },
+  ];
+
+  statConfig.forEach((item) => {
+    const statNode = getAdminTeachersStatNode(item.key);
+    const noteNode = getAdminTeachersNoteNode(item.key);
+
+    if (statNode) {
+      statNode.textContent = formatStatValue(item.value ?? 0);
+    }
+
+    if (noteNode) {
+      noteNode.textContent = item.note;
+    }
+  });
+}
+
+function renderAdminTeachersTable(teachers = []) {
+  const tbody = getAdminTeachersTableBody();
+  const summaryNode = getAdminTeachersSummaryNode();
+  const total = Array.isArray(adminTeachersState.data) ? adminTeachersState.data.length : 0;
+  const filtered = Array.isArray(teachers) ? teachers : [];
+
+  if (tbody) {
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7">
+            <div class="admin-empty-state is-large">
+              <div>
+                <p>Không có dữ liệu giáo viên</p>
+                <span>Thử thay đổi bộ lọc hoặc chờ đồng bộ dữ liệu từ Firestore.</span>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    } else {
+      tbody.innerHTML = filtered.map((teacher, index) => buildAdminTeacherRow(teacher, index)).join("");
+    }
+  }
+
+  if (summaryNode) {
+    if (filtered.length === 0) {
+      summaryNode.innerHTML = `Không tìm thấy giáo viên phù hợp trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> giáo viên`;
+    } else {
+      summaryNode.innerHTML = `Hiển thị 1 đến ${escapeHtml(formatStatValue(filtered.length))} trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> giáo viên`;
+    }
+  }
+}
+
+function setAdminTeachersFiltersFromInputs() {
+  const searchInput = getAdminTeachersSearchInput();
+  const classSelect = getAdminTeachersClassCountSelect();
+  const statusSelect = getAdminTeachersStatusSelect();
+
+  adminTeachersState.searchQuery = String(searchInput?.value || "");
+  adminTeachersState.classCountFilter = String(classSelect?.value || "");
+  adminTeachersState.statusFilter = String(statusSelect?.value || "");
+}
+
+function renderAdminTeachersPage() {
+  renderAdminTeachersStats(adminTeachersState.data);
+  renderAdminTeachersClassOptions();
+  setAdminTeachersFiltersFromInputs();
+  const teachers = filterAdminTeachers(adminTeachersState.data);
+  adminTeachersState.filtered = teachers;
+  renderAdminTeachersTable(teachers);
+}
+
+async function syncAdminTeachers({ forceRefresh = false } = {}) {
+  const root = getAdminTeachersRoot();
+
+  if (!root) {
+    return null;
+  }
+
+  if (
+    adminTeachersState.loaded &&
+    Array.isArray(adminTeachersState.data) &&
+    !forceRefresh
+  ) {
+    renderAdminTeachersPage();
+    return adminTeachersState.data;
+  }
+
+  if (adminTeachersState.loading && adminTeachersState.pendingPromise) {
+    return adminTeachersState.pendingPromise;
+  }
+
+  adminTeachersState.loading = true;
+  root.setAttribute("aria-busy", "true");
+
+  const request = (async () => {
+    try {
+      const service = window.EduKidsAdminTeacherService;
+      const teachers =
+        typeof service?.fetchTeachers === "function"
+          ? await service.fetchTeachers()
+          : [];
+
+      adminTeachersState.data = Array.isArray(teachers)
+        ? teachers
+            .map((teacher) => service?.normalizeTeacher?.(teacher) || teacher)
+            .filter((teacher) => String(teacher?.id || "").trim())
+            .sort((left, right) => {
+              const leftTime = Number(left?.createdAtValue) || 0;
+              const rightTime = Number(right?.createdAtValue) || 0;
+              return rightTime - leftTime;
+            })
+        : [];
+      adminTeachersState.loaded = true;
+
+      renderAdminTeachersPage();
+      return adminTeachersState.data;
+    } catch (error) {
+      console.warn("Không thể tải danh sách giáo viên:", error);
+      adminTeachersState.data = [];
+      adminTeachersState.loaded = true;
+      renderAdminTeachersPage();
+      return [];
+    } finally {
+      adminTeachersState.loading = false;
+      adminTeachersState.pendingPromise = null;
+      root.removeAttribute("aria-busy");
+    }
+  })();
+
+  adminTeachersState.pendingPromise = request;
+  return request;
+}
+
+function filterAdminClasses(classrooms = []) {
+  const query = String(adminClassesState.searchQuery || "").trim().toLowerCase();
+  const gradeFilter = String(adminClassesState.gradeFilter || "").trim();
+
+  return (Array.isArray(classrooms) ? classrooms : []).filter((classroom) => {
+    const className = String(classroom?.name || classroom?.className || "").toLowerCase();
+    const teacherName = String(classroom?.teacherName || classroom?.teacherUsername || "").toLowerCase();
+    const classCode = String(classroom?.classCode || "").toLowerCase();
+    const gradeValue = getAdminClassGradeValue(classroom);
+
+    if (query) {
+      const haystack = `${className} ${teacherName} ${classCode}`.trim();
+      if (!haystack.includes(query)) {
+        return false;
+      }
+    }
+
+    if (gradeFilter && gradeValue !== gradeFilter) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function buildAdminClassCard(classroom, index) {
+  const colorClass = getAdminClassColorClass(index);
+  const gradeLabel = getAdminClassGradeLabel(classroom);
+  const averageValue = getAdminClassAverageValue(classroom);
+  const averageLabel = getAdminClassAverageLabel(classroom);
+  const averageWidth = getAdminClassAverageWidth(classroom);
+  const studentCount = Math.max(0, Number(classroom?.studentCount) || 0);
+  const teacherLabel = String(classroom?.teacherName || classroom?.teacherUsername || "--").trim() || "--";
+  const scoreClass = Number.isFinite(averageValue) ? "" : " is-empty";
+  const scoreText = Number.isFinite(averageValue)
+    ? averageLabel
+    : "Chưa có dữ liệu";
+  const scoreSuffix = Number.isFinite(averageValue) ? "/10" : "";
+
+  return `
+    <article
+      class="admin-class-card ${escapeHtml(colorClass)}"
+      data-admin-class-card
+      data-admin-class-id="${escapeHtml(classroom.id)}"
+      data-admin-class-grade="${escapeHtml(String(getAdminClassGradeValue(classroom) || ""))}"
+    >
+      <div class="admin-class-card-top">
+        <div>
+          <span class="admin-class-badge">${escapeHtml(gradeLabel)}</span>
+          <h3>${escapeHtml(classroom.name || classroom.className || "Lớp học")}</h3>
+          <p>Giáo viên phụ trách</p>
+        </div>
+        <div class="admin-class-score${scoreClass}">
+          <strong>${escapeHtml(scoreText)}</strong>
+          ${scoreSuffix ? `<span>${escapeHtml(scoreSuffix)}</span>` : ""}
+        </div>
+      </div>
+
+      <div class="admin-class-card-meta">
+        <span>👩‍🏫 ${escapeHtml(teacherLabel)}</span>
+        <span>👨‍🎓 ${escapeHtml(formatStatValue(studentCount))} học sinh</span>
+      </div>
+
+      <div class="admin-class-progress">
+        <div class="admin-class-progress-label">
+          <span>Điểm trung bình lớp</span>
+          <strong>${escapeHtml(scoreText)}${scoreSuffix}</strong>
+        </div>
+        <div class="admin-class-progress-track">
+          <div class="admin-class-progress-fill ${escapeHtml(colorClass)}" style="width: ${escapeHtml(String(averageWidth))}%"></div>
+        </div>
+      </div>
+
+      <div class="admin-class-actions">
+        <button type="button" class="is-primary" data-admin-class-action="view" data-admin-class-id="${escapeHtml(classroom.id)}">Xem chi tiết</button>
+        <button type="button">Sửa lớp</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderAdminClassesGrid(classrooms = []) {
+  const grid = getAdminClassesGrid();
+  const filtered = Array.isArray(classrooms) ? classrooms : [];
+  const total = Array.isArray(adminClassesState.data)
+    ? adminClassesState.data.length
+    : 0;
+
+  if (!grid) {
+    return;
+  }
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div class="admin-empty-state is-large">
+        <div>
+          <p>${total === 0 ? "Chưa có dữ liệu lớp học" : "Không tìm thấy lớp phù hợp"}</p>
+          <span>${total === 0 ? "Hệ thống sẽ hiển thị dữ liệu thật từ Firestore khi có lớp học." : "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm."}</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = filtered.map((classroom, index) => buildAdminClassCard(classroom, index)).join("");
+}
+
+function setAdminClassesFiltersFromInputs() {
+  const searchInput = getAdminClassesSearchInput();
+  const filterSelect = getAdminClassesFilterSelect();
+
+  adminClassesState.searchQuery = String(searchInput?.value || "");
+  adminClassesState.gradeFilter = String(filterSelect?.value || "");
+}
+
+function renderAdminClassesPage() {
+  setAdminClassesFiltersFromInputs();
+  const classrooms = filterAdminClasses(adminClassesState.data);
+  adminClassesState.filtered = classrooms;
+  renderAdminClassesGrid(classrooms);
+}
+
+async function syncAdminClasses({ forceRefresh = false } = {}) {
+  const root = getAdminClassesRoot();
+
+  if (!root) {
+    return null;
+  }
+
+  if (
+    adminClassesState.loaded &&
+    Array.isArray(adminClassesState.data) &&
+    !forceRefresh
+  ) {
+    renderAdminClassesPage();
+    return adminClassesState.data;
+  }
+
+  if (adminClassesState.loading && adminClassesState.pendingPromise) {
+    return adminClassesState.pendingPromise;
+  }
+
+  adminClassesState.loading = true;
+  root.setAttribute("aria-busy", "true");
+
+  const request = (async () => {
+    try {
+      const service = window.EduKidsAdminClassService;
+      const classrooms =
+        typeof service?.fetchClasses === "function"
+          ? await service.fetchClasses()
+          : [];
+
+      adminClassesState.data = Array.isArray(classrooms)
+        ? classrooms
+            .filter((classroom) => String(classroom?.id || "").trim())
+            .sort((left, right) => {
+              const leftTime = Number(left?.createdAtValue) || 0;
+              const rightTime = Number(right?.createdAtValue) || 0;
+              return rightTime - leftTime;
+            })
+        : [];
+      adminClassesState.loaded = true;
+
+      renderAdminClassesPage();
+      return adminClassesState.data;
+    } catch (error) {
+      console.warn("Không thể tải danh sách lớp học:", error);
+      adminClassesState.data = [];
+      adminClassesState.loaded = true;
+      renderAdminClassesPage();
+      return [];
+    } finally {
+      adminClassesState.loading = false;
+      adminClassesState.pendingPromise = null;
+      root.removeAttribute("aria-busy");
+    }
+  })();
+
+  adminClassesState.pendingPromise = request;
+  return request;
+}
+
+function showAdminClassDetail(classroom) {
+  if (!classroom) {
+    showToast("Không tìm thấy lớp học.", "error");
+    return;
+  }
+
+  window.alert(buildAdminClassDetailText(classroom));
+}
+
+function filterAdminAssignments(assignments = []) {
+  const query = String(adminAssignmentsState.searchQuery || "").trim().toLowerCase();
+  const subjectFilter = String(adminAssignmentsState.subjectFilter || "").trim().toLowerCase();
+
+  return (Array.isArray(assignments) ? assignments : []).filter((assignment) => {
+    const title = String(assignment?.title || "").toLowerCase();
+    const teacherName = String(assignment?.teacherName || "").toLowerCase();
+    const subjectKey = getAdminAssignmentSubjectKey(assignment?.subject);
+
+    if (query) {
+      const haystack = `${title} ${teacherName}`.trim();
+      if (!haystack.includes(query)) {
+        return false;
+      }
+    }
+
+    if (subjectFilter && subjectKey !== subjectFilter) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function buildAdminAssignmentRow(assignment, index) {
+  const subjectLabel = getAdminAssignmentSubjectLabel(assignment.subject);
+  const statusLabel = getAdminAssignmentStatusLabel(assignment.status);
+  const statusClass = assignment.statusClass || "is-green";
+  const scoreLabel = getAdminAssignmentScoreLabel(assignment);
+  const scoreSuffix = Number.isFinite(Number(assignment.averageScoreValue)) ? "/10" : "";
+
+  return `
+    <tr data-admin-assignment-row data-admin-assignment-id="${escapeHtml(assignment.id)}">
+      <td>${escapeHtml(String(index + 1))}</td>
+      <td class="admin-assign-cell">
+        <div>
+          <strong>${escapeHtml(assignment.title || "--")}</strong>
+          <span>${escapeHtml(assignment.className || assignment.classId || "--")}</span>
+        </div>
+      </td>
+      <td><span class="admin-topic-badge is-green">${escapeHtml(subjectLabel)}</span></td>
+      <td>${escapeHtml(assignment.teacherName || assignment.teacherId || "--")}</td>
+      <td>${escapeHtml(formatStatValue(assignment.submissionCount ?? 0))}</td>
+      <td>${escapeHtml(scoreLabel)}${scoreSuffix}</td>
+      <td>
+        <div class="admin-topic-actions">
+          <button type="button" data-admin-assignment-action="view" data-admin-assignment-id="${escapeHtml(assignment.id)}">Xem chi tiết</button>
+          <button type="button">Sửa</button>
+          <button type="button" class="is-danger">Xóa</button>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function renderAdminAssignmentsStats(assignments = []) {
+  const totalAssignments = Array.isArray(assignments) ? assignments.length : 0;
+  const totalSubmissions = (Array.isArray(assignments) ? assignments : []).reduce(
+    (sum, assignment) => sum + Math.max(0, Number(assignment?.submissionCount) || 0),
+    0,
+  );
+  const scoredAssignments = (Array.isArray(assignments) ? assignments : []).filter((assignment) =>
+    Number.isFinite(Number(assignment?.averageScoreValue)),
+  );
+  const averageScore = scoredAssignments.length
+    ? scoredAssignments.reduce(
+        (sum, assignment) => sum + Number(assignment.averageScoreValue || 0),
+        0,
+      ) / scoredAssignments.length
+    : null;
+  const averageLabel = Number.isFinite(averageScore)
+    ? Number(averageScore).toFixed(1)
+    : "Chưa có dữ liệu";
+
+  const statConfig = [
+    {
+      key: "total-assignments",
+      value: totalAssignments,
+      note: `${formatStatValue(totalAssignments)} bài tập đang có`,
+    },
+    {
+      key: "total-submissions",
+      value: totalSubmissions,
+      note: `${formatStatValue(totalSubmissions)} lượt làm từ assignment_submissions`,
+    },
+    {
+      key: "average-score",
+      value: averageLabel,
+      note:
+        Number.isFinite(averageScore)
+          ? "Tính từ các bài nộp đã chấm"
+          : "Chưa có bài nộp có điểm",
+    },
+  ];
+
+  statConfig.forEach((item) => {
+    const statNode = getAdminAssignmentsStatNode(item.key);
+    const noteNode = getAdminAssignmentsNoteNode(item.key);
+
+    if (statNode) {
+      if (item.key === "average-score") {
+        if (Number.isFinite(averageScore)) {
+          statNode.innerHTML = `${escapeHtml(String(item.value))}<span>/10</span>`;
+        } else {
+          statNode.textContent = String(item.value);
+        }
+      } else {
+        statNode.textContent = formatStatValue(item.value ?? 0);
+      }
+    }
+
+    if (noteNode) {
+      noteNode.textContent = item.note;
+    }
+  });
+}
+
+function renderAdminAssignmentsTable(assignments = []) {
+  const tbody = getAdminAssignmentsTableBody();
+  const summaryNode = getAdminAssignmentsSummaryNode();
+  const total = Array.isArray(adminAssignmentsState.data)
+    ? adminAssignmentsState.data.length
+    : 0;
+  const filtered = Array.isArray(assignments) ? assignments : [];
+
+  if (tbody) {
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7">
+            <div class="admin-empty-state is-large">
+              <div>
+                <p>${total === 0 ? "Chưa có dữ liệu bài tập" : "Không tìm thấy bài tập phù hợp"}</p>
+                <span>${total === 0 ? "Hệ thống chưa ghi nhận bài tập nào từ Firestore." : "Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc môn học."}</span>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    } else {
+      tbody.innerHTML = filtered.map((assignment, index) => buildAdminAssignmentRow(assignment, index)).join("");
+    }
+  }
+
+  if (summaryNode) {
+    if (filtered.length === 0) {
+      summaryNode.innerHTML = total === 0
+        ? "Chưa có bài tập nào trong hệ thống."
+        : `Không tìm thấy bài tập phù hợp trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> bài tập`;
+    } else {
+      summaryNode.innerHTML = `Hiển thị 1 đến ${escapeHtml(formatStatValue(filtered.length))} trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> bài tập`;
+    }
+  }
+}
+
+function setAdminAssignmentsFiltersFromInputs() {
+  const searchInput = getAdminAssignmentsSearchInput();
+  const subjectSelect = getAdminAssignmentsSubjectSelect();
+
+  adminAssignmentsState.searchQuery = String(searchInput?.value || "");
+  adminAssignmentsState.subjectFilter = String(subjectSelect?.value || "");
+}
+
+function renderAdminAssignmentsPage() {
+  renderAdminAssignmentsStats(adminAssignmentsState.data);
+  setAdminAssignmentsFiltersFromInputs();
+  const assignments = filterAdminAssignments(adminAssignmentsState.data);
+  adminAssignmentsState.filtered = assignments;
+  renderAdminAssignmentsTable(assignments);
+}
+
+async function syncAdminAssignments({ forceRefresh = false } = {}) {
+  const root = getAdminAssignmentsRoot();
+
+  if (!root) {
+    return null;
+  }
+
+  if (
+    adminAssignmentsState.loaded &&
+    Array.isArray(adminAssignmentsState.data) &&
+    !forceRefresh
+  ) {
+    renderAdminAssignmentsPage();
+    return adminAssignmentsState.data;
+  }
+
+  if (adminAssignmentsState.loading && adminAssignmentsState.pendingPromise) {
+    return adminAssignmentsState.pendingPromise;
+  }
+
+  adminAssignmentsState.loading = true;
+  root.setAttribute("aria-busy", "true");
+
+  const request = (async () => {
+    try {
+      const service = window.EduKidsAdminAssignmentService;
+      const assignments =
+        typeof service?.fetchAssignments === "function"
+          ? await service.fetchAssignments()
+          : [];
+
+      adminAssignmentsState.data = Array.isArray(assignments)
+        ? assignments
+            .filter((assignment) => String(assignment?.id || "").trim())
+            .sort((left, right) => {
+              const leftTime = Number(left?.createdAtValue) || 0;
+              const rightTime = Number(right?.createdAtValue) || 0;
+              return rightTime - leftTime;
+            })
+        : [];
+      adminAssignmentsState.loaded = true;
+      renderAdminAssignmentsPage();
+      return adminAssignmentsState.data;
+    } catch (error) {
+      console.warn("Không thể tải danh sách bài tập:", error);
+      adminAssignmentsState.data = [];
+      adminAssignmentsState.loaded = true;
+      renderAdminAssignmentsPage();
+      return [];
+    } finally {
+      adminAssignmentsState.loading = false;
+      adminAssignmentsState.pendingPromise = null;
+      root.removeAttribute("aria-busy");
+    }
+  })();
+
+  adminAssignmentsState.pendingPromise = request;
+  return request;
+}
+
+function showAdminAssignmentDetail(assignment) {
+  if (!assignment) {
+    showToast("Không tìm thấy bài tập.", "error");
+    return;
+  }
+
+  window.alert(buildAdminAssignmentDetailText(assignment));
+}
+
+function getAdminAiRoot() {
+  return document.getElementById("admin-ai");
+}
+
+function getAdminAiStatNode(key) {
+  if (!key) {
+    return null;
+  }
+
+  return getAdminAiRoot()?.querySelector(`[data-admin-ai-stat="${key}"]`) ||
+    document.querySelector(`[data-admin-ai-stat="${key}"]`);
+}
+
+function getAdminAiNoteNode(key) {
+  if (!key) {
+    return null;
+  }
+
+  return getAdminAiRoot()?.querySelector(`[data-admin-ai-note="${key}"]`) ||
+    document.querySelector(`[data-admin-ai-note="${key}"]`);
+}
+
+function getAdminAiChartCard() {
+  return getAdminAiRoot()?.querySelector("[data-admin-ai-chart-card]") || null;
+}
+
+function getAdminAiToggleButton() {
+  return getAdminAiRoot()?.querySelector("[data-admin-ai-toggle='coach']") || null;
+}
+
+function getAdminAiActionButton(action) {
+  if (!action) {
+    return null;
+  }
+
+  return getAdminAiRoot()?.querySelector(`[data-admin-ai-action="${action}"]`) || null;
+}
+
+function getAdminAiChartSeries(logs = []) {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  start.setDate(start.getDate() - 6);
+  const buckets = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return {
+      date,
+      key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
+      label: new Intl.DateTimeFormat("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+      }).format(date),
+      value: 0,
+    };
+  });
+
+  const bucketMap = new Map(buckets.map((item) => [item.key, item]));
+
+  (Array.isArray(logs) ? logs : []).forEach((log) => {
+    const createdAtValue = Number(log?.createdAtValue) || 0;
+    if (!createdAtValue) {
+      return;
+    }
+
+    const date = new Date(createdAtValue);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const bucket = bucketMap.get(key);
+
+    if (bucket) {
+      bucket.value += 1;
+    }
+  });
+
+  return buckets;
+}
+
+function renderAdminAiChart(series = []) {
+  const card = getAdminAiChartCard();
+
+  if (!card) {
+    return;
+  }
+
+  const normalizedSeries = Array.isArray(series) ? series : [];
+  const hasData = normalizedSeries.some((entry) => Number(entry?.value) > 0);
+
+  if (!hasData) {
+    card.innerHTML = `
+      <div class="admin-empty-state is-large">
+        <div>
+          <p>Chưa có dữ liệu AI</p>
+          <span>Hệ thống sẽ vẽ biểu đồ khi có log AI đầu tiên.</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const svg = buildAdminChartSvg(normalizedSeries, {
+    chartKey: "ai",
+    ariaLabel: "Lượt sử dụng AI theo ngày",
+  });
+
+  if (!svg) {
+    card.innerHTML = `
+      <div class="admin-empty-state is-large">
+        <div>
+          <p>Chưa có dữ liệu AI</p>
+          <span>Hệ thống sẽ vẽ biểu đồ khi có log AI đầu tiên.</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  card.innerHTML = svg;
+}
+
+function renderAdminAiStats(data = null) {
+  const todayCount = Number(data?.todayCount) || 0;
+  const monthCount = Number(data?.monthCount) || 0;
+  const successRate = Number(data?.successRate) || 0;
+  const coachEnabled = isAICoachAvailable();
+
+  const statConfig = [
+    {
+      key: "today",
+      value: todayCount,
+      note: todayCount > 0 ? `${formatStatValue(todayCount)} lượt hôm nay` : "Chưa có log AI trong hôm nay",
+    },
+    {
+      key: "month",
+      value: monthCount,
+      note: monthCount > 0 ? `${formatStatValue(monthCount)} lượt trong tháng này` : "Chưa có log AI trong tháng này",
+    },
+    {
+      key: "success-rate",
+      value: successRate,
+      note: data?.logs?.length > 0 ? "Tính từ toàn bộ log AI" : "Chưa có log AI để tính tỷ lệ",
+    },
+  ];
+
+  statConfig.forEach((item) => {
+    const statNode = getAdminAiStatNode(item.key);
+    const noteNode = getAdminAiNoteNode(item.key);
+
+    if (statNode) {
+      if (item.key === "success-rate") {
+        statNode.innerHTML = `${escapeHtml(formatStatValue(item.value ?? 0))}<span>%</span>`;
+      } else {
+        statNode.textContent = formatStatValue(item.value ?? 0);
+      }
+    }
+
+    if (noteNode) {
+      noteNode.textContent = item.note;
+    }
+  });
+
+  const toggleButton = getAdminAiToggleButton();
+
+  if (toggleButton) {
+    toggleButton.classList.toggle("is-on", coachEnabled);
+    toggleButton.setAttribute("aria-pressed", String(coachEnabled));
+  }
+}
+
+function renderAdminAiPage() {
+  renderAdminAiStats(adminAiState.data);
+  renderAdminAiChart(adminAiState.data?.dailySeries || []);
+}
+
+async function syncAdminAi({ forceRefresh = false } = {}) {
+  const root = getAdminAiRoot();
+
+  if (!root) {
+    return null;
+  }
+
+  if (adminAiState.loaded && adminAiState.data && !forceRefresh) {
+    renderAdminAiPage();
+    return adminAiState.data;
+  }
+
+  if (adminAiState.loading && adminAiState.pendingPromise) {
+    return adminAiState.pendingPromise;
+  }
+
+  adminAiState.loading = true;
+  root.setAttribute("aria-busy", "true");
+
+  const request = (async () => {
+    try {
+      const service = window.EduKidsAdminAiService;
+      const data =
+        typeof service?.fetchAiDashboardData === "function"
+          ? await service.fetchAiDashboardData()
+          : {
+              settings: {
+                ai: {
+                  coachEnabled: true,
+                  assignmentEnabled: true,
+                  learningAnalysisEnabled: true,
+                },
+                cacheRevision: 0,
+              },
+              logs: [],
+              todayCount: 0,
+              monthCount: 0,
+              successRate: 0,
+              dailySeries: [],
+              hasLogs: false,
+            };
+
+      adminAiState.data = data;
+      adminAiState.loaded = true;
+      renderAdminAiPage();
+      return data;
+    } catch (error) {
+      console.warn("Không thể tải dữ liệu AI:", error);
+      adminAiState.data = {
+        settings: {
+          ai: {
+            coachEnabled: true,
+            assignmentEnabled: true,
+            learningAnalysisEnabled: true,
+          },
+          cacheRevision: 0,
+        },
+        logs: [],
+        todayCount: 0,
+        monthCount: 0,
+        successRate: 0,
+        dailySeries: [],
+        hasLogs: false,
+      };
+      adminAiState.loaded = true;
+      renderAdminAiPage();
+      return adminAiState.data;
+    } finally {
+      adminAiState.loading = false;
+      adminAiState.pendingPromise = null;
+      root.removeAttribute("aria-busy");
+    }
+  })();
+
+  adminAiState.pendingPromise = request;
+  return request;
+}
+
+async function refreshAiCoachEnabledState(forceRefresh = false) {
+  const settings = forceRefresh
+    ? await syncSystemSettings({ forceRefresh: true })
+    : getSystemSettingsData() || (await syncSystemSettings());
+
+  return settings?.ai?.coachEnabled !== false && settings?.ai?.learningAnalysisEnabled !== false;
+}
+
+async function toggleAdminAiCoach() {
+  const currentEnabled = getSystemSettingsAi().coachEnabled !== false;
+  const nextEnabled = !currentEnabled;
+  const confirmMessage = nextEnabled
+    ? "Bật AI Coach?"
+    : "Tắt AI Coach? AI Coach sẽ bị chặn trên toàn hệ thống.";
+
+  if (!window.confirm(confirmMessage)) {
+    return;
+  }
+
+  try {
+    await updateSystemSettings({
+      ai: {
+        ...getSystemSettingsAi(),
+        coachEnabled: nextEnabled,
+      },
+    });
+    await syncAdminAi({ forceRefresh: true });
+    await syncSystemSettings({ forceRefresh: true });
+    if (currentPage === "ai-coach") {
+      renderAICoachPage();
+    }
+    showToast(
+      nextEnabled ? "Đã bật AI Coach." : "Đã tắt AI Coach.",
+      "success",
+    );
+  } catch (error) {
+    console.warn("Không thể cập nhật AI Coach:", error);
+    showToast("Không thể cập nhật cấu hình AI Coach.", "error");
+  }
+}
+
+async function clearAdminAiCache() {
+  const service = window.EduKidsAdminAiService;
+
+  if (typeof service?.clearCoachCache !== "function") {
+    showToast("Dịch vụ xóa cache AI chưa sẵn sàng.", "error");
+    return;
+  }
+
+  if (!window.confirm("Xóa cache AI Coach trong Firebase?")) {
+    return;
+  }
+
+  try {
+    const result = await service.clearCoachCache();
+    await syncAdminAi({ forceRefresh: true });
+    if (currentPage === "ai-coach") {
+      renderAICoachPage();
+    }
+    showToast(`Đã xóa ${formatStatValue(result?.deletedCount || 0)} cache AI.`, "success");
+  } catch (error) {
+    console.warn("Không thể xóa cache AI:", error);
+    showToast("Không thể xóa cache AI.", "error");
+  }
+}
+
+async function showAdminAiLogs() {
+  const service = window.EduKidsAdminAiService;
+
+  if (typeof service?.fetchAiDashboardData !== "function") {
+    showToast("Dịch vụ log AI chưa sẵn sàng.", "error");
+    return;
+  }
+
+  try {
+    const data = adminAiState.data || (await service.fetchAiDashboardData());
+    const latestLogs = Array.isArray(data?.logs) ? data.logs.slice(0, 8) : [];
+    const lines = [
+      `Tổng log: ${formatStatValue(Array.isArray(data?.logs) ? data.logs.length : 0)}`,
+      `Hôm nay: ${formatStatValue(data?.todayCount || 0)}`,
+      `Tháng này: ${formatStatValue(data?.monthCount || 0)}`,
+      "",
+      ...latestLogs.map((log) => {
+        const dateLabel = formatDateOnly(log.createdAt || "");
+        return `${dateLabel} | ${log.feature || "--"} | ${log.status || "--"}`;
+      }),
+    ];
+
+    window.alert(lines.join("\n"));
+  } catch (error) {
+    console.warn("Không thể mở log AI:", error);
+    showToast("Không thể tải log AI.", "error");
+  }
+}
+
+function getSystemSettingsService() {
+  return window.EduKidsSystemSettingsService || null;
+}
+
+function getSystemSettingsData() {
+  return systemSettingsState.data || getSystemSettingsService()?.getCurrentSystemSettings?.() || null;
+}
+
+function getSystemSettingsAi() {
+  return getSystemSettingsData()?.ai || {
+    coachEnabled: true,
+    assignmentEnabled: true,
+    learningAnalysisEnabled: true,
+  };
+}
+
+function isAICoachAvailable() {
+  const ai = getSystemSettingsAi();
+  return ai.coachEnabled !== false && ai.learningAnalysisEnabled !== false;
+}
+
+function getSystemSettingsRegistration() {
+  return getSystemSettingsData()?.registration || {
+    studentEnabled: true,
+    teacherEnabled: true,
+  };
+}
+
+function getSystemSettingsMaintenance() {
+  return getSystemSettingsData()?.maintenance || {
+    enabled: false,
+    message: "Hệ thống đang bảo trì, vui lòng quay lại sau.",
+  };
+}
+
+function getSystemSettingsInfo() {
+  return getSystemSettingsData()?.systemInfo || {
+    version: "2.0.0",
+    firebaseProjectId: "",
+    updatedAt: "",
+  };
+}
+
+function getAdminSettingsRoot() {
+  return document.getElementById("admin-settings");
+}
+
+function getAdminSettingsToggleNode(key) {
+  if (!key) {
+    return null;
+  }
+
+  return getAdminSettingsRoot()?.querySelector(
+    `[data-admin-settings-toggle="${key}"]`,
+  ) || null;
+}
+
+function getAdminSettingsInfoNode(key) {
+  if (!key) {
+    return null;
+  }
+
+  return getAdminSettingsRoot()?.querySelector(
+    `[data-admin-settings-info="${key}"]`,
+  ) || null;
+}
+
+function isRegistrationEnabled(role) {
+  const registration = getSystemSettingsRegistration();
+  return role === "teacher"
+    ? registration.teacherEnabled !== false
+    : registration.studentEnabled !== false;
+}
+
+function isSystemMaintenanceEnabled() {
+  return getSystemSettingsMaintenance().enabled === true;
+}
+
+function getSystemMaintenanceMessage() {
+  return getSystemSettingsMaintenance().message || "Hệ thống đang bảo trì, vui lòng quay lại sau.";
+}
+
+function renderMaintenanceScreen() {
+  const authRoot = getAuthRoot();
+  const appShell = getAppShell();
+
+  if (appShell) {
+    appShell.hidden = true;
+  }
+
+  if (authRoot) {
+    authRoot.hidden = false;
+    authRoot.dataset.renderedMode = "maintenance";
+    authRoot.innerHTML = `
+      <div class="admin-empty-state is-large" style="min-height: 100vh; border: none; border-radius: 0;">
+        <div>
+          <p>Hệ thống đang bảo trì, vui lòng quay lại sau.</p>
+          <span>${escapeHtml(getSystemMaintenanceMessage())}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  document.body.classList.add("auth-mode");
+  document.body.classList.remove("admin-mode");
+}
+
+function syncSystemSettingsUi(settings = null) {
+  const data = settings || getSystemSettingsData();
+
+  if (!data) {
+    return;
+  }
+
+  const info = data.systemInfo || {};
+  const registration = data.registration || {};
+  const ai = data.ai || {};
+  const maintenance = data.maintenance || {};
+
+  const toggleMap = {
+    "registration.student": registration.studentEnabled !== false,
+    "registration.teacher": registration.teacherEnabled !== false,
+    "ai.coach": ai.coachEnabled !== false,
+    "ai.assignment": ai.assignmentEnabled !== false,
+    "ai.learning": ai.learningAnalysisEnabled !== false,
+    "maintenance.enabled": maintenance.enabled === true,
+  };
+
+  Object.entries(toggleMap).forEach(([key, enabled]) => {
+    const toggleNode = getAdminSettingsToggleNode(key);
+
+    if (toggleNode) {
+      toggleNode.classList.toggle("is-on", enabled);
+      toggleNode.setAttribute("aria-pressed", String(enabled));
+    }
+  });
+
+  const versionNode = getAdminSettingsInfoNode("version");
+  const firebaseNode = getAdminSettingsInfoNode("firebaseProjectId");
+  const updatedAtNode = getAdminSettingsInfoNode("updatedAt");
+
+  if (versionNode) {
+    versionNode.textContent = info.version || "2.0.0";
+  }
+
+  if (firebaseNode) {
+    const firebaseProjectId =
+      window.firebase?.apps?.length && typeof window.firebase.app === "function"
+        ? normalizeText(window.firebase.app().options?.projectId || "")
+        : "";
+
+    firebaseNode.textContent =
+      info.firebaseProjectId || firebaseProjectId || "Chưa có dữ liệu";
+  }
+
+  if (updatedAtNode) {
+    updatedAtNode.textContent = formatDateOnly(info.updatedAt || data.updatedAt || "");
+  }
+}
+
+function renderAdminSettingsPage() {
+  syncSystemSettingsUi();
+}
+
+async function syncSystemSettings({ forceRefresh = false } = {}) {
+  const service = getSystemSettingsService();
+
+  if (!service) {
+    return null;
+  }
+
+  if (systemSettingsState.loaded && systemSettingsState.data && !forceRefresh) {
+    syncSystemSettingsUi(systemSettingsState.data);
+    return systemSettingsState.data;
+  }
+
+  if (systemSettingsState.loading && systemSettingsState.pendingPromise) {
+    return systemSettingsState.pendingPromise;
+  }
+
+  systemSettingsState.loading = true;
+
+  const request = (async () => {
+    try {
+      const data =
+        typeof service.fetchSystemSettings === "function"
+          ? await service.fetchSystemSettings()
+          : null;
+
+      systemSettingsState.data = data || null;
+      systemSettingsState.loaded = true;
+      syncSystemSettingsUi(systemSettingsState.data);
+      return systemSettingsState.data;
+    } catch (error) {
+      console.warn("Không thể tải cấu hình hệ thống:", error);
+      systemSettingsState.data = null;
+      systemSettingsState.loaded = true;
+      return null;
+    } finally {
+      systemSettingsState.loading = false;
+      systemSettingsState.pendingPromise = null;
+    }
+  })();
+
+  systemSettingsState.pendingPromise = request;
+  return request;
+}
+
+async function updateSystemSettings(updates = {}) {
+  const service = getSystemSettingsService();
+
+  if (typeof service?.updateSystemSettings !== "function") {
+    throw new Error("System settings service is unavailable");
+  }
+
+  const data = await service.updateSystemSettings(updates, "admin");
+  systemSettingsState.data = data;
+  systemSettingsState.loaded = true;
+  syncSystemSettingsUi(data);
+  return data;
+}
+
+async function toggleAdminSystemSetting(settingKey) {
+  const current = getSystemSettingsData();
+
+  if (!current) {
+    showToast("Cấu hình hệ thống chưa sẵn sàng.", "error");
+    return;
+  }
+
+  const nextState = {
+    ...current,
+    registration: { ...current.registration },
+    ai: { ...current.ai },
+    maintenance: { ...current.maintenance },
+  };
+
+  if (settingKey === "registration.student") {
+    nextState.registration.studentEnabled = !isRegistrationEnabled("student");
+  } else if (settingKey === "registration.teacher") {
+    nextState.registration.teacherEnabled = !isRegistrationEnabled("teacher");
+  } else if (settingKey === "ai.coach") {
+    nextState.ai.coachEnabled = !getSystemSettingsAi().coachEnabled;
+  } else if (settingKey === "ai.assignment") {
+    nextState.ai.assignmentEnabled = !getSystemSettingsAi().assignmentEnabled;
+  } else if (settingKey === "ai.learning") {
+    nextState.ai.learningAnalysisEnabled = !getSystemSettingsAi().learningAnalysisEnabled;
+  } else if (settingKey === "maintenance.enabled") {
+    nextState.maintenance.enabled = !isSystemMaintenanceEnabled();
+  } else {
+    return;
+  }
+
+  const confirmMessage =
+    settingKey === "maintenance.enabled" && nextState.maintenance.enabled
+      ? "Bật chế độ bảo trì? Học sinh và giáo viên sẽ không thể sử dụng hệ thống."
+      : `Cập nhật cấu hình ${settingKey}?`;
+
+  if (!window.confirm(confirmMessage)) {
+    return;
+  }
+
+  try {
+    await updateSystemSettings(nextState);
+    showToast("Đã cập nhật cấu hình hệ thống.", "success");
+    syncCurrentRouteState();
+    if (currentAdminPage === "admin-settings") {
+      renderAdminSettingsPage();
+    }
+    if (currentAdminPage === "admin-ai") {
+      renderAdminAiPage();
+    }
+    if (currentPage === "ai-coach") {
+      renderAICoachPage();
+    }
+  } catch (error) {
+    console.warn("Không thể cập nhật cấu hình hệ thống:", error);
+    showToast("Không thể cập nhật cấu hình hệ thống.", "error");
+  }
+}
+
+function handleAdminSettingsAction(action) {
+  if (action === "logout") {
+    setAdminAuthenticated(false);
+    redirectToLoginRoute();
+    showLoginScreen();
+  }
+}
+
+function applySystemAccessGate() {
+  const settings = getSystemSettingsData();
+  const sessionUser = getCurrentAuthUser();
+  const role = normalizeRole(sessionUser?.role);
+
+  if (!settings) {
+    return;
+  }
+
+  if (isSystemMaintenanceEnabled() && role !== "admin") {
+    renderMaintenanceScreen();
+    return;
+  }
+
+  const authRoot = getAuthRoot();
+  if (authRoot && authRoot.dataset.renderedMode === "maintenance") {
+    authRoot.removeAttribute("data-rendered-mode");
+    authRoot.innerHTML = "";
+  }
+
+  if (sessionUser && role) {
+    bootstrapState.currentUser = sessionUser;
+    setAuthMode(false);
+    initApp(sessionUser);
+  } else {
+    initializeAuth();
+  }
+}
+
+function getAdminTeacherById(teacherId) {
+  const normalizedId = String(teacherId || "").trim();
+
+  if (!normalizedId) {
+    return null;
+  }
+
+  return (Array.isArray(adminTeachersState.data) ? adminTeachersState.data : []).find(
+    (teacher) => String(teacher?.id || "").trim() === normalizedId,
+  ) || null;
+}
+
+async function updateAdminTeacherStatus(teacherId, status) {
+  const teacher = getAdminTeacherById(teacherId);
+
+  if (!teacher) {
+    showToast("Không tìm thấy giáo viên.", "error");
+    return;
+  }
+
+  const normalizedStatus = status === "locked" ? "locked" : "active";
+  const actionText = normalizedStatus === "locked" ? "khóa" : "mở khóa";
+  const confirmMessage = `Bạn có chắc muốn ${actionText} tài khoản "${teacher.fullName || teacher.name || teacher.email || teacher.id}"?`;
+
+  if (!window.confirm(confirmMessage)) {
+    return;
+  }
+
+  try {
+    const service = window.EduKidsAdminTeacherService;
+    if (typeof service?.updateTeacherStatus !== "function") {
+      throw new Error("Teacher service is unavailable");
+    }
+
+    await service.updateTeacherStatus(teacher.id, normalizedStatus);
+    showToast(`Đã ${actionText} tài khoản thành công.`, "success");
+    await syncAdminTeachers({ forceRefresh: true });
+  } catch (error) {
+    console.warn("Không thể cập nhật trạng thái giáo viên:", error);
+    showToast(`Không thể ${actionText} tài khoản.`, "error");
+  }
+}
+
+async function resetAdminTeacherPassword(teacherId) {
+  const teacher = getAdminTeacherById(teacherId);
+
+  if (!teacher) {
+    showToast("Không tìm thấy giáo viên.", "error");
+    return;
+  }
+
+  const newPassword = window.prompt(
+    `Nhập mật khẩu mới cho ${teacher.fullName || teacher.name || teacher.email || teacher.id}`,
+  );
+
+  if (!newPassword || !String(newPassword).trim()) {
+    return;
+  }
+
+  const adminPassword = window.prompt("Nhập mật khẩu quản trị để xác nhận:");
+
+  if (!adminPassword || !String(adminPassword).trim()) {
+    return;
+  }
+
+  try {
+    const service = window.EduKidsAdminTeacherService;
+    if (typeof service?.resetTeacherPassword !== "function") {
+      throw new Error("Teacher service is unavailable");
+    }
+
+    await service.resetTeacherPassword(teacher.id, newPassword, adminPassword);
+    showToast("Đã đặt lại mật khẩu thành công.", "success");
+  } catch (error) {
+    console.warn("Không thể đặt lại mật khẩu giáo viên:", error);
+    showToast(error?.message || "Không thể đặt lại mật khẩu.", "error");
+  }
+}
+
+function getAdminStudentStatusLabel(status) {
+  return status === "locked" ? "Đã khóa" : "Hoạt động";
+}
+
+function getAdminStudentStatusClass(status) {
+  return status === "locked" ? "is-red" : "is-green";
+}
+
+function getAdminStudentActionLabel(status) {
+  return status === "locked" ? "Mở khóa" : "Khóa";
+}
+
+function getAdminStudentActionName(status) {
+  return status === "locked" ? "unlock" : "lock";
+}
+
+function getAdminStudentInitials(student) {
+  const source = String(student?.fullName || student?.username || "").trim();
+  if (!source) {
+    return "--";
+  }
+
+  const initials = source
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+
+  return initials || "--";
+}
+
+function buildAdminStudentRow(student, index) {
+  const status = student.status === "locked" ? "locked" : "active";
+  const statusLabel = getAdminStudentStatusLabel(status);
+  const statusClass = getAdminStudentStatusClass(status);
+  const actionLabel = getAdminStudentActionLabel(status);
+  const actionName = getAdminStudentActionName(status);
+  const className = String(student.className || "--").trim() || "--";
+
+  return `
+    <tr data-admin-student-row data-admin-student-id="${escapeHtml(student.id)}">
+      <td>${escapeHtml(String(index + 1))}</td>
+      <td class="admin-user-cell">
+        <div class="admin-user-avatar is-blue">${escapeHtml(getAdminStudentInitials(student))}</div>
+        <div>
+          <strong>${escapeHtml(student.fullName || "--")}</strong>
+          <span>Học sinh</span>
+        </div>
+      </td>
+      <td>${escapeHtml(student.username || "--")}</td>
+      <td>${escapeHtml(className)}</td>
+      <td>${escapeHtml(formatDateOnly(student.createdAt || ""))}</td>
+      <td><span class="admin-status-badge ${escapeHtml(statusClass)}">${escapeHtml(statusLabel)}</span></td>
+      <td>
+        <div class="admin-action-group">
+          <button type="button" data-admin-student-action="view" data-admin-student-id="${escapeHtml(student.id)}">Xem hồ sơ</button>
+          <button type="button" class="${actionName === "lock" ? "is-danger" : ""}" data-admin-student-action="${escapeHtml(actionName)}" data-admin-student-id="${escapeHtml(student.id)}">${escapeHtml(actionLabel)}</button>
+          <button type="button" class="is-danger" data-admin-student-action="delete" data-admin-student-id="${escapeHtml(student.id)}">Xóa</button>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function filterAdminStudents(students = []) {
+  const query = String(adminStudentsState.searchQuery || "").trim().toLowerCase();
+  const classFilter = String(adminStudentsState.classFilter || "").trim().toLowerCase();
+  const statusFilter = String(adminStudentsState.statusFilter || "").trim().toLowerCase();
+
+  return (Array.isArray(students) ? students : []).filter((student) => {
+    const fullName = String(student?.fullName || "").toLowerCase();
+    const username = String(student?.username || "").toLowerCase();
+    const className = String(student?.className || "").toLowerCase();
+    const status = String(student?.status || "active").toLowerCase();
+
+    if (query) {
+      const haystack = `${fullName} ${username} ${className}`.trim();
+      if (!haystack.includes(query)) {
+        return false;
+      }
+    }
+
+    if (classFilter && className !== classFilter) {
+      return false;
+    }
+
+    if (statusFilter && status !== statusFilter) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function renderAdminStudentsClassOptions(students = []) {
+  const select = getAdminStudentsClassSelect();
+
+  if (!select) {
+    return;
+  }
+
+  const currentValue = String(adminStudentsState.classFilter || "").trim();
+  const classes = Array.from(
+    new Set(
+      (Array.isArray(students) ? students : [])
+        .map((student) => String(student?.className || "").trim())
+        .filter(Boolean),
+    ),
+  ).sort((left, right) => left.localeCompare(right, "vi"));
+
+  select.innerHTML = `
+    <option value="">Tất cả lớp</option>
+    ${classes
+      .map((className) => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`)
+      .join("")}
+  `;
+
+  if (currentValue && classes.includes(currentValue)) {
+    select.value = currentValue;
+  } else {
+    adminStudentsState.classFilter = "";
+    select.value = "";
+  }
+}
+
+function renderAdminStudentsTable(students = []) {
+  const tbody = getAdminStudentsTableBody();
+  const summaryNode = getAdminStudentsSummaryNode();
+  const total = Array.isArray(adminStudentsState.data) ? adminStudentsState.data.length : 0;
+  const filtered = Array.isArray(students) ? students : [];
+
+  if (tbody) {
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7">
+            <div class="admin-empty-state is-large">
+              <div>
+                <p>Không có dữ liệu học sinh</p>
+                <span>Thử thay đổi bộ lọc hoặc chờ đồng bộ dữ liệu từ Firestore.</span>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+    } else {
+      tbody.innerHTML = filtered.map((student, index) => buildAdminStudentRow(student, index)).join("");
+    }
+  }
+
+  if (summaryNode) {
+    if (filtered.length === 0) {
+      summaryNode.innerHTML = `Không tìm thấy học sinh phù hợp trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> học sinh`;
+    } else {
+      summaryNode.innerHTML = `Hiển thị 1 đến ${escapeHtml(formatStatValue(filtered.length))} trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> học sinh`;
+    }
+  }
+}
+
+function renderAdminStudentsPage() {
+  renderAdminStudentsClassOptions(adminStudentsState.data);
+  setAdminStudentsFiltersFromInputs();
+  const students = filterAdminStudents(adminStudentsState.data);
+  adminStudentsState.filtered = students;
+  renderAdminStudentsTable(students);
+}
+
+function setAdminStudentsFiltersFromInputs() {
+  const searchInput = getAdminStudentsSearchInput();
+  const classSelect = getAdminStudentsClassSelect();
+  const statusSelect = getAdminStudentsStatusSelect();
+
+  adminStudentsState.searchQuery = String(searchInput?.value || "");
+  adminStudentsState.classFilter = String(classSelect?.value || "");
+  adminStudentsState.statusFilter = String(statusSelect?.value || "");
+}
+
+async function syncAdminStudents({ forceRefresh = false } = {}) {
+  const root = getAdminStudentsRoot();
+
+  if (!root) {
+    return null;
+  }
+
+  if (
+    adminStudentsState.loaded &&
+    Array.isArray(adminStudentsState.data) &&
+    !forceRefresh
+  ) {
+    renderAdminStudentsPage();
+    return adminStudentsState.data;
+  }
+
+  if (adminStudentsState.loading && adminStudentsState.pendingPromise) {
+    return adminStudentsState.pendingPromise;
+  }
+
+  adminStudentsState.loading = true;
+  root.setAttribute("aria-busy", "true");
+
+  const request = (async () => {
+    try {
+      const service = window.EduKidsAdminStudentService;
+      const students =
+        typeof service?.fetchStudents === "function"
+          ? await service.fetchStudents()
+          : [];
+
+      adminStudentsState.data = Array.isArray(students)
+        ? students
+            .map((student) => service?.normalizeStudent?.(student) || student)
+            .filter((student) => String(student?.id || "").trim())
+            .sort((left, right) => {
+              const leftTime = Number(left?.createdAtValue) || 0;
+              const rightTime = Number(right?.createdAtValue) || 0;
+              return rightTime - leftTime;
+            })
+        : [];
+      adminStudentsState.loaded = true;
+
+      renderAdminStudentsPage();
+      return adminStudentsState.data;
+    } catch (error) {
+      console.warn("Không thể tải danh sách học sinh:", error);
+      adminStudentsState.data = [];
+      adminStudentsState.loaded = true;
+      renderAdminStudentsPage();
+      return [];
+    } finally {
+      adminStudentsState.loading = false;
+      adminStudentsState.pendingPromise = null;
+      root.removeAttribute("aria-busy");
+    }
+  })();
+
+  adminStudentsState.pendingPromise = request;
+  return request;
+}
+
+function getAdminStudentById(studentId) {
+  const normalizedId = String(studentId || "").trim();
+
+  if (!normalizedId) {
+    return null;
+  }
+
+  return (Array.isArray(adminStudentsState.data) ? adminStudentsState.data : []).find(
+    (student) => String(student?.id || "").trim() === normalizedId,
+  ) || null;
+}
+
+function showAdminStudentProfile(student) {
+  if (!student) {
+    showToast("Không tìm thấy hồ sơ học sinh.", "error");
+    return;
+  }
+
+  window.alert(
+    [
+      `Họ tên: ${student.fullName || "--"}`,
+      `Username: ${student.username || "--"}`,
+      `Lớp: ${student.className || "--"}`,
+      `Ngày tạo: ${formatDateOnly(student.createdAt || "")}`,
+      `Trạng thái: ${getAdminStudentStatusLabel(student.status)}`,
+    ].join("\n"),
+  );
+}
+
+async function updateAdminStudentStatus(studentId, status) {
+  const student = getAdminStudentById(studentId);
+
+  if (!student) {
+    showToast("Không tìm thấy học sinh.", "error");
+    return;
+  }
+
+  const normalizedStatus = status === "locked" ? "locked" : "active";
+  const actionText = normalizedStatus === "locked" ? "khóa" : "mở khóa";
+  const confirmMessage = `Bạn có chắc muốn ${actionText} tài khoản "${student.fullName || student.username || student.id}"?`;
+
+  if (!window.confirm(confirmMessage)) {
+    return;
+  }
+
+  try {
+    const service = window.EduKidsAdminStudentService;
+    if (typeof service?.updateStudentStatus !== "function") {
+      throw new Error("Student service is unavailable");
+    }
+
+    await service.updateStudentStatus(student.id, normalizedStatus);
+    showToast(`Đã ${actionText} tài khoản thành công.`, "success");
+    await syncAdminStudents({ forceRefresh: true });
+    void syncAdminOverview({ forceRefresh: true });
+  } catch (error) {
+    console.warn("Không thể cập nhật trạng thái học sinh:", error);
+    showToast(`Không thể ${actionText} tài khoản.`, "error");
+  }
+}
+
+async function deleteAdminStudent(studentId) {
+  const student = getAdminStudentById(studentId);
+
+  if (!student) {
+    showToast("Không tìm thấy học sinh.", "error");
+    return;
+  }
+
+  const confirmMessage = `Xóa tài khoản "${student.fullName || student.username || student.id}"? Hành động này không thể hoàn tác.`;
+
+  if (!window.confirm(confirmMessage)) {
+    return;
+  }
+
+  try {
+    const service = window.EduKidsAdminStudentService;
+    if (typeof service?.deleteStudent !== "function") {
+      throw new Error("Student service is unavailable");
+    }
+
+    await service.deleteStudent(student.id);
+    showToast("Đã xóa tài khoản thành công.", "success");
+    await syncAdminStudents({ forceRefresh: true });
+    void syncAdminOverview({ forceRefresh: true });
+  } catch (error) {
+    console.warn("Không thể xóa học sinh:", error);
+    showToast("Không thể xóa tài khoản.", "error");
+  }
+}
+
 function changeAdminPage(pageId) {
   currentAdminPage = pageId || ADMIN_DEFAULT_PAGE;
   showAdminPage(currentAdminPage);
 
   if (currentAdminPage === "admin-content") {
     showAdminContentTab(currentAdminContentTab);
+    void syncAdminContent();
+  } else if (currentAdminPage === "admin-ai") {
+    void syncAdminAi();
+  } else if (currentAdminPage === "admin-overview") {
+    void syncAdminOverview();
+  } else if (currentAdminPage === "admin-classes") {
+    void syncAdminClasses();
+  } else if (currentAdminPage === "admin-assignments") {
+    void syncAdminAssignments();
+  } else if (currentAdminPage === "admin-stats") {
+    void syncAdminStats();
+  } else if (currentAdminPage === "admin-settings") {
+    renderAdminSettingsPage();
+    void syncSystemSettings();
+  } else if (currentAdminPage === "admin-students") {
+    void syncAdminStudents();
+  } else if (currentAdminPage === "admin-teachers") {
+    void syncAdminTeachers();
   }
 }
 
@@ -515,6 +3540,9 @@ function bindAdminEventsOnce() {
     const contentTabTrigger = event.target.closest("[data-admin-content-tab]");
     if (contentTabTrigger) {
       showAdminContentTab(contentTabTrigger.dataset.adminContentTab);
+      if (currentAdminPage === "admin-content") {
+        void syncAdminContent();
+      }
       return;
     }
 
@@ -522,6 +3550,249 @@ function bindAdminEventsOnce() {
     if (menuToggle) {
       const isOpen = document.body.classList.toggle("sidebar-open");
       menuToggle.setAttribute("aria-expanded", String(isOpen));
+    }
+
+    const studentActionButton = event.target.closest(
+      "[data-admin-student-action]",
+    );
+
+    if (studentActionButton) {
+      const action = String(
+        studentActionButton.dataset.adminStudentAction || "",
+      ).trim();
+      const studentId = String(
+        studentActionButton.dataset.adminStudentId || "",
+      ).trim();
+
+      if (!studentId) {
+        return;
+      }
+
+      if (action === "view") {
+        showAdminStudentProfile(getAdminStudentById(studentId));
+        return;
+      }
+
+      if (action === "lock") {
+        void updateAdminStudentStatus(studentId, "locked");
+        return;
+      }
+
+      if (action === "unlock") {
+        void updateAdminStudentStatus(studentId, "active");
+        return;
+      }
+
+      if (action === "delete") {
+        void deleteAdminStudent(studentId);
+      }
+    }
+
+    const teacherActionButton = event.target.closest(
+      "[data-admin-teacher-action]",
+    );
+
+    if (teacherActionButton) {
+      const action = String(
+        teacherActionButton.dataset.adminTeacherAction || "",
+      ).trim();
+      const teacherId = String(
+        teacherActionButton.dataset.adminTeacherId || "",
+      ).trim();
+
+      if (!teacherId) {
+        return;
+      }
+
+      if (action === "lock") {
+        void updateAdminTeacherStatus(teacherId, "locked");
+        return;
+      }
+
+      if (action === "unlock") {
+        void updateAdminTeacherStatus(teacherId, "active");
+        return;
+      }
+
+      if (action === "reset-password") {
+        void resetAdminTeacherPassword(teacherId);
+      }
+    }
+
+    const classActionButton = event.target.closest("[data-admin-class-action]");
+
+    if (classActionButton) {
+      const action = String(
+        classActionButton.dataset.adminClassAction || "",
+      ).trim();
+      const classId = String(
+        classActionButton.dataset.adminClassId || "",
+      ).trim();
+
+      if (!classId) {
+        return;
+      }
+
+      if (action === "view") {
+        showAdminClassDetail(getAdminClassById(classId));
+      }
+    }
+
+    const assignmentActionButton = event.target.closest(
+      "[data-admin-assignment-action]",
+    );
+
+    if (assignmentActionButton) {
+      const action = String(
+        assignmentActionButton.dataset.adminAssignmentAction || "",
+      ).trim();
+      const assignmentId = String(
+        assignmentActionButton.dataset.adminAssignmentId || "",
+      ).trim();
+
+      if (!assignmentId) {
+        return;
+      }
+
+      if (action === "view") {
+        showAdminAssignmentDetail(getAdminAssignmentById(assignmentId));
+      }
+    }
+
+    const contentActionButton = event.target.closest(
+      "[data-admin-content-action]",
+    );
+
+    if (contentActionButton) {
+      const action = String(
+        contentActionButton.dataset.adminContentAction || "",
+      ).trim();
+      const subject = String(
+        contentActionButton.dataset.adminContentSubject || "",
+      ).trim();
+      const grade = String(
+        contentActionButton.dataset.adminContentGrade || "",
+      ).trim();
+
+      if (action === "view") {
+        showAdminContentDetail(subject, grade);
+      }
+    }
+
+    const aiActionButton = event.target.closest("[data-admin-ai-action]");
+
+    if (aiActionButton) {
+      const action = String(aiActionButton.dataset.adminAiAction || "").trim();
+
+      if (action === "show-logs") {
+        void showAdminAiLogs();
+        return;
+      }
+
+      if (action === "clear-cache") {
+        void clearAdminAiCache();
+      }
+    }
+
+    const aiToggleButton = event.target.closest("[data-admin-ai-toggle]");
+
+    if (aiToggleButton) {
+      const toggleName = String(aiToggleButton.dataset.adminAiToggle || "").trim();
+
+      if (toggleName === "coach") {
+        void toggleAdminAiCoach();
+      }
+    }
+
+    const systemSettingsToggle = event.target.closest("[data-admin-settings-toggle]");
+
+    if (systemSettingsToggle) {
+      void toggleAdminSystemSetting(systemSettingsToggle.dataset.adminSettingsToggle);
+      return;
+    }
+
+    const systemSettingsAction = event.target.closest("[data-admin-settings-action]");
+
+    if (systemSettingsAction) {
+      handleAdminSettingsAction(systemSettingsAction.dataset.adminSettingsAction);
+    }
+  });
+
+  document.addEventListener("input", (event) => {
+    const target = event.target;
+
+    if (
+      target instanceof HTMLInputElement &&
+      target.matches("#admin-students input[type='search']")
+    ) {
+      setAdminStudentsFiltersFromInputs();
+      renderAdminStudentsPage();
+      return;
+    }
+
+    if (
+      target instanceof HTMLInputElement &&
+      target.matches("#admin-teachers input[type='search']")
+    ) {
+      setAdminTeachersFiltersFromInputs();
+      renderAdminTeachersPage();
+      return;
+    }
+
+    if (
+      target instanceof HTMLInputElement &&
+      target.matches("#admin-classes input[type='search']")
+    ) {
+      setAdminClassesFiltersFromInputs();
+      renderAdminClassesPage();
+      return;
+    }
+
+    if (
+      target instanceof HTMLInputElement &&
+      target.matches("#admin-assignments input[type='search']")
+    ) {
+      setAdminAssignmentsFiltersFromInputs();
+      renderAdminAssignmentsPage();
+    }
+  });
+
+  document.addEventListener("change", (event) => {
+    const target = event.target;
+
+    if (
+      target instanceof HTMLSelectElement &&
+      target.closest("#admin-students")
+    ) {
+      setAdminStudentsFiltersFromInputs();
+      renderAdminStudentsPage();
+      return;
+    }
+
+    if (
+      target instanceof HTMLSelectElement &&
+      target.closest("#admin-teachers")
+    ) {
+      setAdminTeachersFiltersFromInputs();
+      renderAdminTeachersPage();
+      return;
+    }
+
+    if (
+      target instanceof HTMLSelectElement &&
+      target.closest("#admin-classes")
+    ) {
+      setAdminClassesFiltersFromInputs();
+      renderAdminClassesPage();
+      return;
+    }
+
+    if (
+      target instanceof HTMLSelectElement &&
+      target.closest("#admin-assignments")
+    ) {
+      setAdminAssignmentsFiltersFromInputs();
+      renderAdminAssignmentsPage();
     }
   });
 
@@ -801,12 +4072,15 @@ function renderAICoachResults() {
   const summaryNode = getAICoachSummaryNode();
   const analyzeButton = getAICoachAnalyzeButton();
   const analysis = aiCoachState.analysis;
+  const aiCoachEnabled = isAICoachAvailable();
 
   if (analyzeButton) {
-    analyzeButton.disabled = aiCoachState.loading;
+    analyzeButton.disabled = aiCoachState.loading || !aiCoachEnabled;
     analyzeButton.textContent = aiCoachState.loading
       ? "Đang phân tích..."
-      : "✨ AI phân tích";
+      : !aiCoachEnabled
+        ? "AI Coach đã tắt"
+        : "✨ AI phân tích";
   }
 
   if (summaryNode && analysis && !aiCoachState.loading) {
@@ -2102,6 +5376,21 @@ async function fetchAICoachAnalysis() {
   return response.data || null;
 }
 
+async function recordAiUsageLog(payload) {
+  const service = window.EduKidsAdminAiService;
+
+  if (typeof service?.recordAiUsage !== "function") {
+    return null;
+  }
+
+  try {
+    return await service.recordAiUsage(payload);
+  } catch (error) {
+    console.warn("Không thể ghi log AI:", error);
+    return null;
+  }
+}
+
 async function handleAICoachAnalyze() {
   const profile = getCurrentAuthUser();
 
@@ -2110,6 +5399,13 @@ async function handleAICoachAnalyze() {
   }
 
   if (aiCoachState.loading) {
+    return;
+  }
+
+  const aiEnabled = await refreshAiCoachEnabledState();
+
+  if (!aiEnabled) {
+    showToast("AI Coach hiện đang tắt trong hệ thống.", "error");
     return;
   }
 
@@ -2126,6 +5422,17 @@ async function handleAICoachAnalyze() {
 
     aiCoachState.analysis = analysis;
     aiCoachState.error = "";
+    void recordAiUsageLog({
+      feature: "coach",
+      action: "analyze",
+      status: "success",
+      success: true,
+      userId: profile?.uid || profile?.userId || profile?.id || "",
+      role: profile?.role || "student",
+      meta: {
+        fromCache: Boolean(analysis?.fromCache),
+      },
+    });
   } catch (error) {
     const rawMessage = String(error?.message || "");
     aiCoachState.error = rawMessage.includes(
@@ -2134,6 +5441,18 @@ async function handleAICoachAnalyze() {
       ? "Bạn cần làm bài trước khi AI Coach có thể phân tích."
       : "Không thể phân tích kết quả học tập. Vui lòng thử lại.";
     showToast(aiCoachState.error, "error");
+    void recordAiUsageLog({
+      feature: "coach",
+      action: "analyze",
+      status: "failed",
+      success: false,
+      userId: profile?.uid || profile?.userId || profile?.id || "",
+      role: profile?.role || "student",
+      message: aiCoachState.error,
+      meta: {
+        rawMessage,
+      },
+    });
   } finally {
     aiCoachState.loading = false;
     aiCoachState.initialized = true;
@@ -2179,6 +5498,11 @@ function initializeAICoachPage() {
   }
 
   renderAICoachPage();
+  void refreshAiCoachEnabledState(true).then(() => {
+    if (getAICoachRoot()) {
+      renderAICoachPage();
+    }
+  });
 }
 
 function invalidateStudentHomeAssignmentCache(profile) {
@@ -9420,6 +12744,7 @@ function setAssignmentCreateMethod(nextMethod) {
 async function handleAssignmentAiGenerate() {
   const draft = getAssignmentAiDraft();
   const validationMessage = validateAssignmentAiGenerationDraft(draft);
+  const profile = getCurrentAuthUser();
 
   if (validationMessage) {
     showToast(validationMessage, "error");
@@ -9467,9 +12792,36 @@ async function handleAssignmentAiGenerate() {
 
     assignmentAiState.error = "";
     showToast("Đã tạo đề AI thành công.", "success");
+    void recordAiUsageLog({
+      feature: "assignment_ai",
+      action: "generate",
+      status: "success",
+      success: true,
+      userId: profile?.uid || profile?.userId || profile?.id || "",
+      role: profile?.role || "teacher",
+      meta: {
+        grade: draft.grade,
+        subject: draft.subject,
+        topicId: draft.topicId,
+      },
+    });
   } catch (error) {
     assignmentAiState.error = error.message || "Không thể tạo đề AI.";
     showToast(assignmentAiState.error, "error");
+    void recordAiUsageLog({
+      feature: "assignment_ai",
+      action: "generate",
+      status: "failed",
+      success: false,
+      userId: profile?.uid || profile?.userId || profile?.id || "",
+      role: profile?.role || "teacher",
+      message: assignmentAiState.error,
+      meta: {
+        grade: draft.grade,
+        subject: draft.subject,
+        topicId: draft.topicId,
+      },
+    });
   } finally {
     assignmentAiState.loading = false;
     renderAssignmentEditor();
@@ -13385,6 +16737,7 @@ function goToAdminDashboard() {
   setAdminMode(true);
   bindAdminEventsOnce();
   changeAdminPage(ADMIN_DEFAULT_PAGE);
+  void syncAdminOverview({ forceRefresh: true });
 }
 
 function showLoginScreen() {
@@ -13420,6 +16773,7 @@ function syncCurrentRouteState() {
     setAdminMode(true);
     bindAdminEventsOnce();
     changeAdminPage(ADMIN_DEFAULT_PAGE);
+    void syncAdminOverview();
     return;
   }
 
@@ -13739,6 +17093,11 @@ async function handleLoginSubmit(form) {
     return;
   }
 
+  if (isSystemMaintenanceEnabled()) {
+    setFeedbackMessage(form, getSystemMaintenanceMessage(), "error");
+    return;
+  }
+
   try {
     setFeedbackMessage(form, "Đang đăng nhập...", "success");
 
@@ -13872,6 +17231,20 @@ async function handleRegisterSubmit(form) {
       "Vui lòng kiểm tra lại các trường còn thiếu.",
       "error",
     );
+    return;
+  }
+
+  if (!isRegistrationEnabled(role)) {
+    setFeedbackMessage(
+      form,
+      `Đăng ký ${role === "teacher" ? "giáo viên" : "học sinh"} hiện đang bị tắt.`,
+      "error",
+    );
+    return;
+  }
+
+  if (isSystemMaintenanceEnabled()) {
+    setFeedbackMessage(form, getSystemMaintenanceMessage(), "error");
     return;
   }
 
@@ -14174,6 +17547,11 @@ function initApp(user) {
     return;
   }
 
+  if (isSystemMaintenanceEnabled() && normalizeRole(user?.role) !== "admin") {
+    renderMaintenanceScreen();
+    return;
+  }
+
   const identityKey = String(
     user.uid || user.userId || user.id || user.username || user.email || "",
   ).trim();
@@ -14202,6 +17580,11 @@ function initializeAuth() {
   const appShell = getAppShell();
   const authRoot = getAuthRoot();
 
+  if (isSystemMaintenanceEnabled() && role !== "admin") {
+    renderMaintenanceScreen();
+    return;
+  }
+
   if (sessionUser && role) {
     bootstrapState.currentUser = sessionUser;
     setAuthMode(false);
@@ -14227,6 +17610,11 @@ function initializeAuth() {
 function syncAuthState() {
   const sessionUser = getCurrentAuthUser();
   const role = normalizeRole(sessionUser?.role);
+
+  if (isSystemMaintenanceEnabled() && role !== "admin") {
+    renderMaintenanceScreen();
+    return;
+  }
 
   if (sessionUser && role) {
     bootstrapState.currentUser = sessionUser;
@@ -14300,6 +17688,49 @@ function installCompatibilityGlobals() {
 
 async function bootstrap() {
   installCompatibilityGlobals();
+  const systemSettingsService = getSystemSettingsService();
+
+  if (typeof systemSettingsService?.observeSystemSettings === "function") {
+    systemSettingsState.unsubscribe = systemSettingsService.observeSystemSettings((settings) => {
+      systemSettingsState.data = settings;
+      systemSettingsState.loaded = true;
+      syncSystemSettingsUi(settings);
+
+      if (currentAdminPage === "admin-settings") {
+        renderAdminSettingsPage();
+      }
+
+      if (currentAdminPage === "admin-ai") {
+        renderAdminAiPage();
+      }
+
+      if (currentPage === "ai-coach") {
+        renderAICoachPage();
+      }
+
+      const authRoot = getAuthRoot();
+      const role = normalizeRole(getCurrentAuthUser()?.role);
+
+      if (settings?.maintenance?.enabled && role !== "admin") {
+        renderMaintenanceScreen();
+        return;
+      }
+
+      if (authRoot?.dataset.renderedMode === "maintenance") {
+        syncCurrentRouteState();
+      }
+    });
+
+    systemSettingsState.listenerReady =
+      typeof systemSettingsService.getReadyPromise === "function"
+        ? systemSettingsService.getReadyPromise()
+        : Promise.resolve(systemSettingsState.data);
+
+    await systemSettingsState.listenerReady.catch(() => null);
+  } else {
+    await syncSystemSettings({ forceRefresh: true });
+  }
+
   window.addEventListener("popstate", () => {
     syncCurrentRouteState();
   });

@@ -1310,6 +1310,10 @@ body.auth-mode .app {
   gap: 16px;
 }
 
+.admin-class-grid .admin-empty-state {
+  grid-column: 1 / -1;
+}
+
 .admin-class-card {
   position: relative;
   overflow: hidden;
@@ -1410,6 +1414,18 @@ body.auth-mode .app {
   font-size: 12px;
   font-weight: 800;
   color: #74819d;
+}
+
+.admin-class-score.is-empty {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.admin-class-score.is-empty strong {
+  font-size: 15px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-align: center;
 }
 
 .admin-class-card-meta {
@@ -1964,6 +1980,10 @@ body.auth-mode .app {
 }
 
 .admin-stats-main-chart .admin-chart {
+  min-height: 280px;
+}
+
+.admin-stats-main-chart .admin-empty-state {
   min-height: 280px;
 }
 
