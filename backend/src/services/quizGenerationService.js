@@ -1,7 +1,11 @@
 const ApiError = require("../utils/apiError");
-const { GoogleGenAI } = require("@google/genai");
 const { buildQuizPrompt } = require("./aiPrompt");
-const { findTopicById, safeJsonParse, validateQuizPayload } = require("./aiService");
+const {
+  findTopicById,
+  safeJsonParse,
+  validateQuizPayload,
+  generateJsonFromPrompt,
+} = require("./aiService");
 const {
   listQuizVersions,
   getNextVersionNumber,
@@ -9,16 +13,6 @@ const {
   createQuizVersion,
   getVersionedQuizMeta,
 } = require("./quizVersionService");
-
-function getGeminiClient() {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-
-  if (!apiKey) {
-    throw new ApiError(500, "Missing GEMINI_API_KEY environment variable");
-  }
-
-  return new GoogleGenAI({ apiKey });
-}
 
 async function generateQuizPayload({ grade, subject, topic, versionId, versionNumber }) {
   const prompt = buildQuizPrompt({
@@ -29,21 +23,7 @@ async function generateQuizPayload({ grade, subject, topic, versionId, versionNu
     versionNumber,
   });
 
-  const client = getGeminiClient();
-  const response = await client.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-    },
-  });
-
-  const rawText =
-    typeof response.text === "string"
-      ? response.text
-      : response.candidates?.[0]?.content?.parts
-          ?.map((part) => part.text || "")
-          .join("") || "";
+  const rawText = await generateJsonFromPrompt({ prompt });
 
   const parsed = safeJsonParse(rawText);
   return validateQuizPayload(parsed);

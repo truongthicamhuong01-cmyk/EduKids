@@ -75,6 +75,20 @@ function extractJsonText(text) {
   return trimmed;
 }
 
+function getGeminiApiKey() {
+  return process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+}
+
+function getGeminiClient() {
+  const apiKey = getGeminiApiKey();
+
+  if (!apiKey) {
+    throw new ApiError(500, "Missing GEMINI_API_KEY environment variable");
+  }
+
+  return new GoogleGenAI({ apiKey });
+}
+
 function safeJsonParse(text) {
   const cleanText = extractJsonText(text);
 
@@ -99,6 +113,28 @@ function safeJsonParse(text) {
 
     throw new ApiError(502, "Gemini did not return valid JSON");
   }
+}
+
+async function generateJsonFromPrompt({
+  prompt,
+  model = "gemini-2.5-flash",
+  config = {},
+}) {
+  const client = getGeminiClient();
+  const response = await client.models.generateContent({
+    model,
+    contents: prompt,
+    config: {
+      responseMimeType: "application/json",
+      ...config,
+    },
+  });
+
+  return typeof response.text === "string"
+    ? response.text
+    : response.candidates?.[0]?.content?.parts
+        ?.map((part) => part.text || "")
+        .join("") || "";
 }
 
 function validateQuizPayload(payload) {
@@ -201,28 +237,7 @@ async function generateQuiz({ grade, subject, topicId }) {
     },
   });
 
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-
-  if (!apiKey) {
-    throw new ApiError(500, "Missing GEMINI_API_KEY environment variable");
-  }
-
-  const client = new GoogleGenAI({ apiKey });
-
-  const response = await client.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: prompt,
-    config: {
-      responseMimeType: "application/json",
-    },
-  });
-
-  const rawText =
-    typeof response.text === "string"
-      ? response.text
-      : response.candidates?.[0]?.content?.parts
-          ?.map((part) => part.text || "")
-          .join("") || "";
+  const rawText = await generateJsonFromPrompt({ prompt });
 
   const parsed = safeJsonParse(rawText);
   const quizPayload = validateQuizPayload(parsed);
@@ -254,4 +269,8 @@ module.exports = {
   buildQuizDocId,
   safeJsonParse,
   validateQuizPayload,
+  extractJsonText,
+  getGeminiApiKey,
+  getGeminiClient,
+  generateJsonFromPrompt,
 };

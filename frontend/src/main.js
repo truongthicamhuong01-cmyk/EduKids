@@ -3816,6 +3816,21 @@ const manualAssignmentState = {
   questions: [],
 };
 
+const assignmentAiState = {
+  topics: [],
+  topicsKey: "",
+  topicId: "",
+  topicName: "",
+  grade: "4",
+  questionCount: "10",
+  difficulty: "Trung bình",
+  notes: "",
+  questions: [],
+  loadingTopics: false,
+  loading: false,
+  error: "",
+};
+
 const classroomState = {
   classes: [],
   selectedClassId: "",
@@ -8699,6 +8714,288 @@ function getManualAssignmentDueDateInput() {
   return document.querySelector("[data-manual-due-date]");
 }
 
+function getAssignmentEditorRoot() {
+  return document.querySelector("[data-assignment-editor]");
+}
+
+function getAssignmentAiQuestionListRoot() {
+  return document.querySelector("[data-ai-question-list]");
+}
+
+function getAssignmentAiStatusNode() {
+  return document.querySelector("[data-ai-status]");
+}
+
+function getAssignmentAiTopicSelect() {
+  return document.querySelector("[data-ai-topic-select]");
+}
+
+function getAssignmentAiGradeSelect() {
+  return document.querySelector("[data-ai-grade-select]");
+}
+
+function getAssignmentAiQuestionCountSelect() {
+  return document.querySelector("[data-ai-question-count-select]");
+}
+
+function getAssignmentAiDifficultySelect() {
+  return document.querySelector("[data-ai-difficulty-select]");
+}
+
+function getAssignmentAiNotesTextarea() {
+  return document.querySelector("[data-ai-notes]");
+}
+
+function getAssignmentAiGenerateButton() {
+  return document.querySelector("[data-ai-generate-button]");
+}
+
+function getAssignmentAiAddButton() {
+  return document.querySelector("[data-ai-add-question]");
+}
+
+function getAssignmentSubjectDisplayLabel(subject) {
+  const normalized = String(subject || "").trim().toLowerCase();
+
+  if (normalized === "math" || normalized === "toán" || normalized === "toan") {
+    return "Toán";
+  }
+
+  if (
+    normalized === "english" ||
+    normalized === "tiếng anh" ||
+    normalized === "tieng anh"
+  ) {
+    return "Tiếng Anh";
+  }
+
+  return String(subject || "").trim() || "--";
+}
+
+function getAssignmentGradeLabel(value) {
+  const grade = String(value || "").trim();
+
+  return grade ? `Lớp ${grade}` : "--";
+}
+
+function getAssignmentDifficultyLabel(value) {
+  const normalized = String(value || "").trim();
+
+  if (!normalized) {
+    return "--";
+  }
+
+  return normalized;
+}
+
+function getAssignmentAiSelectedTopic() {
+  const topicId = String(assignmentAiState.topicId || "").trim();
+
+  if (!topicId) {
+    return null;
+  }
+
+  return (
+    assignmentAiState.topics.find(
+      (topic) => String(topic?.topicId || "").trim() === topicId,
+    ) || null
+  );
+}
+
+function resetAssignmentAiState() {
+  assignmentAiState.topics = [];
+  assignmentAiState.topicsKey = "";
+  assignmentAiState.topicId = "";
+  assignmentAiState.topicName = "";
+  assignmentAiState.grade = "4";
+  assignmentAiState.questionCount = "10";
+  assignmentAiState.difficulty = "Trung bình";
+  assignmentAiState.notes = "";
+  assignmentAiState.questions = [];
+  assignmentAiState.loadingTopics = false;
+  assignmentAiState.loading = false;
+  assignmentAiState.error = "";
+}
+
+function createAssignmentAiQuestion(index = 1) {
+  return {
+    id: generateManualQuestionId(index),
+    question: "",
+    options: ["", "", "", ""],
+    correctAnswerIndex: 0,
+  };
+}
+
+function normalizeAssignmentAiQuestion(question, index = 0) {
+  const options = Array.isArray(question?.options)
+    ? question.options.slice(0, 4).map((option) => String(option || "").trim())
+    : ["", "", "", ""];
+
+  while (options.length < 4) {
+    options.push("");
+  }
+
+  const parsedCorrectIndex = Number(question?.correctAnswerIndex ?? question?.correctAnswer ?? 0);
+  const correctAnswerIndex = Number.isInteger(parsedCorrectIndex)
+    ? Math.min(Math.max(parsedCorrectIndex, 0), 3)
+    : 0;
+
+  return {
+    id: String(question?.id || generateManualQuestionId(index + 1)),
+    question: String(question?.question || "").trim(),
+    options,
+    correctAnswerIndex,
+  };
+}
+
+function normalizeAssignmentAiQuestions(questions) {
+  return (Array.isArray(questions) ? questions : []).map((question, index) =>
+    normalizeAssignmentAiQuestion(question, index),
+  );
+}
+
+function normalizeAssignmentAiQuestionsForSubmission(questions) {
+  return (Array.isArray(questions) ? questions : [])
+    .map((question, index) => {
+      const normalizedQuestion = normalizeAssignmentAiQuestion(question, index);
+      const options = normalizedQuestion.options.map((option) => String(option || "").trim());
+
+      if (options.length < 4 || options.some((option) => !option)) {
+        return null;
+      }
+
+      const correctAnswerIndex = Math.min(
+        Math.max(Number(normalizedQuestion.correctAnswerIndex) || 0, 0),
+        3,
+      );
+
+      return {
+        id: normalizedQuestion.id,
+        question: normalizedQuestion.question,
+        options,
+        correctAnswer: options[correctAnswerIndex],
+      };
+    })
+    .filter(Boolean);
+}
+
+function getAssignmentAiDraft() {
+  const selectedTopic = getAssignmentAiSelectedTopic();
+  const selectedClass = getSelectedManualAssignmentClass();
+  const questionCount = Number(assignmentAiState.questionCount || 0);
+
+  return {
+    title: String(manualAssignmentState.title || "").trim(),
+    description: String(manualAssignmentState.description || "").trim(),
+    subject: String(manualAssignmentState.subject || "").trim(),
+    classId: String(manualAssignmentState.classId || "").trim(),
+    className: String(
+      selectedClass?.name ||
+        selectedClass?.className ||
+        manualAssignmentState.className ||
+        "",
+    ).trim(),
+    dueDate: String(manualAssignmentState.dueDate || "").trim(),
+    topicId: String(assignmentAiState.topicId || "").trim(),
+    topicName: String(
+      selectedTopic?.title ||
+        selectedTopic?.name ||
+        selectedTopic?.topicName ||
+        assignmentAiState.topicName ||
+        "",
+    ).trim(),
+    grade: String(assignmentAiState.grade || "").trim(),
+    difficulty: String(assignmentAiState.difficulty || "").trim(),
+    questionCount: Number.isFinite(questionCount) ? questionCount : 0,
+    notes: String(assignmentAiState.notes || "").trim(),
+    questions: Array.isArray(assignmentAiState.questions)
+      ? assignmentAiState.questions.map((question, index) =>
+          normalizeAssignmentAiQuestion(question, index),
+        )
+      : [],
+  };
+}
+
+function validateAssignmentAiGenerationDraft(draft) {
+  if (!draft.subject) {
+    return "Vui lòng chọn môn học.";
+  }
+
+  if (!draft.topicId) {
+    return "Vui lòng chọn chủ đề.";
+  }
+
+  if (!draft.grade) {
+    return "Vui lòng chọn khối.";
+  }
+
+  if (!draft.difficulty) {
+    return "Vui lòng chọn độ khó.";
+  }
+
+  if (!Number.isInteger(draft.questionCount) || draft.questionCount <= 0) {
+    return "Số câu hỏi phải lớn hơn 0.";
+  }
+
+  return "";
+}
+
+function validateAssignmentMetaDraft(draft) {
+  if (!draft.title) {
+    return "Vui lòng nhập tên bài tập.";
+  }
+
+  if (!draft.subject) {
+    return "Vui lòng chọn môn học.";
+  }
+
+  if (!draft.classId) {
+    return "Vui lòng chọn lớp học.";
+  }
+
+  if (!draft.dueDate) {
+    return "Vui lòng chọn hạn nộp.";
+  }
+
+  return "";
+}
+
+function validateAssignmentAiDraft(draft) {
+  const metaValidation = validateAssignmentMetaDraft(draft);
+
+  if (metaValidation) {
+    return metaValidation;
+  }
+
+  const generationValidation = validateAssignmentAiGenerationDraft(draft);
+
+  if (generationValidation) {
+    return generationValidation;
+  }
+
+  if (!Array.isArray(draft.questions) || draft.questions.length === 0) {
+    return "Vui lòng tạo ít nhất 1 câu hỏi bằng AI.";
+  }
+
+  for (let index = 0; index < draft.questions.length; index += 1) {
+    const question = draft.questions[index];
+
+    if (!question.question) {
+      return `Câu ${index + 1}: vui lòng nhập nội dung câu hỏi.`;
+    }
+
+    if (
+      !Array.isArray(question.options) ||
+      question.options.length < 4 ||
+      question.options.some((option) => !String(option || "").trim())
+    ) {
+      return `Câu ${index + 1}: vui lòng nhập đủ 4 đáp án.`;
+    }
+  }
+
+  return "";
+}
+
 function syncManualAssignmentFormFields() {
   const titleInput = getManualAssignmentTitleInput();
   const subjectSelect = getManualAssignmentSubjectSelect();
@@ -8719,6 +9016,249 @@ function syncManualAssignmentFormFields() {
 
   if (dueDateInput) {
     dueDateInput.value = manualAssignmentState.dueDate || "";
+  }
+}
+
+function syncAssignmentAiFields() {
+  const topicSelect = getAssignmentAiTopicSelect();
+  const gradeSelect = getAssignmentAiGradeSelect();
+  const questionCountSelect = getAssignmentAiQuestionCountSelect();
+  const difficultySelect = getAssignmentAiDifficultySelect();
+  const notesTextarea = getAssignmentAiNotesTextarea();
+  const generateButton = getAssignmentAiGenerateButton();
+
+  if (topicSelect) {
+    topicSelect.value = assignmentAiState.topicId || "";
+    topicSelect.disabled = assignmentAiState.loadingTopics;
+  }
+
+  if (gradeSelect) {
+    gradeSelect.value = assignmentAiState.grade || "4";
+  }
+
+  if (questionCountSelect) {
+    questionCountSelect.value = String(assignmentAiState.questionCount || "10");
+  }
+
+  if (difficultySelect) {
+    difficultySelect.value = assignmentAiState.difficulty || "Trung bình";
+  }
+
+  if (notesTextarea) {
+    notesTextarea.value = assignmentAiState.notes || "";
+  }
+
+  if (generateButton) {
+    generateButton.disabled = Boolean(assignmentAiState.loading || assignmentAiState.loadingTopics);
+    generateButton.textContent = assignmentAiState.loading
+      ? "AI đang tạo đề..."
+      : "✨ Tạo đề bằng AI";
+  }
+}
+
+function getAssignmentAiTopicsKey() {
+  return `${String(assignmentAiState.grade || "").trim()}:${String(
+    manualAssignmentState.subject || "",
+  ).trim()}`;
+}
+
+async function loadAssignmentAiTopics({ force = false } = {}) {
+  const subject = normalizeSubjectLabel(manualAssignmentState.subject || "");
+  const grade = String(assignmentAiState.grade || "4").trim() || "4";
+  const topicsKey = `${grade}:${subject}`;
+
+  if (
+    !force &&
+    assignmentAiState.topicsKey === topicsKey &&
+    Array.isArray(assignmentAiState.topics) &&
+    assignmentAiState.topics.length > 0
+  ) {
+    syncAssignmentAiFields();
+    renderAssignmentPreview();
+    return assignmentAiState.topics;
+  }
+
+  assignmentAiState.topicsKey = topicsKey;
+  assignmentAiState.loadingTopics = true;
+  assignmentAiState.error = "";
+  syncAssignmentAiFields();
+  renderAssignmentEditor();
+  renderAssignmentPreview();
+
+  try {
+    const params = new URLSearchParams({
+      grade,
+      subject,
+    });
+
+    const response = await apiRequestWithAuth(
+      `/api/quiz/topics?${params.toString()}`,
+      {
+        method: "GET",
+      },
+    );
+
+    const topics = Array.isArray(response?.data)
+      ? response.data
+          .map((topic) => ({
+            ...topic,
+            topicId: String(topic?.topicId || "").trim(),
+            title: String(topic?.title || topic?.name || topic?.topicName || "").trim(),
+            description: String(topic?.description || "").trim(),
+            grade: String(topic?.grade || "").trim(),
+            subject: String(topic?.subject || "").trim(),
+          }))
+          .filter((topic) => topic.topicId)
+      : [];
+
+    assignmentAiState.topics = topics;
+
+    if (
+      assignmentAiState.topicId &&
+      !topics.some((topic) => topic.topicId === assignmentAiState.topicId)
+    ) {
+      assignmentAiState.topicId = "";
+      assignmentAiState.topicName = "";
+    }
+
+    const selectedTopic = getAssignmentAiSelectedTopic();
+    if (selectedTopic) {
+      assignmentAiState.topicName =
+        selectedTopic.title ||
+        selectedTopic.name ||
+        selectedTopic.topicName ||
+        "";
+    }
+
+    assignmentAiState.error = "";
+  } catch (error) {
+    assignmentAiState.topics = [];
+    assignmentAiState.topicId = "";
+    assignmentAiState.topicName = "";
+    assignmentAiState.error = error.message || "Không thể tải danh sách chủ đề.";
+    showToast(assignmentAiState.error, "error");
+  } finally {
+    assignmentAiState.loadingTopics = false;
+    renderAssignmentEditor();
+    renderAssignmentPreview();
+  }
+
+  return assignmentAiState.topics;
+}
+
+function addAssignmentAiQuestion() {
+  assignmentAiState.questions = Array.isArray(assignmentAiState.questions)
+    ? assignmentAiState.questions.length > 0
+      ? assignmentAiState.questions.map((question, index) => ({
+          ...normalizeAssignmentAiQuestion(question, index),
+          id: question.id || generateManualQuestionId(index + 1),
+        }))
+      : []
+    : [];
+
+  assignmentAiState.questions.push(
+    createAssignmentAiQuestion(assignmentAiState.questions.length + 1),
+  );
+
+  renderAssignmentEditor();
+  renderAssignmentPreview();
+}
+
+function removeAssignmentAiQuestion(questionIndex) {
+  if (!Array.isArray(assignmentAiState.questions)) {
+    assignmentAiState.questions = [];
+  }
+
+  const nextQuestions = assignmentAiState.questions.filter(
+    (_, index) => index !== questionIndex,
+  );
+
+  assignmentAiState.questions = nextQuestions.length
+    ? nextQuestions.map((question, index) => ({
+        ...normalizeAssignmentAiQuestion(question, index),
+        id: question.id || generateManualQuestionId(index + 1),
+      }))
+    : [];
+
+  renderAssignmentEditor();
+  renderAssignmentPreview();
+}
+
+function setAssignmentCreateMethod(nextMethod) {
+  const normalizedMethod = nextMethod === "ai" ? "ai" : "manual";
+
+  if (createMethod === normalizedMethod) {
+    return;
+  }
+
+  createMethod = normalizedMethod;
+  assignmentAiState.error = "";
+  syncManualAssignmentMethodCards();
+  renderAssignmentEditor();
+  renderAssignmentPreview();
+
+  if (createMethod === "ai") {
+    void loadAssignmentAiTopics();
+  }
+}
+
+async function handleAssignmentAiGenerate() {
+  const draft = getAssignmentAiDraft();
+  const validationMessage = validateAssignmentAiGenerationDraft(draft);
+
+  if (validationMessage) {
+    showToast(validationMessage, "error");
+    return;
+  }
+
+  assignmentAiState.loading = true;
+  assignmentAiState.error = "";
+  renderAssignmentEditor();
+  renderAssignmentPreview();
+
+  try {
+    const response = await apiRequestWithAuth("/api/assignments/generate-ai", {
+      method: "POST",
+      body: {
+        subject: draft.subject,
+        topicId: draft.topicId,
+        topicName: draft.topicName,
+        grade: draft.grade,
+        difficulty: draft.difficulty,
+        questionCount: draft.questionCount,
+        notes: draft.notes,
+      },
+    });
+
+    const generatedQuestions = Array.isArray(response?.data?.questions)
+      ? response.data.questions
+      : [];
+
+    if (generatedQuestions.length === 0) {
+      throw new Error("AI chưa tạo được câu hỏi hợp lệ.");
+    }
+
+    assignmentAiState.questions = generatedQuestions.map((question, index) =>
+      normalizeAssignmentAiQuestion(
+        {
+          id: question.id || generateManualQuestionId(index + 1),
+          question: question.question,
+          options: Array.isArray(question.options) ? question.options : ["", "", "", ""],
+          correctAnswerIndex: Number(question.correctAnswer),
+        },
+        index,
+      ),
+    );
+
+    assignmentAiState.error = "";
+    showToast("Đã tạo đề AI thành công.", "success");
+  } catch (error) {
+    assignmentAiState.error = error.message || "Không thể tạo đề AI.";
+    showToast(assignmentAiState.error, "error");
+  } finally {
+    assignmentAiState.loading = false;
+    renderAssignmentEditor();
+    renderAssignmentPreview();
   }
 }
 
@@ -8761,6 +9301,34 @@ function updateManualAssignmentStateFromElement(target) {
     return;
   }
 
+  if (target.matches("[data-ai-topic-select]")) {
+    assignmentAiState.topicId = target.value || "";
+    const selectedTopic = getAssignmentAiSelectedTopic();
+    assignmentAiState.topicName =
+      selectedTopic?.title || selectedTopic?.name || selectedTopic?.topicName || "";
+    return;
+  }
+
+  if (target.matches("[data-ai-grade-select]")) {
+    assignmentAiState.grade = target.value || "4";
+    return;
+  }
+
+  if (target.matches("[data-ai-question-count-select]")) {
+    assignmentAiState.questionCount = target.value || "10";
+    return;
+  }
+
+  if (target.matches("[data-ai-difficulty-select]")) {
+    assignmentAiState.difficulty = target.value || "Trung bình";
+    return;
+  }
+
+  if (target.matches("[data-ai-notes]")) {
+    assignmentAiState.notes = target.value;
+    return;
+  }
+
   if (target.matches("[data-manual-title]")) {
     manualAssignmentState.title = target.value;
     return;
@@ -8781,6 +9349,51 @@ function updateManualAssignmentStateFromElement(target) {
 
   if (target.matches("[data-manual-due-date]")) {
     manualAssignmentState.dueDate = target.value;
+    return;
+  }
+
+  const aiBlock = target.closest("[data-ai-question-block]");
+
+  if (aiBlock) {
+    const questionIndex = Number(aiBlock.dataset.questionIndex) - 1;
+    const question = assignmentAiState.questions[questionIndex];
+
+    if (!question) {
+      return;
+    }
+
+    const fieldName = target.getAttribute("name");
+
+    if (!fieldName) {
+      return;
+    }
+
+    if (fieldName === "question") {
+      question.question = target.value;
+      return;
+    }
+
+    if (fieldName === "correctAnswerIndex") {
+      question.correctAnswerIndex = Math.min(
+        Math.max(Number(target.value) || 0, 0),
+        3,
+      );
+      return;
+    }
+
+    const optionMatch = fieldName.match(/^option-(\d)$/);
+
+    if (!optionMatch) {
+      return;
+    }
+
+    const optionIndex = Number(optionMatch[1]);
+
+    if (!Number.isInteger(optionIndex) || optionIndex < 0 || optionIndex > 3) {
+      return;
+    }
+
+    question.options[optionIndex] = target.value;
     return;
   }
 
@@ -10767,6 +11380,362 @@ function renderManualQuestionList() {
     .join("");
 }
 
+function renderAssignmentAiQuestionBlock(question, index) {
+  const safeQuestion = normalizeAssignmentAiQuestion(question, index);
+
+  return `
+    <article class="manual-question-card ai-question-card" data-ai-question-block data-question-index="${index + 1}">
+      <div class="manual-question-card-head">
+        <span class="manual-question-badge">Câu ${index + 1}</span>
+        <button type="button" class="manual-question-remove" data-ai-remove-question aria-label="Xóa câu hỏi">
+          ×
+        </button>
+      </div>
+
+      <div class="manual-question-field">
+        <label class="auth-field-label" for="ai-question-${index + 1}">Nội dung câu hỏi</label>
+        <textarea
+          id="ai-question-${index + 1}"
+          class="auth-input manual-question-input ai-question-input"
+          name="question"
+          data-ai-question-input
+          rows="3"
+          placeholder="Nhập nội dung câu hỏi"
+        >${escapeHtml(safeQuestion.question)}</textarea>
+      </div>
+
+      <div class="manual-answer-grid ai-answer-grid">
+        ${["A", "B", "C", "D"]
+          .map(
+            (label, answerIndex) => `
+              <div class="manual-answer-field">
+                <label class="auth-field-label" for="ai-question-${index + 1}-option-${answerIndex}">
+                  Đáp án ${label}
+                </label>
+                <input
+                  id="ai-question-${index + 1}-option-${answerIndex}"
+                  class="auth-input manual-answer-input ai-answer-input"
+                  type="text"
+                  name="option-${answerIndex}"
+                  data-ai-question-option
+                  placeholder="Nhập đáp án ${label}"
+                  value="${escapeHtml(safeQuestion.options[answerIndex] || "")}"
+                />
+              </div>
+            `,
+          )
+          .join("")}
+      </div>
+
+      <div class="ai-correct-answer-row">
+        <label class="auth-field-label" for="ai-question-${index + 1}-correct">Đáp án đúng</label>
+        <select
+          id="ai-question-${index + 1}-correct"
+          class="auth-input ai-correct-answer-select"
+          name="correctAnswerIndex"
+          data-ai-question-correct
+        >
+          ${["A", "B", "C", "D"]
+            .map(
+              (label, answerIndex) =>
+                `<option value="${answerIndex}" ${safeQuestion.correctAnswerIndex === answerIndex ? "selected" : ""}>${label}</option>`,
+            )
+            .join("")}
+        </select>
+      </div>
+    </article>
+  `;
+}
+
+function renderAssignmentAiQuestionList() {
+  const questions = Array.isArray(assignmentAiState.questions)
+    ? assignmentAiState.questions
+    : [];
+
+  if (questions.length === 0) {
+    return `
+      <div class="ai-empty-state">
+        <strong>Chưa có câu hỏi AI</strong>
+        <p>Nhấn <span>“Tạo đề bằng AI”</span> để sinh câu hỏi, sau đó bạn có thể chỉnh sửa trực tiếp ở đây.</p>
+      </div>
+    `;
+  }
+
+  return questions
+    .map((question, index) => renderAssignmentAiQuestionBlock(question, index))
+    .join("");
+}
+
+function renderAssignmentEditor() {
+  const editor = getAssignmentEditorRoot();
+
+  if (!editor) {
+    return;
+  }
+
+  if (createMethod === "ai") {
+    const topicOptions = Array.isArray(assignmentAiState.topics)
+      ? assignmentAiState.topics
+      .map((topic) => {
+        const topicId = String(topic?.topicId || "").trim();
+        const topicName = String(topic?.title || topic?.name || topic?.topicName || topicId || "").trim();
+
+        return `
+          <option value="${escapeHtml(topicId)}" ${topicId && topicId === assignmentAiState.topicId ? "selected" : ""}>
+            ${escapeHtml(topicName || "Chủ đề")}
+          </option>
+        `;
+      })
+      .join("")
+      : "";
+
+    editor.innerHTML = `
+      <section class="manual-assignment-section manual-assignment-section-card ai-assignment-section-card">
+        <div class="ai-assignment-header">
+          <div>
+            <h2>AI hỗ trợ tạo câu hỏi</h2>
+            <p>Chọn chủ đề và cấu hình để AI sinh đề phù hợp với lớp học.</p>
+          </div>
+          <div class="ai-assignment-header-pill">
+            ${escapeHtml(getAssignmentGradeLabel(assignmentAiState.grade))}
+          </div>
+        </div>
+
+        <div class="ai-assignment-grid">
+          <div class="auth-field">
+            <label class="auth-field-label" for="ai-assignment-topic">Chủ đề</label>
+            <select id="ai-assignment-topic" class="auth-input" data-ai-topic-select>
+              <option value="">${
+                assignmentAiState.loadingTopics
+                  ? "Đang tải chủ đề..."
+                  : "Chọn chủ đề"
+              }</option>
+              ${topicOptions}
+            </select>
+          </div>
+
+          <div class="auth-field">
+            <label class="auth-field-label" for="ai-assignment-question-count">Số câu hỏi</label>
+            <select id="ai-assignment-question-count" class="auth-input" data-ai-question-count-select>
+              ${[5, 10, 15, 20]
+                .map(
+                  (count) =>
+                    `<option value="${count}" ${String(assignmentAiState.questionCount || "10") === String(count) ? "selected" : ""}>${count}</option>`,
+                )
+                .join("")}
+            </select>
+          </div>
+
+          <div class="auth-field">
+            <label class="auth-field-label" for="ai-assignment-grade">Khối</label>
+            <select id="ai-assignment-grade" class="auth-input" data-ai-grade-select>
+              ${["1", "2", "3", "4", "5"]
+                .map(
+                  (grade) =>
+                    `<option value="${grade}" ${String(assignmentAiState.grade || "4") === grade ? "selected" : ""}>Lớp ${grade}</option>`,
+                )
+                .join("")}
+            </select>
+          </div>
+
+          <div class="auth-field">
+            <label class="auth-field-label" for="ai-assignment-difficulty">Độ khó</label>
+            <select id="ai-assignment-difficulty" class="auth-input" data-ai-difficulty-select>
+              ${["Dễ", "Trung bình", "Khó"]
+                .map(
+                  (difficulty) =>
+                    `<option value="${difficulty}" ${assignmentAiState.difficulty === difficulty ? "selected" : ""}>${difficulty}</option>`,
+                )
+                .join("")}
+            </select>
+          </div>
+        </div>
+
+        <div class="auth-field ai-notes-field">
+          <label class="auth-field-label" for="ai-assignment-notes">Ghi chú thêm</label>
+          <textarea
+            id="ai-assignment-notes"
+            class="auth-input ai-notes-textarea"
+            rows="4"
+            placeholder="Ví dụ: Tạo câu hỏi có tình huống thực tế, gần gũi với học sinh."
+            data-ai-notes
+          >${escapeHtml(assignmentAiState.notes || "")}</textarea>
+        </div>
+
+        <div class="ai-assignment-actions">
+          <button
+            type="button"
+            class="manual-btn manual-btn-primary ai-generate-btn ${assignmentAiState.loading ? "is-loading" : ""}"
+            data-ai-generate-button
+            ${assignmentAiState.loading || assignmentAiState.loadingTopics ? "disabled" : ""}
+          >
+            ${assignmentAiState.loading ? "AI đang tạo đề..." : "✨ Tạo đề bằng AI"}
+          </button>
+          ${assignmentAiState.error ? `
+            <div class="ai-assignment-error" role="alert">${escapeHtml(assignmentAiState.error)}</div>
+          ` : ""}
+        </div>
+      </section>
+
+      <section class="manual-assignment-section ai-generated-section">
+        <div class="manual-section-heading">
+          <h2>Câu hỏi AI đã tạo</h2>
+        </div>
+        <div class="manual-assignment-question-list ai-generated-question-list" data-ai-question-list>
+          ${renderAssignmentAiQuestionList()}
+        </div>
+      </section>
+
+      <div class="manual-assignment-actions">
+        <div class="manual-assignment-actions-row">
+          <button type="button" class="manual-btn manual-btn-secondary" data-ai-add-question>
+            + Thêm câu
+          </button>
+        </div>
+
+        <button type="submit" class="manual-btn manual-btn-primary">Tạo bài tập</button>
+      </div>
+    `;
+
+    if (assignmentAiState.loadingTopics) {
+      assignmentAiState.error = assignmentAiState.error || "";
+    }
+
+    syncAssignmentAiFields();
+    return;
+  }
+
+  editor.innerHTML = `
+    <section class="manual-assignment-section">
+      <div class="manual-section-heading">
+        <h2>Nội dung bài tập</h2>
+      </div>
+      <div class="manual-assignment-question-list" data-manual-question-list></div>
+    </section>
+
+    <div class="manual-assignment-actions">
+      <div class="manual-assignment-actions-row">
+        <button type="button" class="manual-btn manual-btn-secondary" data-manual-add-question>
+          + Thêm câu
+        </button>
+      </div>
+
+      <button type="submit" class="manual-btn manual-btn-primary">Tạo bài tập</button>
+    </div>
+  `;
+
+  renderManualQuestionList();
+}
+
+function createAssignmentQuestionPreviewHtml(question, index) {
+  const safeQuestion = normalizeAssignmentAiQuestion(question, index);
+  const correctIndex = Math.min(Math.max(Number(safeQuestion.correctAnswerIndex) || 0, 0), 3);
+  const letters = ["A", "B", "C", "D"];
+
+  return `
+    <section class="manual-preview-question">
+      <div class="manual-preview-question-head">
+        <span class="manual-preview-badge">Câu ${index + 1}</span>
+        <p class="manual-preview-question-text">${escapeHtml(
+          safeQuestion.question || "Chưa nhập câu hỏi",
+        )}</p>
+      </div>
+      <div class="manual-preview-answer-list">
+        ${safeQuestion.options
+          .map(
+            (answer, answerIndex) => `
+              <div class="manual-preview-answer ${correctIndex === answerIndex ? "is-correct" : "is-wrong"}">
+                <span class="manual-preview-answer-key">${letters[answerIndex]}</span>
+                <span class="manual-preview-answer-text">${escapeHtml(answer || "Chưa nhập đáp án")}</span>
+                ${correctIndex === answerIndex ? '<span class="manual-preview-answer-mark">✓</span>' : ""}
+              </div>
+            `,
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+}
+
+function createAssignmentAiPreviewHtml(draft) {
+  const selectedTopic = getAssignmentAiSelectedTopic();
+  const topicName =
+    draft.topicName ||
+    selectedTopic?.title ||
+    selectedTopic?.name ||
+    selectedTopic?.topicName ||
+    draft.topicId ||
+    "--";
+  const questionCount = Number(draft.questionCount || 0);
+  const summary = `
+    <div class="manual-preview-summary ai-preview-summary">
+      <h3>${escapeHtml(draft.title || "Bài tập AI")}</h3>
+      <p>Môn: ${escapeHtml(getAssignmentSubjectDisplayLabel(draft.subject))}</p>
+      <p>Lớp giao: ${escapeHtml(draft.className || "--")}</p>
+      <p>Hạn nộp: ${escapeHtml(draft.dueDate || "--")}</p>
+      <p>Chủ đề: ${escapeHtml(topicName)}</p>
+      <p>Khối: ${escapeHtml(getAssignmentGradeLabel(draft.grade))}</p>
+      <p>Độ khó: ${escapeHtml(getAssignmentDifficultyLabel(draft.difficulty))}</p>
+      <p>Số câu: ${escapeHtml(String(questionCount || "--"))}</p>
+      ${draft.notes ? `<p>Ghi chú: ${escapeHtml(draft.notes)}</p>` : ""}
+    </div>
+  `;
+
+  if (assignmentAiState.loading) {
+    return `
+      ${summary}
+      <div class="ai-preview-loading">
+        <span class="quiz-loading-spinner"></span>
+        <p>AI đang tạo đề...</p>
+      </div>
+    `;
+  }
+
+  if (!Array.isArray(draft.questions) || draft.questions.length === 0) {
+    return `
+      ${summary}
+      <div class="ai-preview-empty">
+        <strong>Chưa có câu hỏi AI</strong>
+        <p>Nhấn “Tạo đề bằng AI” để sinh câu hỏi và xem trước ngay tại đây.</p>
+      </div>
+    `;
+  }
+
+  return `
+    ${summary}
+    ${draft.questions
+      .map((question, index) => createAssignmentQuestionPreviewHtml(question, index))
+      .join("")}
+  `;
+}
+
+function renderAssignmentPreview() {
+  const panel = getManualAssignmentPreviewPanel();
+
+  if (!panel) {
+    return;
+  }
+
+  const content = panel.querySelector(".manual-preview-content");
+
+  if (!content) {
+    return;
+  }
+
+  if (createMethod === "ai") {
+    content.innerHTML = createAssignmentAiPreviewHtml(getAssignmentAiDraft());
+    return;
+  }
+
+  const draft = getManualAssignmentDraft();
+  content.innerHTML = createManualAssignmentPreviewHtml(draft);
+}
+
+function updateAssignmentEditorAndPreview() {
+  renderAssignmentEditor();
+  renderAssignmentPreview();
+}
+
 function renderManualAssignmentShell() {
   const card = getManualAssignmentCard();
 
@@ -10830,7 +11799,7 @@ function renderManualAssignmentShell() {
               </div>
             </section>
 
-            <section class="manual-assignment-section">
+          <section class="manual-assignment-section">
               <div class="manual-section-heading">
                 <h2>Chọn cách tạo bài tập</h2>
               </div>
@@ -10859,22 +11828,7 @@ function renderManualAssignmentShell() {
               </div>
             </section>
 
-            <section class="manual-assignment-section">
-              <div class="manual-section-heading">
-                <h2>Nội dung bài tập</h2>
-              </div>
-              <div class="manual-assignment-question-list" data-manual-question-list></div>
-            </section>
-
-            <div class="manual-assignment-actions">
-              <div class="manual-assignment-actions-row">
-                <button type="button" class="manual-btn manual-btn-secondary" data-manual-add-question>
-                  + Thêm câu
-                </button>
-              </div>
-
-              <button type="submit" class="manual-btn manual-btn-primary">Tạo bài tập</button>
-            </div>
+            <div class="assignment-editor" data-assignment-editor></div>
           </form>
         </section>
 
@@ -11037,20 +11991,7 @@ function createManualAssignmentPreviewHtml(draft) {
 }
 
 function syncManualAssignmentPreview() {
-  const panel = getManualAssignmentPreviewPanel();
-
-  if (!panel) {
-    return;
-  }
-
-  const content = panel.querySelector(".manual-preview-content");
-
-  if (!content) {
-    return;
-  }
-
-  const draft = getManualAssignmentDraft();
-  content.innerHTML = createManualAssignmentPreviewHtml(draft);
+  renderAssignmentPreview();
 }
 
 function validateManualAssignmentDraft(draft) {
@@ -11120,7 +12061,7 @@ function ensureAssignmentService() {
 }
 
 function renderManualAssignmentPreviewFromState() {
-  syncManualAssignmentPreview();
+  renderAssignmentPreview();
 }
 
 async function createAssignment(payload) {
@@ -11295,15 +12236,21 @@ async function initializeManualAssignmentBuilder() {
   }
 
   resetManualAssignmentState();
+  resetAssignmentAiState();
   manualAssignmentFormBound = false;
   renderManualAssignmentShell();
-  renderManualQuestionList();
   syncManualAssignmentMethodCards();
   syncManualAssignmentFormFields();
-  syncManualAssignmentPreview();
+  renderAssignmentEditor();
+  renderAssignmentPreview();
 
   await loadManualAssignmentClasses();
   syncManualAssignmentFormFields();
+  renderAssignmentEditor();
+
+  if (createMethod === "ai") {
+    await loadAssignmentAiTopics();
+  }
 
   const form = getManualAssignmentForm();
 
@@ -11313,14 +12260,30 @@ async function initializeManualAssignmentBuilder() {
 
   const handleDraftChange = (event) => {
     updateManualAssignmentStateFromElement(event.target);
+
+    if (
+      createMethod === "ai" &&
+      (event.target.matches("[data-manual-subject]") ||
+        event.target.matches("[data-ai-grade-select]"))
+    ) {
+      void loadAssignmentAiTopics({ force: true });
+    }
+
     syncManualAssignmentMethodCards();
-    syncManualAssignmentPreview();
+    renderAssignmentPreview();
   };
 
   form.addEventListener("input", handleDraftChange);
   form.addEventListener("change", handleDraftChange);
 
   form.addEventListener("click", (event) => {
+    const methodCard = event.target.closest("[data-create-method]");
+
+    if (methodCard) {
+      setAssignmentCreateMethod(methodCard.dataset.method);
+      return;
+    }
+
     const removeButton = event.target.closest("[data-manual-remove-question]");
 
     if (removeButton) {
@@ -11340,13 +12303,25 @@ async function initializeManualAssignmentBuilder() {
       renderManualQuestionList();
       syncManualAssignmentFormFields();
       syncManualAssignmentMethodCards();
-      syncManualAssignmentPreview();
+      renderAssignmentPreview();
+      return;
     }
-  });
 
-  form
-    .querySelector("[data-manual-add-question]")
-    ?.addEventListener("click", () => {
+    const aiRemoveButton = event.target.closest("[data-ai-remove-question]");
+
+    if (aiRemoveButton) {
+      const block = aiRemoveButton.closest("[data-ai-question-block]");
+
+      if (block) {
+        removeAssignmentAiQuestion(Number(block.dataset.questionIndex) - 1);
+      }
+
+      return;
+    }
+
+    const manualAddButton = event.target.closest("[data-manual-add-question]");
+
+    if (manualAddButton) {
       manualAssignmentState.questions = manualAssignmentState.questions.length
         ? manualAssignmentState.questions.map((question, index) => ({
             ...question,
@@ -11358,11 +12333,79 @@ async function initializeManualAssignmentBuilder() {
       );
       renderManualQuestionList();
       syncManualAssignmentFormFields();
-      syncManualAssignmentPreview();
-    });
+      renderAssignmentPreview();
+      return;
+    }
+
+    const aiAddButton = event.target.closest("[data-ai-add-question]");
+
+    if (aiAddButton) {
+      addAssignmentAiQuestion();
+      return;
+    }
+
+    const aiGenerateButton = event.target.closest("[data-ai-generate-button]");
+
+    if (aiGenerateButton) {
+      void handleAssignmentAiGenerate();
+    }
+  });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+
+    if (createMethod === "ai") {
+      const draft = getAssignmentAiDraft();
+      const validationMessage = validateAssignmentAiDraft(draft);
+
+      if (validationMessage) {
+        showToast(validationMessage, "error");
+        return;
+      }
+
+      const selectedClass = manualAssignmentState.classes.find(
+        (item) => item.id === draft.classId,
+      );
+
+      try {
+        await createAssignment({
+          title: draft.title,
+          description: draft.description,
+          subject: draft.subject,
+          classId: draft.classId,
+          className:
+            selectedClass?.name ||
+            selectedClass?.className ||
+            draft.className ||
+            "",
+          dueDate: draft.dueDate,
+          teacherId: getCurrentUserId(),
+          teacherName:
+            getCurrentAuthUser()?.fullName ||
+            getCurrentAuthUser()?.name ||
+            getCurrentAuthUser()?.username ||
+            "",
+          totalQuestions: draft.questions.length,
+          questions: normalizeAssignmentAiQuestionsForSubmission(draft.questions),
+        });
+
+        showToast("Đã tạo bài tập thành công.", "success");
+        resetManualAssignmentState();
+        resetAssignmentAiState();
+        syncManualAssignmentFormFields();
+        renderAssignmentEditor();
+        renderAssignmentPreview();
+        await loadManualAssignmentClasses();
+        if (createMethod === "ai") {
+          await loadAssignmentAiTopics({ force: true });
+        }
+        await refreshTeacherAssignments();
+      } catch (error) {
+        showToast(error.message || "Không thể tạo bài tập.", "error");
+      }
+
+      return;
+    }
 
     const draft = getManualAssignmentDraft();
     const validationMessage = validateManualAssignmentDraft(draft);
@@ -11405,7 +12448,7 @@ async function initializeManualAssignmentBuilder() {
       syncManualAssignmentFormFields();
       renderManualQuestionList();
       await loadManualAssignmentClasses();
-      syncManualAssignmentPreview();
+      renderAssignmentPreview();
       await refreshTeacherAssignments();
     } catch (error) {
       showToast(error.message || "Không thể tạo bài tập.", "error");
