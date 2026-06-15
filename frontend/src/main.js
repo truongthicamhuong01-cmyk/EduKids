@@ -14,6 +14,7 @@ const bootstrapState = (window.__EDUKIDS_BOOTSTRAP__ ||= {
 });
 
 const AUTH_SESSION_KEY = "edukids-current-user";
+const ADMIN_AUTH_KEY = "edukids-admin-authenticated";
 const AUTH_ACCOUNTS_KEY = "edukids-mock-accounts";
 const AUTH_CLEAR_KEYS = [
   "token",
@@ -27,6 +28,8 @@ const ROLE_DEFAULT_PAGES = {
   student: "student-home",
   teacher: "teacher-dashboard",
 };
+
+const ADMIN_DEFAULT_PAGE = "admin-overview";
 
 const ROLE_ALLOWED_PAGES = {
   student: new Set([
@@ -50,6 +53,8 @@ const ROLE_ALLOWED_PAGES = {
 
 let previousPage = ROLE_DEFAULT_PAGES.student;
 let currentPage = ROLE_DEFAULT_PAGES.student;
+let currentAdminPage = ADMIN_DEFAULT_PAGE;
+let currentAdminContentTab = "math";
 
 function apiRequest(path, payload) {
   return fetch(`${API_BASE_URL}${path}`, {
@@ -139,6 +144,19 @@ function loadSessionUser() {
 
 function clearSessionUser() {
   localStorage.removeItem(AUTH_SESSION_KEY);
+}
+
+function isAdminAuthenticated() {
+  return localStorage.getItem(ADMIN_AUTH_KEY) === "true";
+}
+
+function setAdminAuthenticated(isAuthenticated) {
+  if (isAuthenticated) {
+    localStorage.setItem(ADMIN_AUTH_KEY, "true");
+    return;
+  }
+
+  localStorage.removeItem(ADMIN_AUTH_KEY);
 }
 
 function clearStoredAuthKeys() {
@@ -235,6 +253,19 @@ function resolvePageForRole(pageId, role) {
   return isPageAllowedForRole(pageId, role)
     ? pageId
     : getDefaultPageForRole(role);
+}
+
+function isAdminRoute() {
+  const pathname = String(window.location?.pathname || "")
+    .replace(/\/+$/, "") || "/";
+
+  return pathname === "/admin" || pathname.startsWith("/admin/");
+}
+
+function redirectToLoginRoute() {
+  if (window.location.pathname !== "/") {
+    window.history.replaceState({}, "", "/");
+  }
 }
 
 function getSidebarAvatarPath(profile) {
@@ -403,6 +434,100 @@ function applyRoleVisibility(role = getCurrentRole()) {
   });
 }
 
+function getAdminShell() {
+  return document.getElementById("admin-shell");
+}
+
+function setAdminMode(isAdminMode) {
+  const adminShell = getAdminShell();
+  const appShell = getAppShell();
+  const authRoot = getAuthContainer();
+
+  document.body.classList.toggle("admin-mode", isAdminMode);
+
+  if (isAdminMode) {
+    document.body.classList.remove("auth-mode");
+  }
+
+  if (adminShell) {
+    adminShell.hidden = !isAdminMode;
+  }
+
+  if (appShell) {
+    appShell.hidden = isAdminMode;
+  }
+
+  if (authRoot) {
+    authRoot.hidden = isAdminMode;
+  }
+}
+
+function showAdminPage(pageId) {
+  if (!pageId) {
+    return;
+  }
+
+  document.querySelectorAll(".admin-page").forEach((page) => {
+    page.classList.toggle("active", page.id === pageId);
+  });
+
+  document.querySelectorAll("[data-admin-page]").forEach((item) => {
+    item.classList.toggle("active", item.dataset.adminPage === pageId);
+  });
+}
+
+function showAdminContentTab(tabKey) {
+  const normalizedTab = tabKey === "english" ? "english" : "math";
+  currentAdminContentTab = normalizedTab;
+
+  document.querySelectorAll("[data-admin-content-tab]").forEach((item) => {
+    item.classList.toggle("active", item.dataset.adminContentTab === normalizedTab);
+  });
+
+  document.querySelectorAll("[data-admin-content-panel]").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.adminContentPanel === normalizedTab);
+  });
+}
+
+function changeAdminPage(pageId) {
+  currentAdminPage = pageId || ADMIN_DEFAULT_PAGE;
+  showAdminPage(currentAdminPage);
+
+  if (currentAdminPage === "admin-content") {
+    showAdminContentTab(currentAdminContentTab);
+  }
+}
+
+let adminEventsBound = false;
+
+function bindAdminEventsOnce() {
+  if (adminEventsBound) {
+    return;
+  }
+
+  document.addEventListener("click", (event) => {
+    const pageTrigger = event.target.closest("[data-admin-page]");
+    if (pageTrigger) {
+      changeAdminPage(pageTrigger.dataset.adminPage);
+      return;
+    }
+
+    const contentTabTrigger = event.target.closest("[data-admin-content-tab]");
+    if (contentTabTrigger) {
+      showAdminContentTab(contentTabTrigger.dataset.adminContentTab);
+      return;
+    }
+
+    const menuToggle = event.target.closest("[data-mobile-menu-toggle]");
+    if (menuToggle) {
+      const isOpen = document.body.classList.toggle("sidebar-open");
+      menuToggle.setAttribute("aria-expanded", String(isOpen));
+    }
+  });
+
+  adminEventsBound = true;
+}
+
 async function syncSidebarProfile() {
   const profile = getCurrentSidebarProfile();
 
@@ -560,6 +685,12 @@ function openProfile() {
 
 function openTeacherDashboard() {
   changePage("teacher-dashboard");
+}
+
+function openAdminDashboard() {
+  if (isAdminRoute()) {
+    changeAdminPage(ADMIN_DEFAULT_PAGE);
+  }
 }
 
 function goBackPage() {
@@ -12870,16 +13001,77 @@ function renderAuthFeedback() {
   `;
 }
 
+function renderAdminAuthModal() {
+  return `
+    <div class="auth-modal" data-admin-auth-modal hidden>
+      <div class="auth-modal-backdrop" data-admin-auth-overlay></div>
+
+      <div class="auth-modal-card" role="dialog" aria-modal="true" aria-labelledby="admin-auth-title">
+        <div class="auth-modal-head">
+          <div>
+            <span class="auth-modal-kicker">Quản trị</span>
+            <h3 id="admin-auth-title">Đăng nhập quản trị</h3>
+          </div>
+
+          <button
+            type="button"
+            class="auth-modal-close"
+            data-admin-auth-close
+            aria-label="Đóng"
+          >
+            ×
+          </button>
+        </div>
+
+        <form class="auth-modal-form" data-admin-auth-form novalidate>
+          ${renderPasswordField({
+            id: "admin-login-password",
+            name: "password",
+            label: "Mật khẩu quản trị",
+            placeholder: "Nhập mật khẩu quản trị",
+            value: "",
+            autocomplete: "current-password",
+          })}
+
+          <p class="auth-modal-note">
+            Nhập mật khẩu quản trị để truy cập khu vực Admin của EduKids.
+          </p>
+
+          <div class="auth-modal-feedback" data-admin-auth-feedback aria-live="polite"></div>
+
+          <div class="auth-modal-actions">
+            <button type="button" class="auth-modal-cancel" data-admin-auth-close>
+              Hủy
+            </button>
+            <button type="submit" class="auth-modal-submit">
+              Đăng nhập
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+}
+
 function renderLoginScreen() {
   const draft = authDrafts.login;
 
   return `
     <section class="auth-shell">
       <div class="auth-stage">
-        <div class="auth-badge">ĐĂNG NHẬP</div>
-
         <div class="auth-card">
           ${renderAuthBrand()}
+
+          <div class="auth-form-head">
+            <h2 class="auth-title">ĐĂNG NHẬP</h2>
+            <button
+              type="button"
+              class="auth-admin-button"
+              data-admin-auth-open
+            >
+              ⚙️ Quản trị
+            </button>
+          </div>
 
           <form class="auth-form" id="auth-form" data-view="login" novalidate>
 
@@ -12952,6 +13144,8 @@ function renderLoginScreen() {
 
           </form>
         </div>
+
+        ${renderAdminAuthModal()}
       </div>
     </section>
   `;
@@ -13112,6 +13306,120 @@ function clearFormErrors(form) {
   }
 }
 
+function getAdminAuthModal() {
+  return getAuthRoot()?.querySelector("[data-admin-auth-modal]") || null;
+}
+
+function getAdminAuthFeedback() {
+  return getAuthRoot()?.querySelector("[data-admin-auth-feedback]") || null;
+}
+
+function getAdminAuthForm() {
+  return getAuthRoot()?.querySelector("[data-admin-auth-form]") || null;
+}
+
+function setAdminAuthFeedback(message, kind = "error") {
+  const feedback = getAdminAuthFeedback();
+
+  if (!feedback) {
+    return;
+  }
+
+  feedback.className = `auth-modal-feedback is-visible is-${kind}`;
+  feedback.textContent = message || "";
+}
+
+function clearAdminAuthFeedback() {
+  const feedback = getAdminAuthFeedback();
+
+  if (!feedback) {
+    return;
+  }
+
+  feedback.className = "auth-modal-feedback";
+  feedback.textContent = "";
+}
+
+function openAdminAuthModal() {
+  const modal = getAdminAuthModal();
+  const form = getAdminAuthForm();
+  const passwordInput = form?.querySelector("#admin-login-password");
+
+  if (!modal) {
+    return;
+  }
+
+  modal.hidden = false;
+  modal.classList.add("is-open");
+  clearAdminAuthFeedback();
+
+  if (passwordInput instanceof HTMLInputElement) {
+    passwordInput.value = "";
+    window.requestAnimationFrame(() => {
+      passwordInput.focus();
+    });
+  }
+}
+
+function closeAdminAuthModal() {
+  const modal = getAdminAuthModal();
+  const form = getAdminAuthForm();
+
+  if (!modal) {
+    return;
+  }
+
+  modal.classList.remove("is-open");
+  modal.hidden = true;
+  clearAdminAuthFeedback();
+
+  if (form instanceof HTMLFormElement) {
+    form.reset();
+  }
+}
+
+function goToAdminDashboard() {
+  window.history.pushState({}, "", "/admin");
+  setAdminMode(true);
+  bindAdminEventsOnce();
+  changeAdminPage(ADMIN_DEFAULT_PAGE);
+}
+
+function showLoginScreen() {
+  setAdminMode(false);
+  setAuthMode(true);
+
+  const authRoot = getAuthRoot();
+  if (authRoot) {
+    authRoot.removeAttribute("data-rendered-mode");
+  }
+
+  renderAuthScreen("login");
+}
+
+function syncCurrentRouteState() {
+  if (isAdminRoute()) {
+    if (!isAdminAuthenticated()) {
+      redirectToLoginRoute();
+      showLoginScreen();
+      return;
+    }
+
+    const desiredPath = "/admin";
+    if (String(window.location.pathname || "") !== desiredPath) {
+      window.history.replaceState({}, "", desiredPath);
+    }
+
+    setAdminMode(true);
+    bindAdminEventsOnce();
+    changeAdminPage(ADMIN_DEFAULT_PAGE);
+    return;
+  }
+
+  bindStudentQuizControlsOnce();
+  initializeAuth();
+}
+
 function setFeedbackMessage(form, message, type) {
   const feedback = form.querySelector("#auth-feedback");
 
@@ -13256,11 +13564,30 @@ function bindAuthRootEventsOnce() {
   }
 
   authRoot.addEventListener("click", (event) => {
+    const adminOpenButton = event.target.closest("[data-admin-auth-open]");
+    if (adminOpenButton) {
+      openAdminAuthModal();
+      return;
+    }
+
+    const adminCloseButton = event.target.closest("[data-admin-auth-close]");
+    if (adminCloseButton) {
+      closeAdminAuthModal();
+      return;
+    }
+
+    const adminOverlay = event.target.closest("[data-admin-auth-overlay]");
+    if (adminOverlay) {
+      closeAdminAuthModal();
+      return;
+    }
+
     const switchButton = event.target.closest("[data-auth-switch]");
     if (switchButton) {
       const nextMode = switchButton.dataset.authSwitch;
       if (nextMode === "login" || nextMode === "register") {
         authRoot.removeAttribute("data-rendered-mode");
+        closeAdminAuthModal();
         renderAuthScreen(nextMode);
       }
       return;
@@ -13308,7 +13635,40 @@ function bindAuthRootEventsOnce() {
 
   authRoot.addEventListener("submit", async (event) => {
     const form = event.target;
-    if (!(form instanceof HTMLFormElement) || form.id !== "auth-form") {
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
+
+    if (form.id === "admin-auth-form") {
+      event.preventDefault();
+      clearAdminAuthFeedback();
+
+      const password = form.elements.password?.value?.trim();
+
+      if (!password) {
+        setAdminAuthFeedback("Vui lòng nhập mật khẩu quản trị.", "error");
+        return;
+      }
+
+      try {
+        setAdminAuthFeedback("Đang xác thực quản trị...", "success");
+
+        await apiRequest("/api/admin/login", {
+          password,
+        });
+
+        setAdminAuthenticated(true);
+        closeAdminAuthModal();
+        goToAdminDashboard();
+      } catch (error) {
+        console.error("[EduKids][admin] login failed", error);
+        setAdminAuthenticated(false);
+        setAdminAuthFeedback("Sai mật khẩu quản trị", "error");
+      }
+      return;
+    }
+
+    if (form.id !== "auth-form") {
       return;
     }
 
@@ -13894,6 +14254,7 @@ function installCompatibilityGlobals() {
   window.openCreateAssignment = openCreateAssignment;
   window.openProfile = openProfile;
   window.openTeacherDashboard = openTeacherDashboard;
+  window.openAdminDashboard = openAdminDashboard;
   window.goBackPage = goBackPage;
   window.openSubject = openSubject;
   window.goBackSubjects = goBackSubjects;
@@ -13921,20 +14282,11 @@ function installCompatibilityGlobals() {
 }
 
 async function bootstrap() {
-  const appShell = getAppShell();
-  const authRoot = getAuthRoot();
-
-  if (appShell) {
-    appShell.hidden = true;
-  }
-  if (authRoot) {
-    authRoot.hidden = false;
-  }
-  document.body?.classList.add("auth-mode");
-
   installCompatibilityGlobals();
-  bindStudentQuizControlsOnce();
-  initializeAuth();
+  window.addEventListener("popstate", () => {
+    syncCurrentRouteState();
+  });
+  syncCurrentRouteState();
 }
 
 void whenDomReady().then(bootstrap);
