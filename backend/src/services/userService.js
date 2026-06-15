@@ -135,6 +135,7 @@ function mapUserDoc(doc) {
     stats: normalizeStats(data.role, data.stats),
     subjects: Array.isArray(data.subjects) ? data.subjects : getDefaultSubjects(data.role),
     classTags: Array.isArray(data.classTags) ? data.classTags : [],
+    classTagNames: Array.isArray(data.classTagNames) ? data.classTagNames : [],
     activityLogs: Array.isArray(data.activityLogs) ? data.activityLogs : [],
     classIds: resolvedClassIds,
     joinedClasses: resolvedClassIds,
@@ -260,6 +261,7 @@ async function createUser(userData) {
     stats: normalizeStats(role, userData.stats),
     subjects: Array.isArray(userData.subjects) ? userData.subjects : getDefaultSubjects(role),
     classTags: Array.isArray(userData.classTags) ? userData.classTags : [],
+    classTagNames: Array.isArray(userData.classTagNames) ? userData.classTagNames : [],
     activityLogs: Array.isArray(userData.activityLogs) ? userData.activityLogs : [],
     classIds: Array.isArray(userData.classIds) ? userData.classIds : [],
     joinedClasses: Array.isArray(userData.joinedClasses) ? userData.joinedClasses : [],
@@ -317,6 +319,7 @@ async function updateUserById(uid, updates) {
   }
   delete safeUpdates.subjects;
   delete safeUpdates.classTags;
+  delete safeUpdates.classTagNames;
   delete safeUpdates.activityLogs;
   delete safeUpdates.classIds;
   delete safeUpdates.joinedClasses;

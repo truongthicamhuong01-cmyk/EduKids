@@ -1259,9 +1259,15 @@ function getStudentProgressOverview(profile, activityLogs = []) {
       : null;
 
   return {
-    studyTime: Number(stats.studyMinutes) || 0,
+    studyTime:
+      Number(stats.studyMinutes) ||
+      Number(stats.studyTimeMinutes) ||
+      Number(stats.timeStudied) ||
+      logs.reduce((total, entry) => total + Math.max(0, Number(entry?.studyMinutes) || 0), 0),
     completedAssignments:
       Number(stats.completedQuestions) ||
+      Number(stats.completedAssignments) ||
+      Number(stats.questionsAnswered) ||
       logs.filter((entry) => Number.isFinite(Number(entry?.score))).length,
     averageScore:
       Number.isFinite(Number(stats.averageScore))
@@ -1269,6 +1275,30 @@ function getStudentProgressOverview(profile, activityLogs = []) {
         : averageScore,
     streak: Number(stats.streak) || 0,
   };
+}
+
+function getStudentProgressCount(profile, activityLogs = []) {
+  const stats = profile?.stats || {};
+  const logs = Array.isArray(activityLogs) ? activityLogs : [];
+  const completedFromStats =
+    Number(stats.completedQuestions) ||
+    Number(stats.completedAssignments) ||
+    Number(stats.questionsAnswered) ||
+    Number(stats.totalAnswered) ||
+    Number(stats.totalQuestions);
+
+  if (Number.isFinite(completedFromStats) && completedFromStats > 0) {
+    return completedFromStats;
+  }
+
+  return logs.reduce((total, entry) => {
+    const count =
+      Number(entry?.totalQuestions) ||
+      Number(entry?.totalAnswered) ||
+      Number(entry?.questionsAnswered) ||
+      (Number.isFinite(Number(entry?.score)) ? 1 : 0);
+    return total + Math.max(0, count);
+  }, 0);
 }
 
 function renderStudentProgressPage(profile, activityLogs = null) {
@@ -2067,6 +2097,8 @@ async function fetchStudentWeeklyActivityLogs(profile) {
 
     assignmentSnapshot.docs.forEach((doc) => {
       const data = doc.data() || {};
+      const totalQuestions = Number(data.totalQuestions) || 0;
+      const explicitMinutes = Number(data.studyMinutes) || 0;
       logs.push({
         id: doc.id,
         type: "assignment",
@@ -2076,9 +2108,9 @@ async function fetchStudentWeeklyActivityLogs(profile) {
           data.updatedAt ||
           data.createdAt ||
           "",
-        totalQuestions: Number(data.totalQuestions) || 0,
+        totalQuestions,
         score: data.score ?? null,
-        studyMinutes: Number(data.studyMinutes) || 0,
+        studyMinutes: explicitMinutes || Math.max(0, totalQuestions * 2),
       });
     });
   } catch (error) {
@@ -2096,14 +2128,16 @@ async function fetchStudentWeeklyActivityLogs(profile) {
 
     progressSnapshot.docs.forEach((doc) => {
       const data = doc.data() || {};
+      const totalQuestions = Number(data.totalAnswered) || 0;
+      const explicitMinutes = Number(data.studyMinutes) || 0;
       logs.push({
         id: doc.id,
         type: "topic-progress",
         updatedAt:
           data.updatedAt || data.accuracyUpdatedAt || data.createdAt || "",
-        totalQuestions: Number(data.totalAnswered) || 0,
+        totalQuestions,
         score: data.percentage ?? null,
-        studyMinutes: Number(data.studyMinutes) || 0,
+        studyMinutes: explicitMinutes || Math.max(0, totalQuestions * 2),
       });
     });
   } catch (error) {
@@ -2346,8 +2380,9 @@ function renderStudentProfile(profile) {
   const dream = document.getElementById("student-profile-dream");
   const progressStats = getStudentProgressStats(profile);
   const activityLogs = getProfileActivityLogs(profile);
+  const completedCount = getStudentProgressCount(profile, activityLogs);
   const streakValue =
-    activityLogs.length > 0
+      activityLogs.length > 0
       ? calculateStreak(activityLogs)
       : Number(profile?.stats?.streak) || 0;
 
@@ -2367,11 +2402,16 @@ function renderStudentProfile(profile) {
   }
 
   if (completed) {
-    completed.innerHTML = `${formatStatValue(profile?.stats?.completedQuestions)} <span>câu hỏi</span>`;
+    completed.innerHTML = `${formatStatValue(completedCount)} <span>câu hỏi</span>`;
   }
 
   if (studyMinutes) {
-    studyMinutes.innerHTML = `${formatStatValue(profile?.stats?.studyMinutes)} <span>phút</span>`;
+    const fallbackStudyMinutes =
+      Number(profile?.stats?.studyMinutes) ||
+      Number(profile?.stats?.studyTimeMinutes) ||
+      Number(profile?.stats?.timeStudied) ||
+      activityLogs.reduce((total, entry) => total + Math.max(0, Number(entry?.studyMinutes) || 0), 0);
+    studyMinutes.innerHTML = `${formatStatValue(fallbackStudyMinutes)} <span>phút</span>`;
   }
 
   if (fullName) {
@@ -2438,27 +2478,70 @@ function renderTeacherProfile(profile) {
   if (email) email.textContent = profile?.email || "--";
 
   const stats = profile?.stats || {};
+  const dashboardData = teacherDashboardState?.data || null;
   if (totalClasses) {
-    totalClasses.textContent = formatStatValue(stats.totalClasses);
+    totalClasses.textContent = formatStatValue(
+      Number(stats.totalClasses) ||
+        Number(dashboardData?.totalClasses) ||
+        Number(profile?.classTags?.length) ||
+        Number(profile?.classTagNames?.length),
+    );
   }
   if (assignmentsCreated) {
-    assignmentsCreated.textContent = formatStatValue(stats.assignmentsCreated);
+    assignmentsCreated.textContent = formatStatValue(
+      Number(stats.assignmentsCreated) || Number(dashboardData?.totalAssignments),
+    );
   }
   if (studentsManaged) {
-    studentsManaged.textContent = formatStatValue(stats.studentsManaged);
+    studentsManaged.textContent = formatStatValue(
+      Number(stats.studentsManaged) || Number(dashboardData?.totalStudents),
+    );
   }
   if (averageScore) {
-    averageScore.textContent = formatStatValue(stats.averageScore);
+    averageScore.textContent = formatStatValue(
+      Number(stats.averageScore) || Number(dashboardData?.overallAverageScore),
+    );
   }
 
   const tags =
     Array.isArray(profile?.classTags) && profile.classTags.length > 0
       ? profile.classTags
+      : Array.isArray(profile?.classTagNames) && profile.classTagNames.length > 0
+        ? profile.classTagNames
       : [];
 
   if (classTags.length > 0) {
     classTags.forEach((tag, index) => {
       tag.textContent = tags[index] || tags[0] || "--";
+    });
+  }
+}
+
+async function syncTeacherProfileSupplement(profile) {
+  if (normalizeRole(profile?.role) !== "teacher") {
+    return;
+  }
+
+  const resolvedTags = [];
+
+  try {
+    const classes = await window.EduKidsProfileService?.fetchMyClasses?.();
+    if (Array.isArray(classes)) {
+      classes.forEach((classroom) => {
+        const label = String(classroom?.name || classroom?.className || "").trim();
+        if (label) {
+          resolvedTags.push(label);
+        }
+      });
+    }
+  } catch (error) {
+    console.warn("Không thể tải lớp chủ nhiệm cho hồ sơ giáo viên:", error);
+  }
+
+  if (resolvedTags.length > 0) {
+    const tagNodes = document.querySelectorAll("[data-teacher-class-tag]");
+    tagNodes.forEach((tag, index) => {
+      tag.textContent = resolvedTags[index] || resolvedTags[0] || "--";
     });
   }
 }
@@ -2609,6 +2692,7 @@ function renderProfileView(profile) {
 
   if (profileType === "teacher") {
     renderTeacherProfile(profile);
+    void syncTeacherProfileSupplement(profile);
   } else {
     renderStudentProfile(profile);
   }

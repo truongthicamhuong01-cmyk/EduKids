@@ -98,6 +98,8 @@ import { API_BASE_URL } from "../config.js";
     }
 
     const stats = profile.stats && typeof profile.stats === "object" ? { ...profile.stats } : {};
+    const classTags = Array.isArray(profile.classTags) ? profile.classTags : [];
+    const classTagNames = Array.isArray(profile.classTagNames) ? profile.classTagNames : [];
 
     return {
       ...profile,
@@ -120,7 +122,8 @@ import { API_BASE_URL } from "../config.js";
       updatedAt: profile.updatedAt || profile.createdAt || "",
       stats,
       subjects: Array.isArray(profile.subjects) ? profile.subjects : [],
-      classTags: Array.isArray(profile.classTags) ? profile.classTags : [],
+      classTags,
+      classTagNames,
       activityLogs: Array.isArray(profile.activityLogs) ? profile.activityLogs : [],
     };
   }
@@ -139,8 +142,14 @@ import { API_BASE_URL } from "../config.js";
     return normalizeProfile(data.data);
   }
 
+  async function fetchMyClasses() {
+    const data = await request("/api/classes/my");
+    return Array.isArray(data.data) ? data.data : [];
+  }
+
   window.EduKidsProfileService = {
     fetchCurrentProfile,
+    fetchMyClasses,
     fetchProfileById,
     getAvatarPathFromProfile,
     normalizeProfile,
