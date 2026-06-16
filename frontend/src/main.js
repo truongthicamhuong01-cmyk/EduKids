@@ -4441,6 +4441,8 @@ function changeAdminPage(pageId) {
     closeAdminContentDetail();
   }
 
+  closeSidebar();
+
   currentAdminPage = pageId || ADMIN_DEFAULT_PAGE;
   showAdminPage(currentAdminPage);
 
@@ -4492,8 +4494,15 @@ function bindAdminEventsOnce() {
 
     const menuToggle = event.target.closest("[data-mobile-menu-toggle]");
     if (menuToggle) {
-      const isOpen = document.body.classList.toggle("sidebar-open");
-      menuToggle.setAttribute("aria-expanded", String(isOpen));
+      const isOpen = !document.body.classList.contains("sidebar-open");
+      setSidebarOpen(isOpen);
+      return;
+    }
+
+    const sidebarBackdrop = event.target.closest("[data-sidebar-backdrop]");
+    if (sidebarBackdrop) {
+      closeSidebar();
+      return;
     }
 
     const statsRangeButton = event.target.closest("[data-admin-stats-range]");
@@ -4845,6 +4854,8 @@ function showPage(pageId) {
 function changePage(pageId) {
   const role = getCurrentRole();
   const targetPageId = resolvePageForRole(pageId, role);
+
+  closeSidebar();
 
   previousPage = currentPage;
   currentPage = targetPageId;
@@ -17064,6 +17075,10 @@ function getAuthContainer() {
 function setAuthMode(isAuthMode) {
   document.body.classList.toggle("auth-mode", isAuthMode);
 
+  if (isAuthMode) {
+    closeSidebar();
+  }
+
   const appShell = getAppShell();
   const authRoot = getAuthContainer();
 
@@ -17201,6 +17216,24 @@ function showToast(message, type = "success") {
       toast.remove();
     }, 250);
   }, 3000);
+}
+
+function syncSidebarToggleButtons(isOpen) {
+  const expanded = String(Boolean(isOpen));
+
+  document.querySelectorAll("[data-mobile-menu-toggle]").forEach((button) => {
+    button.setAttribute("aria-expanded", expanded);
+  });
+}
+
+function setSidebarOpen(isOpen) {
+  const nextIsOpen = Boolean(isOpen);
+  document.body.classList.toggle("sidebar-open", nextIsOpen);
+  syncSidebarToggleButtons(nextIsOpen);
+}
+
+function closeSidebar() {
+  setSidebarOpen(false);
 }
 
 function normalizeAuthUsername(value) {
@@ -18527,8 +18560,14 @@ function bindAppEventsOnce() {
 
     const menuToggle = event.target.closest("[data-mobile-menu-toggle]");
     if (menuToggle) {
-      const isOpen = document.body.classList.toggle("sidebar-open");
-      menuToggle.setAttribute("aria-expanded", String(isOpen));
+      const isOpen = !document.body.classList.contains("sidebar-open");
+      setSidebarOpen(isOpen);
+      return;
+    }
+
+    const sidebarBackdrop = event.target.closest("[data-sidebar-backdrop]");
+    if (sidebarBackdrop) {
+      closeSidebar();
       return;
     }
 
