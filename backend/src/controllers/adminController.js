@@ -3,6 +3,7 @@ const ApiError = require("../utils/apiError");
 const successResponse = require("../utils/apiResponse");
 const { normalizeString } = require("../utils/validators");
 const { findUserById, resetUserPasswordById } = require("../services/userService");
+const { listTopics } = require("../services/quizReadService");
 
 function verifyAdminPassword(rawPassword) {
   const password = normalizeString(rawPassword);
@@ -20,14 +21,7 @@ function verifyAdminPassword(rawPassword) {
 const login = asyncHandler(async (req, res) => {
   const password = normalizeString(req.body.password);
 
-  console.log("[EduKids][admin] login request", {
-    hasPassword: Boolean(password),
-    passwordLength: password.length,
-  });
-
   verifyAdminPassword(password);
-
-  console.log("[EduKids][admin] login success");
 
   return res.status(200).json({
     success: true,
@@ -69,7 +63,33 @@ const resetTeacherPassword = asyncHandler(async (req, res) => {
   });
 });
 
+const getTopics = asyncHandler(async (req, res) => {
+  const headerPassword = normalizeString(
+    req.get("X-Admin-Password") || req.get("x-admin-password"),
+  );
+  const adminPassword = normalizeString(process.env.ADMIN_PASSWORD);
+
+  if (!adminPassword) {
+    throw new ApiError(500, "ADMIN_PASSWORD is not configured");
+  }
+
+  if (!headerPassword || headerPassword !== adminPassword) {
+    throw new ApiError(401, "Unauthorized");
+  }
+
+  const grade = normalizeString(req.query.grade);
+  const subject = normalizeString(req.query.subject);
+
+  const topics = await listTopics({
+    grade,
+    subject,
+  });
+
+  return successResponse(res, 200, "Topics fetched successfully", topics);
+});
+
 module.exports = {
+  getTopics,
   login,
   resetTeacherPassword,
 };

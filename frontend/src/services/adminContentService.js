@@ -45,7 +45,7 @@
   }
 
   async function fetchTopics(grade, subject) {
-    const api = window.EduKidsApi?.requestWithAuth || window.EduKidsApi?.request;
+    const api = window.EduKidsApi?.requestAdmin;
 
     if (typeof api !== "function") {
       return [];
@@ -53,7 +53,7 @@
 
     try {
       const response = await api(
-        `/api/quiz/topics?grade=${encodeURIComponent(String(grade || ""))}&subject=${encodeURIComponent(String(subject || ""))}`,
+        `/api/admin/topics?grade=${encodeURIComponent(String(grade || ""))}&subject=${encodeURIComponent(String(subject || ""))}`,
         { method: "GET" },
       );
 

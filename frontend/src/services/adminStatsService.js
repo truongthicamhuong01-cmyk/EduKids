@@ -95,7 +95,7 @@
   }
 
   function getTopicCatalogRequest() {
-    return window.EduKidsApi?.requestWithAuth || null;
+    return window.EduKidsApi?.requestAdmin || null;
   }
 
   async function fetchTopicCatalog() {
@@ -110,7 +110,7 @@
         GRADES.map(async (grade) => {
           try {
             const response = await request(
-              `/api/quiz/topics?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`,
+              `/api/admin/topics?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`,
               { method: "GET" },
             );
 

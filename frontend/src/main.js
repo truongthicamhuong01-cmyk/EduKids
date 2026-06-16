@@ -24,12 +24,14 @@ const bootstrapState = (window.__EDUKIDS_BOOTSTRAP__ ||= {
 
 const AUTH_SESSION_KEY = "edukids-current-user";
 const ADMIN_AUTH_KEY = "edukids-admin-authenticated";
+const ADMIN_PASSWORD_KEY = "edukids-admin-password";
 const AUTH_ACCOUNTS_KEY = "edukids-mock-accounts";
 const AUTH_CLEAR_KEYS = [
   "token",
   "authToken",
   "user",
   "currentUser",
+  ADMIN_PASSWORD_KEY,
   AUTH_SESSION_KEY,
 ];
 
@@ -158,14 +160,60 @@ function apiRequest(path, payload) {
   });
 }
 
+function apiRequestPublic(path, options = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+
+  return fetch(`${API_BASE_URL}${path}`, {
+    method: options.method || "GET",
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  }).then(async (response) => {
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || data.success === false) {
+      throw new Error(data.message || `Request failed: ${response.status}`);
+    }
+
+    return data;
+  });
+}
+
+function apiRequestAdmin(path, options = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+  const adminPassword = getAdminPassword();
+
+  if (adminPassword) {
+    headers["X-Admin-Password"] = adminPassword;
+  }
+
+  return fetch(`${API_BASE_URL}${path}`, {
+    method: options.method || "GET",
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  }).then(async (response) => {
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || data.success === false) {
+      throw new Error(data.message || `Request failed: ${response.status}`);
+    }
+
+    return data;
+  });
+}
+
 function apiRequestWithAuth(path, options = {}) {
   const headers = {
     "Content-Type": "application/json",
     ...(options.headers || {}),
   };
 
-  const token =
-    localStorage.getItem("authToken") || localStorage.getItem("token") || "";
+  const token = getAccessToken();
 
   if (token) {
     headers.Authorization = `Bearer ${token}`;
@@ -184,6 +232,14 @@ function apiRequestWithAuth(path, options = {}) {
 
     return data;
   });
+}
+
+function getAccessToken() {
+  return localStorage.getItem("authToken") || localStorage.getItem("token") || "";
+}
+
+function hasAccessToken() {
+  return Boolean(getAccessToken());
 }
 
 function readJsonStorage(key) {
@@ -234,6 +290,25 @@ function isAdminAuthenticated() {
   return localStorage.getItem(ADMIN_AUTH_KEY) === "true";
 }
 
+function getAdminPassword() {
+  return (
+    sessionStorage.getItem(ADMIN_PASSWORD_KEY) ||
+    localStorage.getItem(ADMIN_PASSWORD_KEY) ||
+    ""
+  );
+}
+
+function setAdminPassword(password) {
+  if (password) {
+    sessionStorage.setItem(ADMIN_PASSWORD_KEY, password);
+    localStorage.setItem(ADMIN_PASSWORD_KEY, password);
+    return;
+  }
+
+  sessionStorage.removeItem(ADMIN_PASSWORD_KEY);
+  localStorage.removeItem(ADMIN_PASSWORD_KEY);
+}
+
 function setAdminAuthenticated(isAuthenticated) {
   if (isAuthenticated) {
     localStorage.setItem(ADMIN_AUTH_KEY, "true");
@@ -282,8 +357,7 @@ function getCurrentAuthUser() {
     }
   }
 
-  const token =
-    localStorage.getItem("authToken") || localStorage.getItem("token");
+  const token = getAccessToken();
   const payload = decodeJwtPayload(token);
 
   if (payload && typeof payload === "object" && normalizeRole(payload.role)) {
@@ -2916,7 +2990,7 @@ function syncSystemSettingsUi(settings = null) {
   if (firebaseNode) {
     const firebaseProjectId =
       window.firebase?.apps?.length && typeof window.firebase.app === "function"
-        ? normalizeText(window.firebase.app().options?.projectId || "")
+        ? normalizeQuizText(window.firebase.app().options?.projectId || "")
         : "";
 
     firebaseNode.textContent =
@@ -16051,6 +16125,7 @@ function setAuthMode(isAuthMode) {
 function handleLogout() {
   clearStoredAuthKeys();
   clearSessionUser();
+  setAdminPassword("");
   window.EduKidsCurrentUser = null;
 
   const authRoot = getAuthContainer();
@@ -16701,7 +16776,6 @@ function openAdminAuthModal() {
     return;
   }
 
-  console.log("[EduKids][admin] open modal");
   modal.hidden = false;
   modal.classList.add("is-open");
   clearAdminAuthFeedback();
@@ -16732,7 +16806,6 @@ function closeAdminAuthModal() {
 }
 
 function goToAdminDashboard() {
-  console.log("[EduKids][admin] navigate /admin");
   window.history.pushState({}, "", "/admin");
   setAdminMode(true);
   bindAdminEventsOnce();
@@ -16754,12 +16827,7 @@ function showLoginScreen() {
 
 function syncCurrentRouteState() {
   if (isAdminRoute()) {
-    console.log("[EduKids][admin] route guard", {
-      path: window.location.pathname,
-      authenticated: isAdminAuthenticated(),
-    });
     if (!isAdminAuthenticated()) {
-      console.log("[EduKids][admin] redirect to login");
       redirectToLoginRoute();
       showLoginScreen();
       return;
@@ -17006,11 +17074,6 @@ function bindAuthRootEventsOnce() {
 
       const password = form.elements.password?.value?.trim();
 
-      console.log("[EduKids][admin] submit attempt", {
-        hasPassword: Boolean(password),
-        path: window.location.pathname,
-      });
-
       if (!password) {
         setAdminAuthFeedback("Vui lòng nhập mật khẩu quản trị.", "error");
         return;
@@ -17019,21 +17082,18 @@ function bindAuthRootEventsOnce() {
       try {
         setAdminAuthFeedback("Đang xác thực quản trị...", "success");
 
-        const result = await apiRequest("/api/admin/login", {
+        await apiRequest("/api/admin/login", {
           password,
         });
 
-        console.log("[EduKids][admin] api response", result);
         setAdminAuthenticated(true);
-        console.log("[EduKids][admin] localStorage set", {
-          key: ADMIN_AUTH_KEY,
-          value: localStorage.getItem(ADMIN_AUTH_KEY),
-        });
+        setAdminPassword(password);
         closeAdminAuthModal();
         goToAdminDashboard();
       } catch (error) {
         console.error("[EduKids][admin] login failed", error);
         setAdminAuthenticated(false);
+        setAdminPassword("");
         setAdminAuthFeedback("Sai mật khẩu quản trị", "error");
       }
       return;
@@ -17681,8 +17741,15 @@ function installCompatibilityGlobals() {
     void handleAICoachAnalyze();
   };
   window.EduKidsApi = {
+    requestAdmin: apiRequestAdmin,
     request: apiRequest,
+    requestPublic: apiRequestPublic,
     requestWithAuth: apiRequestWithAuth,
+  };
+  window.EduKidsAuth = {
+    getAccessToken,
+    hasAccessToken,
+    getAdminPassword,
   };
 }
 
