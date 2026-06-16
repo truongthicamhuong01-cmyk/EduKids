@@ -6518,8 +6518,8 @@ function renderStudentRecentWrongAnswers(progress) {
     return;
   }
 
-  const title = card.querySelector(".mistake-top h2");
-  const description = card.querySelector("p");
+  const title = card.querySelector(".mistake-copy h2");
+  const description = card.querySelector(".mistake-copy p");
   const button = card.querySelector(".btn-danger");
   const recentWrongCount = Number(progress?.recentWrongCount) || 0;
 
@@ -7193,8 +7193,8 @@ function renderStudentHomeOverview(profile, activityLogs = null) {
 
   if (greeting) {
     greeting.textContent = displayName
-      ? `Xin chào, ${displayName} 👋`
-      : "Xin chào 👋";
+      ? `Xin chào, ${displayName}! 👋`
+      : "Xin chào! 👋";
   }
 
   if (streakValue) {
