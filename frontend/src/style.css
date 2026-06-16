@@ -313,7 +313,11 @@ body.auth-mode .app {
   box-sizing: border-box;
   border-radius: 24px;
   background:
-    radial-gradient(circle at top right, rgba(96, 165, 250, 0.12), transparent 32%),
+    radial-gradient(
+      circle at top right,
+      rgba(96, 165, 250, 0.12),
+      transparent 32%
+    ),
     linear-gradient(180deg, #101b33 0%, #0b1222 100%);
   border: 1px solid rgba(251, 191, 36, 0.22);
   box-shadow:
@@ -331,7 +335,11 @@ body.auth-mode .app {
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.08), transparent 42%);
+  background: linear-gradient(
+    135deg,
+    rgba(251, 191, 36, 0.08),
+    transparent 42%
+  );
 }
 
 .admin-user-card::after {
@@ -6154,8 +6162,8 @@ img.profile-skeleton {
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
-  background:
-    url("/assets/home/top-backround.png") center center / cover no-repeat;
+  background: url("/assets/home/top-backround.png") center center / cover
+    no-repeat;
   box-shadow: 0 18px 42px rgba(56, 92, 131, 0.12);
 }
 
@@ -6180,7 +6188,7 @@ img.profile-skeleton {
 .home-hero-copy p {
   margin: 8px 0 0;
   color: #4f5f79;
-  font-size: clamp(15px, 1.1vw, 16px);
+  font-size: clamp(18px, 1.2vw, 19px);
   line-height: 1.45;
   font-weight: 400;
   max-width: 440px;
@@ -6571,8 +6579,12 @@ img.profile-skeleton {
   position: absolute;
   inset: 18px 8px 18px 18px;
   border-radius: 999px;
-  background:
-    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.86), rgba(255, 214, 221, 0.55) 55%, rgba(255, 214, 221, 0.2) 100%);
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 255, 255, 0.86),
+    rgba(255, 214, 221, 0.55) 55%,
+    rgba(255, 214, 221, 0.2) 100%
+  );
   opacity: 0.78;
   pointer-events: none;
 }
@@ -13106,4 +13118,3 @@ body.admin-content-drawer-open {
     align-items: flex-start;
   }
 }
-

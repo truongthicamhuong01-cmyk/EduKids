@@ -252,7 +252,9 @@ function apiRequestWithAuth(path, options = {}) {
 }
 
 function getAccessToken() {
-  return localStorage.getItem("authToken") || localStorage.getItem("token") || "";
+  return (
+    localStorage.getItem("authToken") || localStorage.getItem("token") || ""
+  );
 }
 
 function hasAccessToken() {
@@ -431,8 +433,8 @@ function resolvePageForRole(pageId, role) {
 }
 
 function isAdminRoute() {
-  const pathname = String(window.location?.pathname || "")
-    .replace(/\/+$/, "") || "/";
+  const pathname =
+    String(window.location?.pathname || "").replace(/\/+$/, "") || "/";
 
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
@@ -445,7 +447,8 @@ function redirectToLoginRoute() {
 
 function getSidebarAvatarPath(profile) {
   if (window.EduKidsProfileService?.getAvatarPathFromProfile) {
-    const avatarPath = window.EduKidsProfileService.getAvatarPathFromProfile(profile);
+    const avatarPath =
+      window.EduKidsProfileService.getAvatarPathFromProfile(profile);
 
     if (normalizeRole(profile?.role) === "admin") {
       return "assets/admin.png";
@@ -671,11 +674,17 @@ function showAdminContentTab(tabKey) {
   currentAdminContentTab = normalizedTab;
 
   document.querySelectorAll("[data-admin-content-tab]").forEach((item) => {
-    item.classList.toggle("active", item.dataset.adminContentTab === normalizedTab);
+    item.classList.toggle(
+      "active",
+      item.dataset.adminContentTab === normalizedTab,
+    );
   });
 
   document.querySelectorAll("[data-admin-content-panel]").forEach((panel) => {
-    panel.classList.toggle("active", panel.dataset.adminContentPanel === normalizedTab);
+    panel.classList.toggle(
+      "active",
+      panel.dataset.adminContentPanel === normalizedTab,
+    );
   });
 }
 
@@ -686,41 +695,64 @@ function getAdminContentRoot() {
 function getAdminContentPanel(tabKey) {
   const normalizedTab = tabKey === "english" ? "english" : "math";
 
-  return getAdminContentRoot()?.querySelector(
-    `[data-admin-content-panel="${normalizedTab}"]`,
-  ) || null;
+  return (
+    getAdminContentRoot()?.querySelector(
+      `[data-admin-content-panel="${normalizedTab}"]`,
+    ) || null
+  );
 }
 
 function getAdminContentTopicBody(tabKey) {
   const normalizedTab = tabKey === "english" ? "english" : "math";
 
-  return getAdminContentRoot()?.querySelector(
-    `[data-admin-content-topic-body="${normalizedTab}"]`,
-  ) || null;
+  return (
+    getAdminContentRoot()?.querySelector(
+      `[data-admin-content-topic-body="${normalizedTab}"]`,
+    ) || null
+  );
 }
 
 function getAdminContentDrawerRoot() {
-  return getAdminContentRoot()?.querySelector("[data-admin-content-drawer]") || null;
+  return (
+    getAdminContentRoot()?.querySelector("[data-admin-content-drawer]") || null
+  );
 }
 
 function getAdminContentDrawerPanel() {
-  return getAdminContentRoot()?.querySelector("[data-admin-content-drawer-panel]") || null;
+  return (
+    getAdminContentRoot()?.querySelector("[data-admin-content-drawer-panel]") ||
+    null
+  );
 }
 
 function getAdminContentDrawerTitleNode() {
-  return getAdminContentRoot()?.querySelector("[data-admin-content-drawer-title]") || null;
+  return (
+    getAdminContentRoot()?.querySelector("[data-admin-content-drawer-title]") ||
+    null
+  );
 }
 
 function getAdminContentDrawerSubtitleNode() {
-  return getAdminContentRoot()?.querySelector("[data-admin-content-drawer-subtitle]") || null;
+  return (
+    getAdminContentRoot()?.querySelector(
+      "[data-admin-content-drawer-subtitle]",
+    ) || null
+  );
 }
 
 function getAdminContentDrawerSummaryNode(key) {
-  return getAdminContentRoot()?.querySelector(`[data-admin-content-drawer-summary="${key}"]`) || null;
+  return (
+    getAdminContentRoot()?.querySelector(
+      `[data-admin-content-drawer-summary="${key}"]`,
+    ) || null
+  );
 }
 
 function getAdminContentDrawerListNode() {
-  return getAdminContentRoot()?.querySelector("[data-admin-content-drawer-list]") || null;
+  return (
+    getAdminContentRoot()?.querySelector("[data-admin-content-drawer-list]") ||
+    null
+  );
 }
 
 function getAdminContentRowLabel(subject, grade) {
@@ -745,7 +777,8 @@ function buildAdminContentRow(bucket) {
   const statusLabel = getAdminContentStatusLabel(versionCount);
   const statusClass = getAdminContentStatusClass(versionCount);
   const topicCount = Array.isArray(bucket?.topics) ? bucket.topics.length : 0;
-  const topicLabel = topicCount > 0 ? `${formatStatValue(topicCount)} topic` : "Chưa có topic";
+  const topicLabel =
+    topicCount > 0 ? `${formatStatValue(topicCount)} topic` : "Chưa có topic";
   const accuracyLabel = Number.isFinite(Number(bucket?.accuracy))
     ? `${formatStatValue(bucket.accuracy)}%`
     : "Chưa có dữ liệu";
@@ -813,7 +846,9 @@ function renderAdminContentPanel(tabKey) {
     return;
   }
 
-  body.innerHTML = buckets.map((bucket) => buildAdminContentRow(bucket)).join("");
+  body.innerHTML = buckets
+    .map((bucket) => buildAdminContentRow(bucket))
+    .join("");
 }
 
 function renderAdminContentPage() {
@@ -826,25 +861,37 @@ function getAdminContentBucket(tabKey, grade) {
   const normalizedTab = tabKey === "english" ? "english" : "math";
   const normalizedGrade = String(grade || "").trim();
 
-  return (Array.isArray(adminContentState.data?.[normalizedTab])
-    ? adminContentState.data[normalizedTab]
-    : []
-  ).find((bucket) => String(bucket?.grade || "").trim() === normalizedGrade) || null;
+  return (
+    (Array.isArray(adminContentState.data?.[normalizedTab])
+      ? adminContentState.data[normalizedTab]
+      : []
+    ).find(
+      (bucket) => String(bucket?.grade || "").trim() === normalizedGrade,
+    ) || null
+  );
 }
 
 function getAdminContentTopicAccuracyLabel(topic) {
-  if (!topic || !Number.isFinite(Number(topic.totalAnswered)) || Number(topic.totalAnswered) <= 0) {
+  if (
+    !topic ||
+    !Number.isFinite(Number(topic.totalAnswered)) ||
+    Number(topic.totalAnswered) <= 0
+  ) {
     return "Chưa có dữ liệu";
   }
 
   const accuracy = Number(topic.percentage);
-  return Number.isFinite(accuracy) ? `${formatStatValue(Math.max(0, Math.min(100, Math.round(accuracy))))}%` : "Chưa có dữ liệu";
+  return Number.isFinite(accuracy)
+    ? `${formatStatValue(Math.max(0, Math.min(100, Math.round(accuracy))))}%`
+    : "Chưa có dữ liệu";
 }
 
 function getAdminContentTopicVersionLabel(topic) {
   const versionCount = Math.max(0, Number(topic?.versionCount) || 0);
 
-  return versionCount > 0 ? `${formatStatValue(versionCount)} version` : "Chưa có version nào";
+  return versionCount > 0
+    ? `${formatStatValue(versionCount)} version`
+    : "Chưa có version nào";
 }
 
 function getAdminContentTopicStatusLabel(topic) {
@@ -853,11 +900,18 @@ function getAdminContentTopicStatusLabel(topic) {
 }
 
 function getAdminContentTopicAccuracyState(topic) {
-  if (!topic || !Number.isFinite(Number(topic.totalAnswered)) || Number(topic.totalAnswered) <= 0) {
+  if (
+    !topic ||
+    !Number.isFinite(Number(topic.totalAnswered)) ||
+    Number(topic.totalAnswered) <= 0
+  ) {
     return "is-gray";
   }
 
-  const accuracy = Math.max(0, Math.min(100, Math.round(Number(topic.percentage) || 0)));
+  const accuracy = Math.max(
+    0,
+    Math.min(100, Math.round(Number(topic.percentage) || 0)),
+  );
 
   if (accuracy >= 80) {
     return "is-green";
@@ -874,7 +928,9 @@ function buildAdminContentTopicRow(topic, index) {
   const versionLabel = getAdminContentTopicVersionLabel(topic);
   const accuracyLabel = getAdminContentTopicAccuracyLabel(topic);
   const statusLabel = getAdminContentTopicStatusLabel(topic);
-  const topicTitle = String(topic?.title || topic?.topicId || `Topic ${index + 1}`).trim() || `Topic ${index + 1}`;
+  const topicTitle =
+    String(topic?.title || topic?.topicId || `Topic ${index + 1}`).trim() ||
+    `Topic ${index + 1}`;
   const accuracyValue = Number.isFinite(Number(topic?.percentage))
     ? Math.max(0, Math.min(100, Math.round(Number(topic.percentage) || 0)))
     : 0;
@@ -948,13 +1004,19 @@ function renderAdminContentDrawer() {
   const bucket = detail.bucket;
   const topics = Array.isArray(bucket.topics) ? bucket.topics : [];
   const topicCount = topics.length;
-  const topicsWithData = topics.filter((topic) => Number(topic.totalAnswered) > 0).length;
+  const topicsWithData = topics.filter(
+    (topic) => Number(topic.totalAnswered) > 0,
+  ).length;
   const versionCount = Math.max(0, Number(bucket.versionCount) || 0);
-  const accuracyValue = Math.max(0, Math.min(100, Math.round(Number(bucket.accuracy) || 0)));
+  const accuracyValue = Math.max(
+    0,
+    Math.min(100, Math.round(Number(bucket.accuracy) || 0)),
+  );
   const accuracyLabel = Number.isFinite(Number(bucket.accuracy))
     ? `${formatStatValue(accuracyValue)}%`
     : "Chưa có dữ liệu";
-  const title = bucket.title || getAdminContentRowLabel(bucket.subject, bucket.grade);
+  const title =
+    bucket.title || getAdminContentRowLabel(bucket.subject, bucket.grade);
 
   drawer.hidden = false;
   drawer.classList.add("is-open");
@@ -973,11 +1035,17 @@ function renderAdminContentDrawer() {
   }
 
   if (summaryDataNode) {
-    summaryDataNode.textContent = topicsWithData > 0 ? `${formatStatValue(topicsWithData)} topic có dữ liệu` : "Chưa có dữ liệu";
+    summaryDataNode.textContent =
+      topicsWithData > 0
+        ? `${formatStatValue(topicsWithData)} topic có dữ liệu`
+        : "Chưa có dữ liệu";
   }
 
   if (summaryVersionNode) {
-    summaryVersionNode.textContent = versionCount > 0 ? `${formatStatValue(versionCount)} version` : "Chưa có version nào";
+    summaryVersionNode.textContent =
+      versionCount > 0
+        ? `${formatStatValue(versionCount)} version`
+        : "Chưa có version nào";
   }
 
   if (summaryAccuracyNode) {
@@ -1062,7 +1130,9 @@ async function syncAdminContent({ forceRefresh = false } = {}) {
 
       adminContentState.data = {
         math: Array.isArray(content?.grouped?.math) ? content.grouped.math : [],
-        english: Array.isArray(content?.grouped?.english) ? content.grouped.english : [],
+        english: Array.isArray(content?.grouped?.english)
+          ? content.grouped.english
+          : [],
       };
       adminContentState.hasData = Boolean(content?.hasData);
       adminContentState.loaded = true;
@@ -1098,9 +1168,11 @@ function getAdminOverviewStatNode(key) {
     return null;
   }
 
-  return getAdminOverviewRoot()?.querySelector(
-    `[data-admin-overview-stat="${key}"]`,
-  ) || document.querySelector(`[data-admin-overview-stat="${key}"]`);
+  return (
+    getAdminOverviewRoot()?.querySelector(
+      `[data-admin-overview-stat="${key}"]`,
+    ) || document.querySelector(`[data-admin-overview-stat="${key}"]`)
+  );
 }
 
 function getAdminOverviewNoteNode(key) {
@@ -1108,9 +1180,11 @@ function getAdminOverviewNoteNode(key) {
     return null;
   }
 
-  return getAdminOverviewRoot()?.querySelector(
-    `[data-admin-overview-note="${key}"]`,
-  ) || document.querySelector(`[data-admin-overview-note="${key}"]`);
+  return (
+    getAdminOverviewRoot()?.querySelector(
+      `[data-admin-overview-note="${key}"]`,
+    ) || document.querySelector(`[data-admin-overview-note="${key}"]`)
+  );
 }
 
 function getAdminOverviewChartCard(key) {
@@ -1118,9 +1192,11 @@ function getAdminOverviewChartCard(key) {
     return null;
   }
 
-  return getAdminOverviewRoot()?.querySelector(
-    `[data-admin-overview-chart-card="${key}"]`,
-  ) || document.querySelector(`[data-admin-overview-chart-card="${key}"]`);
+  return (
+    getAdminOverviewRoot()?.querySelector(
+      `[data-admin-overview-chart-card="${key}"]`,
+    ) || document.querySelector(`[data-admin-overview-chart-card="${key}"]`)
+  );
 }
 
 function getAdminChartPalette(chartKey) {
@@ -1156,7 +1232,10 @@ function buildAdminChartSvg(series, { chartKey, ariaLabel }) {
     }))
     .filter((entry) => entry.label);
 
-  if (safeSeries.length === 0 || safeSeries.every((entry) => entry.value <= 0)) {
+  if (
+    safeSeries.length === 0 ||
+    safeSeries.every((entry) => entry.value <= 0)
+  ) {
     return null;
   }
 
@@ -1184,9 +1263,13 @@ function buildAdminChartSvg(series, { chartKey, ariaLabel }) {
       y,
     };
   });
-  const linePoints = chartPoints.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(" ");
+  const linePoints = chartPoints
+    .map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`)
+    .join(" ");
   const areaPoints = [
-    ...chartPoints.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`),
+    ...chartPoints.map(
+      (point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`,
+    ),
     `${chartPoints[chartPoints.length - 1].x.toFixed(1)},${height - bottomPad}`,
     `${chartPoints[0].x.toFixed(1)},${height - bottomPad}`,
   ].join(" ");
@@ -1212,14 +1295,16 @@ function buildAdminChartSvg(series, { chartKey, ariaLabel }) {
       <g class="admin-chart-grid-lines ${palette.gridClass}">
         ${yLabels
           .map(
-            (label) => `<line x1="${leftPad}" y1="${label.y.toFixed(1)}" x2="${width - rightPad}" y2="${label.y.toFixed(1)}" />`,
+            (label) =>
+              `<line x1="${leftPad}" y1="${label.y.toFixed(1)}" x2="${width - rightPad}" y2="${label.y.toFixed(1)}" />`,
           )
           .join("")}
       </g>
       <g class="admin-chart-ylabels">
         ${yLabels
           .map(
-            (label) => `<text x="${label.value > 999 ? 8 : 12}" y="${(label.y + 4).toFixed(1)}">${escapeHtml(formatStatValue(label.value))}</text>`,
+            (label) =>
+              `<text x="${label.value > 999 ? 8 : 12}" y="${(label.y + 4).toFixed(1)}">${escapeHtml(formatStatValue(label.value))}</text>`,
           )
           .join("")}
       </g>
@@ -1235,14 +1320,16 @@ function buildAdminChartSvg(series, { chartKey, ariaLabel }) {
       <g class="admin-chart-points ${palette.lineClass}">
         ${chartPoints
           .map(
-            (point) => `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="6" />`,
+            (point) =>
+              `<circle cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="6" />`,
           )
           .join("")}
       </g>
       <g class="admin-chart-labels">
         ${chartPoints
           .map(
-            (point) => `<text x="${point.x.toFixed(1)}" y="${height - 14}">${escapeHtml(point.label)}</text>`,
+            (point) =>
+              `<text x="${point.x.toFixed(1)}" y="${height - 14}">${escapeHtml(point.label)}</text>`,
           )
           .join("")}
       </g>
@@ -1250,7 +1337,11 @@ function buildAdminChartSvg(series, { chartKey, ariaLabel }) {
   `;
 }
 
-function renderAdminOverviewChart(chartKey, series, { ariaLabel, emptyTitle, emptyDescription }) {
+function renderAdminOverviewChart(
+  chartKey,
+  series,
+  { ariaLabel, emptyTitle, emptyDescription },
+) {
   const card = getAdminOverviewChartCard(chartKey);
 
   if (!card) {
@@ -1343,22 +1434,27 @@ async function syncAdminOverview({ forceRefresh = false } = {}) {
     return null;
   }
 
-  if (
-    adminOverviewState.loaded &&
-    adminOverviewState.data &&
-    !forceRefresh
-  ) {
+  if (adminOverviewState.loaded && adminOverviewState.data && !forceRefresh) {
     renderAdminOverviewStats(adminOverviewState.data);
-    renderAdminOverviewChart("work", adminOverviewState.data?.charts?.workSubmissions || [], {
-      ariaLabel: "Lượt làm bài theo ngày",
-      emptyTitle: "Chưa có dữ liệu làm bài",
-      emptyDescription: "Hệ thống chưa ghi nhận bài làm nào trong 7 ngày gần nhất.",
-    });
-    renderAdminOverviewChart("ai", adminOverviewState.data?.charts?.aiUsage || [], {
-      ariaLabel: "Lượt sử dụng AI theo ngày",
-      emptyTitle: "Chưa có dữ liệu AI",
-      emptyDescription: "Hệ thống chưa có log AI để vẽ biểu đồ.",
-    });
+    renderAdminOverviewChart(
+      "work",
+      adminOverviewState.data?.charts?.workSubmissions || [],
+      {
+        ariaLabel: "Lượt làm bài theo ngày",
+        emptyTitle: "Chưa có dữ liệu làm bài",
+        emptyDescription:
+          "Hệ thống chưa ghi nhận bài làm nào trong 7 ngày gần nhất.",
+      },
+    );
+    renderAdminOverviewChart(
+      "ai",
+      adminOverviewState.data?.charts?.aiUsage || [],
+      {
+        ariaLabel: "Lượt sử dụng AI theo ngày",
+        emptyTitle: "Chưa có dữ liệu AI",
+        emptyDescription: "Hệ thống chưa có log AI để vẽ biểu đồ.",
+      },
+    );
     return adminOverviewState.data;
   }
 
@@ -1377,21 +1473,20 @@ async function syncAdminOverview({ forceRefresh = false } = {}) {
           ? await service.fetchAdminOverviewData()
           : null;
 
-      adminOverviewState.data =
-        data || {
-          totals: {
-            students: 0,
-            teachers: 0,
-            classes: 0,
-            assignments: 0,
-            aiUsageToday: 0,
-            averageScore: 0,
-          },
-          charts: {
-            workSubmissions: [],
-            aiUsage: [],
-          },
-        };
+      adminOverviewState.data = data || {
+        totals: {
+          students: 0,
+          teachers: 0,
+          classes: 0,
+          assignments: 0,
+          aiUsageToday: 0,
+          averageScore: 0,
+        },
+        charts: {
+          workSubmissions: [],
+          aiUsage: [],
+        },
+      };
       adminOverviewState.loaded = true;
 
       renderAdminOverviewStats(adminOverviewState.data);
@@ -1401,7 +1496,8 @@ async function syncAdminOverview({ forceRefresh = false } = {}) {
         {
           ariaLabel: "Lượt làm bài theo ngày",
           emptyTitle: "Chưa có dữ liệu làm bài",
-          emptyDescription: "Hệ thống chưa ghi nhận bài làm nào trong 7 ngày gần nhất.",
+          emptyDescription:
+            "Hệ thống chưa ghi nhận bài làm nào trong 7 ngày gần nhất.",
         },
       );
       renderAdminOverviewChart(
@@ -1435,7 +1531,8 @@ async function syncAdminOverview({ forceRefresh = false } = {}) {
       renderAdminOverviewChart("work", [], {
         ariaLabel: "Lượt làm bài theo ngày",
         emptyTitle: "Chưa có dữ liệu làm bài",
-        emptyDescription: "Hệ thống chưa ghi nhận bài làm nào trong 7 ngày gần nhất.",
+        emptyDescription:
+          "Hệ thống chưa ghi nhận bài làm nào trong 7 ngày gần nhất.",
       });
       renderAdminOverviewChart("ai", [], {
         ariaLabel: "Lượt sử dụng AI theo ngày",
@@ -1459,33 +1556,45 @@ function getAdminStatsRoot() {
 }
 
 function getAdminStatsChartCard() {
-  return getAdminStatsRoot()?.querySelector("[data-admin-stats-chart-card]") || null;
+  return (
+    getAdminStatsRoot()?.querySelector("[data-admin-stats-chart-card]") || null
+  );
 }
 
 function getAdminStatsTopicCard(topicKey) {
   const normalizedKey = topicKey === "english" ? "english" : "math";
-  return getAdminStatsRoot()?.querySelector(
-    `[data-admin-stats-topic-card="${normalizedKey}"]`,
-  ) || null;
+  return (
+    getAdminStatsRoot()?.querySelector(
+      `[data-admin-stats-topic-card="${normalizedKey}"]`,
+    ) || null
+  );
 }
 
 function getAdminStatsTopicNode(topicKey, key) {
   const normalizedTopicKey = topicKey === "english" ? "english" : "math";
-  return getAdminStatsRoot()?.querySelector(
-    `[data-admin-stats-${key}="${normalizedTopicKey}"]`,
-  ) || null;
+  return (
+    getAdminStatsRoot()?.querySelector(
+      `[data-admin-stats-${key}="${normalizedTopicKey}"]`,
+    ) || null
+  );
 }
 
 function getAdminStatsTableBody() {
-  return getAdminStatsRoot()?.querySelector("[data-admin-stats-table-body]") || null;
+  return (
+    getAdminStatsRoot()?.querySelector("[data-admin-stats-table-body]") || null
+  );
 }
 
 function getAdminStatsRangeButtons() {
-  return Array.from(getAdminStatsRoot()?.querySelectorAll("[data-admin-stats-range]") || []);
+  return Array.from(
+    getAdminStatsRoot()?.querySelectorAll("[data-admin-stats-range]") || [],
+  );
 }
 
 function normalizeAdminStatsRangeKey(value) {
-  const rangeKey = String(value || "").trim().toLowerCase();
+  const rangeKey = String(value || "")
+    .trim()
+    .toLowerCase();
 
   if (rangeKey === "month" || rangeKey === "year") {
     return rangeKey;
@@ -1581,10 +1690,18 @@ function getAdminStatsSubmissionScore(submission) {
     return Math.max(0, Math.min(10, directScore / 10));
   }
 
-  const correctCount = Number(submission?.correctCount || submission?.correctAnswers || 0);
-  const totalQuestions = Number(submission?.totalQuestions || submission?.questionCount || 0);
+  const correctCount = Number(
+    submission?.correctCount || submission?.correctAnswers || 0,
+  );
+  const totalQuestions = Number(
+    submission?.totalQuestions || submission?.questionCount || 0,
+  );
 
-  if (Number.isFinite(correctCount) && Number.isFinite(totalQuestions) && totalQuestions > 0) {
+  if (
+    Number.isFinite(correctCount) &&
+    Number.isFinite(totalQuestions) &&
+    totalQuestions > 0
+  ) {
     return Math.max(0, Math.min(10, (correctCount / totalQuestions) * 10));
   }
 
@@ -1668,11 +1785,18 @@ function buildAdminStatsTimelineSeries(submissions = [], rangeKey = "week") {
     const date = getAdminStatsSubmissionDate(submission);
     const score = getAdminStatsSubmissionScore(submission);
 
-    if (!date || !Number.isFinite(score) || !isAdminStatsDateInRange(date, normalizedRange)) {
+    if (
+      !date ||
+      !Number.isFinite(score) ||
+      !isAdminStatsDateInRange(date, normalizedRange)
+    ) {
       return;
     }
 
-    const key = bucket === "month" ? getAdminStatsMonthKey(date) : getAdminStatsDateKey(date);
+    const key =
+      bucket === "month"
+        ? getAdminStatsMonthKey(date)
+        : getAdminStatsDateKey(date);
     const entry = bucketMap.get(key);
 
     if (!entry) {
@@ -1690,7 +1814,8 @@ function buildAdminStatsTimelineSeries(submissions = [], rangeKey = "week") {
       };
     }
 
-    const average = entry.values.reduce((sum, value) => sum + value, 0) / entry.values.length;
+    const average =
+      entry.values.reduce((sum, value) => sum + value, 0) / entry.values.length;
 
     return {
       label: entry.label,
@@ -1707,7 +1832,12 @@ function getAdminStatsTopicProgressDate(topic) {
   );
 }
 
-function buildAdminStatsTopic(topicProgressDocs = [], topicCatalog = [], subjectKey = "", rangeKey = "week") {
+function buildAdminStatsTopic(
+  topicProgressDocs = [],
+  topicCatalog = [],
+  subjectKey = "",
+  rangeKey = "week",
+) {
   const catalogMap = new Map();
   (Array.isArray(topicCatalog) ? topicCatalog : []).forEach((topic) => {
     if (topic?.topicId) {
@@ -1735,15 +1865,16 @@ function buildAdminStatsTopic(topicProgressDocs = [], topicCatalog = [], subject
       return;
     }
 
-    const bucket =
-      buckets.get(key) || {
-        topicId,
-        title: String(doc?.title || meta.title || doc?.topicName || topicId || "Chủ đề").trim(),
-        subject: subjectKey,
-        totalAnswered: 0,
-        totalCorrect: 0,
-        grades: new Set(),
-      };
+    const bucket = buckets.get(key) || {
+      topicId,
+      title: String(
+        doc?.title || meta.title || doc?.topicName || topicId || "Chủ đề",
+      ).trim(),
+      subject: subjectKey,
+      totalAnswered: 0,
+      totalCorrect: 0,
+      grades: new Set(),
+    };
 
     bucket.totalAnswered += Math.max(0, Number(doc?.totalAnswered) || 0);
     bucket.totalCorrect += Math.max(0, Number(doc?.totalCorrect) || 0);
@@ -1756,14 +1887,19 @@ function buildAdminStatsTopic(topicProgressDocs = [], topicCatalog = [], subject
 
   const ranked = Array.from(buckets.values())
     .map((item) => {
-      const accuracy = item.totalAnswered > 0 ? Math.round((item.totalCorrect / item.totalAnswered) * 100) : 0;
+      const accuracy =
+        item.totalAnswered > 0
+          ? Math.round((item.totalCorrect / item.totalAnswered) * 100)
+          : 0;
       return {
         topicId: item.topicId,
         title: item.title || item.topicId || "Chủ đề",
-        subtitle: item.grades.size > 0
-          ? `Khối ${Array.from(item.grades).filter(Boolean).join(", ")}`
-          : "Chưa xác định khối",
-        note: item.totalAnswered > 0 ? `${accuracy}% chính xác` : "Chưa có dữ liệu",
+        subtitle:
+          item.grades.size > 0
+            ? `Khối ${Array.from(item.grades).filter(Boolean).join(", ")}`
+            : "Chưa xác định khối",
+        note:
+          item.totalAnswered > 0 ? `${accuracy}% chính xác` : "Chưa có dữ liệu",
         value: `${item.totalAnswered.toLocaleString("vi-VN")} lượt`,
         totalAnswered: item.totalAnswered,
         accuracy,
@@ -1789,40 +1925,52 @@ function buildAdminStatsTopic(topicProgressDocs = [], topicCatalog = [], subject
 function getAdminStatsClassAverageMaps(submissionDocs = [], rangeKey = "week") {
   const buckets = new Map();
 
-  (Array.isArray(submissionDocs) ? submissionDocs : []).forEach((submission) => {
-    const date = getAdminStatsSubmissionDate(submission);
+  (Array.isArray(submissionDocs) ? submissionDocs : []).forEach(
+    (submission) => {
+      const date = getAdminStatsSubmissionDate(submission);
 
-    if (!isAdminStatsDateInRange(date, rangeKey)) {
-      return;
-    }
+      if (!isAdminStatsDateInRange(date, rangeKey)) {
+        return;
+      }
 
-    const classId = String(submission?.classId || "").trim();
-    const score = getAdminStatsSubmissionScore(submission);
+      const classId = String(submission?.classId || "").trim();
+      const score = getAdminStatsSubmissionScore(submission);
 
-    if (!classId || !Number.isFinite(score)) {
-      return;
-    }
+      if (!classId || !Number.isFinite(score)) {
+        return;
+      }
 
-    const scores = buckets.get(classId) || [];
-    scores.push(score);
-    buckets.set(classId, scores);
-  });
+      const scores = buckets.get(classId) || [];
+      scores.push(score);
+      buckets.set(classId, scores);
+    },
+  );
 
   const averageByClassId = new Map();
   buckets.forEach((scores, classId) => {
-    const average = scores.reduce((sum, value) => sum + value, 0) / scores.length;
+    const average =
+      scores.reduce((sum, value) => sum + value, 0) / scores.length;
     averageByClassId.set(classId, Number(average.toFixed(1)));
   });
 
   return averageByClassId;
 }
 
-function buildAdminStatsTopClasses(classDocs = [], teacherNameById = new Map(), submissionDocs = [], rangeKey = "week") {
-  const averageByClassId = getAdminStatsClassAverageMaps(submissionDocs, rangeKey);
+function buildAdminStatsTopClasses(
+  classDocs = [],
+  teacherNameById = new Map(),
+  submissionDocs = [],
+  rangeKey = "week",
+) {
+  const averageByClassId = getAdminStatsClassAverageMaps(
+    submissionDocs,
+    rangeKey,
+  );
 
   return (Array.isArray(classDocs) ? classDocs : [])
     .map((doc) => {
-      const data = typeof doc?.data === "function" ? doc.data() || {} : doc || {};
+      const data =
+        typeof doc?.data === "function" ? doc.data() || {} : doc || {};
       const id = String(doc?.id || data.id || data.classId || "").trim();
       const teacherId = String(data.teacherId || "").trim();
       const students = Array.from(
@@ -1848,27 +1996,45 @@ function buildAdminStatsTopClasses(classDocs = [], teacherNameById = new Map(), 
             .filter(Boolean),
         ),
       );
-      const averageScoreValue = averageByClassId.has(id) ? averageByClassId.get(id) : null;
+      const averageScoreValue = averageByClassId.has(id)
+        ? averageByClassId.get(id)
+        : null;
 
       return {
         id,
         name: String(data.name || data.className || "Chưa đặt tên").trim(),
         className: String(data.className || data.name || "").trim(),
-        teacherName:
-          String(data.teacherName || data.teacherUsername || teacherNameById.get(teacherId) || teacherId || "--").trim(),
+        teacherName: String(
+          data.teacherName ||
+            data.teacherUsername ||
+            teacherNameById.get(teacherId) ||
+            teacherId ||
+            "--",
+        ).trim(),
         teacherUsername: String(data.teacherUsername || "").trim(),
-        studentCount: students.length || Number(data.studentCount ?? data.studentsCount ?? 0) || 0,
-        averageScoreValue: Number.isFinite(Number(averageScoreValue)) ? Number(averageScoreValue) : null,
+        studentCount:
+          students.length ||
+          Number(data.studentCount ?? data.studentsCount ?? 0) ||
+          0,
+        averageScoreValue: Number.isFinite(Number(averageScoreValue))
+          ? Number(averageScoreValue)
+          : null,
       };
     })
-    .filter((classroom) => classroom.id && Number.isFinite(Number(classroom.averageScoreValue)))
+    .filter(
+      (classroom) =>
+        classroom.id && Number.isFinite(Number(classroom.averageScoreValue)),
+    )
     .sort((left, right) => {
-      const scoreDiff = (Number(right.averageScoreValue) || 0) - (Number(left.averageScoreValue) || 0);
+      const scoreDiff =
+        (Number(right.averageScoreValue) || 0) -
+        (Number(left.averageScoreValue) || 0);
       if (scoreDiff !== 0) {
         return scoreDiff;
       }
 
-      const studentDiff = (Number(right.studentCount) || 0) - (Number(left.studentCount) || 0);
+      const studentDiff =
+        (Number(right.studentCount) || 0) - (Number(left.studentCount) || 0);
       if (studentDiff !== 0) {
         return studentDiff;
       }
@@ -1883,7 +2049,8 @@ function buildAdminStatsViewModel(source, rangeKey = "week") {
     return {
       chartTitle: "Điểm trung bình theo ngày",
       chartEmptyTitle: "Chưa có dữ liệu điểm",
-      chartEmptyDescription: "Hệ thống chưa ghi nhận đủ bài nộp có điểm để vẽ biểu đồ.",
+      chartEmptyDescription:
+        "Hệ thống chưa ghi nhận đủ bài nộp có điểm để vẽ biểu đồ.",
       chartSeries: [],
       topTopics: {
         math: null,
@@ -1894,24 +2061,45 @@ function buildAdminStatsViewModel(source, rangeKey = "week") {
     };
   }
 
-  const submissionDocs = Array.isArray(source.submissionDocs) ? source.submissionDocs : [];
+  const submissionDocs = Array.isArray(source.submissionDocs)
+    ? source.submissionDocs
+    : [];
   const topicDocs = Array.isArray(source.topicDocs) ? source.topicDocs : [];
-  const topicCatalog = Array.isArray(source.topicCatalog) ? source.topicCatalog : [];
-  const teacherDocs = Array.isArray(source.teacherDocs) ? source.teacherDocs : [];
+  const topicCatalog = Array.isArray(source.topicCatalog)
+    ? source.topicCatalog
+    : [];
+  const teacherDocs = Array.isArray(source.teacherDocs)
+    ? source.teacherDocs
+    : [];
   const teacherNameById = new Map(
     teacherDocs
       .map((doc) => {
         const id = String(doc?.id || doc?.uid || doc?.userId || "").trim();
-        const name = String(doc?.fullName || doc?.name || doc?.username || doc?.email || "").trim();
+        const name = String(
+          doc?.fullName || doc?.name || doc?.username || doc?.email || "",
+        ).trim();
         return id ? [id, name] : null;
       })
       .filter(Boolean),
   );
   const normalizedRange = normalizeAdminStatsRangeKey(rangeKey);
-  const chartSeries = buildAdminStatsTimelineSeries(submissionDocs, normalizedRange);
+  const chartSeries = buildAdminStatsTimelineSeries(
+    submissionDocs,
+    normalizedRange,
+  );
   const topTopics = {
-    math: buildAdminStatsTopic(topicDocs, topicCatalog, "math", normalizedRange),
-    english: buildAdminStatsTopic(topicDocs, topicCatalog, "english", normalizedRange),
+    math: buildAdminStatsTopic(
+      topicDocs,
+      topicCatalog,
+      "math",
+      normalizedRange,
+    ),
+    english: buildAdminStatsTopic(
+      topicDocs,
+      topicCatalog,
+      "english",
+      normalizedRange,
+    ),
   };
   const topClasses = buildAdminStatsTopClasses(
     source.classDocs || [],
@@ -1921,7 +2109,10 @@ function buildAdminStatsViewModel(source, rangeKey = "week") {
   );
 
   return {
-    chartTitle: normalizedRange === "year" ? "Điểm trung bình theo tháng" : "Điểm trung bình theo ngày",
+    chartTitle:
+      normalizedRange === "year"
+        ? "Điểm trung bình theo tháng"
+        : "Điểm trung bình theo ngày",
     chartEmptyTitle: "Chưa có dữ liệu điểm",
     chartEmptyDescription:
       normalizedRange === "year"
@@ -1951,13 +2142,23 @@ function syncAdminStatsRangeButtons(rangeKey = "week") {
   const normalizedRange = normalizeAdminStatsRangeKey(rangeKey);
 
   getAdminStatsRangeButtons().forEach((button) => {
-    const isActive = normalizeAdminStatsRangeKey(button.dataset.adminStatsRange) === normalizedRange;
+    const isActive =
+      normalizeAdminStatsRangeKey(button.dataset.adminStatsRange) ===
+      normalizedRange;
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", String(isActive));
   });
 }
 
-function renderAdminStatsChart(series = [], { loading = false, title = "Điểm trung bình theo ngày", emptyTitle, emptyDescription } = {}) {
+function renderAdminStatsChart(
+  series = [],
+  {
+    loading = false,
+    title = "Điểm trung bình theo ngày",
+    emptyTitle,
+    emptyDescription,
+  } = {},
+) {
   const card = getAdminStatsChartCard();
 
   if (!card) {
@@ -1980,7 +2181,8 @@ function renderAdminStatsChart(series = [], { loading = false, title = "Điểm 
   if (!svgMarkup) {
     card.innerHTML = buildAdminStatsEmptyState(
       emptyTitle || "Chưa có dữ liệu điểm",
-      emptyDescription || "Hệ thống chưa ghi nhận đủ bài nộp có điểm để vẽ biểu đồ.",
+      emptyDescription ||
+        "Hệ thống chưa ghi nhận đủ bài nộp có điểm để vẽ biểu đồ.",
     );
     return;
   }
@@ -2030,7 +2232,9 @@ function renderAdminStatsTopic(topicKey, topic, { loading = false } = {}) {
 
 function buildAdminStatsTableRow(classroom, index) {
   const score = Number(classroom?.averageScoreValue);
-  const scoreLabel = Number.isFinite(score) ? score.toFixed(1) : "Chưa có dữ liệu";
+  const scoreLabel = Number.isFinite(score)
+    ? score.toFixed(1)
+    : "Chưa có dữ liệu";
 
   return `
     <tr data-admin-stats-row data-admin-stats-class-id="${escapeHtml(String(classroom?.id || ""))}">
@@ -2083,7 +2287,9 @@ function renderAdminStatsTable(topClasses = [], { loading = false } = {}) {
     return;
   }
 
-  tbody.innerHTML = rows.map((classroom, index) => buildAdminStatsTableRow(classroom, index)).join("");
+  tbody.innerHTML = rows
+    .map((classroom, index) => buildAdminStatsTableRow(classroom, index))
+    .join("");
 }
 
 function renderAdminStatsPage() {
@@ -2102,7 +2308,9 @@ function renderAdminStatsPage() {
     emptyDescription: viewModel.chartEmptyDescription,
   });
   renderAdminStatsTopic("math", viewModel.topTopics?.math || null, { loading });
-  renderAdminStatsTopic("english", viewModel.topTopics?.english || null, { loading });
+  renderAdminStatsTopic("english", viewModel.topTopics?.english || null, {
+    loading,
+  });
   renderAdminStatsTable(viewModel.topClasses || [], { loading });
 }
 
@@ -2134,25 +2342,24 @@ async function syncAdminStats({ forceRefresh = false } = {}) {
           ? await service.fetchAdminStatsData()
           : null;
 
-      adminStatsState.data =
-        data || {
-          source: {
-            teacherDocs: [],
-            classDocs: [],
-            submissionDocs: [],
-            topicDocs: [],
-            topicCatalog: [],
-          },
-          charts: {
-            monthlyAverageScores: [],
-          },
-          topTopics: {
-            math: null,
-            english: null,
-          },
-          topClasses: [],
-          hasData: false,
-        };
+      adminStatsState.data = data || {
+        source: {
+          teacherDocs: [],
+          classDocs: [],
+          submissionDocs: [],
+          topicDocs: [],
+          topicCatalog: [],
+        },
+        charts: {
+          monthlyAverageScores: [],
+        },
+        topTopics: {
+          math: null,
+          english: null,
+        },
+        topClasses: [],
+        hasData: false,
+      };
       adminStatsState.loaded = true;
       renderAdminStatsPage();
       return adminStatsState.data;
@@ -2195,20 +2402,29 @@ function getAdminReviewsRoot() {
 }
 
 function getAdminReviewsListNode() {
-  return getAdminReviewsRoot()?.querySelector("[data-admin-reviews-list]") || null;
+  return (
+    getAdminReviewsRoot()?.querySelector("[data-admin-reviews-list]") || null
+  );
 }
 
 function getAdminReviewsSummaryNode() {
-  return getAdminReviewsRoot()?.querySelector("[data-admin-reviews-summary]") || null;
+  return (
+    getAdminReviewsRoot()?.querySelector("[data-admin-reviews-summary]") || null
+  );
 }
 
 function getAdminReviewsRoleSelect() {
-  return getAdminReviewsRoot()?.querySelector("[data-admin-reviews-role-filter]") || null;
+  return (
+    getAdminReviewsRoot()?.querySelector("[data-admin-reviews-role-filter]") ||
+    null
+  );
 }
 
 function getAdminReviewsRatingButtons() {
   return Array.from(
-    getAdminReviewsRoot()?.querySelectorAll("[data-admin-reviews-rating-filter]") || [],
+    getAdminReviewsRoot()?.querySelectorAll(
+      "[data-admin-reviews-rating-filter]",
+    ) || [],
   );
 }
 
@@ -2219,10 +2435,12 @@ function getAdminReviewAvatarPath(review) {
     return avatar;
   }
 
-  return window.EduKidsAppReviewService?.getDefaultAvatarByRole?.(review?.role) ||
+  return (
+    window.EduKidsAppReviewService?.getDefaultAvatarByRole?.(review?.role) ||
     (review?.role === "teacher"
       ? "/assets/userAvatar/maleteacher.png"
-      : "/assets/userAvatar/boy.png");
+      : "/assets/userAvatar/boy.png")
+  );
 }
 
 function getAdminReviewRoleLabel(role) {
@@ -2240,7 +2458,10 @@ function getAdminReviewAverageRating(reviews = []) {
     return 0;
   }
 
-  const total = items.reduce((sum, review) => sum + (Number(review?.rating) || 0), 0);
+  const total = items.reduce(
+    (sum, review) => sum + (Number(review?.rating) || 0),
+    0,
+  );
   return total / items.length;
 }
 
@@ -2249,7 +2470,10 @@ function filterAdminReviews(reviews = []) {
   const roleFilter = String(adminReviewsState.roleFilter || "all").trim();
 
   return (Array.isArray(reviews) ? reviews : []).filter((review) => {
-    if (ratingFilter !== "all" && String(review?.rating || "") !== ratingFilter) {
+    if (
+      ratingFilter !== "all" &&
+      String(review?.rating || "") !== ratingFilter
+    ) {
       return false;
     }
 
@@ -2399,7 +2623,9 @@ function renderAdminReviewsStats(reviews = []) {
 function renderAdminReviewsList(reviews = []) {
   const listNode = getAdminReviewsListNode();
   const summaryNode = getAdminReviewsSummaryNode();
-  const total = Array.isArray(adminReviewsState.data) ? adminReviewsState.data.length : 0;
+  const total = Array.isArray(adminReviewsState.data)
+    ? adminReviewsState.data.length
+    : 0;
   const filtered = Array.isArray(reviews) ? reviews : [];
 
   if (!listNode) {
@@ -2417,7 +2643,9 @@ function renderAdminReviewsList(reviews = []) {
       </div>
     `;
   } else {
-    listNode.innerHTML = filtered.map((review, index) => buildAdminReviewCard(review, index)).join("");
+    listNode.innerHTML = filtered
+      .map((review, index) => buildAdminReviewCard(review, index))
+      .join("");
   }
 
   if (summaryNode) {
@@ -2430,8 +2658,11 @@ function syncAdminReviewsFilterState() {
   const roleSelect = getAdminReviewsRoleSelect();
 
   ratingButtons.forEach((button) => {
-    const value = String(button.dataset.adminReviewsRatingFilter || "all").trim();
-    const isActive = value === String(adminReviewsState.ratingFilter || "all").trim();
+    const value = String(
+      button.dataset.adminReviewsRatingFilter || "all",
+    ).trim();
+    const isActive =
+      value === String(adminReviewsState.ratingFilter || "all").trim();
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", String(isActive));
   });
@@ -2456,7 +2687,11 @@ async function syncAdminReviews({ forceRefresh = false } = {}) {
     return null;
   }
 
-  if (adminReviewsState.loaded && Array.isArray(adminReviewsState.data) && !forceRefresh) {
+  if (
+    adminReviewsState.loaded &&
+    Array.isArray(adminReviewsState.data) &&
+    !forceRefresh
+  ) {
     renderAdminReviewsPage();
     return adminReviewsState.data;
   }
@@ -2473,7 +2708,9 @@ async function syncAdminReviews({ forceRefresh = false } = {}) {
     try {
       const service = window.EduKidsAppReviewService;
       const reviews =
-        typeof service?.fetchReviews === "function" ? await service.fetchReviews() : [];
+        typeof service?.fetchReviews === "function"
+          ? await service.fetchReviews()
+          : [];
 
       adminReviewsState.data = Array.isArray(reviews) ? reviews : [];
       adminReviewsState.loaded = true;
@@ -2497,7 +2734,9 @@ async function syncAdminReviews({ forceRefresh = false } = {}) {
 }
 
 async function deleteAdminReview(reviewId) {
-  const review = (Array.isArray(adminReviewsState.data) ? adminReviewsState.data : []).find(
+  const review = (
+    Array.isArray(adminReviewsState.data) ? adminReviewsState.data : []
+  ).find(
     (item) => String(item?.id || "").trim() === String(reviewId || "").trim(),
   );
 
@@ -2538,15 +2777,26 @@ function getAdminStudentsRoot() {
 }
 
 function getAdminStudentsSearchInput() {
-  return getAdminStudentsRoot()?.querySelector("[data-admin-students-search]") || null;
+  return (
+    getAdminStudentsRoot()?.querySelector("[data-admin-students-search]") ||
+    null
+  );
 }
 
 function getAdminStudentsClassSelect() {
-  return getAdminStudentsRoot()?.querySelector("[data-admin-students-class-filter]") || null;
+  return (
+    getAdminStudentsRoot()?.querySelector(
+      "[data-admin-students-class-filter]",
+    ) || null
+  );
 }
 
 function getAdminStudentsStatusSelect() {
-  return getAdminStudentsRoot()?.querySelector("[data-admin-students-status-filter]") || null;
+  return (
+    getAdminStudentsRoot()?.querySelector(
+      "[data-admin-students-status-filter]",
+    ) || null
+  );
 }
 
 function getAdminStudentsTableBody() {
@@ -2562,23 +2812,39 @@ function getAdminTeachersRoot() {
 }
 
 function getAdminTeachersSearchInput() {
-  return getAdminTeachersRoot()?.querySelector("[data-admin-teachers-search]") || null;
+  return (
+    getAdminTeachersRoot()?.querySelector("[data-admin-teachers-search]") ||
+    null
+  );
 }
 
 function getAdminTeachersClassCountSelect() {
-  return getAdminTeachersRoot()?.querySelector("[data-admin-teachers-class-filter]") || null;
+  return (
+    getAdminTeachersRoot()?.querySelector(
+      "[data-admin-teachers-class-filter]",
+    ) || null
+  );
 }
 
 function getAdminTeachersStatusSelect() {
-  return getAdminTeachersRoot()?.querySelector("[data-admin-teachers-status-filter]") || null;
+  return (
+    getAdminTeachersRoot()?.querySelector(
+      "[data-admin-teachers-status-filter]",
+    ) || null
+  );
 }
 
 function getAdminTeachersTableBody() {
-  return getAdminTeachersRoot()?.querySelector("[data-admin-teachers-tbody]") || null;
+  return (
+    getAdminTeachersRoot()?.querySelector("[data-admin-teachers-tbody]") || null
+  );
 }
 
 function getAdminTeachersSummaryNode() {
-  return getAdminTeachersRoot()?.querySelector("[data-admin-teachers-summary]") || null;
+  return (
+    getAdminTeachersRoot()?.querySelector("[data-admin-teachers-summary]") ||
+    null
+  );
 }
 
 function getAdminAssignmentsRoot() {
@@ -2586,19 +2852,35 @@ function getAdminAssignmentsRoot() {
 }
 
 function getAdminAssignmentsSearchInput() {
-  return getAdminAssignmentsRoot()?.querySelector("[data-admin-assignments-search]") || null;
+  return (
+    getAdminAssignmentsRoot()?.querySelector(
+      "[data-admin-assignments-search]",
+    ) || null
+  );
 }
 
 function getAdminAssignmentsSubjectSelect() {
-  return getAdminAssignmentsRoot()?.querySelector("[data-admin-assignments-subject-filter]") || null;
+  return (
+    getAdminAssignmentsRoot()?.querySelector(
+      "[data-admin-assignments-subject-filter]",
+    ) || null
+  );
 }
 
 function getAdminAssignmentsTableBody() {
-  return getAdminAssignmentsRoot()?.querySelector("[data-admin-assignments-tbody]") || null;
+  return (
+    getAdminAssignmentsRoot()?.querySelector(
+      "[data-admin-assignments-tbody]",
+    ) || null
+  );
 }
 
 function getAdminAssignmentsSummaryNode() {
-  return getAdminAssignmentsRoot()?.querySelector("[data-admin-assignments-summary]") || null;
+  return (
+    getAdminAssignmentsRoot()?.querySelector(
+      "[data-admin-assignments-summary]",
+    ) || null
+  );
 }
 
 function getAdminAssignmentsStatNode(key) {
@@ -2606,9 +2888,11 @@ function getAdminAssignmentsStatNode(key) {
     return null;
   }
 
-  return getAdminAssignmentsRoot()?.querySelector(
-    `[data-admin-assignments-stat="${key}"]`,
-  ) || document.querySelector(`[data-admin-assignments-stat="${key}"]`);
+  return (
+    getAdminAssignmentsRoot()?.querySelector(
+      `[data-admin-assignments-stat="${key}"]`,
+    ) || document.querySelector(`[data-admin-assignments-stat="${key}"]`)
+  );
 }
 
 function getAdminAssignmentsNoteNode(key) {
@@ -2616,9 +2900,11 @@ function getAdminAssignmentsNoteNode(key) {
     return null;
   }
 
-  return getAdminAssignmentsRoot()?.querySelector(
-    `[data-admin-assignments-note="${key}"]`,
-  ) || document.querySelector(`[data-admin-assignments-note="${key}"]`);
+  return (
+    getAdminAssignmentsRoot()?.querySelector(
+      `[data-admin-assignments-note="${key}"]`,
+    ) || document.querySelector(`[data-admin-assignments-note="${key}"]`)
+  );
 }
 
 function getAdminAssignmentById(assignmentId) {
@@ -2628,13 +2914,20 @@ function getAdminAssignmentById(assignmentId) {
     return null;
   }
 
-  return (Array.isArray(adminAssignmentsState.data) ? adminAssignmentsState.data : []).find(
-    (assignment) => String(assignment?.id || "").trim() === normalizedId,
-  ) || null;
+  return (
+    (Array.isArray(adminAssignmentsState.data)
+      ? adminAssignmentsState.data
+      : []
+    ).find(
+      (assignment) => String(assignment?.id || "").trim() === normalizedId,
+    ) || null
+  );
 }
 
 function getAdminAssignmentSubjectLabel(subject) {
-  const normalized = String(subject || "").trim().toLowerCase();
+  const normalized = String(subject || "")
+    .trim()
+    .toLowerCase();
 
   if (normalized === "math" || normalized === "toán" || normalized === "toan") {
     return "Toán";
@@ -2652,7 +2945,9 @@ function getAdminAssignmentSubjectLabel(subject) {
 }
 
 function getAdminAssignmentSubjectKey(subject) {
-  const normalized = String(subject || "").trim().toLowerCase();
+  const normalized = String(subject || "")
+    .trim()
+    .toLowerCase();
 
   if (normalized === "math" || normalized === "toán" || normalized === "toan") {
     return "math";
@@ -2670,7 +2965,9 @@ function getAdminAssignmentSubjectKey(subject) {
 }
 
 function getAdminAssignmentStatusLabel(status) {
-  const normalized = String(status || "").trim().toLowerCase();
+  const normalized = String(status || "")
+    .trim()
+    .toLowerCase();
 
   if (normalized === "closed") {
     return "Đã đóng";
@@ -2726,15 +3023,21 @@ function getAdminClassesRoot() {
 }
 
 function getAdminClassesSearchInput() {
-  return getAdminClassesRoot()?.querySelector("[data-admin-classes-search]") || null;
+  return (
+    getAdminClassesRoot()?.querySelector("[data-admin-classes-search]") || null
+  );
 }
 
 function getAdminClassesFilterSelect() {
-  return getAdminClassesRoot()?.querySelector("[data-admin-classes-filter]") || null;
+  return (
+    getAdminClassesRoot()?.querySelector("[data-admin-classes-filter]") || null
+  );
 }
 
 function getAdminClassesGrid() {
-  return getAdminClassesRoot()?.querySelector("[data-admin-classes-grid]") || null;
+  return (
+    getAdminClassesRoot()?.querySelector("[data-admin-classes-grid]") || null
+  );
 }
 
 function getAdminClassById(classId) {
@@ -2744,9 +3047,11 @@ function getAdminClassById(classId) {
     return null;
   }
 
-  return (Array.isArray(adminClassesState.data) ? adminClassesState.data : []).find(
-    (classroom) => String(classroom?.id || "").trim() === normalizedId,
-  ) || null;
+  return (
+    (Array.isArray(adminClassesState.data) ? adminClassesState.data : []).find(
+      (classroom) => String(classroom?.id || "").trim() === normalizedId,
+    ) || null
+  );
 }
 
 function getAdminClassGradeValue(classroom) {
@@ -2833,9 +3138,11 @@ function getAdminTeachersStatNode(key) {
     return null;
   }
 
-  return getAdminTeachersRoot()?.querySelector(
-    `[data-admin-teachers-stat="${key}"]`,
-  ) || document.querySelector(`[data-admin-teachers-stat="${key}"]`);
+  return (
+    getAdminTeachersRoot()?.querySelector(
+      `[data-admin-teachers-stat="${key}"]`,
+    ) || document.querySelector(`[data-admin-teachers-stat="${key}"]`)
+  );
 }
 
 function getAdminTeachersNoteNode(key) {
@@ -2843,9 +3150,11 @@ function getAdminTeachersNoteNode(key) {
     return null;
   }
 
-  return getAdminTeachersRoot()?.querySelector(
-    `[data-admin-teachers-note="${key}"]`,
-  ) || document.querySelector(`[data-admin-teachers-note="${key}"]`);
+  return (
+    getAdminTeachersRoot()?.querySelector(
+      `[data-admin-teachers-note="${key}"]`,
+    ) || document.querySelector(`[data-admin-teachers-note="${key}"]`)
+  );
 }
 
 function getAdminTeacherStatusLabel(status) {
@@ -2940,8 +3249,12 @@ function buildAdminTeacherRow(teacher, index) {
 
 function filterAdminTeachers(teachers = []) {
   const query = normalizeAdminSearchValue(adminTeachersState.searchQuery);
-  const classCountFilter = String(adminTeachersState.classCountFilter || "").trim();
-  const statusFilter = String(adminTeachersState.statusFilter || "").trim().toLowerCase();
+  const classCountFilter = String(
+    adminTeachersState.classCountFilter || "",
+  ).trim();
+  const statusFilter = String(adminTeachersState.statusFilter || "")
+    .trim()
+    .toLowerCase();
 
   return (Array.isArray(teachers) ? teachers : []).filter((teacher) => {
     const searchIndex = getAdminSearchIndex(
@@ -3025,7 +3338,9 @@ function renderAdminTeachersStats(teachers = []) {
 function renderAdminTeachersTable(teachers = []) {
   const tbody = getAdminTeachersTableBody();
   const summaryNode = getAdminTeachersSummaryNode();
-  const total = Array.isArray(adminTeachersState.data) ? adminTeachersState.data.length : 0;
+  const total = Array.isArray(adminTeachersState.data)
+    ? adminTeachersState.data.length
+    : 0;
   const filtered = Array.isArray(teachers) ? teachers : [];
 
   if (tbody) {
@@ -3044,15 +3359,18 @@ function renderAdminTeachersTable(teachers = []) {
         </tr>
       `;
     } else {
-      tbody.innerHTML = filtered.map((teacher, index) => buildAdminTeacherRow(teacher, index)).join("");
+      tbody.innerHTML = filtered
+        .map((teacher, index) => buildAdminTeacherRow(teacher, index))
+        .join("");
     }
   }
 
   if (summaryNode) {
     if (filtered.length === 0) {
-      summaryNode.innerHTML = total === 0
-        ? "Chưa có dữ liệu giáo viên trong hệ thống."
-        : ADMIN_NO_RESULTS_MESSAGE;
+      summaryNode.innerHTML =
+        total === 0
+          ? "Chưa có dữ liệu giáo viên trong hệ thống."
+          : ADMIN_NO_RESULTS_MESSAGE;
     } else {
       summaryNode.innerHTML = `Hiển thị 1 đến ${escapeHtml(formatStatValue(filtered.length))} trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> giáo viên`;
     }
@@ -3173,7 +3491,10 @@ function buildAdminClassCard(classroom, index) {
   const averageLabel = getAdminClassAverageLabel(classroom);
   const averageWidth = getAdminClassAverageWidth(classroom);
   const studentCount = Math.max(0, Number(classroom?.studentCount) || 0);
-  const teacherLabel = String(classroom?.teacherName || classroom?.teacherUsername || "--").trim() || "--";
+  const teacherLabel =
+    String(
+      classroom?.teacherName || classroom?.teacherUsername || "--",
+    ).trim() || "--";
   const scoreClass = Number.isFinite(averageValue) ? "" : " is-empty";
   const scoreText = Number.isFinite(averageValue)
     ? averageLabel
@@ -3246,7 +3567,9 @@ function renderAdminClassesGrid(classrooms = []) {
     return;
   }
 
-  grid.innerHTML = filtered.map((classroom, index) => buildAdminClassCard(classroom, index)).join("");
+  grid.innerHTML = filtered
+    .map((classroom, index) => buildAdminClassCard(classroom, index))
+    .join("");
 }
 
 function setAdminClassesFiltersFromInputs() {
@@ -3336,27 +3659,31 @@ function showAdminClassDetail(classroom) {
 
 function filterAdminAssignments(assignments = []) {
   const query = normalizeAdminSearchValue(adminAssignmentsState.searchQuery);
-  const subjectFilter = String(adminAssignmentsState.subjectFilter || "").trim().toLowerCase();
+  const subjectFilter = String(adminAssignmentsState.subjectFilter || "")
+    .trim()
+    .toLowerCase();
 
-  return (Array.isArray(assignments) ? assignments : []).filter((assignment) => {
-    const searchIndex = getAdminSearchIndex(
-      assignment?.title,
-      assignment?.teacherName,
-      assignment?.className,
-      assignment?.subject,
-    );
-    const subjectKey = getAdminAssignmentSubjectKey(assignment?.subject);
+  return (Array.isArray(assignments) ? assignments : []).filter(
+    (assignment) => {
+      const searchIndex = getAdminSearchIndex(
+        assignment?.title,
+        assignment?.teacherName,
+        assignment?.className,
+        assignment?.subject,
+      );
+      const subjectKey = getAdminAssignmentSubjectKey(assignment?.subject);
 
-    if (query && !searchIndex.includes(query)) {
-      return false;
-    }
+      if (query && !searchIndex.includes(query)) {
+        return false;
+      }
 
-    if (subjectFilter && subjectKey !== subjectFilter) {
-      return false;
-    }
+      if (subjectFilter && subjectKey !== subjectFilter) {
+        return false;
+      }
 
-    return true;
-  });
+      return true;
+    },
+  );
 }
 
 function buildAdminAssignmentRow(assignment, index) {
@@ -3364,7 +3691,9 @@ function buildAdminAssignmentRow(assignment, index) {
   const statusLabel = getAdminAssignmentStatusLabel(assignment.status);
   const statusClass = assignment.statusClass || "is-green";
   const scoreLabel = getAdminAssignmentScoreLabel(assignment);
-  const scoreSuffix = Number.isFinite(Number(assignment.averageScoreValue)) ? "/10" : "";
+  const scoreSuffix = Number.isFinite(Number(assignment.averageScoreValue))
+    ? "/10"
+    : "";
 
   return `
     <tr data-admin-assignment-row data-admin-assignment-id="${escapeHtml(assignment.id)}">
@@ -3391,11 +3720,16 @@ function buildAdminAssignmentRow(assignment, index) {
 
 function renderAdminAssignmentsStats(assignments = []) {
   const totalAssignments = Array.isArray(assignments) ? assignments.length : 0;
-  const totalSubmissions = (Array.isArray(assignments) ? assignments : []).reduce(
-    (sum, assignment) => sum + Math.max(0, Number(assignment?.submissionCount) || 0),
+  const totalSubmissions = (
+    Array.isArray(assignments) ? assignments : []
+  ).reduce(
+    (sum, assignment) =>
+      sum + Math.max(0, Number(assignment?.submissionCount) || 0),
     0,
   );
-  const scoredAssignments = (Array.isArray(assignments) ? assignments : []).filter((assignment) =>
+  const scoredAssignments = (
+    Array.isArray(assignments) ? assignments : []
+  ).filter((assignment) =>
     Number.isFinite(Number(assignment?.averageScoreValue)),
   );
   const averageScore = scoredAssignments.length
@@ -3422,10 +3756,9 @@ function renderAdminAssignmentsStats(assignments = []) {
     {
       key: "average-score",
       value: averageLabel,
-      note:
-        Number.isFinite(averageScore)
-          ? "Tính từ các bài nộp đã chấm"
-          : "Chưa có bài nộp có điểm",
+      note: Number.isFinite(averageScore)
+        ? "Tính từ các bài nộp đã chấm"
+        : "Chưa có bài nộp có điểm",
     },
   ];
 
@@ -3475,15 +3808,18 @@ function renderAdminAssignmentsTable(assignments = []) {
         </tr>
       `;
     } else {
-      tbody.innerHTML = filtered.map((assignment, index) => buildAdminAssignmentRow(assignment, index)).join("");
+      tbody.innerHTML = filtered
+        .map((assignment, index) => buildAdminAssignmentRow(assignment, index))
+        .join("");
     }
   }
 
   if (summaryNode) {
     if (filtered.length === 0) {
-      summaryNode.innerHTML = total === 0
-        ? "Chưa có dữ liệu bài tập trong hệ thống."
-        : ADMIN_NO_RESULTS_MESSAGE;
+      summaryNode.innerHTML =
+        total === 0
+          ? "Chưa có dữ liệu bài tập trong hệ thống."
+          : ADMIN_NO_RESULTS_MESSAGE;
     } else {
       summaryNode.innerHTML = `Hiển thị 1 đến ${escapeHtml(formatStatValue(filtered.length))} trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> bài tập`;
     }
@@ -3584,8 +3920,10 @@ function getAdminAiStatNode(key) {
     return null;
   }
 
-  return getAdminAiRoot()?.querySelector(`[data-admin-ai-stat="${key}"]`) ||
-    document.querySelector(`[data-admin-ai-stat="${key}"]`);
+  return (
+    getAdminAiRoot()?.querySelector(`[data-admin-ai-stat="${key}"]`) ||
+    document.querySelector(`[data-admin-ai-stat="${key}"]`)
+  );
 }
 
 function getAdminAiNoteNode(key) {
@@ -3593,8 +3931,10 @@ function getAdminAiNoteNode(key) {
     return null;
   }
 
-  return getAdminAiRoot()?.querySelector(`[data-admin-ai-note="${key}"]`) ||
-    document.querySelector(`[data-admin-ai-note="${key}"]`);
+  return (
+    getAdminAiRoot()?.querySelector(`[data-admin-ai-note="${key}"]`) ||
+    document.querySelector(`[data-admin-ai-note="${key}"]`)
+  );
 }
 
 function getAdminAiChartCard() {
@@ -3606,7 +3946,9 @@ function getAdminAiToggleButton(key) {
     return null;
   }
 
-  return getAdminAiRoot()?.querySelector(`[data-admin-ai-toggle="${key}"]`) || null;
+  return (
+    getAdminAiRoot()?.querySelector(`[data-admin-ai-toggle="${key}"]`) || null
+  );
 }
 
 function getAdminAiToggleStateNode(key) {
@@ -3614,7 +3956,10 @@ function getAdminAiToggleStateNode(key) {
     return null;
   }
 
-  return getAdminAiRoot()?.querySelector(`[data-admin-ai-toggle-state="${key}"]`) || null;
+  return (
+    getAdminAiRoot()?.querySelector(`[data-admin-ai-toggle-state="${key}"]`) ||
+    null
+  );
 }
 
 function getAdminAiActionButton(action) {
@@ -3622,12 +3967,19 @@ function getAdminAiActionButton(action) {
     return null;
   }
 
-  return getAdminAiRoot()?.querySelector(`[data-admin-ai-action="${action}"]`) || null;
+  return (
+    getAdminAiRoot()?.querySelector(`[data-admin-ai-action="${action}"]`) ||
+    null
+  );
 }
 
 function getAdminAiChartSeries(logs = []) {
   const today = new Date();
-  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const start = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  );
   start.setDate(start.getDate() - 6);
   const buckets = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(start);
@@ -3714,17 +4066,26 @@ function renderAdminAiStats(data = null) {
     {
       key: "today",
       value: todayCount,
-      note: todayCount > 0 ? `${formatStatValue(todayCount)} lượt hôm nay` : "Chưa có log AI trong hôm nay",
+      note:
+        todayCount > 0
+          ? `${formatStatValue(todayCount)} lượt hôm nay`
+          : "Chưa có log AI trong hôm nay",
     },
     {
       key: "month",
       value: monthCount,
-      note: monthCount > 0 ? `${formatStatValue(monthCount)} lượt trong tháng này` : "Chưa có log AI trong tháng này",
+      note:
+        monthCount > 0
+          ? `${formatStatValue(monthCount)} lượt trong tháng này`
+          : "Chưa có log AI trong tháng này",
     },
     {
       key: "success-rate",
       value: successRate,
-      note: data?.logs?.length > 0 ? "Tính từ toàn bộ log AI" : "Chưa có log AI để tính tỷ lệ",
+      note:
+        data?.logs?.length > 0
+          ? "Tính từ toàn bộ log AI"
+          : "Chưa có log AI để tính tỷ lệ",
     },
   ];
 
@@ -3996,7 +4357,10 @@ async function clearAdminAiCache() {
     if (currentPage === "ai-coach") {
       renderAICoachPage();
     }
-    showToast(`Đã xóa ${formatStatValue(result?.deletedCount || 0)} cache AI.`, "success");
+    showToast(
+      `Đã xóa ${formatStatValue(result?.deletedCount || 0)} cache AI.`,
+      "success",
+    );
   } catch (error) {
     console.warn("Không thể xóa cache AI:", error);
     showToast("Không thể xóa cache AI.", "error");
@@ -4037,7 +4401,11 @@ function getSystemSettingsService() {
 }
 
 function getSystemSettingsData() {
-  return systemSettingsState.data || getSystemSettingsService()?.getCurrentSystemSettings?.() || null;
+  return (
+    systemSettingsState.data ||
+    getSystemSettingsService()?.getCurrentSystemSettings?.() ||
+    null
+  );
 }
 
 function getSystemSettingsAi() {
@@ -4072,25 +4440,31 @@ function isAiAssignmentEnabled() {
 }
 
 function getSystemSettingsRegistration() {
-  return getSystemSettingsData()?.registration || {
-    studentEnabled: true,
-    teacherEnabled: true,
-  };
+  return (
+    getSystemSettingsData()?.registration || {
+      studentEnabled: true,
+      teacherEnabled: true,
+    }
+  );
 }
 
 function getSystemSettingsMaintenance() {
-  return getSystemSettingsData()?.maintenance || {
-    enabled: false,
-    message: "Hệ thống đang bảo trì, vui lòng quay lại sau.",
-  };
+  return (
+    getSystemSettingsData()?.maintenance || {
+      enabled: false,
+      message: "Hệ thống đang bảo trì, vui lòng quay lại sau.",
+    }
+  );
 }
 
 function getSystemSettingsInfo() {
-  return getSystemSettingsData()?.systemInfo || {
-    version: "2.0.0",
-    firebaseProjectId: "",
-    updatedAt: "",
-  };
+  return (
+    getSystemSettingsData()?.systemInfo || {
+      version: "2.0.0",
+      firebaseProjectId: "",
+      updatedAt: "",
+    }
+  );
 }
 
 function getAdminSettingsRoot() {
@@ -4102,9 +4476,11 @@ function getAdminSettingsToggleNode(key) {
     return null;
   }
 
-  return getAdminSettingsRoot()?.querySelector(
-    `[data-admin-settings-toggle="${key}"]`,
-  ) || null;
+  return (
+    getAdminSettingsRoot()?.querySelector(
+      `[data-admin-settings-toggle="${key}"]`,
+    ) || null
+  );
 }
 
 function getAdminSettingsInfoNode(key) {
@@ -4112,9 +4488,11 @@ function getAdminSettingsInfoNode(key) {
     return null;
   }
 
-  return getAdminSettingsRoot()?.querySelector(
-    `[data-admin-settings-info="${key}"]`,
-  ) || null;
+  return (
+    getAdminSettingsRoot()?.querySelector(
+      `[data-admin-settings-info="${key}"]`,
+    ) || null
+  );
 }
 
 function isRegistrationEnabled(role) {
@@ -4129,7 +4507,10 @@ function isSystemMaintenanceEnabled() {
 }
 
 function getSystemMaintenanceMessage() {
-  return getSystemSettingsMaintenance().message || "Hệ thống đang bảo trì, vui lòng quay lại sau.";
+  return (
+    getSystemSettingsMaintenance().message ||
+    "Hệ thống đang bảo trì, vui lòng quay lại sau."
+  );
 }
 
 function renderMaintenanceScreen() {
@@ -4205,7 +4586,9 @@ function syncSystemSettingsUi(settings = null) {
   }
 
   if (updatedAtNode) {
-    updatedAtNode.textContent = formatDateOnly(info.updatedAt || data.updatedAt || "");
+    updatedAtNode.textContent = formatDateOnly(
+      info.updatedAt || data.updatedAt || "",
+    );
   }
 }
 
@@ -4383,9 +4766,13 @@ function getAdminTeacherById(teacherId) {
     return null;
   }
 
-  return (Array.isArray(adminTeachersState.data) ? adminTeachersState.data : []).find(
-    (teacher) => String(teacher?.id || "").trim() === normalizedId,
-  ) || null;
+  return (
+    (Array.isArray(adminTeachersState.data)
+      ? adminTeachersState.data
+      : []
+    ).find((teacher) => String(teacher?.id || "").trim() === normalizedId) ||
+    null
+  );
 }
 
 async function updateAdminTeacherStatus(teacherId, status) {
@@ -4522,8 +4909,12 @@ function buildAdminStudentRow(student, index) {
 
 function filterAdminStudents(students = []) {
   const query = normalizeAdminSearchValue(adminStudentsState.searchQuery);
-  const classFilter = String(adminStudentsState.classFilter || "").trim().toLowerCase();
-  const statusFilter = String(adminStudentsState.statusFilter || "").trim().toLowerCase();
+  const classFilter = String(adminStudentsState.classFilter || "")
+    .trim()
+    .toLowerCase();
+  const statusFilter = String(adminStudentsState.statusFilter || "")
+    .trim()
+    .toLowerCase();
 
   return (Array.isArray(students) ? students : []).filter((student) => {
     const searchIndex = getAdminSearchIndex(
@@ -4569,7 +4960,10 @@ function renderAdminStudentsClassOptions(students = []) {
   select.innerHTML = `
     <option value="">Tất cả lớp</option>
     ${classes
-      .map((className) => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`)
+      .map(
+        (className) =>
+          `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`,
+      )
       .join("")}
   `;
 
@@ -4584,7 +4978,9 @@ function renderAdminStudentsClassOptions(students = []) {
 function renderAdminStudentsTable(students = []) {
   const tbody = getAdminStudentsTableBody();
   const summaryNode = getAdminStudentsSummaryNode();
-  const total = Array.isArray(adminStudentsState.data) ? adminStudentsState.data.length : 0;
+  const total = Array.isArray(adminStudentsState.data)
+    ? adminStudentsState.data.length
+    : 0;
   const filtered = Array.isArray(students) ? students : [];
 
   if (tbody) {
@@ -4603,15 +4999,18 @@ function renderAdminStudentsTable(students = []) {
         </tr>
       `;
     } else {
-      tbody.innerHTML = filtered.map((student, index) => buildAdminStudentRow(student, index)).join("");
+      tbody.innerHTML = filtered
+        .map((student, index) => buildAdminStudentRow(student, index))
+        .join("");
     }
   }
 
   if (summaryNode) {
     if (filtered.length === 0) {
-      summaryNode.innerHTML = total === 0
-        ? "Chưa có dữ liệu học sinh trong hệ thống."
-        : ADMIN_NO_RESULTS_MESSAGE;
+      summaryNode.innerHTML =
+        total === 0
+          ? "Chưa có dữ liệu học sinh trong hệ thống."
+          : ADMIN_NO_RESULTS_MESSAGE;
     } else {
       summaryNode.innerHTML = `Hiển thị 1 đến ${escapeHtml(formatStatValue(filtered.length))} trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> học sinh`;
     }
@@ -4705,9 +5104,13 @@ function getAdminStudentById(studentId) {
     return null;
   }
 
-  return (Array.isArray(adminStudentsState.data) ? adminStudentsState.data : []).find(
-    (student) => String(student?.id || "").trim() === normalizedId,
-  ) || null;
+  return (
+    (Array.isArray(adminStudentsState.data)
+      ? adminStudentsState.data
+      : []
+    ).find((student) => String(student?.id || "").trim() === normalizedId) ||
+    null
+  );
 }
 
 function showAdminStudentProfile(student) {
@@ -4862,7 +5265,9 @@ function bindAdminEventsOnce() {
 
     const statsRangeButton = event.target.closest("[data-admin-stats-range]");
     if (statsRangeButton) {
-      const nextRange = normalizeAdminStatsRangeKey(statsRangeButton.dataset.adminStatsRange);
+      const nextRange = normalizeAdminStatsRangeKey(
+        statsRangeButton.dataset.adminStatsRange,
+      );
       if (adminStatsState.selectedRange !== nextRange) {
         adminStatsState.selectedRange = nextRange;
         renderAdminStatsPage();
@@ -4870,9 +5275,14 @@ function bindAdminEventsOnce() {
       return;
     }
 
-    const reviewsRatingButton = event.target.closest("[data-admin-reviews-rating-filter]");
+    const reviewsRatingButton = event.target.closest(
+      "[data-admin-reviews-rating-filter]",
+    );
     if (reviewsRatingButton) {
-      const nextRating = String(reviewsRatingButton.dataset.adminReviewsRatingFilter || "all").trim() || "all";
+      const nextRating =
+        String(
+          reviewsRatingButton.dataset.adminReviewsRatingFilter || "all",
+        ).trim() || "all";
       if (adminReviewsState.ratingFilter !== nextRating) {
         adminReviewsState.ratingFilter = nextRating;
         renderAdminReviewsPage();
@@ -5043,7 +5453,9 @@ function bindAdminEventsOnce() {
     const aiToggleButton = event.target.closest("[data-admin-ai-toggle]");
 
     if (aiToggleButton) {
-      const toggleName = String(aiToggleButton.dataset.adminAiToggle || "").trim();
+      const toggleName = String(
+        aiToggleButton.dataset.adminAiToggle || "",
+      ).trim();
 
       if (toggleName === "coach") {
         void toggleAdminAiCoach();
@@ -5061,25 +5473,39 @@ function bindAdminEventsOnce() {
       }
     }
 
-    const systemSettingsToggle = event.target.closest("[data-admin-settings-toggle]");
+    const systemSettingsToggle = event.target.closest(
+      "[data-admin-settings-toggle]",
+    );
 
     if (systemSettingsToggle) {
-      void toggleAdminSystemSetting(systemSettingsToggle.dataset.adminSettingsToggle);
+      void toggleAdminSystemSetting(
+        systemSettingsToggle.dataset.adminSettingsToggle,
+      );
       return;
     }
 
-    const systemSettingsAction = event.target.closest("[data-admin-settings-action]");
+    const systemSettingsAction = event.target.closest(
+      "[data-admin-settings-action]",
+    );
 
     if (systemSettingsAction) {
-      handleAdminSettingsAction(systemSettingsAction.dataset.adminSettingsAction);
+      handleAdminSettingsAction(
+        systemSettingsAction.dataset.adminSettingsAction,
+      );
       return;
     }
 
-    const reviewActionButton = event.target.closest("[data-admin-review-action]");
+    const reviewActionButton = event.target.closest(
+      "[data-admin-review-action]",
+    );
 
     if (reviewActionButton) {
-      const action = String(reviewActionButton.dataset.adminReviewAction || "").trim();
-      const reviewId = String(reviewActionButton.dataset.adminReviewId || "").trim();
+      const action = String(
+        reviewActionButton.dataset.adminReviewAction || "",
+      ).trim();
+      const reviewId = String(
+        reviewActionButton.dataset.adminReviewId || "",
+      ).trim();
 
       if (!reviewId) {
         return;
@@ -5173,7 +5599,8 @@ function bindAdminEventsOnce() {
       target instanceof HTMLSelectElement &&
       target.closest("#admin-reviews")
     ) {
-      adminReviewsState.roleFilter = String(target.value || "all").trim() || "all";
+      adminReviewsState.roleFilter =
+        String(target.value || "all").trim() || "all";
       renderAdminReviewsPage();
     }
   });
@@ -5335,8 +5762,13 @@ function changePage(pageId) {
 
   if (targetPageId === "progress" && normalizeRole(role) === "student") {
     const currentProfile =
-      bootstrapState.currentUser || profileState.current || getCurrentAuthUser();
-    renderStudentProgressPage(currentProfile, getProfileActivityLogs(currentProfile));
+      bootstrapState.currentUser ||
+      profileState.current ||
+      getCurrentAuthUser();
+    renderStudentProgressPage(
+      currentProfile,
+      getProfileActivityLogs(currentProfile),
+    );
   }
 }
 
@@ -6093,16 +6525,18 @@ function getStudentProgressOverview(profile, activityLogs = []) {
       Number(stats.studyMinutes) ||
       Number(stats.studyTimeMinutes) ||
       Number(stats.timeStudied) ||
-      logs.reduce((total, entry) => total + Math.max(0, Number(entry?.studyMinutes) || 0), 0),
+      logs.reduce(
+        (total, entry) => total + Math.max(0, Number(entry?.studyMinutes) || 0),
+        0,
+      ),
     completedAssignments:
       Number(stats.completedQuestions) ||
       Number(stats.completedAssignments) ||
       Number(stats.questionsAnswered) ||
       logs.filter((entry) => Number.isFinite(Number(entry?.score))).length,
-    averageScore:
-      Number.isFinite(Number(stats.averageScore))
-        ? Number(stats.averageScore)
-        : averageScore,
+    averageScore: Number.isFinite(Number(stats.averageScore))
+      ? Number(stats.averageScore)
+      : averageScore,
     streak: Number(stats.streak) || 0,
   };
 }
@@ -6144,7 +6578,9 @@ function renderStudentProgressPage(profile, activityLogs = null) {
   const overview = getStudentProgressOverview(profile, logs);
   const chartEntries = getStudentProgressChartEntries(logs);
 
-  const studyTimeNode = root.querySelector('[data-progress-overview="study-time"]');
+  const studyTimeNode = root.querySelector(
+    '[data-progress-overview="study-time"]',
+  );
   const completedNode = root.querySelector(
     '[data-progress-overview="completed-assignments"]',
   );
@@ -6164,7 +6600,9 @@ function renderStudentProgressPage(profile, activityLogs = null) {
   }
 
   if (averageScoreNode) {
-    averageScoreNode.textContent = Number.isFinite(Number(overview.averageScore))
+    averageScoreNode.textContent = Number.isFinite(
+      Number(overview.averageScore),
+    )
       ? `${formatStatValue(overview.averageScore)} / 10`
       : "--";
   }
@@ -6529,7 +6967,9 @@ function renderStudentRecentWrongAnswers(progress) {
 
   if (description) {
     description.textContent =
-      recentWrongCount > 0 ? `Luyện lại để ghi nhớ tốt hơn nhé!` : "0 câu sai";
+      recentWrongCount > 0
+        ? `Luyện lại để ghi nhớ tốt hơn nhé!`
+        : "Bạn đang làm rất tốt! Cố gắng tiếp tục nhé!";
   }
 
   if (button) {
@@ -6901,7 +7341,10 @@ async function openAICoachPracticeTopic(topicId, grade, subject) {
   }
 
   if (!normalizedGrade || !normalizedSubject) {
-    showToast("Không thể xác định khối lớp hoặc môn học cho chủ đề này.", "error");
+    showToast(
+      "Không thể xác định khối lớp hoặc môn học cho chủ đề này.",
+      "error",
+    );
     return;
   }
 
@@ -7147,7 +7590,8 @@ function renderStudentSubjectProgress(profile) {
       return;
     }
 
-    const subjectName = String(subject.name || subject.topicName || "--").trim() || "--";
+    const subjectName =
+      String(subject.name || subject.topicName || "--").trim() || "--";
     const progress = Math.max(0, Math.min(Number(subject.progress) || 0, 100));
 
     if (nameNode) nameNode.textContent = subjectName;
@@ -7267,7 +7711,7 @@ function renderStudentProfile(profile) {
   const activityLogs = getProfileActivityLogs(profile);
   const completedCount = getStudentProgressCount(profile, activityLogs);
   const streakValue =
-      activityLogs.length > 0
+    activityLogs.length > 0
       ? calculateStreak(activityLogs)
       : Number(profile?.stats?.streak) || 0;
 
@@ -7295,7 +7739,10 @@ function renderStudentProfile(profile) {
       Number(profile?.stats?.studyMinutes) ||
       Number(profile?.stats?.studyTimeMinutes) ||
       Number(profile?.stats?.timeStudied) ||
-      activityLogs.reduce((total, entry) => total + Math.max(0, Number(entry?.studyMinutes) || 0), 0);
+      activityLogs.reduce(
+        (total, entry) => total + Math.max(0, Number(entry?.studyMinutes) || 0),
+        0,
+      );
     studyMinutes.innerHTML = `${formatStatValue(fallbackStudyMinutes)} <span>phút</span>`;
   }
 
@@ -7374,7 +7821,8 @@ function renderTeacherProfile(profile) {
   }
   if (assignmentsCreated) {
     assignmentsCreated.textContent = formatStatValue(
-      Number(stats.assignmentsCreated) || Number(dashboardData?.totalAssignments),
+      Number(stats.assignmentsCreated) ||
+        Number(dashboardData?.totalAssignments),
     );
   }
   if (studentsManaged) {
@@ -7391,9 +7839,10 @@ function renderTeacherProfile(profile) {
   const tags =
     Array.isArray(profile?.classTags) && profile.classTags.length > 0
       ? profile.classTags
-      : Array.isArray(profile?.classTagNames) && profile.classTagNames.length > 0
+      : Array.isArray(profile?.classTagNames) &&
+          profile.classTagNames.length > 0
         ? profile.classTagNames
-      : [];
+        : [];
 
   if (classTags.length > 0) {
     classTags.forEach((tag, index) => {
@@ -7413,7 +7862,9 @@ async function syncTeacherProfileSupplement(profile) {
     const classes = await window.EduKidsProfileService?.fetchMyClasses?.();
     if (Array.isArray(classes)) {
       classes.forEach((classroom) => {
-        const label = String(classroom?.name || classroom?.className || "").trim();
+        const label = String(
+          classroom?.name || classroom?.className || "",
+        ).trim();
         if (label) {
           resolvedTags.push(label);
         }
@@ -7442,7 +7893,9 @@ async function syncTeacherDashboard(profile = null, forceRefresh = true) {
   });
 
   if (dashboardData) {
-    renderTeacherDashboard(dashboardData.profile || profile || getCurrentAuthUser());
+    renderTeacherDashboard(
+      dashboardData.profile || profile || getCurrentAuthUser(),
+    );
     return;
   }
 
@@ -7909,7 +8362,8 @@ function buildAppReviewStarMarkup(rating = 0, { interactive = false } = {}) {
 
 function buildAppReviewModal(profile) {
   const roleLabel = formatRoleLabel(profile?.role);
-  const nameLabel = profile?.fullName || profile?.name || profile?.username || "Người dùng";
+  const nameLabel =
+    profile?.fullName || profile?.name || profile?.username || "Người dùng";
 
   return `
     <form class="app-review-form" data-app-review-form>
@@ -7965,7 +8419,10 @@ function buildAppReviewModal(profile) {
 }
 
 function syncAppReviewModalStars(modal, rating) {
-  const normalizedRating = Math.max(0, Math.min(5, Number.parseInt(rating, 10) || 0));
+  const normalizedRating = Math.max(
+    0,
+    Math.min(5, Number.parseInt(rating, 10) || 0),
+  );
   const ratingInput = modal.querySelector("[data-app-review-rating-input]");
   const hintNode = modal.querySelector("[data-app-review-rating-hint]");
 
@@ -8030,7 +8487,9 @@ async function openAppReviewModal() {
   const countNode = modal.querySelector("[data-app-review-count]");
 
   modal.querySelector(".close-btn")?.addEventListener("click", closeModal);
-  modal.querySelector("[data-app-review-cancel]")?.addEventListener("click", closeModal);
+  modal
+    .querySelector("[data-app-review-cancel]")
+    ?.addEventListener("click", closeModal);
   modal.addEventListener("click", (event) => {
     if (event.target === modal) {
       closeModal();
@@ -8161,9 +8620,15 @@ function openConfirmModal({
 
     document.body.appendChild(modal);
 
-    modal.querySelector(".close-btn")?.addEventListener("click", () => finish(false));
-    modal.querySelector(".confirm-modal-cancel-btn")?.addEventListener("click", () => finish(false));
-    modal.querySelector(".confirm-modal-confirm-btn")?.addEventListener("click", () => finish(true));
+    modal
+      .querySelector(".close-btn")
+      ?.addEventListener("click", () => finish(false));
+    modal
+      .querySelector(".confirm-modal-cancel-btn")
+      ?.addEventListener("click", () => finish(false));
+    modal
+      .querySelector(".confirm-modal-confirm-btn")
+      ?.addEventListener("click", () => finish(true));
     modal.addEventListener("click", (event) => {
       if (event.target === modal) {
         finish(false);
@@ -8850,10 +9315,7 @@ async function loadStudentQuizByTopic(topicId) {
 
     if (questionCount === 0) {
       studentQuizState.quiz = null;
-      showToast(
-        "Chủ đề này hiện chưa có bộ câu hỏi luyện tập.",
-        "error",
-      );
+      showToast("Chủ đề này hiện chưa có bộ câu hỏi luyện tập.", "error");
       return;
     }
 
@@ -8868,10 +9330,7 @@ async function loadStudentQuizByTopic(topicId) {
       errorMessage.includes("AI topic learning is disabled") ||
       errorMessage.includes("không có bộ câu hỏi")
     ) {
-      showToast(
-        "AI Học theo chủ đề hiện đang tắt trong hệ thống.",
-        "error",
-      );
+      showToast("AI Học theo chủ đề hiện đang tắt trong hệ thống.", "error");
     } else {
       showToast("Không thể tạo bộ câu hỏi. Vui lòng thử lại.", "error");
     }
@@ -11917,7 +12376,9 @@ function updateStudentAssignmentFeed(assignments, errors = []) {
         .map((assignment) => normalizeStudentAssignmentRecord(assignment))
         .filter(
           (assignment) =>
-            assignment && assignment.id && !shouldHideStudentAssignmentFromFeed(assignment),
+            assignment &&
+            assignment.id &&
+            !shouldHideStudentAssignmentFromFeed(assignment),
         )
     : [];
 
@@ -13004,7 +13465,11 @@ async function resolveClassroomStudentProfile(student) {
     return null;
   }
 
-  if (student && typeof student === "object" && String(student.fullName || student.name || "").trim()) {
+  if (
+    student &&
+    typeof student === "object" &&
+    String(student.fullName || student.name || "").trim()
+  ) {
     return student;
   }
 
@@ -14049,7 +14514,9 @@ function getAssignmentAiAddButton() {
 }
 
 function getAssignmentSubjectDisplayLabel(subject) {
-  const normalized = String(subject || "").trim().toLowerCase();
+  const normalized = String(subject || "")
+    .trim()
+    .toLowerCase();
 
   if (normalized === "math" || normalized === "toán" || normalized === "toan") {
     return "Toán";
@@ -14129,7 +14596,9 @@ function normalizeAssignmentAiQuestion(question, index = 0) {
     options.push("");
   }
 
-  const parsedCorrectIndex = Number(question?.correctAnswerIndex ?? question?.correctAnswer ?? 0);
+  const parsedCorrectIndex = Number(
+    question?.correctAnswerIndex ?? question?.correctAnswer ?? 0,
+  );
   const correctAnswerIndex = Number.isInteger(parsedCorrectIndex)
     ? Math.min(Math.max(parsedCorrectIndex, 0), 3)
     : 0;
@@ -14152,7 +14621,9 @@ function normalizeAssignmentAiQuestionsForSubmission(questions) {
   return (Array.isArray(questions) ? questions : [])
     .map((question, index) => {
       const normalizedQuestion = normalizeAssignmentAiQuestion(question, index);
-      const options = normalizedQuestion.options.map((option) => String(option || "").trim());
+      const options = normalizedQuestion.options.map((option) =>
+        String(option || "").trim(),
+      );
 
       if (options.length < 4 || options.some((option) => !option)) {
         return null;
@@ -14345,14 +14816,14 @@ function syncAssignmentAiFields() {
   if (generateButton) {
     generateButton.disabled = Boolean(
       assignmentAiState.loading ||
-        assignmentAiState.loadingTopics ||
-        !isAiAssignmentEnabled(),
+      assignmentAiState.loadingTopics ||
+      !isAiAssignmentEnabled(),
     );
     generateButton.textContent = assignmentAiState.loading
       ? "AI đang tạo đề..."
       : !isAiAssignmentEnabled()
         ? "AI Tạo bài tập giáo viên đang tắt"
-      : "✨ Tạo đề bằng AI";
+        : "✨ Tạo đề bằng AI";
   }
 }
 
@@ -14403,7 +14874,9 @@ async function loadAssignmentAiTopics({ force = false } = {}) {
           .map((topic) => ({
             ...topic,
             topicId: String(topic?.topicId || "").trim(),
-            title: String(topic?.title || topic?.name || topic?.topicName || "").trim(),
+            title: String(
+              topic?.title || topic?.name || topic?.topicName || "",
+            ).trim(),
             description: String(topic?.description || "").trim(),
             grade: String(topic?.grade || "").trim(),
             subject: String(topic?.subject || "").trim(),
@@ -14435,7 +14908,8 @@ async function loadAssignmentAiTopics({ force = false } = {}) {
     assignmentAiState.topics = [];
     assignmentAiState.topicId = "";
     assignmentAiState.topicName = "";
-    assignmentAiState.error = error.message || "Không thể tải danh sách chủ đề.";
+    assignmentAiState.error =
+      error.message || "Không thể tải danh sách chủ đề.";
     showToast(assignmentAiState.error, "error");
   } finally {
     assignmentAiState.loadingTopics = false;
@@ -14513,7 +14987,8 @@ async function handleAssignmentAiGenerate() {
   }
 
   if (!isAiAssignmentEnabled()) {
-    assignmentAiState.error = "AI Tạo bài tập giáo viên hiện đang tắt trong hệ thống.";
+    assignmentAiState.error =
+      "AI Tạo bài tập giáo viên hiện đang tắt trong hệ thống.";
     showToast(assignmentAiState.error, "error");
     renderAssignmentEditor();
     renderAssignmentPreview();
@@ -14552,7 +15027,9 @@ async function handleAssignmentAiGenerate() {
         {
           id: question.id || generateManualQuestionId(index + 1),
           question: question.question,
-          options: Array.isArray(question.options) ? question.options : ["", "", "", ""],
+          options: Array.isArray(question.options)
+            ? question.options
+            : ["", "", "", ""],
           correctAnswerIndex: Number(question.correctAnswer),
         },
         index,
@@ -14641,7 +15118,10 @@ function updateManualAssignmentStateFromElement(target) {
     assignmentAiState.topicId = target.value || "";
     const selectedTopic = getAssignmentAiSelectedTopic();
     assignmentAiState.topicName =
-      selectedTopic?.title || selectedTopic?.name || selectedTopic?.topicName || "";
+      selectedTopic?.title ||
+      selectedTopic?.name ||
+      selectedTopic?.topicName ||
+      "";
     return;
   }
 
@@ -14831,8 +15311,8 @@ function logTeacherDashboardStep(label, startTime = 0, details = "") {
 
   const elapsedMs =
     Number.isFinite(Number(startTime)) && startTime > 0
-    ? Math.max(0, Math.round(performance.now() - startTime))
-    : 0;
+      ? Math.max(0, Math.round(performance.now() - startTime))
+      : 0;
 
   const suffix = details ? `: ${details}` : "";
   console.log(
@@ -14965,13 +15445,19 @@ function calculateCompletionRate(
     );
     const classStudents = getTeacherAssignmentClassroomStudentCount(classroom);
     const assignedStudents = Math.max(0, classStudents);
-    const submissions = submissionsByAssignmentId.get(String(assignment?.id || "").trim()) || [];
+    const submissions =
+      submissionsByAssignmentId.get(String(assignment?.id || "").trim()) || [];
     const completedStudents = uniqueClassroomValues(
-      submissions.map((submission) => String(submission?.studentId || "").trim()),
+      submissions.map((submission) =>
+        String(submission?.studentId || "").trim(),
+      ),
     ).length;
 
     totalAssigned += assignedStudents;
-    totalCompleted += Math.min(completedStudents, assignedStudents || completedStudents);
+    totalCompleted += Math.min(
+      completedStudents,
+      assignedStudents || completedStudents,
+    );
   });
 
   if (totalAssigned <= 0) {
@@ -14996,13 +15482,17 @@ function getTeacherDashboardClassroomById(classrooms, classId) {
     return null;
   }
 
-  return (Array.isArray(classrooms) ? classrooms : []).find(
-    (classroom) => String(classroom?.id || "").trim() === normalizedClassId,
-  ) || null;
+  return (
+    (Array.isArray(classrooms) ? classrooms : []).find(
+      (classroom) => String(classroom?.id || "").trim() === normalizedClassId,
+    ) || null
+  );
 }
 
 function normalizeTeacherDashboardAssignmentStatus(status) {
-  const normalized = String(status || "").trim().toLowerCase();
+  const normalized = String(status || "")
+    .trim()
+    .toLowerCase();
 
   if (normalized === "deleted" || normalized === "archived") {
     return "";
@@ -15017,16 +15507,27 @@ function getTeacherDashboardSubmissionMap(submissionsByAssignmentId) {
     : new Map();
 }
 
-function getTeacherDashboardAssignmentSummary(assignment, classrooms, submissionsByAssignmentId) {
-  const classInfo = getTeacherDashboardClassroomById(classrooms, assignment?.classId);
+function getTeacherDashboardAssignmentSummary(
+  assignment,
+  classrooms,
+  submissionsByAssignmentId,
+) {
+  const classInfo = getTeacherDashboardClassroomById(
+    classrooms,
+    assignment?.classId,
+  );
   const totalStudents = getTeacherDashboardClassroomStudentCount(classInfo);
-  const submissions = getTeacherDashboardSubmissionMap(submissionsByAssignmentId).get(
-    String(assignment?.id || "").trim(),
-  ) || [];
+  const submissions =
+    getTeacherDashboardSubmissionMap(submissionsByAssignmentId).get(
+      String(assignment?.id || "").trim(),
+    ) || [];
   const submittedStudents = uniqueClassroomValues(
     submissions.map((submission) => String(submission?.studentId || "").trim()),
   ).length;
-  const completionRate = totalStudents > 0 ? Math.round((submittedStudents / totalStudents) * 100) : 0;
+  const completionRate =
+    totalStudents > 0
+      ? Math.round((submittedStudents / totalStudents) * 100)
+      : 0;
 
   return {
     classInfo,
@@ -15134,7 +15635,10 @@ function buildTeacherDashboardAttentionItems({
         completionRate: summary.completionRate,
       };
     })
-    .filter((assignment) => String(assignment?.status || "active").toLowerCase() !== "deleted")
+    .filter(
+      (assignment) =>
+        String(assignment?.status || "active").toLowerCase() !== "deleted",
+    )
     .sort((left, right) => {
       const leftRate = Number(left.completionRate) || 0;
       const rightRate = Number(right.completionRate) || 0;
@@ -15144,28 +15648,35 @@ function buildTeacherDashboardAttentionItems({
       }
 
       const leftTime = Date.parse(left.createdAt || left.updatedAt || "") || 0;
-      const rightTime = Date.parse(right.createdAt || right.updatedAt || "") || 0;
+      const rightTime =
+        Date.parse(right.createdAt || right.updatedAt || "") || 0;
       return rightTime - leftTime;
     });
 
-  const belowNinety = sortedAssignments.filter((assignment) => (Number(assignment.completionRate) || 0) < 90);
+  const belowNinety = sortedAssignments.filter(
+    (assignment) => (Number(assignment.completionRate) || 0) < 90,
+  );
   const sourceAssignments =
     belowNinety.length > 0
       ? belowNinety.slice(0, 3)
       : [...sortedAssignments]
           .sort((left, right) => {
-            const leftTime = Date.parse(left.createdAt || left.updatedAt || "") || 0;
-            const rightTime = Date.parse(right.createdAt || right.updatedAt || "") || 0;
+            const leftTime =
+              Date.parse(left.createdAt || left.updatedAt || "") || 0;
+            const rightTime =
+              Date.parse(right.createdAt || right.updatedAt || "") || 0;
             return rightTime - leftTime;
           })
           .slice(0, 3);
 
   return sourceAssignments.map((assignment) => {
-    const summary = assignment.summary || getTeacherDashboardAssignmentSummary(
-      assignment,
-      classrooms,
-      submissionsByAssignmentId,
-    );
+    const summary =
+      assignment.summary ||
+      getTeacherDashboardAssignmentSummary(
+        assignment,
+        classrooms,
+        submissionsByAssignmentId,
+      );
     const totalStudents = summary.totalStudents || 0;
     const submittedStudents = summary.submittedStudents || 0;
     const completionRate = summary.completionRate || 0;
@@ -15186,7 +15697,10 @@ function buildTeacherDashboardAttentionItems({
   });
 }
 
-async function fetchTeacherDashboardData(profile = null, { forceRefresh = false } = {}) {
+async function fetchTeacherDashboardData(
+  profile = null,
+  { forceRefresh = false } = {},
+) {
   const teacherId = String(
     profile?.uid || profile?.userId || profile?.id || getCurrentUserId() || "",
   ).trim();
@@ -15219,15 +15733,20 @@ async function fetchTeacherDashboardData(profile = null, { forceRefresh = false 
   const requestPromise = (async () => {
     try {
       const service = getAssignmentService();
-      const [resolvedProfile, classesResponse, assignmentsResponse] = await Promise.all([
-        window.EduKidsProfileService?.fetchCurrentProfile
-          ? window.EduKidsProfileService.fetchCurrentProfile().catch(() => profile)
-          : Promise.resolve(profile),
-        apiRequestWithAuth("/api/classes/my", { method: "GET" }).catch(() => ({ data: [] })),
-        service?.getTeacherAssignments
-          ? service.getTeacherAssignments(teacherId).catch(() => [])
-          : Promise.resolve([]),
-      ]);
+      const [resolvedProfile, classesResponse, assignmentsResponse] =
+        await Promise.all([
+          window.EduKidsProfileService?.fetchCurrentProfile
+            ? window.EduKidsProfileService.fetchCurrentProfile().catch(
+                () => profile,
+              )
+            : Promise.resolve(profile),
+          apiRequestWithAuth("/api/classes/my", { method: "GET" }).catch(
+            () => ({ data: [] }),
+          ),
+          service?.getTeacherAssignments
+            ? service.getTeacherAssignments(teacherId).catch(() => [])
+            : Promise.resolve([]),
+        ]);
 
       const classrooms = sortClassroomRecords(
         Array.isArray(classesResponse?.data)
@@ -15249,14 +15768,16 @@ async function fetchTeacherDashboardData(profile = null, { forceRefresh = false 
         `${studentIds.length}`,
       );
 
-      const assignments = (Array.isArray(assignmentsResponse)
-        ? assignmentsResponse
-        : [])
+      const assignments = (
+        Array.isArray(assignmentsResponse) ? assignmentsResponse : []
+      )
         .map((assignment) => ({
           ...assignment,
           status: normalizeTeacherDashboardAssignmentStatus(assignment?.status),
         }))
-        .filter((assignment) => Boolean(String(assignment?.status || "").trim()));
+        .filter((assignment) =>
+          Boolean(String(assignment?.status || "").trim()),
+        );
       logTeacherDashboardStep(
         "assignments loaded",
         dashboardStart,
@@ -15271,7 +15792,9 @@ async function fetchTeacherDashboardData(profile = null, { forceRefresh = false 
             return [assignmentId, []];
           }
 
-          const submissions = await service.fetchAssignmentSubmissions(assignmentId).catch(() => []);
+          const submissions = await service
+            .fetchAssignmentSubmissions(assignmentId)
+            .catch(() => []);
           return [assignmentId, Array.isArray(submissions) ? submissions : []];
         }),
       );
@@ -15431,7 +15954,9 @@ function renderTeacherDashboard(profile = null) {
   }
 
   if (totalStudentsNode) {
-    totalStudentsNode.textContent = formatStatValue(dashboardData?.totalStudents);
+    totalStudentsNode.textContent = formatStatValue(
+      dashboardData?.totalStudents,
+    );
   }
 
   if (totalClassesNode) {
@@ -15439,7 +15964,9 @@ function renderTeacherDashboard(profile = null) {
   }
 
   if (totalAssignmentsNode) {
-    totalAssignmentsNode.textContent = formatStatValue(dashboardData?.totalAssignments);
+    totalAssignmentsNode.textContent = formatStatValue(
+      dashboardData?.totalAssignments,
+    );
   }
 
   if (completionRateNode) {
@@ -15597,7 +16124,11 @@ function getTeacherStatsClassStudents(classroom) {
     rawStudents.map((student) =>
       String(
         student && typeof student === "object"
-          ? student.id || student.studentId || student.userId || student.uid || ""
+          ? student.id ||
+              student.studentId ||
+              student.userId ||
+              student.uid ||
+              ""
           : student || "",
       ).trim(),
     ),
@@ -15615,11 +16146,22 @@ function getTeacherStatsScore10(submission) {
     return Math.max(0, Math.min(10, directScore));
   }
 
-  const correctCount = Number(submission?.correctCount || submission?.correctAnswers);
-  const totalQuestions = Number(submission?.totalQuestions || submission?.questionCount);
+  const correctCount = Number(
+    submission?.correctCount || submission?.correctAnswers,
+  );
+  const totalQuestions = Number(
+    submission?.totalQuestions || submission?.questionCount,
+  );
 
-  if (Number.isFinite(correctCount) && Number.isFinite(totalQuestions) && totalQuestions > 0) {
-    return Math.max(0, Math.min(10, Number(((correctCount / totalQuestions) * 10).toFixed(1))));
+  if (
+    Number.isFinite(correctCount) &&
+    Number.isFinite(totalQuestions) &&
+    totalQuestions > 0
+  ) {
+    return Math.max(
+      0,
+      Math.min(10, Number(((correctCount / totalQuestions) * 10).toFixed(1))),
+    );
   }
 
   return null;
@@ -15693,7 +16235,9 @@ function getTeacherStatsAverage(values) {
   }
 
   return Number(
-    (validValues.reduce((sum, value) => sum + value, 0) / validValues.length).toFixed(1),
+    (
+      validValues.reduce((sum, value) => sum + value, 0) / validValues.length
+    ).toFixed(1),
   );
 }
 
@@ -15754,9 +16298,13 @@ function buildTeacherStatsViewModel(rawData, rangeKey = "7d") {
   }
 
   const classroom = rawData.classroom || null;
-  const studentRows = Array.isArray(rawData.studentRows) ? rawData.studentRows : [];
+  const studentRows = Array.isArray(rawData.studentRows)
+    ? rawData.studentRows
+    : [];
   const studentIds = studentRows.map((student) => student.id).filter(Boolean);
-  const assignments = Array.isArray(rawData.assignments) ? rawData.assignments : [];
+  const assignments = Array.isArray(rawData.assignments)
+    ? rawData.assignments
+    : [];
   const submissionsByAssignmentId =
     rawData.submissionsByAssignmentId instanceof Map
       ? rawData.submissionsByAssignmentId
@@ -15766,7 +16314,9 @@ function buildTeacherStatsViewModel(rawData, rangeKey = "7d") {
       ? rawData.topicProgressByStudentId
       : new Map();
   const allSubmissions = assignments.flatMap((assignment) =>
-    Array.isArray(submissionsByAssignmentId.get(String(assignment.id || "").trim()))
+    Array.isArray(
+      submissionsByAssignmentId.get(String(assignment.id || "").trim()),
+    )
       ? submissionsByAssignmentId.get(String(assignment.id || "").trim())
       : [],
   );
@@ -15841,7 +16391,10 @@ function buildTeacherStatsViewModel(rawData, rangeKey = "7d") {
     .filter((student) => Number.isFinite(Number(student.averageScore)));
 
   const topStudents = [...studentAverages]
-    .sort((left, right) => (Number(right.averageScore) || 0) - (Number(left.averageScore) || 0))
+    .sort(
+      (left, right) =>
+        (Number(right.averageScore) || 0) - (Number(left.averageScore) || 0),
+    )
     .slice(0, 5);
 
   const topicBuckets = new Map();
@@ -15857,7 +16410,9 @@ function buildTeacherStatsViewModel(rawData, rangeKey = "7d") {
         return isTeacherStatsDateInRange(date, rangeKey);
       })
       .forEach((topic) => {
-        const topicKey = String(topic.topicName || topic.title || topic.topicId || "").trim();
+        const topicKey = String(
+          topic.topicName || topic.title || topic.topicId || "",
+        ).trim();
         const accuracy = Number(topic.percentage);
 
         if (!topicKey || !Number.isFinite(accuracy)) {
@@ -15870,62 +16425,90 @@ function buildTeacherStatsViewModel(rawData, rangeKey = "7d") {
       });
   });
 
-  const weakestTopic = Array.from(topicBuckets.entries())
-    .map(([topicName, values]) => ({
-      topicName,
-      percentage: getTeacherStatsAverage(values) ?? 0,
-    }))
-    .filter((item) => Number.isFinite(Number(item.percentage)))
-    .sort((left, right) => (left.percentage || 0) - (right.percentage || 0))[0] || null;
+  const weakestTopic =
+    Array.from(topicBuckets.entries())
+      .map(([topicName, values]) => ({
+        topicName,
+        percentage: getTeacherStatsAverage(values) ?? 0,
+      }))
+      .filter((item) => Number.isFinite(Number(item.percentage)))
+      .sort(
+        (left, right) => (left.percentage || 0) - (right.percentage || 0),
+      )[0] || null;
 
-  const assignmentRows = assignments.map((assignment) => {
-    const submissions = (submissionsByAssignmentId.get(String(assignment.id || "").trim()) || []).filter(
-      (submission) => {
+  const assignmentRows = assignments
+    .map((assignment) => {
+      const submissions = (
+        submissionsByAssignmentId.get(String(assignment.id || "").trim()) || []
+      ).filter((submission) => {
         const date =
           getTeacherStatsDateValue(submission?.submittedAt) ||
           getTeacherStatsDateValue(submission?.gradedAt) ||
           getTeacherStatsDateValue(submission?.createdAt);
         return isTeacherStatsDateInRange(date, rangeKey);
-      },
-    );
+      });
 
-    const completedStudentIds = uniqueClassroomValues(
-      submissions.map((submission) => String(submission?.studentId || "").trim()),
-    );
-    const totalStudents = studentRows.length;
-    const completedCount = completedStudentIds.length;
-    const pendingCount = Math.max(0, totalStudents - completedCount);
-    const completionRate = totalStudents > 0 ? Math.round((completedCount / totalStudents) * 100) : 0;
+      const completedStudentIds = uniqueClassroomValues(
+        submissions.map((submission) =>
+          String(submission?.studentId || "").trim(),
+        ),
+      );
+      const totalStudents = studentRows.length;
+      const completedCount = completedStudentIds.length;
+      const pendingCount = Math.max(0, totalStudents - completedCount);
+      const completionRate =
+        totalStudents > 0
+          ? Math.round((completedCount / totalStudents) * 100)
+          : 0;
 
-    return {
-      id: assignment.id,
-      title: String(assignment.title || "Bài tập").trim(),
-      completedCount,
-      pendingCount,
-      completionRate,
-      createdAt: assignment.createdAt || "",
-    };
-  }).sort((left, right) => Date.parse(right.createdAt || "") - Date.parse(left.createdAt || ""));
+      return {
+        id: assignment.id,
+        title: String(assignment.title || "Bài tập").trim(),
+        completedCount,
+        pendingCount,
+        completionRate,
+        createdAt: assignment.createdAt || "",
+      };
+    })
+    .sort(
+      (left, right) =>
+        Date.parse(right.createdAt || "") - Date.parse(left.createdAt || ""),
+    );
 
   const overallAverageScore = getTeacherStatsAverage(
-    filteredSubmissions.map((submission) => getTeacherStatsScore10(submission)).filter((value) => Number.isFinite(value)),
+    filteredSubmissions
+      .map((submission) => getTeacherStatsScore10(submission))
+      .filter((value) => Number.isFinite(value)),
   );
-  const totalCompletedAssignments = assignmentRows.reduce((sum, row) => sum + row.completedCount, 0);
+  const totalCompletedAssignments = assignmentRows.reduce(
+    (sum, row) => sum + row.completedCount,
+    0,
+  );
   const totalAssignments = assignmentRows.length;
   const assignmentCompletionRate = assignmentRows.length
     ? Math.round(
-        assignmentRows.reduce((sum, row) => sum + row.completionRate, 0) / assignmentRows.length,
+        assignmentRows.reduce((sum, row) => sum + row.completionRate, 0) /
+          assignmentRows.length,
       )
     : 0;
   const averageStudyMinutes = getTeacherStatsAverage(
-    studentRows.map((student) => Number(student.profile?.stats?.studyMinutes || 0)),
+    studentRows.map((student) =>
+      Number(student.profile?.stats?.studyMinutes || 0),
+    ),
   );
   const topStudentIds = new Set(topStudents.map((student) => student.id));
-  const supportStudentsFiltered = studentAverages.filter((student) => !topStudentIds.has(student.id));
+  const supportStudentsFiltered = studentAverages.filter(
+    (student) => !topStudentIds.has(student.id),
+  );
   const supportStudents = [...supportStudentsFiltered]
-    .sort((left, right) => (Number(left.averageScore) || 0) - (Number(right.averageScore) || 0))
+    .sort(
+      (left, right) =>
+        (Number(left.averageScore) || 0) - (Number(right.averageScore) || 0),
+    )
     .slice(0, 5);
-  const supportStudentCount = supportStudentsFiltered.filter((student) => Number(student.averageScore) < 5).length;
+  const supportStudentCount = supportStudentsFiltered.filter(
+    (student) => Number(student.averageScore) < 5,
+  ).length;
   const className = getTeacherStatsClassName(classroom);
 
   return {
@@ -15962,7 +16545,8 @@ function renderTeacherStatsSkeleton() {
   if (supportStudentsNode) supportStudentsNode.innerHTML = skeleton;
   if (assignmentTableNode) assignmentTableNode.innerHTML = skeleton;
   if (aiNode) aiNode.innerHTML = skeleton;
-  if (summaryNode) summaryNode.innerHTML = `<div class="teacher-stats-skeleton" style="min-height: 116px; width: 100%;"></div>`;
+  if (summaryNode)
+    summaryNode.innerHTML = `<div class="teacher-stats-skeleton" style="min-height: 116px; width: 100%;"></div>`;
 }
 
 function renderTeacherStatsEmpty(message = "Chưa có dữ liệu thống kê.") {
@@ -16011,7 +16595,8 @@ function buildTeacherStatsLineChartSvg(entries) {
   const chartWidth = width - leftPad - rightPad;
   const chartHeight = height - topPad - bottomPad;
   const points = safeEntries.map((entry, index) => {
-    const ratio = safeEntries.length === 1 ? 0.5 : index / (safeEntries.length - 1);
+    const ratio =
+      safeEntries.length === 1 ? 0.5 : index / (safeEntries.length - 1);
     const x = leftPad + ratio * chartWidth;
     const score = Number(entry.score) || 0;
     const y = topPad + (1 - score / 10) * chartHeight;
@@ -16090,7 +16675,8 @@ function renderTeacherStatsTableRows(rows, kind = "top") {
           `;
         }
 
-        const medal = kind === "top" && index < 3 ? ["🥇", "🥈", "🥉"][index] : "";
+        const medal =
+          kind === "top" && index < 3 ? ["🥇", "🥈", "🥉"][index] : "";
         return `
           <div class="teacher-stats-table-row">
             <span class="teacher-stats-table-rank ${medal ? "is-medal" : ""}">${medal || index + 1}</span>
@@ -16140,11 +16726,15 @@ function renderTeacherStatsAssignments(rows) {
         `,
       )
       .join("")}
-    ${showToggle ? `
+    ${
+      showToggle
+        ? `
       <button class="teacher-stats-link-button is-purple" type="button" data-teacher-stats-assignment-toggle>
         ${teacherStatsState.assignmentExpanded ? "Thu gọn" : "Xem thêm"}
       </button>
-    ` : ""}
+    `
+        : ""
+    }
   `;
 }
 
@@ -16164,12 +16754,15 @@ function renderTeacherStatsAi(viewModel) {
     ? Number(viewModel.overallAverageScore).toFixed(1)
     : "--";
   const weakestTopicName = viewModel.weakestTopic?.topicName || "--";
-  const weakestTopicAccuracy = Number.isFinite(Number(viewModel.weakestTopic?.percentage))
+  const weakestTopicAccuracy = Number.isFinite(
+    Number(viewModel.weakestTopic?.percentage),
+  )
     ? `${Number(viewModel.weakestTopic.percentage).toFixed(0)}%`
     : "--";
   const completionRate = `${viewModel.assignmentCompletionRate || 0}%`;
   const supportStudentCount = viewModel.supportStudentCount || 0;
-  const recommendationTopic = weakestTopicName !== "--" ? weakestTopicName : "chủ đề yếu nhất";
+  const recommendationTopic =
+    weakestTopicName !== "--" ? weakestTopicName : "chủ đề yếu nhất";
   const weakerNote = viewModel.weakestTopic
     ? `Chủ đề yếu nhất là ${weakestTopicName} (${weakestTopicAccuracy}).`
     : "Chưa có đủ dữ liệu chủ đề để phân tích.";
@@ -16323,15 +16916,23 @@ function renderTeacherStatsPageState(viewModel) {
   }
 
   if (topStudentsNode) {
-    topStudentsNode.innerHTML = renderTeacherStatsTableRows(viewModel.topStudents, "top");
+    topStudentsNode.innerHTML = renderTeacherStatsTableRows(
+      viewModel.topStudents,
+      "top",
+    );
   }
 
   if (supportStudentsNode) {
-    supportStudentsNode.innerHTML = renderTeacherStatsTableRows(viewModel.supportStudents, "support");
+    supportStudentsNode.innerHTML = renderTeacherStatsTableRows(
+      viewModel.supportStudents,
+      "support",
+    );
   }
 
   if (assignmentTableNode) {
-    assignmentTableNode.innerHTML = renderTeacherStatsAssignments(viewModel.assignmentRows);
+    assignmentTableNode.innerHTML = renderTeacherStatsAssignments(
+      viewModel.assignmentRows,
+    );
   }
 
   if (aiNode) {
@@ -16344,7 +16945,10 @@ function renderTeacherStatsPageState(viewModel) {
 
   const assignmentToggleButton = getTeacherStatsAssignmentToggleButton();
   if (assignmentToggleButton) {
-    assignmentToggleButton.hidden = !(Array.isArray(viewModel.assignmentRows) && viewModel.assignmentRows.length > 5);
+    assignmentToggleButton.hidden = !(
+      Array.isArray(viewModel.assignmentRows) &&
+      viewModel.assignmentRows.length > 5
+    );
   }
 }
 
@@ -16371,9 +16975,13 @@ function bindTeacherStatsControls() {
 
   if (rangeSelect) {
     rangeSelect.addEventListener("change", (event) => {
-      teacherStatsState.selectedRange = String(event.target.value || "7d").trim() || "7d";
+      teacherStatsState.selectedRange =
+        String(event.target.value || "7d").trim() || "7d";
       teacherStatsState.assignmentExpanded = false;
-      const viewModel = buildTeacherStatsViewModel(teacherStatsState.data, teacherStatsState.selectedRange);
+      const viewModel = buildTeacherStatsViewModel(
+        teacherStatsState.data,
+        teacherStatsState.selectedRange,
+      );
       renderTeacherStatsPageState(viewModel);
     });
   }
@@ -16389,25 +16997,36 @@ function bindTeacherStatsControls() {
   }
 
   root.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-teacher-stats-assignment-toggle]");
+    const button = event.target.closest(
+      "[data-teacher-stats-assignment-toggle]",
+    );
 
     if (!button) {
       return;
     }
 
-    teacherStatsState.assignmentExpanded = !teacherStatsState.assignmentExpanded;
-    const viewModel = buildTeacherStatsViewModel(teacherStatsState.data, teacherStatsState.selectedRange);
+    teacherStatsState.assignmentExpanded =
+      !teacherStatsState.assignmentExpanded;
+    const viewModel = buildTeacherStatsViewModel(
+      teacherStatsState.data,
+      teacherStatsState.selectedRange,
+    );
     renderTeacherStatsPageState(viewModel);
   });
 }
 
-async function loadTeacherStatsData({ selectedClassId = "", forceRefresh = false } = {}) {
+async function loadTeacherStatsData({
+  selectedClassId = "",
+  forceRefresh = false,
+} = {}) {
   const teacher = getCurrentAuthUser();
   if (normalizeRole(teacher?.role) !== "teacher") {
     return null;
   }
 
-  const teacherId = String(teacher?.uid || teacher?.userId || teacher?.id || "").trim();
+  const teacherId = String(
+    teacher?.uid || teacher?.userId || teacher?.id || "",
+  ).trim();
 
   if (!teacherId) {
     return null;
@@ -16442,9 +17061,13 @@ async function loadTeacherStatsData({ selectedClassId = "", forceRefresh = false
   const requestPromise = (async () => {
     try {
       const [classesResponse, assignmentsResponse] = await Promise.all([
-        apiRequestWithAuth("/api/classes/my", { method: "GET" }).catch(() => ({ data: [] })),
+        apiRequestWithAuth("/api/classes/my", { method: "GET" }).catch(() => ({
+          data: [],
+        })),
         getAssignmentService()?.getTeacherAssignments
-          ? getAssignmentService().getTeacherAssignments(teacherId).catch(() => [])
+          ? getAssignmentService()
+              .getTeacherAssignments(teacherId)
+              .catch(() => [])
           : Promise.resolve([]),
       ]);
 
@@ -16486,7 +17109,9 @@ async function loadTeacherStatsData({ selectedClassId = "", forceRefresh = false
       }
 
       const studentCards = await getClassroomStudentCards(classroom);
-      const studentIds = uniqueClassroomValues(studentCards.map((student) => student.id));
+      const studentIds = uniqueClassroomValues(
+        studentCards.map((student) => student.id),
+      );
       const profileService = window.EduKidsProfileService;
       const studentProfiles = await Promise.all(
         studentIds.map(async (studentId) => {
@@ -16494,7 +17119,9 @@ async function loadTeacherStatsData({ selectedClassId = "", forceRefresh = false
             return [studentId, null];
           }
 
-          const profile = await profileService.fetchProfileById(studentId).catch(() => null);
+          const profile = await profileService
+            .fetchProfileById(studentId)
+            .catch(() => null);
           return [studentId, profile];
         }),
       );
@@ -16515,8 +17142,13 @@ async function loadTeacherStatsData({ selectedClassId = "", forceRefresh = false
         };
       });
 
-      const classAssignments = (Array.isArray(assignmentsResponse) ? assignmentsResponse : [])
-        .filter((assignment) => String(assignment?.classId || "").trim() === classroom.id)
+      const classAssignments = (
+        Array.isArray(assignmentsResponse) ? assignmentsResponse : []
+      )
+        .filter(
+          (assignment) =>
+            String(assignment?.classId || "").trim() === classroom.id,
+        )
         .map((assignment) => ({
           ...assignment,
           id: String(assignment.id || "").trim(),
@@ -16536,7 +17168,8 @@ async function loadTeacherStatsData({ selectedClassId = "", forceRefresh = false
         }),
       );
 
-      const topicProgressByStudentId = await loadTeacherStatsStudentTopics(studentIds);
+      const topicProgressByStudentId =
+        await loadTeacherStatsStudentTopics(studentIds);
 
       const nextData = {
         classes,
@@ -16812,17 +17445,19 @@ function renderAssignmentEditor() {
   if (createMethod === "ai") {
     const topicOptions = Array.isArray(assignmentAiState.topics)
       ? assignmentAiState.topics
-      .map((topic) => {
-        const topicId = String(topic?.topicId || "").trim();
-        const topicName = String(topic?.title || topic?.name || topic?.topicName || topicId || "").trim();
+          .map((topic) => {
+            const topicId = String(topic?.topicId || "").trim();
+            const topicName = String(
+              topic?.title || topic?.name || topic?.topicName || topicId || "",
+            ).trim();
 
-        return `
+            return `
           <option value="${escapeHtml(topicId)}" ${topicId && topicId === assignmentAiState.topicId ? "selected" : ""}>
             ${escapeHtml(topicName || "Chủ đề")}
           </option>
         `;
-      })
-      .join("")
+          })
+          .join("")
       : "";
 
     editor.innerHTML = `
@@ -16907,9 +17542,13 @@ function renderAssignmentEditor() {
           >
             ${assignmentAiState.loading ? "AI đang tạo đề..." : "✨ Tạo đề bằng AI"}
           </button>
-          ${assignmentAiState.error ? `
+          ${
+            assignmentAiState.error
+              ? `
             <div class="ai-assignment-error" role="alert">${escapeHtml(assignmentAiState.error)}</div>
-          ` : ""}
+          `
+              : ""
+          }
         </div>
       </section>
 
@@ -16965,7 +17604,10 @@ function renderAssignmentEditor() {
 
 function createAssignmentQuestionPreviewHtml(question, index) {
   const safeQuestion = normalizeAssignmentAiQuestion(question, index);
-  const correctIndex = Math.min(Math.max(Number(safeQuestion.correctAnswerIndex) || 0, 0), 3);
+  const correctIndex = Math.min(
+    Math.max(Number(safeQuestion.correctAnswerIndex) || 0, 0),
+    3,
+  );
   const letters = ["A", "B", "C", "D"];
 
   return `
@@ -17040,7 +17682,9 @@ function createAssignmentAiPreviewHtml(draft) {
   return `
     ${summary}
     ${draft.questions
-      .map((question, index) => createAssignmentQuestionPreviewHtml(question, index))
+      .map((question, index) =>
+        createAssignmentQuestionPreviewHtml(question, index),
+      )
       .join("")}
   `;
 }
@@ -17722,7 +18366,9 @@ async function initializeManualAssignmentBuilder() {
             getCurrentAuthUser()?.username ||
             "",
           totalQuestions: draft.questions.length,
-          questions: normalizeAssignmentAiQuestionsForSubmission(draft.questions),
+          questions: normalizeAssignmentAiQuestionsForSubmission(
+            draft.questions,
+          ),
         });
 
         showToast("Đã tạo bài tập thành công.", "success");
@@ -19481,35 +20127,36 @@ async function bootstrap() {
   const systemSettingsService = getSystemSettingsService();
 
   if (typeof systemSettingsService?.observeSystemSettings === "function") {
-    systemSettingsState.unsubscribe = systemSettingsService.observeSystemSettings((settings) => {
-      systemSettingsState.data = settings;
-      systemSettingsState.loaded = true;
-      syncSystemSettingsUi(settings);
+    systemSettingsState.unsubscribe =
+      systemSettingsService.observeSystemSettings((settings) => {
+        systemSettingsState.data = settings;
+        systemSettingsState.loaded = true;
+        syncSystemSettingsUi(settings);
 
-      if (currentAdminPage === "admin-settings") {
-        renderAdminSettingsPage();
-      }
+        if (currentAdminPage === "admin-settings") {
+          renderAdminSettingsPage();
+        }
 
-      if (currentAdminPage === "admin-ai") {
-        renderAdminAiPage();
-      }
+        if (currentAdminPage === "admin-ai") {
+          renderAdminAiPage();
+        }
 
-      if (currentPage === "ai-coach") {
-        renderAICoachPage();
-      }
+        if (currentPage === "ai-coach") {
+          renderAICoachPage();
+        }
 
-      const authRoot = getAuthRoot();
-      const role = normalizeRole(getCurrentAuthUser()?.role);
+        const authRoot = getAuthRoot();
+        const role = normalizeRole(getCurrentAuthUser()?.role);
 
-      if (settings?.maintenance?.enabled && role !== "admin") {
-        renderMaintenanceScreen();
-        return;
-      }
+        if (settings?.maintenance?.enabled && role !== "admin") {
+          renderMaintenanceScreen();
+          return;
+        }
 
-      if (authRoot?.dataset.renderedMode === "maintenance") {
-        syncCurrentRouteState();
-      }
-    });
+        if (authRoot?.dataset.renderedMode === "maintenance") {
+          syncCurrentRouteState();
+        }
+      });
 
     systemSettingsState.listenerReady =
       typeof systemSettingsService.getReadyPromise === "function"
