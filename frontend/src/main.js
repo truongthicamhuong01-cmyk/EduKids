@@ -11,6 +11,7 @@ import "./services/adminAssignmentService.js";
 import "./services/adminAiService.js";
 import "./services/systemSettingsService.js";
 import "./services/adminStatsService.js";
+import "./services/appReviewService.js";
 import "./services/topicAccuracyService.js";
 import "./style.css";
 
@@ -117,6 +118,15 @@ const adminContentState = {
     grade: "",
     bucket: null,
   },
+};
+const adminReviewsState = {
+  loading: false,
+  loaded: false,
+  data: [],
+  filtered: [],
+  pendingPromise: null,
+  ratingFilter: "all",
+  roleFilter: "all",
 };
 const adminAssignmentsState = {
   loading: false,
@@ -2178,6 +2188,349 @@ async function syncAdminStats({ forceRefresh = false } = {}) {
 
   adminStatsState.pendingPromise = request;
   return request;
+}
+
+function getAdminReviewsRoot() {
+  return document.getElementById("admin-reviews");
+}
+
+function getAdminReviewsListNode() {
+  return getAdminReviewsRoot()?.querySelector("[data-admin-reviews-list]") || null;
+}
+
+function getAdminReviewsSummaryNode() {
+  return getAdminReviewsRoot()?.querySelector("[data-admin-reviews-summary]") || null;
+}
+
+function getAdminReviewsRoleSelect() {
+  return getAdminReviewsRoot()?.querySelector("[data-admin-reviews-role-filter]") || null;
+}
+
+function getAdminReviewsRatingButtons() {
+  return Array.from(
+    getAdminReviewsRoot()?.querySelectorAll("[data-admin-reviews-rating-filter]") || [],
+  );
+}
+
+function getAdminReviewAvatarPath(review) {
+  const avatar = String(review?.userAvatar || "").trim();
+
+  if (avatar) {
+    return avatar;
+  }
+
+  return window.EduKidsAppReviewService?.getDefaultAvatarByRole?.(review?.role) ||
+    (review?.role === "teacher"
+      ? "/assets/userAvatar/maleteacher.png"
+      : "/assets/userAvatar/boy.png");
+}
+
+function getAdminReviewRoleLabel(role) {
+  return role === "teacher" ? "Giáo viên" : "Học sinh";
+}
+
+function getAdminReviewDateValue(review) {
+  return getNormalizedDateFromValue(review?.createdAt)?.getTime() || 0;
+}
+
+function getAdminReviewAverageRating(reviews = []) {
+  const items = Array.isArray(reviews) ? reviews : [];
+
+  if (items.length === 0) {
+    return 0;
+  }
+
+  const total = items.reduce((sum, review) => sum + (Number(review?.rating) || 0), 0);
+  return total / items.length;
+}
+
+function filterAdminReviews(reviews = []) {
+  const ratingFilter = String(adminReviewsState.ratingFilter || "all").trim();
+  const roleFilter = String(adminReviewsState.roleFilter || "all").trim();
+
+  return (Array.isArray(reviews) ? reviews : []).filter((review) => {
+    if (ratingFilter !== "all" && String(review?.rating || "") !== ratingFilter) {
+      return false;
+    }
+
+    if (roleFilter !== "all" && String(review?.role || "") !== roleFilter) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function buildAdminReviewStars(rating = 0) {
+  return Array.from({ length: 5 }, (_, index) => {
+    const value = index + 1;
+    const isActive = value <= Number(rating || 0);
+
+    return `
+      <span class="admin-review-star ${isActive ? "is-active" : ""}" aria-hidden="true">
+        <svg viewBox="0 0 24 24" role="presentation">
+          <path
+            d="M12 3.4l2.76 5.59 6.17.9-4.46 4.34 1.05 6.15L12 17.5l-5.52 2.88 1.05-6.15-4.46-4.34 6.17-.9L12 3.4z"
+            fill="currentColor"
+          />
+        </svg>
+      </span>
+    `;
+  }).join("");
+}
+
+function buildAdminReviewCard(review, index) {
+  const comment = String(review?.comment || "").trim() || "Chưa có nội dung.";
+  const dateLabel = formatReviewDate(review?.createdAt || "");
+  const avatarSrc = getAdminReviewAvatarPath(review);
+
+  return `
+    <article class="admin-review-card" data-admin-review-card data-admin-review-id="${escapeHtml(String(review?.id || ""))}">
+      <div class="admin-review-card-head">
+        <div class="admin-review-avatar-wrap">
+          <img
+            class="admin-review-avatar"
+            src="${escapeHtml(avatarSrc)}"
+            alt="Avatar mặc định"
+            onerror="this.onerror=null;this.src='${escapeHtml(
+              review?.role === "teacher"
+                ? "/assets/userAvatar/maleteacher.png"
+                : "/assets/userAvatar/boy.png",
+            )}';"
+          />
+          <div class="admin-review-user-copy">
+            <strong>${escapeHtml(review?.userName || "Người dùng")}</strong>
+            <span>${escapeHtml(getAdminReviewRoleLabel(review?.role))}</span>
+          </div>
+        </div>
+
+        <div class="admin-review-meta">
+          <div class="admin-review-stars">
+            ${buildAdminReviewStars(review?.rating || 0)}
+          </div>
+          <span class="admin-review-date">${escapeHtml(dateLabel)}</span>
+        </div>
+      </div>
+
+      <p class="admin-review-comment">${escapeHtml(comment)}</p>
+
+      <div class="admin-review-footer">
+        <span class="admin-review-order">#${escapeHtml(String(index + 1))}</span>
+        <button
+          type="button"
+          class="admin-review-delete-btn"
+          data-admin-review-action="delete"
+          data-admin-review-id="${escapeHtml(String(review?.id || ""))}"
+        >
+          Xóa đánh giá
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function renderAdminReviewsStats(reviews = []) {
+  const totalReviews = Array.isArray(reviews) ? reviews.length : 0;
+  const averageRating = getAdminReviewAverageRating(reviews);
+  const fiveStarCount = (Array.isArray(reviews) ? reviews : []).filter(
+    (review) => Number(review?.rating) === 5,
+  ).length;
+  const oneStarCount = (Array.isArray(reviews) ? reviews : []).filter(
+    (review) => Number(review?.rating) === 1,
+  ).length;
+
+  const cards = [
+    {
+      key: "total-reviews",
+      icon: "💬",
+      label: "Tổng số đánh giá",
+      value: formatStatValue(totalReviews),
+      note: "Tất cả phản hồi đã ghi nhận",
+      color: "is-blue",
+    },
+    {
+      key: "average-rating",
+      icon: "⭐",
+      label: "Điểm trung bình",
+      value: totalReviews > 0 ? averageRating.toFixed(1) : "--",
+      note: "Thang điểm 5 sao",
+      color: "is-yellow",
+    },
+    {
+      key: "five-star-count",
+      icon: "✨",
+      label: "Số đánh giá 5 sao",
+      value: formatStatValue(fiveStarCount),
+      note: "Phản hồi tích cực nhất",
+      color: "is-green",
+    },
+    {
+      key: "one-star-count",
+      icon: "⚠",
+      label: "Số đánh giá 1 sao",
+      value: formatStatValue(oneStarCount),
+      note: "Cần ưu tiên theo dõi",
+      color: "is-red",
+    },
+  ];
+
+  const root = getAdminReviewsRoot();
+  if (!root) {
+    return;
+  }
+
+  const nodes = root.querySelectorAll("[data-admin-reviews-stat]");
+  cards.forEach((card, index) => {
+    const node = nodes[index];
+    if (!node) {
+      return;
+    }
+
+    node.className = `admin-kpi-card ${card.color}`;
+    node.innerHTML = `
+      <div class="admin-kpi-icon ${card.color}">${escapeHtml(card.icon)}</div>
+      <small>${escapeHtml(card.label)}</small>
+      <strong>${escapeHtml(card.value)}</strong>
+      <span>${escapeHtml(card.note)}</span>
+    `;
+  });
+}
+
+function renderAdminReviewsList(reviews = []) {
+  const listNode = getAdminReviewsListNode();
+  const summaryNode = getAdminReviewsSummaryNode();
+  const total = Array.isArray(adminReviewsState.data) ? adminReviewsState.data.length : 0;
+  const filtered = Array.isArray(reviews) ? reviews : [];
+
+  if (!listNode) {
+    return;
+  }
+
+  if (filtered.length === 0) {
+    const hasData = total > 0;
+    listNode.innerHTML = `
+      <div class="admin-empty-state is-large">
+        <div>
+          <p>${hasData ? ADMIN_NO_RESULTS_MESSAGE : "Chưa có đánh giá nào"}</p>
+          <span>${hasData ? "Thử thay đổi bộ lọc sao hoặc vai trò." : "Đánh giá từ người dùng sẽ xuất hiện ở đây."}</span>
+        </div>
+      </div>
+    `;
+  } else {
+    listNode.innerHTML = filtered.map((review, index) => buildAdminReviewCard(review, index)).join("");
+  }
+
+  if (summaryNode) {
+    summaryNode.innerHTML = `Hiển thị <strong>${escapeHtml(formatStatValue(filtered.length))}</strong> / <strong>${escapeHtml(formatStatValue(total))}</strong> đánh giá`;
+  }
+}
+
+function syncAdminReviewsFilterState() {
+  const ratingButtons = getAdminReviewsRatingButtons();
+  const roleSelect = getAdminReviewsRoleSelect();
+
+  ratingButtons.forEach((button) => {
+    const value = String(button.dataset.adminReviewsRatingFilter || "all").trim();
+    const isActive = value === String(adminReviewsState.ratingFilter || "all").trim();
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+
+  if (roleSelect) {
+    roleSelect.value = adminReviewsState.roleFilter || "all";
+  }
+}
+
+function renderAdminReviewsPage() {
+  syncAdminReviewsFilterState();
+  const filtered = filterAdminReviews(adminReviewsState.data);
+  adminReviewsState.filtered = filtered;
+  renderAdminReviewsStats(adminReviewsState.data);
+  renderAdminReviewsList(filtered);
+}
+
+async function syncAdminReviews({ forceRefresh = false } = {}) {
+  const root = getAdminReviewsRoot();
+
+  if (!root) {
+    return null;
+  }
+
+  if (adminReviewsState.loaded && Array.isArray(adminReviewsState.data) && !forceRefresh) {
+    renderAdminReviewsPage();
+    return adminReviewsState.data;
+  }
+
+  if (adminReviewsState.loading && adminReviewsState.pendingPromise) {
+    return adminReviewsState.pendingPromise;
+  }
+
+  adminReviewsState.loading = true;
+  root.setAttribute("aria-busy", "true");
+  renderAdminReviewsPage();
+
+  const request = (async () => {
+    try {
+      const service = window.EduKidsAppReviewService;
+      const reviews =
+        typeof service?.fetchReviews === "function" ? await service.fetchReviews() : [];
+
+      adminReviewsState.data = Array.isArray(reviews) ? reviews : [];
+      adminReviewsState.loaded = true;
+      renderAdminReviewsPage();
+      return adminReviewsState.data;
+    } catch (error) {
+      console.warn("Không thể tải danh sách đánh giá:", error);
+      adminReviewsState.data = [];
+      adminReviewsState.loaded = true;
+      renderAdminReviewsPage();
+      return [];
+    } finally {
+      adminReviewsState.loading = false;
+      adminReviewsState.pendingPromise = null;
+      root.removeAttribute("aria-busy");
+    }
+  })();
+
+  adminReviewsState.pendingPromise = request;
+  return request;
+}
+
+async function deleteAdminReview(reviewId) {
+  const review = (Array.isArray(adminReviewsState.data) ? adminReviewsState.data : []).find(
+    (item) => String(item?.id || "").trim() === String(reviewId || "").trim(),
+  );
+
+  if (!review) {
+    showToast("Không tìm thấy đánh giá.", "error");
+    return;
+  }
+
+  const confirmed = await openConfirmModal({
+    title: "Xóa đánh giá",
+    message: `Bạn có chắc muốn xóa đánh giá của ${review.userName || "người dùng"} không? Hành động này không thể hoàn tác.`,
+    confirmLabel: "Xóa",
+    cancelLabel: "Hủy",
+  });
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const service = window.EduKidsAppReviewService;
+
+    if (typeof service?.deleteReview !== "function") {
+      throw new Error("Dịch vụ đánh giá chưa sẵn sàng.");
+    }
+
+    await service.deleteReview(review.id);
+    showToast("Đã xóa đánh giá thành công.", "success");
+    await syncAdminReviews({ forceRefresh: true });
+  } catch (error) {
+    console.warn("Không thể xóa đánh giá:", error);
+    showToast(error?.message || "Không thể xóa đánh giá.", "error");
+  }
 }
 
 function getAdminStudentsRoot() {
@@ -4459,6 +4812,8 @@ function changeAdminPage(pageId) {
     void syncAdminAssignments();
   } else if (currentAdminPage === "admin-stats") {
     void syncAdminStats();
+  } else if (currentAdminPage === "admin-reviews") {
+    void syncAdminReviews();
   } else if (currentAdminPage === "admin-settings") {
     renderAdminSettingsPage();
     void syncSystemSettings();
@@ -4511,6 +4866,16 @@ function bindAdminEventsOnce() {
       if (adminStatsState.selectedRange !== nextRange) {
         adminStatsState.selectedRange = nextRange;
         renderAdminStatsPage();
+      }
+      return;
+    }
+
+    const reviewsRatingButton = event.target.closest("[data-admin-reviews-rating-filter]");
+    if (reviewsRatingButton) {
+      const nextRating = String(reviewsRatingButton.dataset.adminReviewsRatingFilter || "all").trim() || "all";
+      if (adminReviewsState.ratingFilter !== nextRating) {
+        adminReviewsState.ratingFilter = nextRating;
+        renderAdminReviewsPage();
       }
       return;
     }
@@ -4707,6 +5072,22 @@ function bindAdminEventsOnce() {
 
     if (systemSettingsAction) {
       handleAdminSettingsAction(systemSettingsAction.dataset.adminSettingsAction);
+      return;
+    }
+
+    const reviewActionButton = event.target.closest("[data-admin-review-action]");
+
+    if (reviewActionButton) {
+      const action = String(reviewActionButton.dataset.adminReviewAction || "").trim();
+      const reviewId = String(reviewActionButton.dataset.adminReviewId || "").trim();
+
+      if (!reviewId) {
+        return;
+      }
+
+      if (action === "delete") {
+        void deleteAdminReview(reviewId);
+      }
     }
   });
 
@@ -4785,6 +5166,15 @@ function bindAdminEventsOnce() {
     ) {
       setAdminAssignmentsFiltersFromInputs();
       renderAdminAssignmentsPage();
+      return;
+    }
+
+    if (
+      target instanceof HTMLSelectElement &&
+      target.closest("#admin-reviews")
+    ) {
+      adminReviewsState.roleFilter = String(target.value || "all").trim() || "all";
+      renderAdminReviewsPage();
     }
   });
 
@@ -5259,6 +5649,37 @@ function formatDateOnly(value) {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+  }).format(date);
+}
+
+function getNormalizedDateFromValue(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  if (typeof value === "object" && typeof value.toDate === "function") {
+    const date = value.toDate();
+    return date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatReviewDate(value) {
+  const date = getNormalizedDateFromValue(value);
+
+  if (!date) {
+    return "--";
+  }
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(date);
 }
 
@@ -7451,7 +7872,316 @@ async function openProfileEditModal() {
   });
 }
 
+function buildAppReviewStarMarkup(rating = 0, { interactive = false } = {}) {
+  return Array.from({ length: 5 }, (_, index) => {
+    const value = index + 1;
+    const isActive = value <= Number(rating || 0);
+    const starSvg = `
+      <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+        <path
+          d="M12 3.4l2.76 5.59 6.17.9-4.46 4.34 1.05 6.15L12 17.5l-5.52 2.88 1.05-6.15-4.46-4.34 6.17-.9L12 3.4z"
+          fill="currentColor"
+        />
+      </svg>
+    `;
+
+    if (interactive) {
+      return `
+        <button
+          type="button"
+          class="app-review-star-btn ${isActive ? "is-active" : ""}"
+          data-app-review-rating="${value}"
+          aria-pressed="${String(isActive)}"
+          aria-label="${value} sao"
+        >
+          ${starSvg}
+        </button>
+      `;
+    }
+
+    return `
+      <span class="app-review-star ${isActive ? "is-active" : ""}" aria-hidden="true">
+        ${starSvg}
+      </span>
+    `;
+  }).join("");
+}
+
+function buildAppReviewModal(profile) {
+  const roleLabel = formatRoleLabel(profile?.role);
+  const nameLabel = profile?.fullName || profile?.name || profile?.username || "Người dùng";
+
+  return `
+    <form class="app-review-form" data-app-review-form>
+      <div class="app-review-profile">
+        <img
+          class="app-review-avatar"
+          src="${getProfileAvatar(profile)}"
+          alt="${escapeHtml(nameLabel)}"
+        />
+        <div class="app-review-profile-copy">
+          <strong>${escapeHtml(nameLabel)}</strong>
+          <span>${escapeHtml(roleLabel)}</span>
+        </div>
+      </div>
+
+      <section class="app-review-section">
+        <div class="app-review-section-head">
+          <h4>Chọn số sao</h4>
+          <span>1 đến 5 sao</span>
+        </div>
+        <div class="app-review-stars" data-app-review-stars>
+          ${buildAppReviewStarMarkup(0, { interactive: true })}
+        </div>
+        <input type="hidden" name="rating" value="0" data-app-review-rating-input />
+        <p class="app-review-rating-hint" data-app-review-rating-hint>
+          Hãy chọn số sao phù hợp với trải nghiệm của bạn.
+        </p>
+      </section>
+
+      <section class="app-review-section">
+        <div class="app-review-section-head">
+          <h4>Nhận xét</h4>
+          <span data-app-review-count>0 / 1000</span>
+        </div>
+        <textarea
+          class="app-review-textarea"
+          name="comment"
+          rows="6"
+          maxlength="1000"
+          placeholder="Hãy chia sẻ trải nghiệm của bạn về EduKids..."
+          data-app-review-comment
+        ></textarea>
+      </section>
+
+      <div class="app-review-actions">
+        <button type="button" class="app-review-cancel-btn" data-app-review-cancel>Hủy</button>
+        <button type="submit" class="app-review-submit-btn">Gửi đánh giá</button>
+      </div>
+
+      <div class="app-review-feedback" data-app-review-feedback aria-live="polite"></div>
+    </form>
+  `;
+}
+
+function syncAppReviewModalStars(modal, rating) {
+  const normalizedRating = Math.max(0, Math.min(5, Number.parseInt(rating, 10) || 0));
+  const ratingInput = modal.querySelector("[data-app-review-rating-input]");
+  const hintNode = modal.querySelector("[data-app-review-rating-hint]");
+
+  if (ratingInput) {
+    ratingInput.value = String(normalizedRating);
+  }
+
+  modal.querySelectorAll("[data-app-review-rating]").forEach((button) => {
+    const value = Number.parseInt(button.dataset.appReviewRating || "0", 10);
+    const isActive = value <= normalizedRating;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(value === normalizedRating));
+  });
+
+  if (hintNode) {
+    hintNode.textContent =
+      normalizedRating > 0
+        ? `Bạn đã chọn ${normalizedRating} sao.`
+        : "Hãy chọn số sao phù hợp với trải nghiệm của bạn.";
+  }
+}
+
+async function openAppReviewModal() {
+  let profile = profileState.current || getCurrentAuthUser();
+
+  if (!profile?.userCode && window.EduKidsProfileService?.fetchCurrentProfile) {
+    try {
+      profile = await window.EduKidsProfileService.fetchCurrentProfile();
+      profileState.current = profile;
+    } catch (error) {
+      console.warn(error?.message || "Không thể tải hồ sơ để đánh giá.");
+      showToast(error?.message || "Không thể tải hồ sơ để đánh giá.", "error");
+      return;
+    }
+  }
+
+  if (!profile) {
+    showToast("Không tìm thấy thông tin người dùng.", "error");
+    return;
+  }
+
+  const modal = document.createElement("div");
+  modal.className = "modal-overlay app-review-overlay";
+  modal.innerHTML = `
+    <div class="modal app-review-modal">
+      <div class="modal-header">
+        <h3>Đánh giá EduKids</h3>
+        <button class="close-btn" type="button" aria-label="Đóng cửa sổ">×</button>
+      </div>
+      <div class="modal-content">
+        ${buildAppReviewModal(profile)}
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeModal = () => modal.remove();
+  const form = modal.querySelector("[data-app-review-form]");
+  const feedback = modal.querySelector("[data-app-review-feedback]");
+  const textarea = modal.querySelector("[data-app-review-comment]");
+  const countNode = modal.querySelector("[data-app-review-count]");
+
+  modal.querySelector(".close-btn")?.addEventListener("click", closeModal);
+  modal.querySelector("[data-app-review-cancel]")?.addEventListener("click", closeModal);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  syncAppReviewModalStars(modal, 0);
+
+  modal.querySelectorAll("[data-app-review-rating]").forEach((button) => {
+    button.addEventListener("click", () => {
+      syncAppReviewModalStars(modal, button.dataset.appReviewRating || "0");
+    });
+  });
+
+  if (textarea && countNode) {
+    const syncCount = () => {
+      countNode.textContent = `${String(textarea.value || "").length} / 1000`;
+    };
+
+    textarea.addEventListener("input", syncCount);
+    syncCount();
+  }
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const reviewService = window.EduKidsAppReviewService;
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalLabel = submitButton?.textContent || "Gửi đánh giá";
+    const formData = new FormData(form);
+    const rating = Number.parseInt(String(formData.get("rating") || "0"), 10);
+    const comment = String(formData.get("comment") || "").trim();
+
+    if (!Number.isFinite(rating) || rating < 1) {
+      if (feedback) {
+        feedback.textContent = "Vui lòng chọn số sao từ 1 đến 5.";
+      }
+      return;
+    }
+
+    if (!comment) {
+      if (feedback) {
+        feedback.textContent = "Vui lòng nhập nhận xét.";
+      }
+      return;
+    }
+
+    if (comment.length > 1000) {
+      if (feedback) {
+        feedback.textContent = "Nhận xét không được vượt quá 1000 ký tự.";
+      }
+      return;
+    }
+
+    try {
+      if (feedback) {
+        feedback.textContent = "Đang gửi đánh giá...";
+      }
+
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Đang gửi...";
+      }
+
+      if (!reviewService?.submitReview) {
+        throw new Error("Dịch vụ đánh giá chưa sẵn sàng.");
+      }
+
+      await reviewService.submitReview({
+        profile,
+        rating,
+        comment,
+      });
+
+      showToast("Đã gửi đánh giá thành công.", "success");
+      closeModal();
+      if (currentAdminPage === "admin-reviews") {
+        void syncAdminReviews({ forceRefresh: true });
+      }
+    } catch (error) {
+      if (feedback) {
+        feedback.textContent = error?.message || "Không thể gửi đánh giá.";
+      }
+      showToast(error?.message || "Không thể gửi đánh giá.", "error");
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = originalLabel;
+      }
+    }
+  });
+}
+
+function openConfirmModal({
+  title = "Xác nhận",
+  message = "",
+  confirmLabel = "Xác nhận",
+  cancelLabel = "Hủy",
+} = {}) {
+  return new Promise((resolve) => {
+    const modal = document.createElement("div");
+    modal.className = "modal-overlay confirm-modal-overlay";
+    modal.innerHTML = `
+      <div class="modal confirm-modal">
+        <div class="modal-header">
+          <h3>${escapeHtml(title)}</h3>
+          <button class="close-btn" type="button" aria-label="Đóng cửa sổ">×</button>
+        </div>
+        <div class="modal-content">
+          <div class="confirm-modal-body">${escapeHtml(message)}</div>
+          <div class="confirm-modal-actions">
+            <button type="button" class="confirm-modal-cancel-btn">${escapeHtml(cancelLabel)}</button>
+            <button type="button" class="confirm-modal-confirm-btn">${escapeHtml(confirmLabel)}</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const finish = (value) => {
+      if (!modal.isConnected) {
+        resolve(value);
+        return;
+      }
+
+      modal.remove();
+      resolve(value);
+    };
+
+    document.body.appendChild(modal);
+
+    modal.querySelector(".close-btn")?.addEventListener("click", () => finish(false));
+    modal.querySelector(".confirm-modal-cancel-btn")?.addEventListener("click", () => finish(false));
+    modal.querySelector(".confirm-modal-confirm-btn")?.addEventListener("click", () => finish(true));
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        finish(false);
+      }
+    });
+  });
+}
+
 document.addEventListener("click", (event) => {
+  const reviewButton = event.target.closest(
+    ".student-profile-review-btn, .teacher-profile-review-btn",
+  );
+
+  if (reviewButton) {
+    void openAppReviewModal();
+    return;
+  }
+
   const editButton = event.target.closest(
     ".student-profile-edit-btn, .teacher-profile-edit-btn",
   );

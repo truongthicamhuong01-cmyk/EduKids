@@ -635,6 +635,21 @@
               </div>
 
               <div class="student-profile-actions">
+                <button class="student-profile-review-btn" type="button">
+                  <span aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="presentation">
+                      <path
+                        d="M12 3.4l2.76 5.59 6.17.9-4.46 4.34 1.05 6.15L12 17.5l-5.52 2.88 1.05-6.15-4.46-4.34 6.17-.9L12 3.4z"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  Đánh giá ứng dụng
+                </button>
+
                 <button class="student-profile-edit-btn" type="button">
                   <span aria-hidden="true">
                     <svg viewBox="0 0 24 24" role="presentation">
@@ -1761,6 +1776,21 @@
               </div>
 
               <div class="teacher-profile-actions">
+                <button class="teacher-profile-review-btn" type="button">
+                  <span aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="presentation">
+                      <path
+                        d="M12 3.4l2.76 5.59 6.17.9-4.46 4.34 1.05 6.15L12 17.5l-5.52 2.88 1.05-6.15-4.46-4.34 6.17-.9L12 3.4z"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  Đánh giá ứng dụng
+                </button>
+
                 <button class="teacher-profile-edit-btn" type="button">
                   <span aria-hidden="true">
                     <svg viewBox="0 0 24 24" role="presentation">
@@ -2110,6 +2140,14 @@
             data-admin-page="admin-stats"
           >
             📊 Thống kê
+          </button>
+
+          <button
+            class="admin-nav-item"
+            type="button"
+            data-admin-page="admin-reviews"
+          >
+            ⭐ Đánh giá ứng dụng
           </button>
 
           <button
@@ -3321,6 +3359,56 @@
                 </table>
               </div>
             </section>
+          </section>
+        </section>
+
+        <section id="admin-reviews" class="admin-page">
+          <div class="admin-page-header">
+            <div>
+              <span class="admin-eyebrow">Phản hồi người dùng</span>
+              <h1>Đánh giá từ người dùng</h1>
+              <p>Theo dõi phản hồi của học sinh và giáo viên cho EduKids.</p>
+            </div>
+          </div>
+
+          <div class="admin-review-stats-grid">
+            <article class="admin-kpi-card" data-admin-reviews-stat="total-reviews"></article>
+            <article class="admin-kpi-card" data-admin-reviews-stat="average-rating"></article>
+            <article class="admin-kpi-card" data-admin-reviews-stat="five-star-count"></article>
+            <article class="admin-kpi-card" data-admin-reviews-stat="one-star-count"></article>
+          </div>
+
+          <section class="admin-data-card">
+            <header class="admin-data-toolbar admin-review-toolbar">
+              <div class="admin-review-rating-filters" aria-label="Lọc theo số sao">
+                <button type="button" class="admin-review-filter-btn active" data-admin-reviews-rating-filter="all" aria-pressed="true">Tất cả</button>
+                <button type="button" class="admin-review-filter-btn" data-admin-reviews-rating-filter="5" aria-pressed="false">5 sao</button>
+                <button type="button" class="admin-review-filter-btn" data-admin-reviews-rating-filter="4" aria-pressed="false">4 sao</button>
+                <button type="button" class="admin-review-filter-btn" data-admin-reviews-rating-filter="3" aria-pressed="false">3 sao</button>
+                <button type="button" class="admin-review-filter-btn" data-admin-reviews-rating-filter="2" aria-pressed="false">2 sao</button>
+                <button type="button" class="admin-review-filter-btn" data-admin-reviews-rating-filter="1" aria-pressed="false">1 sao</button>
+              </div>
+
+              <label class="admin-filter-field">
+                <span>Vai trò</span>
+                <select aria-label="Lọc theo vai trò" data-admin-reviews-role-filter>
+                  <option value="all">Tất cả</option>
+                  <option value="student">Học sinh</option>
+                  <option value="teacher">Giáo viên</option>
+                </select>
+              </label>
+            </header>
+
+            <div class="admin-review-summary" data-admin-reviews-summary>Đang tải dữ liệu đánh giá...</div>
+
+            <div class="admin-review-list" data-admin-reviews-list>
+              <div class="admin-empty-state is-large">
+                <div>
+                  <p>Đang tải đánh giá</p>
+                  <span>Hệ thống sẽ hiển thị phản hồi từ Firestore.</span>
+                </div>
+              </div>
+            </div>
           </section>
         </section>
 
