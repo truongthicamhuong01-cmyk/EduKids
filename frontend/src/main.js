@@ -111,6 +111,12 @@ const adminContentState = {
   },
   pendingPromise: null,
   hasData: false,
+  detail: {
+    visible: false,
+    subject: "",
+    grade: "",
+    bucket: null,
+  },
 };
 const adminAssignmentsState = {
   loading: false,
@@ -428,7 +434,13 @@ function redirectToLoginRoute() {
 
 function getSidebarAvatarPath(profile) {
   if (window.EduKidsProfileService?.getAvatarPathFromProfile) {
-    return window.EduKidsProfileService.getAvatarPathFromProfile(profile);
+    const avatarPath = window.EduKidsProfileService.getAvatarPathFromProfile(profile);
+
+    if (normalizeRole(profile?.role) === "admin") {
+      return "assets/admin.png";
+    }
+
+    return avatarPath;
   }
 
   const avatar = String(profile?.avatar || profile?.photoURL || "").trim();
@@ -447,6 +459,10 @@ function getSidebarAvatarPath(profile) {
 
   const role = normalizeRole(profile?.role) || "student";
   const gender = profile?.gender === "female" ? "female" : "male";
+
+  if (role === "admin") {
+    return "assets/admin.png";
+  }
 
   if (role === "teacher") {
     return `assets/userAvatar/${gender === "female" ? "femaleteacher.png" : "maleteacher.png"}`;
@@ -478,7 +494,12 @@ function getSidebarUserData(profile) {
     role,
     name,
     code,
-    roleLabel: role === "teacher" ? "Giáo viên" : "Học sinh",
+    roleLabel:
+      role === "admin"
+        ? "Quản trị viên"
+        : role === "teacher"
+          ? "Giáo viên"
+          : "Học sinh",
     avatar: getSidebarAvatarPath(profile),
   };
 }
@@ -667,9 +688,37 @@ function getAdminContentTopicBody(tabKey) {
   ) || null;
 }
 
+function getAdminContentDrawerRoot() {
+  return getAdminContentRoot()?.querySelector("[data-admin-content-drawer]") || null;
+}
+
+function getAdminContentDrawerPanel() {
+  return getAdminContentRoot()?.querySelector("[data-admin-content-drawer-panel]") || null;
+}
+
+function getAdminContentDrawerTitleNode() {
+  return getAdminContentRoot()?.querySelector("[data-admin-content-drawer-title]") || null;
+}
+
+function getAdminContentDrawerSubtitleNode() {
+  return getAdminContentRoot()?.querySelector("[data-admin-content-drawer-subtitle]") || null;
+}
+
+function getAdminContentDrawerSummaryNode(key) {
+  return getAdminContentRoot()?.querySelector(`[data-admin-content-drawer-summary="${key}"]`) || null;
+}
+
+function getAdminContentDrawerListNode() {
+  return getAdminContentRoot()?.querySelector("[data-admin-content-drawer-list]") || null;
+}
+
 function getAdminContentRowLabel(subject, grade) {
   const subjectLabel = subject === "english" ? "Tiếng Anh" : "Toán";
   return `${subjectLabel} lớp ${grade}`;
+}
+
+function getAdminContentSubjectLabel(subject) {
+  return subject === "english" ? "Tiếng Anh" : "Toán";
 }
 
 function getAdminContentStatusLabel(versionCount) {
@@ -685,22 +734,28 @@ function buildAdminContentRow(bucket) {
   const statusLabel = getAdminContentStatusLabel(versionCount);
   const statusClass = getAdminContentStatusClass(versionCount);
   const topicCount = Array.isArray(bucket?.topics) ? bucket.topics.length : 0;
+  const topicLabel = topicCount > 0 ? `${formatStatValue(topicCount)} topic` : "Chưa có topic";
+  const accuracyLabel = Number.isFinite(Number(bucket?.accuracy))
+    ? `${formatStatValue(bucket.accuracy)}%`
+    : "Chưa có dữ liệu";
 
   return `
     <tr data-admin-content-row data-admin-content-subject="${escapeHtml(String(bucket?.subject || ""))}" data-admin-content-grade="${escapeHtml(String(bucket?.grade || ""))}">
       <td>
         <div class="admin-topic-cell">
-          <strong>${escapeHtml(bucket?.title || getAdminContentRowLabel(bucket?.subject, bucket?.grade))}</strong>
-          <span>${escapeHtml(bucket?.subtitle || `Khối ${bucket?.grade || "--"}`)}</span>
+          <button type="button" class="admin-topic-cell-button" data-admin-content-action="view" data-admin-content-subject="${escapeHtml(String(bucket?.subject || ""))}" data-admin-content-grade="${escapeHtml(String(bucket?.grade || ""))}">
+            ${escapeHtml(bucket?.title || getAdminContentRowLabel(bucket?.subject, bucket?.grade))}
+          </button>
+          <span>${escapeHtml(bucket?.subtitle || `Khối ${bucket?.grade || "--"}`)} · ${escapeHtml(topicLabel)} · ${escapeHtml(accuracyLabel)}</span>
         </div>
       </td>
       <td>${versionCount > 0 ? `${escapeHtml(formatStatValue(versionCount))} version` : "Chưa có version nào"}</td>
       <td><span class="admin-topic-badge ${escapeHtml(statusClass)}">${escapeHtml(statusLabel)}</span></td>
       <td>
         <div class="admin-topic-actions">
-          <button type="button" data-admin-content-action="view" data-admin-content-subject="${escapeHtml(String(bucket?.subject || ""))}" data-admin-content-grade="${escapeHtml(String(bucket?.grade || ""))}">Xem chi tiết</button>
-          <button type="button">Sửa</button>
-          <button type="button" class="is-danger">Xóa</button>
+          <button type="button" data-admin-content-action="view" data-admin-content-subject="${escapeHtml(String(bucket?.subject || ""))}" data-admin-content-grade="${escapeHtml(String(bucket?.grade || ""))}">Chi tiết</button>
+          <button type="button" disabled>Sửa</button>
+          <button type="button" class="is-danger" disabled>Xóa</button>
         </div>
       </td>
     </tr>
@@ -754,6 +809,7 @@ function renderAdminContentPanel(tabKey) {
 function renderAdminContentPage() {
   renderAdminContentPanel("math");
   renderAdminContentPanel("english");
+  renderAdminContentDrawer();
 }
 
 function getAdminContentBucket(tabKey, grade) {
@@ -766,6 +822,188 @@ function getAdminContentBucket(tabKey, grade) {
   ).find((bucket) => String(bucket?.grade || "").trim() === normalizedGrade) || null;
 }
 
+function getAdminContentTopicAccuracyLabel(topic) {
+  if (!topic || !Number.isFinite(Number(topic.totalAnswered)) || Number(topic.totalAnswered) <= 0) {
+    return "Chưa có dữ liệu";
+  }
+
+  const accuracy = Number(topic.percentage);
+  return Number.isFinite(accuracy) ? `${formatStatValue(Math.max(0, Math.min(100, Math.round(accuracy))))}%` : "Chưa có dữ liệu";
+}
+
+function getAdminContentTopicVersionLabel(topic) {
+  const versionCount = Math.max(0, Number(topic?.versionCount) || 0);
+
+  return versionCount > 0 ? `${formatStatValue(versionCount)} version` : "Chưa có version nào";
+}
+
+function getAdminContentTopicStatusLabel(topic) {
+  const versionCount = Math.max(0, Number(topic?.versionCount) || 0);
+  return versionCount > 0 ? "Đã có version" : "Chưa có version nào";
+}
+
+function getAdminContentTopicAccuracyState(topic) {
+  if (!topic || !Number.isFinite(Number(topic.totalAnswered)) || Number(topic.totalAnswered) <= 0) {
+    return "is-gray";
+  }
+
+  const accuracy = Math.max(0, Math.min(100, Math.round(Number(topic.percentage) || 0)));
+
+  if (accuracy >= 80) {
+    return "is-green";
+  }
+
+  if (accuracy >= 60) {
+    return "is-yellow";
+  }
+
+  return "is-red";
+}
+
+function buildAdminContentTopicRow(topic, index) {
+  const versionLabel = getAdminContentTopicVersionLabel(topic);
+  const accuracyLabel = getAdminContentTopicAccuracyLabel(topic);
+  const statusLabel = getAdminContentTopicStatusLabel(topic);
+  const topicTitle = String(topic?.title || topic?.topicId || `Topic ${index + 1}`).trim() || `Topic ${index + 1}`;
+  const accuracyValue = Number.isFinite(Number(topic?.percentage))
+    ? Math.max(0, Math.min(100, Math.round(Number(topic.percentage) || 0)))
+    : 0;
+  const accuracyState = getAdminContentTopicAccuracyState(topic);
+  const hasData = Number(topic?.totalAnswered) > 0;
+
+  return `
+    <article class="admin-content-topic-card ${escapeHtml(accuracyState)}">
+      <div class="admin-content-topic-card-head">
+        <div class="admin-content-topic-copy">
+          <strong>${escapeHtml(topicTitle)}</strong>
+          <span>${escapeHtml(String(topic?.topicId || "--"))}</span>
+        </div>
+
+        <span class="admin-topic-badge ${hasData ? "is-green" : "is-orange"}">
+          ${escapeHtml(hasData ? accuracyLabel : "Chưa có dữ liệu")}
+        </span>
+      </div>
+
+      <div class="admin-content-topic-progress">
+        <div class="admin-content-topic-progress-head">
+          <span>Độ chính xác</span>
+          <strong>${escapeHtml(accuracyLabel)}</strong>
+        </div>
+
+        <div class="admin-content-topic-progress-track" aria-hidden="true">
+          <div
+            class="admin-content-topic-progress-fill"
+            style="width: ${hasData ? `${accuracyValue}%` : "0%"}"
+          ></div>
+        </div>
+      </div>
+
+      <div class="admin-content-topic-card-footer">
+        <div class="admin-content-topic-metric">
+          <span>Số version</span>
+          <strong>${escapeHtml(versionLabel)}</strong>
+        </div>
+
+        <div class="admin-content-topic-metric">
+          <span>Trạng thái</span>
+          <strong>${escapeHtml(statusLabel)}</strong>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderAdminContentDrawer() {
+  const drawer = getAdminContentDrawerRoot();
+  const panel = getAdminContentDrawerPanel();
+  const titleNode = getAdminContentDrawerTitleNode();
+  const subtitleNode = getAdminContentDrawerSubtitleNode();
+  const summaryTopicsNode = getAdminContentDrawerSummaryNode("topics");
+  const summaryDataNode = getAdminContentDrawerSummaryNode("data");
+  const summaryVersionNode = getAdminContentDrawerSummaryNode("versions");
+  const summaryAccuracyNode = getAdminContentDrawerSummaryNode("accuracy");
+  const listNode = getAdminContentDrawerListNode();
+  const detail = adminContentState.detail || {};
+
+  if (!drawer || !panel || !listNode) {
+    return;
+  }
+
+  if (!detail.visible || !detail.bucket) {
+    drawer.hidden = true;
+    document.body.classList.remove("admin-content-drawer-open");
+    return;
+  }
+
+  const bucket = detail.bucket;
+  const topics = Array.isArray(bucket.topics) ? bucket.topics : [];
+  const topicCount = topics.length;
+  const topicsWithData = topics.filter((topic) => Number(topic.totalAnswered) > 0).length;
+  const versionCount = Math.max(0, Number(bucket.versionCount) || 0);
+  const accuracyValue = Math.max(0, Math.min(100, Math.round(Number(bucket.accuracy) || 0)));
+  const accuracyLabel = Number.isFinite(Number(bucket.accuracy))
+    ? `${formatStatValue(accuracyValue)}%`
+    : "Chưa có dữ liệu";
+  const title = bucket.title || getAdminContentRowLabel(bucket.subject, bucket.grade);
+
+  drawer.hidden = false;
+  drawer.classList.add("is-open");
+  document.body.classList.add("admin-content-drawer-open");
+
+  if (titleNode) {
+    titleNode.textContent = title;
+  }
+
+  if (subtitleNode) {
+    subtitleNode.textContent = `${bucket.subtitle || `Khối ${bucket.grade || "--"}`} · ${getAdminContentSubjectLabel(bucket.subject)} · ${formatStatValue(topicCount)} topic`;
+  }
+
+  if (summaryTopicsNode) {
+    summaryTopicsNode.textContent = formatStatValue(topicCount);
+  }
+
+  if (summaryDataNode) {
+    summaryDataNode.textContent = topicsWithData > 0 ? `${formatStatValue(topicsWithData)} topic có dữ liệu` : "Chưa có dữ liệu";
+  }
+
+  if (summaryVersionNode) {
+    summaryVersionNode.textContent = versionCount > 0 ? `${formatStatValue(versionCount)} version` : "Chưa có version nào";
+  }
+
+  if (summaryAccuracyNode) {
+    summaryAccuracyNode.textContent = accuracyLabel;
+  }
+
+  if (topics.length === 0) {
+    listNode.innerHTML = `
+      <div class="admin-empty-state is-large">
+        <div>
+          <p>Chưa có dữ liệu</p>
+          <span>Không có topic nào được ghi nhận cho lớp này.</span>
+        </div>
+      </div>
+    `;
+  } else {
+    listNode.innerHTML = topics
+      .map((topic, index) => buildAdminContentTopicRow(topic, index))
+      .join("");
+  }
+
+  requestAnimationFrame(() => {
+    panel.scrollTop = 0;
+  });
+}
+
+function closeAdminContentDetail() {
+  adminContentState.detail = {
+    visible: false,
+    subject: "",
+    grade: "",
+    bucket: null,
+  };
+  renderAdminContentDrawer();
+}
+
 function showAdminContentDetail(tabKey, grade) {
   const bucket = getAdminContentBucket(tabKey, grade);
 
@@ -774,14 +1012,14 @@ function showAdminContentDetail(tabKey, grade) {
     return;
   }
 
-  const lines = [
-    `Tên topic: ${bucket.title || getAdminContentRowLabel(tabKey, grade)}`,
-    `Số lượng version: ${Number(bucket.versionCount) > 0 ? `${bucket.versionCount} version` : "Chưa có version nào"}`,
-    `Trạng thái: ${bucket.status || getAdminContentStatusLabel(bucket.versionCount)}`,
-    `Số topic con: ${formatStatValue(Array.isArray(bucket.topics) ? bucket.topics.length : 0)}`,
-  ];
+  adminContentState.detail = {
+    visible: true,
+    subject: tabKey,
+    grade,
+    bucket,
+  };
 
-  window.alert(lines.join("\n"));
+  renderAdminContentDrawer();
 }
 
 async function syncAdminContent({ forceRefresh = false } = {}) {
@@ -3571,6 +3809,10 @@ async function deleteAdminStudent(studentId) {
 }
 
 function changeAdminPage(pageId) {
+  if (pageId !== "admin-content" && adminContentState.detail?.visible) {
+    closeAdminContentDetail();
+  }
+
   currentAdminPage = pageId || ADMIN_DEFAULT_PAGE;
   showAdminPage(currentAdminPage);
 
@@ -3753,6 +3995,24 @@ function bindAdminEventsOnce() {
       }
     }
 
+    const contentDrawerClose = event.target.closest(
+      "[data-admin-content-drawer-close]",
+    );
+
+    if (contentDrawerClose) {
+      closeAdminContentDetail();
+      return;
+    }
+
+    const contentDrawerBackdrop = event.target.closest(
+      "[data-admin-content-drawer-backdrop]",
+    );
+
+    if (contentDrawerBackdrop) {
+      closeAdminContentDetail();
+      return;
+    }
+
     const aiActionButton = event.target.closest("[data-admin-ai-action]");
 
     if (aiActionButton) {
@@ -3867,6 +4127,16 @@ function bindAdminEventsOnce() {
     ) {
       setAdminAssignmentsFiltersFromInputs();
       renderAdminAssignmentsPage();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") {
+      return;
+    }
+
+    if (adminContentState.detail?.visible) {
+      closeAdminContentDetail();
     }
   });
 

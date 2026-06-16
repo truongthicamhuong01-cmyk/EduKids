@@ -1,4 +1,5 @@
 const ApiError = require("../utils/apiError");
+const { db } = require("../firebase");
 const { readTopicsFile } = require("./aiService");
 const {
   listQuizVersions,
@@ -10,6 +11,20 @@ const { getUserTopicProgress } = require("./quizSelectionService");
 
 function normalizeFilter(value) {
   return String(value || "").trim();
+}
+
+function normalizeProgressKeyPart(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function buildTopicProgressKey({ grade, subject, topicId }) {
+  return [
+    normalizeProgressKeyPart(grade),
+    normalizeProgressKeyPart(subject),
+    normalizeProgressKeyPart(topicId),
+  ]
+    .filter(Boolean)
+    .join(":");
 }
 
 function normalizeTopicRecord(topic) {
@@ -29,6 +44,10 @@ async function listTopics({ grade, subject, userId } = {}) {
   const normalizedGrade = normalizeFilter(grade);
   const normalizedSubject = normalizeFilter(subject).toLowerCase();
   const normalizedUserId = normalizeFilter(userId);
+  const useAggregateProgress = !normalizedUserId && Boolean(db?.collectionGroup);
+  const aggregateProgressMap = useAggregateProgress
+    ? await loadAggregateTopicProgressMap()
+    : new Map();
 
   const filteredTopics = topics.filter((topic) => {
     if (normalizedGrade && topic.grade !== normalizedGrade) {
@@ -53,7 +72,7 @@ async function listTopics({ grade, subject, userId } = {}) {
       const legacyQuiz = versions.length === 0 ? await getLegacyQuizData(topic) : null;
       const progress = normalizedUserId
         ? await getUserTopicProgress(normalizedUserId, topic.topicId).catch(() => null)
-        : null;
+        : aggregateProgressMap.get(buildTopicProgressKey(topic)) || null;
       const totalAnswered = Math.max(0, Number(progress?.totalAnswered) || 0);
       const totalCorrect = Math.max(0, Number(progress?.totalCorrect) || 0);
       const percentage =
@@ -85,11 +104,62 @@ async function listTopics({ grade, subject, userId } = {}) {
         totalAnswered,
         totalCorrect,
         percentage,
+        hasProgressData: totalAnswered > 0,
       };
     })
   );
 
   return topicsWithAvailability;
+}
+
+async function loadAggregateTopicProgressMap() {
+  if (!db?.collectionGroup) {
+    return new Map();
+  }
+
+  try {
+    const snapshot = await db.collectionGroup("topics").get();
+    const progressBuckets = new Map();
+
+    snapshot.docs.forEach((doc) => {
+      const data = doc.data() || {};
+      const topicId = normalizeFilter(data.topicId || doc.id);
+      const grade = normalizeFilter(data.grade);
+      const subject = normalizeFilter(data.subject).toLowerCase();
+      const key = buildTopicProgressKey({ grade, subject, topicId });
+      const totalAnswered = Math.max(0, Number(data.totalAnswered) || 0);
+      const totalCorrect = Math.max(0, Number(data.totalCorrect) || 0);
+      const percentage = Number.isFinite(Number(data.percentage))
+        ? Math.max(0, Math.min(100, Math.round(Number(data.percentage))))
+        : totalAnswered > 0
+          ? Math.round((totalCorrect / totalAnswered) * 100)
+          : 0;
+
+      if (!key) {
+        return;
+      }
+
+      const bucket = progressBuckets.get(key) || {
+        totalAnswered: 0,
+        totalCorrect: 0,
+        percentage: 0,
+      };
+
+      bucket.totalAnswered += totalAnswered;
+      bucket.totalCorrect += totalCorrect;
+      bucket.percentage =
+        bucket.totalAnswered > 0
+          ? Math.round((bucket.totalCorrect / bucket.totalAnswered) * 100)
+          : Math.max(bucket.percentage, percentage);
+
+      progressBuckets.set(key, bucket);
+    });
+
+    return progressBuckets;
+  } catch (error) {
+    console.warn("[EduKids][quizReadService] Unable to load aggregate topic progress:", error);
+    return new Map();
+  }
 }
 
 async function getQuizByTopic({ grade, subject, topicId }) {

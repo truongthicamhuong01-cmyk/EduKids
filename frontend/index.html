@@ -2049,8 +2049,9 @@
           >
             <img
               data-sidebar-avatar
-              src="/assets/userAvatar/maleteacher.png"
+              src="/assets/admin.png"
               alt="ADMIN"
+              onerror="this.onerror=null;this.src='/assets/userAvatar/maleteacher.png';"
             />
 
             <div class="admin-card-info">
@@ -2077,10 +2078,6 @@
             </div>
 
             <div class="admin-hero-summary">
-              <div class="admin-hero-summary-pill">
-                <span>●</span>
-                Dữ liệu thật
-              </div>
               <div class="admin-hero-summary-meta">
                 <strong>Admin Dashboard</strong>
                 <span>Thiết kế hiện đại, bo góc lớn</span>
@@ -2112,21 +2109,21 @@
 
             <article class="admin-kpi-card is-orange">
               <div class="admin-kpi-icon">📝</div>
-              <small>Tổng bài tập đã giao</small>
+              <small>Tổng bài tập</small>
               <strong data-admin-overview-stat="total-assignments">--</strong>
               <span data-admin-overview-note="total-assignments">Đang tải dữ liệu</span>
             </article>
 
             <article class="admin-kpi-card is-purple">
               <div class="admin-kpi-icon">🤖</div>
-              <small>Lượt sử dụng AI hôm nay</small>
+              <small>Lượt sử dụng AI</small>
               <strong data-admin-overview-stat="ai-usage-today">--</strong>
               <span data-admin-overview-note="ai-usage-today">Chưa có log AI</span>
             </article>
 
             <article class="admin-kpi-card is-red">
               <div class="admin-kpi-icon">📊</div>
-              <small>Điểm trung bình toàn hệ thống</small>
+              <small>Điểm trung bình hệ thống</small>
               <strong data-admin-overview-stat="average-score">--<span>/10</span></strong>
               <span data-admin-overview-note="average-score">Đang tải dữ liệu</span>
             </article>
@@ -2618,6 +2615,72 @@
               </div>
             </div>
           </section>
+
+          <div class="admin-content-drawer" data-admin-content-drawer hidden>
+            <div
+              class="admin-content-drawer-backdrop"
+              data-admin-content-drawer-backdrop
+              aria-hidden="true"
+            ></div>
+
+            <aside
+              class="admin-content-drawer-panel"
+              data-admin-content-drawer-panel
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="admin-content-drawer-title"
+            >
+              <header class="admin-content-drawer-head">
+                <div>
+                  <span class="admin-eyebrow">Chi tiết nội dung</span>
+                  <h2 id="admin-content-drawer-title" data-admin-content-drawer-title>
+                    --
+                  </h2>
+                  <p data-admin-content-drawer-subtitle>--</p>
+                </div>
+
+                <button
+                  type="button"
+                  class="admin-content-drawer-close"
+                  data-admin-content-drawer-close
+                  aria-label="Đóng chi tiết nội dung"
+                >
+                  ×
+                </button>
+              </header>
+
+              <div class="admin-content-drawer-summary">
+                <div class="admin-content-drawer-summary-card">
+                  <span>Tổng topic</span>
+                  <strong data-admin-content-drawer-summary="topics">--</strong>
+                </div>
+
+                <div class="admin-content-drawer-summary-card">
+                  <span>Có dữ liệu</span>
+                  <strong data-admin-content-drawer-summary="data">--</strong>
+                </div>
+
+                <div class="admin-content-drawer-summary-card">
+                  <span>Số version</span>
+                  <strong data-admin-content-drawer-summary="versions">--</strong>
+                </div>
+
+                <div class="admin-content-drawer-summary-card">
+                  <span>Độ chính xác TB</span>
+                  <strong data-admin-content-drawer-summary="accuracy">--</strong>
+                </div>
+              </div>
+
+              <div class="admin-content-drawer-list" data-admin-content-drawer-list>
+                <div class="admin-empty-state is-large">
+                  <div>
+                    <p>Chưa có dữ liệu</p>
+                    <span>Chọn một lớp để xem danh sách topic chi tiết.</span>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
         </section>
 
         <section id="admin-assignments" class="admin-page">
