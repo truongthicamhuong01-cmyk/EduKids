@@ -2452,7 +2452,7 @@
             <div>
               <span class="admin-eyebrow">Quản trị thành viên</span>
               <h1>Quản lý giáo viên</h1>
-              <p>Tìm kiếm, thêm giáo viên và quản lý trạng thái tài khoản.</p>
+              <p>Tìm kiếm và quản lý trạng thái tài khoản giáo viên.</p>
             </div>
           </div>
 
@@ -2532,9 +2532,6 @@
                 </select>
               </label>
 
-              <button type="button" class="admin-add-button">
-                + Thêm giáo viên
-              </button>
             </header>
 
             <div class="admin-table-wrap">
@@ -2651,7 +2648,6 @@
                 </select>
               </label>
 
-              <button type="button" class="admin-add-button">+ Thêm lớp</button>
             </header>
 
             <div class="admin-class-grid" data-admin-classes-grid>
@@ -2945,9 +2941,6 @@
                 </select>
               </label>
 
-              <button type="button" class="admin-add-button">
-                + Thêm bài tập
-              </button>
             </header>
 
             <div class="admin-table-wrap">
@@ -3059,9 +3052,10 @@
 
               <div class="admin-ai-toggle-list">
                 <div class="admin-ai-toggle-row">
-                  <div>
+                  <div class="admin-ai-toggle-copy">
                     <strong>AI Coach</strong>
-                    <span>Hỗ trợ phân tích học tập cá nhân</span>
+                    <span>Hỗ trợ học sinh phân tích kết quả học tập.</span>
+                    <small data-admin-ai-toggle-state="coach">Đang bật</small>
                   </div>
                   <button
                     type="button"
@@ -3074,13 +3068,17 @@
                 </div>
 
                 <div class="admin-ai-toggle-row">
-                  <div>
-                    <strong>AI chấm bài</strong>
-                    <span>Tự động chấm và gợi ý điểm</span>
+                  <div class="admin-ai-toggle-copy">
+                    <strong>AI Học theo chủ đề</strong>
+                    <span>Tạo nội dung AI cho luồng học theo chủ đề.</span>
+                    <small data-admin-ai-toggle-state="topic-learning"
+                      >Đang bật</small
+                    >
                   </div>
                   <button
                     type="button"
                     class="admin-switch is-on"
+                    data-admin-ai-toggle="topic-learning"
                     aria-pressed="true"
                   >
                     <span></span>
@@ -3088,14 +3086,18 @@
                 </div>
 
                 <div class="admin-ai-toggle-row">
-                  <div>
-                    <strong>AI gợi ý bài tập</strong>
-                    <span>Đề xuất lộ trình học phù hợp</span>
+                  <div class="admin-ai-toggle-copy">
+                    <strong>AI Tạo bài tập giáo viên</strong>
+                    <span>Cho phép giáo viên sinh đề bằng AI.</span>
+                    <small data-admin-ai-toggle-state="assignment"
+                      >Đang bật</small
+                    >
                   </div>
                   <button
                     type="button"
-                    class="admin-switch"
-                    aria-pressed="false"
+                    class="admin-switch is-on"
+                    data-admin-ai-toggle="assignment"
+                    aria-pressed="true"
                   >
                     <span></span>
                   </button>
@@ -3162,6 +3164,7 @@
                 <button
                   type="button"
                   class="admin-stats-range-btn active"
+                  data-admin-stats-range="week"
                   aria-pressed="true"
                 >
                   Tuần
@@ -3169,6 +3172,7 @@
                 <button
                   type="button"
                   class="admin-stats-range-btn"
+                  data-admin-stats-range="month"
                   aria-pressed="false"
                 >
                   Tháng
@@ -3176,15 +3180,12 @@
                 <button
                   type="button"
                   class="admin-stats-range-btn"
+                  data-admin-stats-range="year"
                   aria-pressed="false"
                 >
                   Năm
                 </button>
               </div>
-
-              <button type="button" class="admin-add-button">
-                Xem báo cáo
-              </button>
             </header>
 
             <div class="admin-stats-grid">
@@ -3193,7 +3194,7 @@
               >
                 <div class="admin-panel-head">
                   <div>
-                    <h2>Điểm trung bình theo tháng</h2>
+                    <h2>Điểm trung bình theo thời gian</h2>
                     <p>Dữ liệu thật từ các bài nộp hiện có</p>
                   </div>
                   <span class="admin-panel-chip is-blue">Trend</span>
@@ -3335,7 +3336,7 @@
               <div class="admin-panel-head">
                 <div>
                   <h2>Nhóm Cấu hình</h2>
-                  <p>Kiểm soát đăng ký, AI và trạng thái hệ thống</p>
+                  <p>Kiểm soát đăng ký và trạng thái hệ thống</p>
                 </div>
                 <span class="admin-panel-chip is-blue">Config</span>
               </div>
@@ -3367,60 +3368,6 @@
                     type="button"
                     class="admin-switch is-on"
                     data-admin-settings-toggle="registration.teacher"
-                    aria-pressed="true"
-                  >
-                    <span></span>
-                  </button>
-                </div>
-
-                <div class="admin-settings-row">
-                  <div>
-                    <strong>Bật/Tắt AI Coach</strong>
-                    <span
-                      >Chặn AI Coach khi cần tắt tính năng phân tích học
-                      tập</span
-                    >
-                  </div>
-                  <button
-                    type="button"
-                    class="admin-switch is-on"
-                    data-admin-settings-toggle="ai.coach"
-                    aria-pressed="true"
-                  >
-                    <span></span>
-                  </button>
-                </div>
-
-                <div class="admin-settings-row">
-                  <div>
-                    <strong>Bật/Tắt AI Assignment</strong>
-                    <span
-                      >Chặn sinh đề AI cho bài tập khi tính năng không khả
-                      dụng</span
-                    >
-                  </div>
-                  <button
-                    type="button"
-                    class="admin-switch is-on"
-                    data-admin-settings-toggle="ai.assignment"
-                    aria-pressed="true"
-                  >
-                    <span></span>
-                  </button>
-                </div>
-
-                <div class="admin-settings-row">
-                  <div>
-                    <strong>Bật/Tắt AI Phân tích học tập</strong>
-                    <span
-                      >Áp dụng cho các luồng phân tích học tập của hệ
-                      thống</span
-                    >
-                  </div>
-                  <button
-                    type="button"
-                    class="admin-switch is-on"
-                    data-admin-settings-toggle="ai.learning"
                     aria-pressed="true"
                   >
                     <span></span>

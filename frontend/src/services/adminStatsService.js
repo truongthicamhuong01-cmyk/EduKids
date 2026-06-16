@@ -534,6 +534,13 @@
 
     if (!firestore) {
       return {
+        source: {
+          teacherDocs: [],
+          classDocs: [],
+          submissionDocs: [],
+          topicDocs: [],
+          topicCatalog: [],
+        },
         charts: {
           monthlyAverageScores: [],
         },
@@ -580,6 +587,13 @@
     const topClasses = buildTopClasses(classDocs, teacherNameById, submissionDocs);
 
     return {
+      source: {
+        teacherDocs,
+        classDocs,
+        submissionDocs: (Array.isArray(submissionDocs) ? submissionDocs : []).map(normalizeSubmission),
+        topicDocs: normalizedTopicDocs,
+        topicCatalog,
+      },
       charts: {
         monthlyAverageScores,
       },

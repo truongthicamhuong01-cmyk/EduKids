@@ -1118,7 +1118,7 @@ body.auth-mode .app {
 }
 
 .admin-data-toolbar-teacher {
-  grid-template-columns: minmax(0, 1.9fr) 180px 180px 150px;
+  grid-template-columns: minmax(0, 1.9fr) 180px 180px;
 }
 
 .admin-search-field,
@@ -1158,7 +1158,8 @@ body.auth-mode .app {
 .admin-search-icon {
   position: absolute;
   left: 14px;
-  top: 33px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 16px;
   height: 16px;
   color: #92a1bf;
@@ -1337,7 +1338,12 @@ body.auth-mode .app {
   color: #4b5a76;
   border-radius: 10px;
   padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-size: 12px;
+  line-height: 1;
   font-weight: 800;
   cursor: pointer;
   transition:
@@ -1424,7 +1430,7 @@ body.auth-mode .app {
 
 .admin-class-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) 190px 150px;
+  grid-template-columns: minmax(0, 1.7fr) 190px;
   gap: 12px;
   align-items: end;
   margin-bottom: 18px;
@@ -1636,7 +1642,12 @@ body.auth-mode .app {
   color: #496081;
   border-radius: 12px;
   padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-size: 13px;
+  line-height: 1;
   font-weight: 800;
   cursor: pointer;
   transition:
@@ -1863,7 +1874,12 @@ body.auth-mode .app {
   color: #4b5a76;
   border-radius: 10px;
   padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-size: 12px;
+  line-height: 1;
   font-weight: 800;
   cursor: pointer;
   transition:
@@ -1962,6 +1978,9 @@ body.auth-mode .app {
   font-weight: 600;
   cursor: pointer;
   flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
 }
 
 .admin-content-drawer-close:hover,
@@ -2202,7 +2221,7 @@ body.auth-mode .app {
 }
 
 .admin-data-toolbar-assignment {
-  grid-template-columns: minmax(0, 1.7fr) 160px 160px 150px;
+  grid-template-columns: minmax(0, 1.7fr) 160px;
 }
 
 .admin-assign-cell strong {
@@ -2268,6 +2287,11 @@ body.auth-mode .app {
   background: #f8fbff;
 }
 
+.admin-ai-toggle-copy {
+  display: grid;
+  gap: 4px;
+}
+
 .admin-ai-toggle-row strong {
   display: block;
   font-size: 14px;
@@ -2284,34 +2308,70 @@ body.auth-mode .app {
   color: #72809a;
 }
 
+.admin-ai-toggle-row small {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #eafaf0;
+  color: #1f8f53;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.admin-ai-toggle-row small.is-off {
+  background: #fff0f0;
+  color: #c73e3e;
+}
+
 .admin-switch {
   width: 56px;
   height: 32px;
   border: none;
   border-radius: 999px;
   background: #d7deef;
-  padding: 3px;
+  padding: 0;
   flex: none;
   cursor: pointer;
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  transition:
+    background-color 0.22s ease,
+    box-shadow 0.22s ease;
 }
 
 .admin-switch span {
-  display: block;
-  width: 26px;
-  height: 26px;
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: #ffffff;
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.14);
-  transition: transform 0.2s ease;
+  transform: translateY(-50%);
+  transition:
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s ease;
+  will-change: transform;
 }
 
 .admin-switch.is-on {
   background: linear-gradient(180deg, #4f7bff 0%, #355fe0 100%);
+  box-shadow:
+    inset 0 1px 2px rgba(15, 23, 42, 0.08),
+    0 0 0 1px rgba(53, 95, 224, 0.08);
 }
 
 .admin-switch.is-on span {
-  transform: translateX(24px);
+  transform: translate(24px, -50%);
 }
 
 .admin-ai-actions {
@@ -2358,6 +2418,9 @@ body.auth-mode .app {
   place-items: center;
   background: #eef2ff;
   font-size: 20px;
+  line-height: 1;
+  align-self: center;
+  box-sizing: border-box;
 }
 
 .admin-ai-action-btn strong {
@@ -2682,6 +2745,9 @@ body.auth-mode .app {
   place-items: center;
   background: #eef2ff;
   font-size: 20px;
+  line-height: 1;
+  align-self: center;
+  box-sizing: border-box;
 }
 
 .admin-settings-action-btn strong {

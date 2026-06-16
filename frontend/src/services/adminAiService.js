@@ -150,6 +150,9 @@
           studentEnabled: true,
           teacherEnabled: true,
         },
+        aiCoachEnabled: true,
+        aiTopicLearningEnabled: true,
+        aiAssignmentEnabled: true,
         ai: {
           coachEnabled: true,
           assignmentEnabled: true,
@@ -177,6 +180,9 @@
             studentEnabled: true,
             teacherEnabled: true,
           },
+          aiCoachEnabled: true,
+          aiTopicLearningEnabled: true,
+          aiAssignmentEnabled: true,
           ai: {
             coachEnabled: true,
             assignmentEnabled: true,
@@ -202,12 +208,26 @@
           studentEnabled: normalizeBoolean(data.registration?.studentEnabled, true),
           teacherEnabled: normalizeBoolean(data.registration?.teacherEnabled, true),
         },
+        aiCoachEnabled: normalizeBoolean(
+          data.aiCoachEnabled,
+          data.ai?.coachEnabled ?? data.aiCoachEnabled !== false,
+        ),
+        aiTopicLearningEnabled: normalizeBoolean(
+          data.aiTopicLearningEnabled,
+          data.ai?.learningAnalysisEnabled ??
+            data.aiLearningAnalysisEnabled ??
+            data.aiTopicLearningEnabled !== false,
+        ),
+        aiAssignmentEnabled: normalizeBoolean(
+          data.aiAssignmentEnabled,
+          data.ai?.assignmentEnabled ?? data.aiAssignmentEnabled !== false,
+        ),
         ai: {
           coachEnabled: normalizeBoolean(data.ai?.coachEnabled, data.aiCoachEnabled !== false),
           assignmentEnabled: normalizeBoolean(data.ai?.assignmentEnabled, data.aiAssignmentEnabled !== false),
           learningAnalysisEnabled: normalizeBoolean(
             data.ai?.learningAnalysisEnabled,
-            data.aiLearningAnalysisEnabled !== false,
+            data.aiTopicLearningEnabled !== false && data.aiLearningAnalysisEnabled !== false,
           ),
         },
         maintenance: {
@@ -234,6 +254,9 @@
           studentEnabled: true,
           teacherEnabled: true,
         },
+        aiCoachEnabled: true,
+        aiTopicLearningEnabled: true,
+        aiAssignmentEnabled: true,
         ai: {
           coachEnabled: true,
           assignmentEnabled: true,
@@ -272,19 +295,45 @@
             ? updates.registration.teacherEnabled
             : current.registration.teacherEnabled,
       },
+      aiCoachEnabled:
+        typeof updates.aiCoachEnabled === "boolean"
+          ? updates.aiCoachEnabled
+          : typeof updates.ai?.coachEnabled === "boolean"
+            ? updates.ai.coachEnabled
+            : current.aiCoachEnabled,
+      aiTopicLearningEnabled:
+        typeof updates.aiTopicLearningEnabled === "boolean"
+          ? updates.aiTopicLearningEnabled
+          : typeof updates.aiLearningAnalysisEnabled === "boolean"
+            ? updates.aiLearningAnalysisEnabled
+          : typeof updates.ai?.learningAnalysisEnabled === "boolean"
+            ? updates.ai.learningAnalysisEnabled
+            : current.aiTopicLearningEnabled,
+      aiAssignmentEnabled:
+        typeof updates.aiAssignmentEnabled === "boolean"
+          ? updates.aiAssignmentEnabled
+          : typeof updates.ai?.assignmentEnabled === "boolean"
+            ? updates.ai.assignmentEnabled
+            : current.aiAssignmentEnabled,
       ai: {
         coachEnabled:
-          typeof updates.ai?.coachEnabled === "boolean"
-            ? updates.ai.coachEnabled
-            : current.ai.coachEnabled,
+          typeof updates.aiCoachEnabled === "boolean"
+            ? updates.aiCoachEnabled
+            : typeof updates.ai?.coachEnabled === "boolean"
+              ? updates.ai.coachEnabled
+              : current.ai.coachEnabled,
         assignmentEnabled:
-          typeof updates.ai?.assignmentEnabled === "boolean"
-            ? updates.ai.assignmentEnabled
-            : current.ai.assignmentEnabled,
+          typeof updates.aiAssignmentEnabled === "boolean"
+            ? updates.aiAssignmentEnabled
+            : typeof updates.ai?.assignmentEnabled === "boolean"
+              ? updates.ai.assignmentEnabled
+              : current.ai.assignmentEnabled,
         learningAnalysisEnabled:
-          typeof updates.ai?.learningAnalysisEnabled === "boolean"
-            ? updates.ai.learningAnalysisEnabled
-            : current.ai.learningAnalysisEnabled,
+          typeof updates.aiTopicLearningEnabled === "boolean"
+            ? updates.aiTopicLearningEnabled
+            : typeof updates.ai?.learningAnalysisEnabled === "boolean"
+              ? updates.ai.learningAnalysisEnabled
+              : current.ai.learningAnalysisEnabled,
       },
       maintenance: {
         enabled:
@@ -317,8 +366,29 @@
 
   async function toggleAiCoachEnabled(enabled, updatedBy = "") {
     return updateAiSettings({
+      aiCoachEnabled: Boolean(enabled),
       ai: {
         coachEnabled: Boolean(enabled),
+      },
+      updatedBy,
+    });
+  }
+
+  async function toggleAiTopicLearningEnabled(enabled, updatedBy = "") {
+    return updateAiSettings({
+      aiTopicLearningEnabled: Boolean(enabled),
+      ai: {
+        learningAnalysisEnabled: Boolean(enabled),
+      },
+      updatedBy,
+    });
+  }
+
+  async function toggleAiAssignmentEnabled(enabled, updatedBy = "") {
+    return updateAiSettings({
+      aiAssignmentEnabled: Boolean(enabled),
+      ai: {
+        assignmentEnabled: Boolean(enabled),
       },
       updatedBy,
     });
@@ -437,5 +507,7 @@
     fetchAiSettings,
     recordAiUsage,
     toggleAiCoachEnabled,
+    toggleAiTopicLearningEnabled,
+    toggleAiAssignmentEnabled,
   };
 })();

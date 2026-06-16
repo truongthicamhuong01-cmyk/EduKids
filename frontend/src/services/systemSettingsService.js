@@ -6,6 +6,9 @@
       studentEnabled: true,
       teacherEnabled: true,
     },
+    aiCoachEnabled: true,
+    aiTopicLearningEnabled: true,
+    aiAssignmentEnabled: true,
     ai: {
       coachEnabled: true,
       assignmentEnabled: true,
@@ -57,6 +60,21 @@
 
   function normalizeSettings(data = {}) {
     const source = data && typeof data === "object" ? data : {};
+    const aiCoachEnabled = normalizeBoolean(
+      source.aiCoachEnabled,
+      source.ai?.coachEnabled ?? source.aiCoachEnabled ?? true,
+    );
+    const aiTopicLearningEnabled = normalizeBoolean(
+      source.aiTopicLearningEnabled,
+      source.ai?.learningAnalysisEnabled ??
+        source.aiLearningAnalysisEnabled ??
+        source.aiTopicLearningEnabled ??
+        true,
+    );
+    const aiAssignmentEnabled = normalizeBoolean(
+      source.aiAssignmentEnabled,
+      source.ai?.assignmentEnabled ?? source.aiAssignmentEnabled ?? true,
+    );
 
     return {
       registration: {
@@ -65,13 +83,13 @@
         teacherEnabled:
           normalizeBoolean(source.registration?.teacherEnabled, source.registration?.teacherEnabled ?? true),
       },
+      aiCoachEnabled,
+      aiTopicLearningEnabled,
+      aiAssignmentEnabled,
       ai: {
-        coachEnabled:
-          normalizeBoolean(source.ai?.coachEnabled, source.aiCoachEnabled ?? true),
-        assignmentEnabled:
-          normalizeBoolean(source.ai?.assignmentEnabled, source.aiAssignmentEnabled ?? true),
-        learningAnalysisEnabled:
-          normalizeBoolean(source.ai?.learningAnalysisEnabled, source.aiLearningAnalysisEnabled ?? true),
+        coachEnabled: aiCoachEnabled,
+        assignmentEnabled: aiAssignmentEnabled,
+        learningAnalysisEnabled: aiTopicLearningEnabled,
       },
       maintenance: {
         enabled: normalizeBoolean(source.maintenance?.enabled, source.maintenance?.enabled ?? false),
@@ -198,9 +216,32 @@
 
     const current = currentSettings || (await fetchSystemSettings());
     const now = new Date().toISOString();
+    const nextAiCoachEnabled =
+      typeof updates.aiCoachEnabled === "boolean"
+        ? updates.aiCoachEnabled
+        : typeof updates.ai?.coachEnabled === "boolean"
+          ? updates.ai.coachEnabled
+          : current.aiCoachEnabled;
+    const nextAiTopicLearningEnabled =
+      typeof updates.aiTopicLearningEnabled === "boolean"
+        ? updates.aiTopicLearningEnabled
+        : typeof updates.aiLearningAnalysisEnabled === "boolean"
+          ? updates.aiLearningAnalysisEnabled
+        : typeof updates.ai?.learningAnalysisEnabled === "boolean"
+          ? updates.ai.learningAnalysisEnabled
+          : current.aiTopicLearningEnabled;
+    const nextAiAssignmentEnabled =
+      typeof updates.aiAssignmentEnabled === "boolean"
+        ? updates.aiAssignmentEnabled
+        : typeof updates.ai?.assignmentEnabled === "boolean"
+          ? updates.ai.assignmentEnabled
+          : current.aiAssignmentEnabled;
     const payload = normalizeSettings({
       ...current,
       ...updates,
+      aiCoachEnabled: nextAiCoachEnabled,
+      aiTopicLearningEnabled: nextAiTopicLearningEnabled,
+      aiAssignmentEnabled: nextAiAssignmentEnabled,
       registration: {
         ...current.registration,
         ...(updates.registration || {}),
@@ -208,6 +249,9 @@
       ai: {
         ...current.ai,
         ...(updates.ai || {}),
+        coachEnabled: nextAiCoachEnabled,
+        assignmentEnabled: nextAiAssignmentEnabled,
+        learningAnalysisEnabled: nextAiTopicLearningEnabled,
       },
       maintenance: {
         ...current.maintenance,

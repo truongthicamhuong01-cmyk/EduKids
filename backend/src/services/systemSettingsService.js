@@ -9,6 +9,9 @@ const DEFAULT_SETTINGS = {
     studentEnabled: true,
     teacherEnabled: true,
   },
+  aiCoachEnabled: true,
+  aiTopicLearningEnabled: true,
+  aiAssignmentEnabled: true,
   ai: {
     coachEnabled: true,
     assignmentEnabled: true,
@@ -39,6 +42,21 @@ function normalizeText(value) {
 function normalizeSettings(data = {}, fallback = DEFAULT_SETTINGS) {
   const source = data && typeof data === "object" ? data : {};
   const fallbackSettings = fallback && typeof fallback === "object" ? fallback : DEFAULT_SETTINGS;
+  const aiCoachEnabled = normalizeBoolean(
+    source.aiCoachEnabled,
+    source.ai?.coachEnabled ?? source.aiCoachEnabled ?? fallbackSettings.aiCoachEnabled,
+  );
+  const aiTopicLearningEnabled = normalizeBoolean(
+    source.aiTopicLearningEnabled,
+    source.ai?.learningAnalysisEnabled ??
+      source.aiLearningAnalysisEnabled ??
+      source.aiTopicLearningEnabled ??
+      fallbackSettings.aiTopicLearningEnabled,
+  );
+  const aiAssignmentEnabled = normalizeBoolean(
+    source.aiAssignmentEnabled,
+    source.ai?.assignmentEnabled ?? source.aiAssignmentEnabled ?? fallbackSettings.aiAssignmentEnabled,
+  );
 
   return {
     registration: {
@@ -48,19 +66,13 @@ function normalizeSettings(data = {}, fallback = DEFAULT_SETTINGS) {
         normalizeBoolean(source.registration?.teacherEnabled, fallbackSettings.registration.teacherEnabled),
     },
     ai: {
-      coachEnabled:
-        normalizeBoolean(source.ai?.coachEnabled, source.aiCoachEnabled ?? fallbackSettings.ai.coachEnabled),
-      assignmentEnabled:
-        normalizeBoolean(
-          source.ai?.assignmentEnabled,
-          source.aiAssignmentEnabled ?? fallbackSettings.ai.assignmentEnabled,
-        ),
-      learningAnalysisEnabled:
-        normalizeBoolean(
-          source.ai?.learningAnalysisEnabled,
-          source.aiLearningAnalysisEnabled ?? fallbackSettings.ai.learningAnalysisEnabled,
-        ),
+      coachEnabled: aiCoachEnabled,
+      assignmentEnabled: aiAssignmentEnabled,
+      learningAnalysisEnabled: aiTopicLearningEnabled,
     },
+    aiCoachEnabled,
+    aiTopicLearningEnabled,
+    aiAssignmentEnabled,
     maintenance: {
       enabled:
         normalizeBoolean(source.maintenance?.enabled, fallbackSettings.maintenance.enabled),
@@ -102,9 +114,18 @@ async function readSystemSettings() {
     ...DEFAULT_SETTINGS,
     ...(legacyAiDoc
       ? {
+          aiCoachEnabled: legacyAiDoc.aiCoachEnabled !== false,
+          aiTopicLearningEnabled:
+            legacyAiDoc.aiTopicLearningEnabled !== false &&
+            legacyAiDoc.aiLearningAnalysisEnabled !== false,
+          aiAssignmentEnabled: legacyAiDoc.aiAssignmentEnabled !== false,
           ai: {
             ...DEFAULT_SETTINGS.ai,
             coachEnabled: legacyAiDoc.aiCoachEnabled !== false,
+            assignmentEnabled: legacyAiDoc.aiAssignmentEnabled !== false,
+            learningAnalysisEnabled:
+              legacyAiDoc.aiTopicLearningEnabled !== false &&
+              legacyAiDoc.aiLearningAnalysisEnabled !== false,
           },
           cacheRevision: Number(legacyAiDoc.cacheRevision) || 0,
           updatedAt: legacyAiDoc.updatedAt || "",
@@ -115,8 +136,20 @@ async function readSystemSettings() {
   };
 
   if (currentDoc?.aiCoachEnabled !== undefined) {
-    merged.ai.coachEnabled = currentDoc.aiCoachEnabled !== false;
+    merged.aiCoachEnabled = currentDoc.aiCoachEnabled !== false;
   }
+
+  if (currentDoc?.aiTopicLearningEnabled !== undefined) {
+    merged.aiTopicLearningEnabled = currentDoc.aiTopicLearningEnabled !== false;
+  }
+
+  if (currentDoc?.aiAssignmentEnabled !== undefined) {
+    merged.aiAssignmentEnabled = currentDoc.aiAssignmentEnabled !== false;
+  }
+
+  merged.ai.coachEnabled = merged.aiCoachEnabled !== false;
+  merged.ai.assignmentEnabled = merged.aiAssignmentEnabled !== false;
+  merged.ai.learningAnalysisEnabled = merged.aiTopicLearningEnabled !== false;
 
   return normalizeSettings(merged);
 }
@@ -128,6 +161,26 @@ async function updateSystemSettings(updates = {}, actor = "") {
     {
       ...current,
       ...updates,
+      aiCoachEnabled:
+        typeof updates.aiCoachEnabled === "boolean"
+          ? updates.aiCoachEnabled
+          : typeof updates.ai?.coachEnabled === "boolean"
+            ? updates.ai.coachEnabled
+            : current.aiCoachEnabled,
+      aiTopicLearningEnabled:
+        typeof updates.aiTopicLearningEnabled === "boolean"
+          ? updates.aiTopicLearningEnabled
+          : typeof updates.aiLearningAnalysisEnabled === "boolean"
+            ? updates.aiLearningAnalysisEnabled
+          : typeof updates.ai?.learningAnalysisEnabled === "boolean"
+            ? updates.ai.learningAnalysisEnabled
+            : current.aiTopicLearningEnabled,
+      aiAssignmentEnabled:
+        typeof updates.aiAssignmentEnabled === "boolean"
+          ? updates.aiAssignmentEnabled
+          : typeof updates.ai?.assignmentEnabled === "boolean"
+            ? updates.ai.assignmentEnabled
+            : current.aiAssignmentEnabled,
       registration: {
         ...current.registration,
         ...(updates.registration || {}),
@@ -135,6 +188,24 @@ async function updateSystemSettings(updates = {}, actor = "") {
       ai: {
         ...current.ai,
         ...(updates.ai || {}),
+        coachEnabled:
+          typeof updates.aiCoachEnabled === "boolean"
+            ? updates.aiCoachEnabled
+            : typeof updates.ai?.coachEnabled === "boolean"
+              ? updates.ai.coachEnabled
+              : current.ai.coachEnabled,
+        assignmentEnabled:
+          typeof updates.aiAssignmentEnabled === "boolean"
+            ? updates.aiAssignmentEnabled
+            : typeof updates.ai?.assignmentEnabled === "boolean"
+              ? updates.ai.assignmentEnabled
+              : current.ai.assignmentEnabled,
+        learningAnalysisEnabled:
+          typeof updates.aiTopicLearningEnabled === "boolean"
+            ? updates.aiTopicLearningEnabled
+            : typeof updates.ai?.learningAnalysisEnabled === "boolean"
+              ? updates.ai.learningAnalysisEnabled
+              : current.ai.learningAnalysisEnabled,
       },
       maintenance: {
         ...current.maintenance,

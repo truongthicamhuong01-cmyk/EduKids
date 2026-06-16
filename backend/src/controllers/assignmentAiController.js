@@ -22,8 +22,11 @@ const generateAssignmentAiQuestions = asyncHandler(async (req, res) => {
     );
   }
 
-  if (systemSettings?.ai?.assignmentEnabled === false) {
-    throw new ApiError(403, "AI Assignment is disabled");
+  if (
+    systemSettings?.aiAssignmentEnabled === false ||
+    systemSettings?.ai?.assignmentEnabled === false
+  ) {
+    throw new ApiError(403, "AI assignment generation is disabled");
   }
 
   const subject = normalizeString(req.body.subject);

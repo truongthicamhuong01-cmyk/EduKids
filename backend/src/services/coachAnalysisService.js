@@ -150,8 +150,14 @@ async function readAiSettings() {
   const settings = await readSystemSettings();
 
   return {
-    aiCoachEnabled: settings.ai.coachEnabled !== false,
-    aiLearningAnalysisEnabled: settings.ai.learningAnalysisEnabled !== false,
+    aiCoachEnabled:
+      settings.aiCoachEnabled !== undefined
+        ? settings.aiCoachEnabled !== false
+        : settings.ai.coachEnabled !== false,
+    aiTopicLearningEnabled:
+      settings.aiTopicLearningEnabled !== undefined
+        ? settings.aiTopicLearningEnabled !== false
+        : settings.ai.learningAnalysisEnabled !== false,
     cacheRevision: Number(settings.ai.cacheRevision || settings.cacheRevision || 0) || 0,
   };
 }
@@ -268,10 +274,6 @@ async function analyzeStudentProgress(userId) {
 
   if (aiSettings.aiCoachEnabled === false) {
     throw new ApiError(403, "AI Coach is disabled");
-  }
-
-  if (aiSettings.aiLearningAnalysisEnabled === false) {
-    throw new ApiError(403, "AI learning analysis is disabled");
   }
 
   const progressItems = await loadStudentProgress(normalizedUserId);

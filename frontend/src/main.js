@@ -146,6 +146,7 @@ const adminStatsState = {
   loaded: false,
   data: null,
   pendingPromise: null,
+  selectedRange: "week",
 };
 
 function apiRequest(path, payload) {
@@ -753,8 +754,7 @@ function buildAdminContentRow(bucket) {
       <td><span class="admin-topic-badge ${escapeHtml(statusClass)}">${escapeHtml(statusLabel)}</span></td>
       <td>
         <div class="admin-topic-actions">
-          <button type="button" data-admin-content-action="view" data-admin-content-subject="${escapeHtml(String(bucket?.subject || ""))}" data-admin-content-grade="${escapeHtml(String(bucket?.grade || ""))}">Chi tiết</button>
-          <button type="button" disabled>Sửa</button>
+          <button type="button" data-admin-content-action="view" data-admin-content-subject="${escapeHtml(String(bucket?.subject || ""))}" data-admin-content-grade="${escapeHtml(String(bucket?.grade || ""))}">Xem chi tiết</button>
           <button type="button" class="is-danger" disabled>Xóa</button>
         </div>
       </td>
@@ -1470,6 +1470,462 @@ function getAdminStatsTableBody() {
   return getAdminStatsRoot()?.querySelector("[data-admin-stats-table-body]") || null;
 }
 
+function getAdminStatsRangeButtons() {
+  return Array.from(getAdminStatsRoot()?.querySelectorAll("[data-admin-stats-range]") || []);
+}
+
+function normalizeAdminStatsRangeKey(value) {
+  const rangeKey = String(value || "").trim().toLowerCase();
+
+  if (rangeKey === "month" || rangeKey === "year") {
+    return rangeKey;
+  }
+
+  return "week";
+}
+
+function getAdminStatsRangeLabel(rangeKey) {
+  const normalizedRange = normalizeAdminStatsRangeKey(rangeKey);
+
+  if (normalizedRange === "month") {
+    return "Tháng này";
+  }
+
+  if (normalizedRange === "year") {
+    return "Năm nay";
+  }
+
+  return "Tuần này";
+}
+
+function getAdminStatsRangeStateLabel(rangeKey) {
+  const normalizedRange = normalizeAdminStatsRangeKey(rangeKey);
+
+  if (normalizedRange === "month") {
+    return "Tháng";
+  }
+
+  if (normalizedRange === "year") {
+    return "Năm";
+  }
+
+  return "Tuần";
+}
+
+function getAdminStatsRangeWindow(rangeKey) {
+  const normalizedRange = normalizeAdminStatsRangeKey(rangeKey);
+  const now = new Date();
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+
+  if (normalizedRange === "year") {
+    start.setMonth(0, 1);
+    start.setHours(0, 0, 0, 0);
+    return { start, end, bucket: "month" };
+  }
+
+  if (normalizedRange === "month") {
+    start.setDate(1);
+    start.setHours(0, 0, 0, 0);
+    return { start, end, bucket: "day" };
+  }
+
+  start.setDate(start.getDate() - 6);
+  return { start, end, bucket: "day" };
+}
+
+function getAdminStatsDateValue(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value?.toDate === "function") {
+    const date = value.toDate();
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getAdminStatsSubmissionDate(submission) {
+  return (
+    getAdminStatsDateValue(submission?.submittedAt) ||
+    getAdminStatsDateValue(submission?.gradedAt) ||
+    getAdminStatsDateValue(submission?.createdAt) ||
+    getAdminStatsDateValue(submission?.updatedAt)
+  );
+}
+
+function getAdminStatsSubmissionScore(submission) {
+  const directScore = Number(submission?.score);
+
+  if (Number.isFinite(directScore)) {
+    if (directScore <= 10) {
+      return Math.max(0, Math.min(10, directScore));
+    }
+
+    return Math.max(0, Math.min(10, directScore / 10));
+  }
+
+  const correctCount = Number(submission?.correctCount || submission?.correctAnswers || 0);
+  const totalQuestions = Number(submission?.totalQuestions || submission?.questionCount || 0);
+
+  if (Number.isFinite(correctCount) && Number.isFinite(totalQuestions) && totalQuestions > 0) {
+    return Math.max(0, Math.min(10, (correctCount / totalQuestions) * 10));
+  }
+
+  return null;
+}
+
+function isAdminStatsDateInRange(date, rangeKey) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  const { start, end } = getAdminStatsRangeWindow(rangeKey);
+  return date >= start && date <= end;
+}
+
+function getAdminStatsDateKey(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate(),
+  ).padStart(2, "0")}`;
+}
+
+function getAdminStatsMonthKey(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getAdminStatsChartLabel(date, rangeKey) {
+  const normalizedRange = normalizeAdminStatsRangeKey(rangeKey);
+
+  if (normalizedRange === "year") {
+    return `T${date.getMonth() + 1}`;
+  }
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+  }).format(date);
+}
+
+function buildAdminStatsTimelineSeries(submissions = [], rangeKey = "week") {
+  const normalizedRange = normalizeAdminStatsRangeKey(rangeKey);
+  const { start, end, bucket } = getAdminStatsRangeWindow(normalizedRange);
+  const buckets = [];
+  const bucketMap = new Map();
+
+  if (bucket === "month") {
+    const year = start.getFullYear();
+    for (let monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+      const key = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
+      const entry = {
+        key,
+        label: `T${monthIndex + 1}`,
+        values: [],
+      };
+      buckets.push(entry);
+      bucketMap.set(key, entry);
+    }
+  } else {
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const key = getAdminStatsDateKey(cursor);
+      const entry = {
+        key,
+        label: getAdminStatsChartLabel(cursor, normalizedRange),
+        values: [],
+      };
+      buckets.push(entry);
+      bucketMap.set(key, entry);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+
+  (Array.isArray(submissions) ? submissions : []).forEach((submission) => {
+    const date = getAdminStatsSubmissionDate(submission);
+    const score = getAdminStatsSubmissionScore(submission);
+
+    if (!date || !Number.isFinite(score) || !isAdminStatsDateInRange(date, normalizedRange)) {
+      return;
+    }
+
+    const key = bucket === "month" ? getAdminStatsMonthKey(date) : getAdminStatsDateKey(date);
+    const entry = bucketMap.get(key);
+
+    if (!entry) {
+      return;
+    }
+
+    entry.values.push(score);
+  });
+
+  return buckets.map((entry) => {
+    if (entry.values.length === 0) {
+      return {
+        label: entry.label,
+        value: 0,
+      };
+    }
+
+    const average = entry.values.reduce((sum, value) => sum + value, 0) / entry.values.length;
+
+    return {
+      label: entry.label,
+      value: Number(average.toFixed(1)),
+    };
+  });
+}
+
+function getAdminStatsTopicProgressDate(topic) {
+  return (
+    getAdminStatsDateValue(topic?.updatedAt) ||
+    getAdminStatsDateValue(topic?.accuracyUpdatedAt) ||
+    getAdminStatsDateValue(topic?.createdAt)
+  );
+}
+
+function buildAdminStatsTopic(topicProgressDocs = [], topicCatalog = [], subjectKey = "", rangeKey = "week") {
+  const catalogMap = new Map();
+  (Array.isArray(topicCatalog) ? topicCatalog : []).forEach((topic) => {
+    if (topic?.topicId) {
+      catalogMap.set(topic.topicId, topic);
+    }
+  });
+
+  const buckets = new Map();
+  (Array.isArray(topicProgressDocs) ? topicProgressDocs : []).forEach((doc) => {
+    if (doc?.subject !== subjectKey || doc?.totalAnswered <= 0) {
+      return;
+    }
+
+    const date = getAdminStatsTopicProgressDate(doc);
+
+    if (!isAdminStatsDateInRange(date, rangeKey)) {
+      return;
+    }
+
+    const topicId = String(doc?.topicId || "").trim();
+    const meta = catalogMap.get(topicId) || {};
+    const key = topicId || String(doc?.title || "").trim();
+
+    if (!key) {
+      return;
+    }
+
+    const bucket =
+      buckets.get(key) || {
+        topicId,
+        title: String(doc?.title || meta.title || doc?.topicName || topicId || "Chủ đề").trim(),
+        subject: subjectKey,
+        totalAnswered: 0,
+        totalCorrect: 0,
+        grades: new Set(),
+      };
+
+    bucket.totalAnswered += Math.max(0, Number(doc?.totalAnswered) || 0);
+    bucket.totalCorrect += Math.max(0, Number(doc?.totalCorrect) || 0);
+    if (doc?.grade || meta.grade) {
+      bucket.grades.add(String(doc?.grade || meta.grade).trim());
+    }
+
+    buckets.set(key, bucket);
+  });
+
+  const ranked = Array.from(buckets.values())
+    .map((item) => {
+      const accuracy = item.totalAnswered > 0 ? Math.round((item.totalCorrect / item.totalAnswered) * 100) : 0;
+      return {
+        topicId: item.topicId,
+        title: item.title || item.topicId || "Chủ đề",
+        subtitle: item.grades.size > 0
+          ? `Khối ${Array.from(item.grades).filter(Boolean).join(", ")}`
+          : "Chưa xác định khối",
+        note: item.totalAnswered > 0 ? `${accuracy}% chính xác` : "Chưa có dữ liệu",
+        value: `${item.totalAnswered.toLocaleString("vi-VN")} lượt`,
+        totalAnswered: item.totalAnswered,
+        accuracy,
+      };
+    })
+    .sort((left, right) => {
+      const answerDiff = (right.totalAnswered || 0) - (left.totalAnswered || 0);
+      if (answerDiff !== 0) {
+        return answerDiff;
+      }
+
+      const accuracyDiff = (right.accuracy || 0) - (left.accuracy || 0);
+      if (accuracyDiff !== 0) {
+        return accuracyDiff;
+      }
+
+      return left.title.localeCompare(right.title);
+    });
+
+  return ranked[0] || null;
+}
+
+function getAdminStatsClassAverageMaps(submissionDocs = [], rangeKey = "week") {
+  const buckets = new Map();
+
+  (Array.isArray(submissionDocs) ? submissionDocs : []).forEach((submission) => {
+    const date = getAdminStatsSubmissionDate(submission);
+
+    if (!isAdminStatsDateInRange(date, rangeKey)) {
+      return;
+    }
+
+    const classId = String(submission?.classId || "").trim();
+    const score = getAdminStatsSubmissionScore(submission);
+
+    if (!classId || !Number.isFinite(score)) {
+      return;
+    }
+
+    const scores = buckets.get(classId) || [];
+    scores.push(score);
+    buckets.set(classId, scores);
+  });
+
+  const averageByClassId = new Map();
+  buckets.forEach((scores, classId) => {
+    const average = scores.reduce((sum, value) => sum + value, 0) / scores.length;
+    averageByClassId.set(classId, Number(average.toFixed(1)));
+  });
+
+  return averageByClassId;
+}
+
+function buildAdminStatsTopClasses(classDocs = [], teacherNameById = new Map(), submissionDocs = [], rangeKey = "week") {
+  const averageByClassId = getAdminStatsClassAverageMaps(submissionDocs, rangeKey);
+
+  return (Array.isArray(classDocs) ? classDocs : [])
+    .map((doc) => {
+      const data = typeof doc?.data === "function" ? doc.data() || {} : doc || {};
+      const id = String(doc?.id || data.id || data.classId || "").trim();
+      const teacherId = String(data.teacherId || "").trim();
+      const students = Array.from(
+        new Set(
+          [
+            ...(Array.isArray(data.students) ? data.students : []),
+            ...(Array.isArray(data.studentIds) ? data.studentIds : []),
+            ...(Array.isArray(data.members) ? data.members : []),
+          ]
+            .flatMap((value) => {
+              if (typeof value === "string" || typeof value === "number") {
+                return [String(value).trim()];
+              }
+
+              if (!value || typeof value !== "object") {
+                return [];
+              }
+
+              return [value.id, value.uid, value.userId, value.studentId]
+                .map((entry) => String(entry || "").trim())
+                .filter(Boolean);
+            })
+            .filter(Boolean),
+        ),
+      );
+      const averageScoreValue = averageByClassId.has(id) ? averageByClassId.get(id) : null;
+
+      return {
+        id,
+        name: String(data.name || data.className || "Chưa đặt tên").trim(),
+        className: String(data.className || data.name || "").trim(),
+        teacherName:
+          String(data.teacherName || data.teacherUsername || teacherNameById.get(teacherId) || teacherId || "--").trim(),
+        teacherUsername: String(data.teacherUsername || "").trim(),
+        studentCount: students.length || Number(data.studentCount ?? data.studentsCount ?? 0) || 0,
+        averageScoreValue: Number.isFinite(Number(averageScoreValue)) ? Number(averageScoreValue) : null,
+      };
+    })
+    .filter((classroom) => classroom.id && Number.isFinite(Number(classroom.averageScoreValue)))
+    .sort((left, right) => {
+      const scoreDiff = (Number(right.averageScoreValue) || 0) - (Number(left.averageScoreValue) || 0);
+      if (scoreDiff !== 0) {
+        return scoreDiff;
+      }
+
+      const studentDiff = (Number(right.studentCount) || 0) - (Number(left.studentCount) || 0);
+      if (studentDiff !== 0) {
+        return studentDiff;
+      }
+
+      return left.name.localeCompare(right.name);
+    })
+    .slice(0, 10);
+}
+
+function buildAdminStatsViewModel(source, rangeKey = "week") {
+  if (!source || typeof source !== "object") {
+    return {
+      chartTitle: "Điểm trung bình theo ngày",
+      chartEmptyTitle: "Chưa có dữ liệu điểm",
+      chartEmptyDescription: "Hệ thống chưa ghi nhận đủ bài nộp có điểm để vẽ biểu đồ.",
+      chartSeries: [],
+      topTopics: {
+        math: null,
+        english: null,
+      },
+      topClasses: [],
+      hasData: false,
+    };
+  }
+
+  const submissionDocs = Array.isArray(source.submissionDocs) ? source.submissionDocs : [];
+  const topicDocs = Array.isArray(source.topicDocs) ? source.topicDocs : [];
+  const topicCatalog = Array.isArray(source.topicCatalog) ? source.topicCatalog : [];
+  const teacherDocs = Array.isArray(source.teacherDocs) ? source.teacherDocs : [];
+  const teacherNameById = new Map(
+    teacherDocs
+      .map((doc) => {
+        const id = String(doc?.id || doc?.uid || doc?.userId || "").trim();
+        const name = String(doc?.fullName || doc?.name || doc?.username || doc?.email || "").trim();
+        return id ? [id, name] : null;
+      })
+      .filter(Boolean),
+  );
+  const normalizedRange = normalizeAdminStatsRangeKey(rangeKey);
+  const chartSeries = buildAdminStatsTimelineSeries(submissionDocs, normalizedRange);
+  const topTopics = {
+    math: buildAdminStatsTopic(topicDocs, topicCatalog, "math", normalizedRange),
+    english: buildAdminStatsTopic(topicDocs, topicCatalog, "english", normalizedRange),
+  };
+  const topClasses = buildAdminStatsTopClasses(
+    source.classDocs || [],
+    teacherNameById,
+    submissionDocs,
+    normalizedRange,
+  );
+
+  return {
+    chartTitle: normalizedRange === "year" ? "Điểm trung bình theo tháng" : "Điểm trung bình theo ngày",
+    chartEmptyTitle: "Chưa có dữ liệu điểm",
+    chartEmptyDescription:
+      normalizedRange === "year"
+        ? "Hệ thống chưa ghi nhận đủ bài nộp có điểm trong năm nay."
+        : "Hệ thống chưa ghi nhận đủ bài nộp có điểm trong khoảng thời gian này.",
+    chartSeries,
+    topTopics,
+    topClasses,
+    hasData:
+      chartSeries.some((item) => Number(item.value) > 0) ||
+      Boolean(topTopics.math || topTopics.english || topClasses.length > 0),
+  };
+}
+
 function buildAdminStatsEmptyState(message, description) {
   return `
     <div class="admin-empty-state is-large">
@@ -1481,7 +1937,17 @@ function buildAdminStatsEmptyState(message, description) {
   `;
 }
 
-function renderAdminStatsChart(monthlyAverageScores = [], { loading = false } = {}) {
+function syncAdminStatsRangeButtons(rangeKey = "week") {
+  const normalizedRange = normalizeAdminStatsRangeKey(rangeKey);
+
+  getAdminStatsRangeButtons().forEach((button) => {
+    const isActive = normalizeAdminStatsRangeKey(button.dataset.adminStatsRange) === normalizedRange;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
+function renderAdminStatsChart(series = [], { loading = false, title = "Điểm trung bình theo ngày", emptyTitle, emptyDescription } = {}) {
   const card = getAdminStatsChartCard();
 
   if (!card) {
@@ -1491,20 +1957,20 @@ function renderAdminStatsChart(monthlyAverageScores = [], { loading = false } = 
   if (loading) {
     card.innerHTML = buildAdminStatsEmptyState(
       "Đang tải dữ liệu thống kê",
-      "Hệ thống đang đồng bộ điểm trung bình theo tháng từ Firestore.",
+      "Hệ thống đang đồng bộ dữ liệu thật từ Firestore.",
     );
     return;
   }
 
-  const svgMarkup = buildAdminChartSvg(monthlyAverageScores, {
+  const svgMarkup = buildAdminChartSvg(series, {
     chartKey: "work",
-    ariaLabel: "Điểm trung bình theo tháng",
+    ariaLabel: title,
   });
 
   if (!svgMarkup) {
     card.innerHTML = buildAdminStatsEmptyState(
-      "Chưa có dữ liệu điểm",
-      "Hệ thống chưa ghi nhận đủ bài nộp có điểm để vẽ biểu đồ.",
+      emptyTitle || "Chưa có dữ liệu điểm",
+      emptyDescription || "Hệ thống chưa ghi nhận đủ bài nộp có điểm để vẽ biểu đồ.",
     );
     return;
   }
@@ -1612,21 +2078,22 @@ function renderAdminStatsTable(topClasses = [], { loading = false } = {}) {
 
 function renderAdminStatsPage() {
   const loading = adminStatsState.loading && !adminStatsState.loaded;
-  const data = adminStatsState.data || {
-    charts: {
-      monthlyAverageScores: [],
-    },
-    topTopics: {
-      math: null,
-      english: null,
-    },
-    topClasses: [],
-  };
+  syncAdminStatsRangeButtons(adminStatsState.selectedRange);
 
-  renderAdminStatsChart(data.charts?.monthlyAverageScores || [], { loading });
-  renderAdminStatsTopic("math", data.topTopics?.math || null, { loading });
-  renderAdminStatsTopic("english", data.topTopics?.english || null, { loading });
-  renderAdminStatsTable(data.topClasses || [], { loading });
+  const viewModel = buildAdminStatsViewModel(
+    adminStatsState.data?.source || null,
+    adminStatsState.selectedRange,
+  );
+
+  renderAdminStatsChart(viewModel.chartSeries || [], {
+    loading,
+    title: viewModel.chartTitle,
+    emptyTitle: viewModel.chartEmptyTitle,
+    emptyDescription: viewModel.chartEmptyDescription,
+  });
+  renderAdminStatsTopic("math", viewModel.topTopics?.math || null, { loading });
+  renderAdminStatsTopic("english", viewModel.topTopics?.english || null, { loading });
+  renderAdminStatsTable(viewModel.topClasses || [], { loading });
 }
 
 async function syncAdminStats({ forceRefresh = false } = {}) {
@@ -1659,6 +2126,13 @@ async function syncAdminStats({ forceRefresh = false } = {}) {
 
       adminStatsState.data =
         data || {
+          source: {
+            teacherDocs: [],
+            classDocs: [],
+            submissionDocs: [],
+            topicDocs: [],
+            topicCatalog: [],
+          },
           charts: {
             monthlyAverageScores: [],
           },
@@ -1675,6 +2149,13 @@ async function syncAdminStats({ forceRefresh = false } = {}) {
     } catch (error) {
       console.warn("Không thể tải thống kê admin:", error);
       adminStatsState.data = {
+        source: {
+          teacherDocs: [],
+          classDocs: [],
+          submissionDocs: [],
+          topicDocs: [],
+          topicCatalog: [],
+        },
         charts: {
           monthlyAverageScores: [],
         },
@@ -2105,21 +2586,21 @@ function buildAdminTeacherRow(teacher, index) {
 }
 
 function filterAdminTeachers(teachers = []) {
-  const query = String(adminTeachersState.searchQuery || "").trim().toLowerCase();
+  const query = normalizeAdminSearchValue(adminTeachersState.searchQuery);
   const classCountFilter = String(adminTeachersState.classCountFilter || "").trim();
   const statusFilter = String(adminTeachersState.statusFilter || "").trim().toLowerCase();
 
   return (Array.isArray(teachers) ? teachers : []).filter((teacher) => {
-    const fullName = String(teacher?.fullName || teacher?.name || "").toLowerCase();
-    const email = String(teacher?.email || "").toLowerCase();
+    const searchIndex = getAdminSearchIndex(
+      teacher?.fullName,
+      teacher?.name,
+      teacher?.email,
+    );
     const status = String(teacher?.status || "active").toLowerCase();
     const classBucket = getAdminTeacherClassCountBucket(teacher?.classCount);
 
-    if (query) {
-      const haystack = `${fullName} ${email}`.trim();
-      if (!haystack.includes(query)) {
-        return false;
-      }
+    if (query && !searchIndex.includes(query)) {
+      return false;
     }
 
     if (classCountFilter && classBucket !== classCountFilter) {
@@ -2196,13 +2677,14 @@ function renderAdminTeachersTable(teachers = []) {
 
   if (tbody) {
     if (filtered.length === 0) {
+      const hasData = total > 0;
       tbody.innerHTML = `
         <tr>
           <td colspan="7">
             <div class="admin-empty-state is-large">
               <div>
-                <p>Không có dữ liệu giáo viên</p>
-                <span>Thử thay đổi bộ lọc hoặc chờ đồng bộ dữ liệu từ Firestore.</span>
+                <p>${hasData ? ADMIN_NO_RESULTS_MESSAGE : "Không có dữ liệu giáo viên"}</p>
+                <span>${hasData ? "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm." : "Danh sách giáo viên sẽ được đồng bộ từ Firestore."}</span>
               </div>
             </div>
           </td>
@@ -2215,7 +2697,9 @@ function renderAdminTeachersTable(teachers = []) {
 
   if (summaryNode) {
     if (filtered.length === 0) {
-      summaryNode.innerHTML = `Không tìm thấy giáo viên phù hợp trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> giáo viên`;
+      summaryNode.innerHTML = total === 0
+        ? "Chưa có dữ liệu giáo viên trong hệ thống."
+        : ADMIN_NO_RESULTS_MESSAGE;
     } else {
       summaryNode.innerHTML = `Hiển thị 1 đến ${escapeHtml(formatStatValue(filtered.length))} trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> giáo viên`;
     }
@@ -2304,20 +2788,21 @@ async function syncAdminTeachers({ forceRefresh = false } = {}) {
 }
 
 function filterAdminClasses(classrooms = []) {
-  const query = String(adminClassesState.searchQuery || "").trim().toLowerCase();
+  const query = normalizeAdminSearchValue(adminClassesState.searchQuery);
   const gradeFilter = String(adminClassesState.gradeFilter || "").trim();
 
   return (Array.isArray(classrooms) ? classrooms : []).filter((classroom) => {
-    const className = String(classroom?.name || classroom?.className || "").toLowerCase();
-    const teacherName = String(classroom?.teacherName || classroom?.teacherUsername || "").toLowerCase();
-    const classCode = String(classroom?.classCode || "").toLowerCase();
+    const searchIndex = getAdminSearchIndex(
+      classroom?.name,
+      classroom?.className,
+      classroom?.teacherName,
+      classroom?.teacherUsername,
+      classroom?.classCode,
+    );
     const gradeValue = getAdminClassGradeValue(classroom);
 
-    if (query) {
-      const haystack = `${className} ${teacherName} ${classCode}`.trim();
-      if (!haystack.includes(query)) {
-        return false;
-      }
+    if (query && !searchIndex.includes(query)) {
+      return false;
     }
 
     if (gradeFilter && gradeValue !== gradeFilter) {
@@ -2396,11 +2881,12 @@ function renderAdminClassesGrid(classrooms = []) {
   }
 
   if (filtered.length === 0) {
+    const hasData = total > 0;
     grid.innerHTML = `
       <div class="admin-empty-state is-large">
         <div>
-          <p>${total === 0 ? "Chưa có dữ liệu lớp học" : "Không tìm thấy lớp phù hợp"}</p>
-          <span>${total === 0 ? "Hệ thống sẽ hiển thị dữ liệu thật từ Firestore khi có lớp học." : "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm."}</span>
+          <p>${hasData ? ADMIN_NO_RESULTS_MESSAGE : "Chưa có dữ liệu lớp học"}</p>
+          <span>${hasData ? "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm." : "Hệ thống sẽ hiển thị dữ liệu thật từ Firestore khi có lớp học."}</span>
         </div>
       </div>
     `;
@@ -2496,19 +2982,20 @@ function showAdminClassDetail(classroom) {
 }
 
 function filterAdminAssignments(assignments = []) {
-  const query = String(adminAssignmentsState.searchQuery || "").trim().toLowerCase();
+  const query = normalizeAdminSearchValue(adminAssignmentsState.searchQuery);
   const subjectFilter = String(adminAssignmentsState.subjectFilter || "").trim().toLowerCase();
 
   return (Array.isArray(assignments) ? assignments : []).filter((assignment) => {
-    const title = String(assignment?.title || "").toLowerCase();
-    const teacherName = String(assignment?.teacherName || "").toLowerCase();
+    const searchIndex = getAdminSearchIndex(
+      assignment?.title,
+      assignment?.teacherName,
+      assignment?.className,
+      assignment?.subject,
+    );
     const subjectKey = getAdminAssignmentSubjectKey(assignment?.subject);
 
-    if (query) {
-      const haystack = `${title} ${teacherName}`.trim();
-      if (!haystack.includes(query)) {
-        return false;
-      }
+    if (query && !searchIndex.includes(query)) {
+      return false;
     }
 
     if (subjectFilter && subjectKey !== subjectFilter) {
@@ -2542,7 +3029,6 @@ function buildAdminAssignmentRow(assignment, index) {
       <td>
         <div class="admin-topic-actions">
           <button type="button" data-admin-assignment-action="view" data-admin-assignment-id="${escapeHtml(assignment.id)}">Xem chi tiết</button>
-          <button type="button">Sửa</button>
           <button type="button" class="is-danger">Xóa</button>
         </div>
       </td>
@@ -2622,13 +3108,14 @@ function renderAdminAssignmentsTable(assignments = []) {
 
   if (tbody) {
     if (filtered.length === 0) {
+      const hasData = total > 0;
       tbody.innerHTML = `
         <tr>
           <td colspan="7">
             <div class="admin-empty-state is-large">
               <div>
-                <p>${total === 0 ? "Chưa có dữ liệu bài tập" : "Không tìm thấy bài tập phù hợp"}</p>
-                <span>${total === 0 ? "Hệ thống chưa ghi nhận bài tập nào từ Firestore." : "Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc môn học."}</span>
+                <p>${hasData ? ADMIN_NO_RESULTS_MESSAGE : "Chưa có dữ liệu bài tập"}</p>
+                <span>${hasData ? "Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc môn học." : "Hệ thống chưa ghi nhận bài tập nào từ Firestore."}</span>
               </div>
             </div>
           </td>
@@ -2642,8 +3129,8 @@ function renderAdminAssignmentsTable(assignments = []) {
   if (summaryNode) {
     if (filtered.length === 0) {
       summaryNode.innerHTML = total === 0
-        ? "Chưa có bài tập nào trong hệ thống."
-        : `Không tìm thấy bài tập phù hợp trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> bài tập`;
+        ? "Chưa có dữ liệu bài tập trong hệ thống."
+        : ADMIN_NO_RESULTS_MESSAGE;
     } else {
       summaryNode.innerHTML = `Hiển thị 1 đến ${escapeHtml(formatStatValue(filtered.length))} trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> bài tập`;
     }
@@ -2761,8 +3248,20 @@ function getAdminAiChartCard() {
   return getAdminAiRoot()?.querySelector("[data-admin-ai-chart-card]") || null;
 }
 
-function getAdminAiToggleButton() {
-  return getAdminAiRoot()?.querySelector("[data-admin-ai-toggle='coach']") || null;
+function getAdminAiToggleButton(key) {
+  if (!key) {
+    return null;
+  }
+
+  return getAdminAiRoot()?.querySelector(`[data-admin-ai-toggle="${key}"]`) || null;
+}
+
+function getAdminAiToggleStateNode(key) {
+  if (!key) {
+    return null;
+  }
+
+  return getAdminAiRoot()?.querySelector(`[data-admin-ai-toggle-state="${key}"]`) || null;
 }
 
 function getAdminAiActionButton(action) {
@@ -2857,7 +3356,6 @@ function renderAdminAiStats(data = null) {
   const todayCount = Number(data?.todayCount) || 0;
   const monthCount = Number(data?.monthCount) || 0;
   const successRate = Number(data?.successRate) || 0;
-  const coachEnabled = isAICoachAvailable();
 
   const statConfig = [
     {
@@ -2894,12 +3392,7 @@ function renderAdminAiStats(data = null) {
     }
   });
 
-  const toggleButton = getAdminAiToggleButton();
-
-  if (toggleButton) {
-    toggleButton.classList.toggle("is-on", coachEnabled);
-    toggleButton.setAttribute("aria-pressed", String(coachEnabled));
-  }
+  syncAdminAiToggleStates();
 }
 
 function renderAdminAiPage() {
@@ -2934,6 +3427,9 @@ async function syncAdminAi({ forceRefresh = false } = {}) {
           ? await service.fetchAiDashboardData()
           : {
               settings: {
+                aiCoachEnabled: true,
+                aiTopicLearningEnabled: true,
+                aiAssignmentEnabled: true,
                 ai: {
                   coachEnabled: true,
                   assignmentEnabled: true,
@@ -2957,6 +3453,9 @@ async function syncAdminAi({ forceRefresh = false } = {}) {
       console.warn("Không thể tải dữ liệu AI:", error);
       adminAiState.data = {
         settings: {
+          aiCoachEnabled: true,
+          aiTopicLearningEnabled: true,
+          aiAssignmentEnabled: true,
           ai: {
             coachEnabled: true,
             assignmentEnabled: true,
@@ -2990,40 +3489,140 @@ async function refreshAiCoachEnabledState(forceRefresh = false) {
     ? await syncSystemSettings({ forceRefresh: true })
     : getSystemSettingsData() || (await syncSystemSettings());
 
-  return settings?.ai?.coachEnabled !== false && settings?.ai?.learningAnalysisEnabled !== false;
+  return settings?.aiCoachEnabled !== false;
 }
 
-async function toggleAdminAiCoach() {
-  const currentEnabled = getSystemSettingsAi().coachEnabled !== false;
-  const nextEnabled = !currentEnabled;
-  const confirmMessage = nextEnabled
-    ? "Bật AI Coach?"
-    : "Tắt AI Coach? AI Coach sẽ bị chặn trên toàn hệ thống.";
+function syncAdminAiToggleStates() {
+  const ai = getSystemSettingsAi();
+  const toggleMap = {
+    coach: ai.aiCoachEnabled !== false,
+    "topic-learning": ai.aiTopicLearningEnabled !== false,
+    assignment: ai.aiAssignmentEnabled !== false,
+  };
 
-  if (!window.confirm(confirmMessage)) {
+  Object.entries(toggleMap).forEach(([key, enabled]) => {
+    const toggleButton = getAdminAiToggleButton(key);
+    const toggleStateNode = getAdminAiToggleStateNode(key);
+
+    if (toggleButton) {
+      toggleButton.classList.toggle("is-on", enabled);
+      toggleButton.setAttribute("aria-pressed", String(enabled));
+    }
+
+    if (toggleStateNode) {
+      toggleStateNode.textContent = enabled ? "Đang bật" : "Đang tắt";
+      toggleStateNode.classList.toggle("is-off", !enabled);
+    }
+  });
+}
+
+function getAiFeatureUpdatePayload(featureKey, enabled) {
+  const nextEnabled = Boolean(enabled);
+
+  if (featureKey === "coach") {
+    return {
+      updates: {
+        aiCoachEnabled: nextEnabled,
+        ai: {
+          coachEnabled: nextEnabled,
+        },
+      },
+      confirmMessage: nextEnabled
+        ? "Bật AI Coach?"
+        : "Tắt AI Coach? AI Coach sẽ bị chặn trên toàn hệ thống.",
+      successMessage: nextEnabled ? "Đã bật AI Coach." : "Đã tắt AI Coach.",
+      errorMessage: "Không thể cập nhật cấu hình AI Coach.",
+    };
+  }
+
+  if (featureKey === "topic-learning") {
+    return {
+      updates: {
+        aiTopicLearningEnabled: nextEnabled,
+        ai: {
+          learningAnalysisEnabled: nextEnabled,
+        },
+      },
+      confirmMessage: nextEnabled
+        ? "Bật AI Học theo chủ đề?"
+        : "Tắt AI Học theo chủ đề? Hệ thống sẽ không tạo nội dung AI cho chủ đề.",
+      successMessage: nextEnabled
+        ? "Đã bật AI Học theo chủ đề."
+        : "Đã tắt AI Học theo chủ đề.",
+      errorMessage: "Không thể cập nhật cấu hình AI Học theo chủ đề.",
+    };
+  }
+
+  if (featureKey === "assignment") {
+    return {
+      updates: {
+        aiAssignmentEnabled: nextEnabled,
+        ai: {
+          assignmentEnabled: nextEnabled,
+        },
+      },
+      confirmMessage: nextEnabled
+        ? "Bật AI Tạo bài tập giáo viên?"
+        : "Tắt AI Tạo bài tập giáo viên? Giáo viên sẽ không tạo đề bằng AI.",
+      successMessage: nextEnabled
+        ? "Đã bật AI Tạo bài tập giáo viên."
+        : "Đã tắt AI Tạo bài tập giáo viên.",
+      errorMessage: "Không thể cập nhật cấu hình AI Tạo bài tập giáo viên.",
+    };
+  }
+
+  return null;
+}
+
+async function toggleAdminAiFeature(featureKey) {
+  const normalizedKey = String(featureKey || "").trim();
+  const ai = getSystemSettingsAi();
+  const currentEnabled =
+    normalizedKey === "coach"
+      ? ai.aiCoachEnabled !== false
+      : normalizedKey === "topic-learning"
+        ? ai.aiTopicLearningEnabled !== false
+        : normalizedKey === "assignment"
+          ? ai.aiAssignmentEnabled !== false
+          : true;
+  const payload = getAiFeatureUpdatePayload(normalizedKey, !currentEnabled);
+
+  if (!payload) {
+    return;
+  }
+
+  if (!window.confirm(payload.confirmMessage)) {
     return;
   }
 
   try {
-    await updateSystemSettings({
-      ai: {
-        ...getSystemSettingsAi(),
-        coachEnabled: nextEnabled,
-      },
-    });
-    await syncAdminAi({ forceRefresh: true });
+    await updateSystemSettings(payload.updates);
     await syncSystemSettings({ forceRefresh: true });
+    await syncAdminAi({ forceRefresh: true });
+    syncAdminAiToggleStates();
     if (currentPage === "ai-coach") {
       renderAICoachPage();
     }
-    showToast(
-      nextEnabled ? "Đã bật AI Coach." : "Đã tắt AI Coach.",
-      "success",
-    );
+    if (currentAdminPage === "admin-settings") {
+      renderAdminSettingsPage();
+    }
+    showToast(payload.successMessage, "success");
   } catch (error) {
-    console.warn("Không thể cập nhật AI Coach:", error);
-    showToast("Không thể cập nhật cấu hình AI Coach.", "error");
+    console.warn(`Không thể cập nhật cấu hình ${normalizedKey}:`, error);
+    showToast(payload.errorMessage, "error");
   }
+}
+
+async function toggleAdminAiCoach() {
+  return toggleAdminAiFeature("coach");
+}
+
+async function toggleAdminAiTopicLearning() {
+  return toggleAdminAiFeature("topic-learning");
+}
+
+async function toggleAdminAiAssignment() {
+  return toggleAdminAiFeature("assignment");
 }
 
 async function clearAdminAiCache() {
@@ -3089,16 +3688,34 @@ function getSystemSettingsData() {
 }
 
 function getSystemSettingsAi() {
-  return getSystemSettingsData()?.ai || {
-    coachEnabled: true,
-    assignmentEnabled: true,
-    learningAnalysisEnabled: true,
+  const settings = getSystemSettingsData() || {};
+
+  return {
+    aiCoachEnabled:
+      settings.aiCoachEnabled !== undefined
+        ? settings.aiCoachEnabled
+        : settings.ai?.coachEnabled !== false,
+    aiTopicLearningEnabled:
+      settings.aiTopicLearningEnabled !== undefined
+        ? settings.aiTopicLearningEnabled
+        : settings.ai?.learningAnalysisEnabled !== false,
+    aiAssignmentEnabled:
+      settings.aiAssignmentEnabled !== undefined
+        ? settings.aiAssignmentEnabled
+        : settings.ai?.assignmentEnabled !== false,
   };
 }
 
 function isAICoachAvailable() {
-  const ai = getSystemSettingsAi();
-  return ai.coachEnabled !== false && ai.learningAnalysisEnabled !== false;
+  return getSystemSettingsAi().aiCoachEnabled !== false;
+}
+
+function isAiTopicLearningEnabled() {
+  return getSystemSettingsAi().aiTopicLearningEnabled !== false;
+}
+
+function isAiAssignmentEnabled() {
+  return getSystemSettingsAi().aiAssignmentEnabled !== false;
 }
 
 function getSystemSettingsRegistration() {
@@ -3196,15 +3813,14 @@ function syncSystemSettingsUi(settings = null) {
 
   const info = data.systemInfo || {};
   const registration = data.registration || {};
-  const ai = data.ai || {};
   const maintenance = data.maintenance || {};
 
   const toggleMap = {
     "registration.student": registration.studentEnabled !== false,
     "registration.teacher": registration.teacherEnabled !== false,
-    "ai.coach": ai.coachEnabled !== false,
-    "ai.assignment": ai.assignmentEnabled !== false,
-    "ai.learning": ai.learningAnalysisEnabled !== false,
+    "ai.coach": data.aiCoachEnabled !== false,
+    "ai.assignment": data.aiAssignmentEnabled !== false,
+    "ai.learning": data.aiTopicLearningEnabled !== false,
     "maintenance.enabled": maintenance.enabled === true,
   };
 
@@ -3313,6 +3929,9 @@ async function toggleAdminSystemSetting(settingKey) {
   const nextState = {
     ...current,
     registration: { ...current.registration },
+    aiCoachEnabled: current.aiCoachEnabled,
+    aiTopicLearningEnabled: current.aiTopicLearningEnabled,
+    aiAssignmentEnabled: current.aiAssignmentEnabled,
     ai: { ...current.ai },
     maintenance: { ...current.maintenance },
   };
@@ -3322,11 +3941,17 @@ async function toggleAdminSystemSetting(settingKey) {
   } else if (settingKey === "registration.teacher") {
     nextState.registration.teacherEnabled = !isRegistrationEnabled("teacher");
   } else if (settingKey === "ai.coach") {
-    nextState.ai.coachEnabled = !getSystemSettingsAi().coachEnabled;
+    const nextEnabled = !isAICoachAvailable();
+    nextState.aiCoachEnabled = nextEnabled;
+    nextState.ai.coachEnabled = nextEnabled;
   } else if (settingKey === "ai.assignment") {
-    nextState.ai.assignmentEnabled = !getSystemSettingsAi().assignmentEnabled;
+    const nextEnabled = !isAiAssignmentEnabled();
+    nextState.aiAssignmentEnabled = nextEnabled;
+    nextState.ai.assignmentEnabled = nextEnabled;
   } else if (settingKey === "ai.learning") {
-    nextState.ai.learningAnalysisEnabled = !getSystemSettingsAi().learningAnalysisEnabled;
+    const nextEnabled = !isAiTopicLearningEnabled();
+    nextState.aiTopicLearningEnabled = nextEnabled;
+    nextState.ai.learningAnalysisEnabled = nextEnabled;
   } else if (settingKey === "maintenance.enabled") {
     nextState.maintenance.enabled = !isSystemMaintenanceEnabled();
   } else {
@@ -3543,21 +4168,21 @@ function buildAdminStudentRow(student, index) {
 }
 
 function filterAdminStudents(students = []) {
-  const query = String(adminStudentsState.searchQuery || "").trim().toLowerCase();
+  const query = normalizeAdminSearchValue(adminStudentsState.searchQuery);
   const classFilter = String(adminStudentsState.classFilter || "").trim().toLowerCase();
   const statusFilter = String(adminStudentsState.statusFilter || "").trim().toLowerCase();
 
   return (Array.isArray(students) ? students : []).filter((student) => {
-    const fullName = String(student?.fullName || "").toLowerCase();
-    const username = String(student?.username || "").toLowerCase();
+    const searchIndex = getAdminSearchIndex(
+      student?.fullName,
+      student?.username,
+      student?.className,
+    );
     const className = String(student?.className || "").toLowerCase();
     const status = String(student?.status || "active").toLowerCase();
 
-    if (query) {
-      const haystack = `${fullName} ${username} ${className}`.trim();
-      if (!haystack.includes(query)) {
-        return false;
-      }
+    if (query && !searchIndex.includes(query)) {
+      return false;
     }
 
     if (classFilter && className !== classFilter) {
@@ -3611,13 +4236,14 @@ function renderAdminStudentsTable(students = []) {
 
   if (tbody) {
     if (filtered.length === 0) {
+      const hasData = total > 0;
       tbody.innerHTML = `
         <tr>
           <td colspan="7">
             <div class="admin-empty-state is-large">
               <div>
-                <p>Không có dữ liệu học sinh</p>
-                <span>Thử thay đổi bộ lọc hoặc chờ đồng bộ dữ liệu từ Firestore.</span>
+                <p>${hasData ? ADMIN_NO_RESULTS_MESSAGE : "Không có dữ liệu học sinh"}</p>
+                <span>${hasData ? "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm." : "Danh sách học sinh sẽ được đồng bộ từ Firestore."}</span>
               </div>
             </div>
           </td>
@@ -3630,7 +4256,9 @@ function renderAdminStudentsTable(students = []) {
 
   if (summaryNode) {
     if (filtered.length === 0) {
-      summaryNode.innerHTML = `Không tìm thấy học sinh phù hợp trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> học sinh`;
+      summaryNode.innerHTML = total === 0
+        ? "Chưa có dữ liệu học sinh trong hệ thống."
+        : ADMIN_NO_RESULTS_MESSAGE;
     } else {
       summaryNode.innerHTML = `Hiển thị 1 đến ${escapeHtml(formatStatValue(filtered.length))} trong tổng số <strong>${escapeHtml(formatStatValue(total))}</strong> học sinh`;
     }
@@ -3868,6 +4496,16 @@ function bindAdminEventsOnce() {
       menuToggle.setAttribute("aria-expanded", String(isOpen));
     }
 
+    const statsRangeButton = event.target.closest("[data-admin-stats-range]");
+    if (statsRangeButton) {
+      const nextRange = normalizeAdminStatsRangeKey(statsRangeButton.dataset.adminStatsRange);
+      if (adminStatsState.selectedRange !== nextRange) {
+        adminStatsState.selectedRange = nextRange;
+        renderAdminStatsPage();
+      }
+      return;
+    }
+
     const studentActionButton = event.target.closest(
       "[data-admin-student-action]",
     );
@@ -4035,6 +4673,17 @@ function bindAdminEventsOnce() {
 
       if (toggleName === "coach") {
         void toggleAdminAiCoach();
+        return;
+      }
+
+      if (toggleName === "topic-learning") {
+        void toggleAdminAiTopicLearning();
+        return;
+      }
+
+      if (toggleName === "assignment") {
+        void toggleAdminAiAssignment();
+        return;
       }
     }
 
@@ -5809,6 +6458,11 @@ async function openAICoachPracticeTopic(topicId, grade, subject) {
   const normalizedGrade = normalizeQuizText(grade);
   const normalizedSubject = normalizeQuizText(subject);
 
+  if (!isAiTopicLearningEnabled()) {
+    showToast("AI Học theo chủ đề hiện đang tắt trong hệ thống.", "error");
+    return;
+  }
+
   if (!normalizedTopicId) {
     showToast("Chủ đề này hiện chưa có bộ câu hỏi luyện tập.", "error");
     return;
@@ -7420,6 +8074,11 @@ async function loadStudentQuizByTopic(topicId) {
     return;
   }
 
+  if (!isAiTopicLearningEnabled()) {
+    showToast("AI Học theo chủ đề hiện đang tắt trong hệ thống.", "error");
+    return;
+  }
+
   studentQuizState.selectedTopicId = normalizedTopicId;
   studentQuizState.loadingQuiz = true;
   studentQuizState.quiz = null;
@@ -7465,10 +8124,11 @@ async function loadStudentQuizByTopic(topicId) {
     if (
       errorMessage.includes("Quiz not found") ||
       errorMessage.includes("no questions") ||
+      errorMessage.includes("AI topic learning is disabled") ||
       errorMessage.includes("không có bộ câu hỏi")
     ) {
       showToast(
-        "Chủ đề này hiện chưa có bộ câu hỏi luyện tập.",
+        "AI Học theo chủ đề hiện đang tắt trong hệ thống.",
         "error",
       );
     } else {
@@ -7825,12 +8485,22 @@ function getFirestoreInstance() {
   }
 }
 
-function normalizeTeacherManageSearchValue(value) {
+const ADMIN_NO_RESULTS_MESSAGE = "Không tìm thấy dữ liệu phù hợp";
+
+function normalizeAdminSearchValue(value) {
   return String(value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function getAdminSearchIndex(...parts) {
+  return normalizeAdminSearchValue(parts.filter(Boolean).join(" "));
+}
+
+function normalizeTeacherManageSearchValue(value) {
+  return normalizeAdminSearchValue(value);
 }
 
 function getTeacherAssignmentSearchIndex(assignment) {
@@ -12932,9 +13602,15 @@ function syncAssignmentAiFields() {
   }
 
   if (generateButton) {
-    generateButton.disabled = Boolean(assignmentAiState.loading || assignmentAiState.loadingTopics);
+    generateButton.disabled = Boolean(
+      assignmentAiState.loading ||
+        assignmentAiState.loadingTopics ||
+        !isAiAssignmentEnabled(),
+    );
     generateButton.textContent = assignmentAiState.loading
       ? "AI đang tạo đề..."
+      : !isAiAssignmentEnabled()
+        ? "AI Tạo bài tập giáo viên đang tắt"
       : "✨ Tạo đề bằng AI";
   }
 }
@@ -13092,6 +13768,14 @@ async function handleAssignmentAiGenerate() {
 
   if (validationMessage) {
     showToast(validationMessage, "error");
+    return;
+  }
+
+  if (!isAiAssignmentEnabled()) {
+    assignmentAiState.error = "AI Tạo bài tập giáo viên hiện đang tắt trong hệ thống.";
+    showToast(assignmentAiState.error, "error");
+    renderAssignmentEditor();
+    renderAssignmentPreview();
     return;
   }
 

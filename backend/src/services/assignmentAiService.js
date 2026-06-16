@@ -8,6 +8,7 @@ const {
   buildAssignmentAiPrompt,
   getSubjectLabel,
 } = require("./assignmentAiPrompt");
+const { readSystemSettings } = require("./systemSettingsService");
 
 function normalizeOptionText(option) {
   if (option && typeof option === "object") {
@@ -107,6 +108,15 @@ async function generateAssignmentQuestions({
   questionCount,
   notes,
 }) {
+  const systemSettings = await readSystemSettings();
+
+  if (
+    systemSettings?.aiAssignmentEnabled === false ||
+    systemSettings?.ai?.assignmentEnabled === false
+  ) {
+    throw new ApiError(403, "AI assignment generation is disabled");
+  }
+
   const normalizedSubject = String(subject || "").trim();
   const normalizedGrade = String(grade || "").trim();
   const normalizedDifficulty = String(difficulty || "").trim();

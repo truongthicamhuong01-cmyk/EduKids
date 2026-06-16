@@ -13,6 +13,7 @@ const {
   createQuizVersion,
   getVersionedQuizMeta,
 } = require("./quizVersionService");
+const { readSystemSettings } = require("./systemSettingsService");
 
 async function generateQuizPayload({ grade, subject, topic, versionId, versionNumber }) {
   const prompt = buildQuizPrompt({
@@ -30,6 +31,15 @@ async function generateQuizPayload({ grade, subject, topic, versionId, versionNu
 }
 
 async function ensureNextQuizVersion({ grade, subject, topicId, minVersions = 3 }) {
+  const systemSettings = await readSystemSettings();
+
+  if (
+    systemSettings?.aiTopicLearningEnabled === false ||
+    systemSettings?.ai?.learningAnalysisEnabled === false
+  ) {
+    throw new ApiError(403, "AI topic learning is disabled");
+  }
+
   const topic = findTopicById(topicId);
 
   if (!topic) {

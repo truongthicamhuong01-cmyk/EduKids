@@ -4,6 +4,7 @@ const { GoogleGenAI } = require("@google/genai");
 const { db } = require("../firebase");
 const ApiError = require("../utils/apiError");
 const { buildQuizPrompt } = require("./aiPrompt");
+const { readSystemSettings } = require("./systemSettingsService");
 
 const TOPICS_PATH = path.join(__dirname, "..", "topics.json");
 const QUIZZES_COLLECTION = db.collection("quizzes");
@@ -211,6 +212,15 @@ function validateQuizPayload(payload) {
 }
 
 async function generateQuiz({ grade, subject, topicId }) {
+  const systemSettings = await readSystemSettings();
+
+  if (
+    systemSettings?.aiTopicLearningEnabled === false ||
+    systemSettings?.ai?.learningAnalysisEnabled === false
+  ) {
+    throw new ApiError(403, "AI topic learning is disabled");
+  }
+
   const topic = findTopicById(topicId);
 
   if (!topic) {
