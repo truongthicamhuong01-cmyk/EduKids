@@ -222,6 +222,8 @@ body.auth-mode .app {
 .sidebar .student-card,
 .sidebar .teacher-card,
 .sidebar .admin-card {
+  width: 100%;
+  align-self: stretch;
   margin-top: auto;
 }
 
@@ -230,8 +232,13 @@ body.auth-mode .app {
 .admin-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 18px 16px;
+  justify-content: flex-start;
+  gap: 18px;
+  padding: 24px 20px;
+  width: 100%;
+  max-width: none;
+  min-height: 92px;
+  box-sizing: border-box;
   border-radius: 24px;
   background:
     radial-gradient(
@@ -252,6 +259,7 @@ body.auth-mode .app {
   position: relative;
   overflow: hidden;
   border-radius: 20px;
+  min-height: 96px;
   box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
   transition:
     transform 0.2s ease,
@@ -293,8 +301,8 @@ body.auth-mode .app {
 .student-card img,
 .teacher-card img,
 .admin-card img {
-  width: 60px;
-  height: 60px;
+  width: 66px;
+  height: 66px;
   border-radius: 50%;
   object-fit: cover;
   flex: none;
@@ -323,6 +331,9 @@ body.auth-mode .app {
 .admin-card-info {
   position: relative;
   z-index: 1;
+  flex: 1;
+  min-width: 0;
+  padding-right: 8px;
 }
 
 .student-card-info h4,
@@ -354,10 +365,14 @@ body.auth-mode .app {
   font-weight: 800;
   letter-spacing: 0.04em;
   color: #f8fafc;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .admin-card-info p {
   color: #cbd5e1;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .student-card.is-loading,
@@ -587,7 +602,7 @@ body.auth-mode .app {
   box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
 }
 
-.admin-kpi-card span {
+.admin-kpi-icon {
   display: inline-flex;
   width: 42px;
   height: 42px;
@@ -885,7 +900,7 @@ body.auth-mode .app {
   font-weight: 700;
 }
 
-.admin-kpi-card > span {
+.admin-kpi-description {
   position: relative;
   z-index: 1;
   display: block;
@@ -897,6 +912,7 @@ body.auth-mode .app {
   overflow: visible;
   text-overflow: clip;
   overflow-wrap: anywhere;
+  width: 100%;
 }
 
 .admin-dashboard-grid {
@@ -11258,6 +11274,8 @@ body.admin-content-drawer-open {
   .sidebar .student-card,
   .sidebar .teacher-card,
   .sidebar .admin-card {
+    width: 100%;
+    align-self: stretch;
     margin-top: 16px;
   }
 
