@@ -151,21 +151,31 @@
           <div class="home-hero">
             <div class="home-hero-content">
               <div class="home-hero-copy">
-                <h1 id="student-home-greeting">Xin chào, ...! 👋</h1>
+                <h1 id="student-home-greeting">Xin chào, ... 👋</h1>
                 <p>Hôm nay là một ngày tuyệt vời để học hỏi!</p>
               </div>
 
               <div class="home-hero-stats" aria-label="Thống kê học tập">
                 <article class="home-stat-card home-stat-card-streak">
-                  <div class="home-stat-icon home-stat-icon-streak" aria-hidden="true">🔥</div>
+                  <div
+                    class="home-stat-icon home-stat-icon-streak"
+                    aria-hidden="true"
+                  >
+                    🔥
+                  </div>
                   <div class="home-stat-copy">
-                    <small>Chuỗi ngày học</small>
+                    <small>Chuỗi</small>
                     <h3 id="student-home-streak">-- ngày</h3>
                   </div>
                 </article>
 
                 <article class="home-stat-card home-stat-card-level">
-                  <div class="home-stat-icon home-stat-icon-level" aria-hidden="true">🏅</div>
+                  <div
+                    class="home-stat-icon home-stat-icon-level"
+                    aria-hidden="true"
+                  >
+                    🏅
+                  </div>
                   <div class="home-stat-copy">
                     <small>Cấp độ</small>
                     <h3 id="student-home-level">--</h3>
@@ -180,7 +190,11 @@
                     </div>
 
                     <div class="home-treasure-icon" aria-hidden="true">
-                      <svg viewBox="0 0 64 64" role="presentation" focusable="false">
+                      <svg
+                        viewBox="0 0 64 64"
+                        role="presentation"
+                        focusable="false"
+                      >
                         <path
                           d="M12 26.5C12 20.7 16.7 16 22.5 16h19C47.3 16 52 20.7 52 26.5V42H12V26.5Z"
                           fill="#F7C56A"
@@ -220,178 +234,161 @@
                 </article>
               </div>
             </div>
-
-            <button
-              class="home-hero-notification"
-              type="button"
-              aria-label="Thông báo"
-            >
-              <span class="home-hero-notification-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" role="presentation" focusable="false">
-                  <path
-                    d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 .8-.2 1.6-.6 2.3L6 14.2V16h12v-1.8l-.9-1.8a4.8 4.8 0 0 1-.6-2.3V8a4.5 4.5 0 0 0-4.5-4.5Z"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M9.4 16.5a2.6 2.6 0 0 0 5.2 0"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                  />
-                </svg>
-              </span>
-              <span class="home-hero-notification-badge">2</span>
-            </button>
           </div>
 
-          <div class="home-grid">
-            <div class="card">
-              <h3>🤖 Hôm nay nên học gì?</h3>
+          <div class="home-content-inner">
+            <div class="home-grid">
+              <div class="card">
+                <h3>🤖 Hôm nay nên học gì?</h3>
 
-              <div class="task-item" data-home-study-item="practice">
-                <span>1</span>
-                <p data-home-study-text="practice">Luyện -- (10 câu)</p>
-                <label class="tag-red" data-home-study-badge="practice"
-                  >Yếu</label
+                <div class="task-item" data-home-study-item="practice">
+                  <span>1</span>
+                  <p data-home-study-text="practice">Luyện -- (10 câu)</p>
+                  <label class="tag-red" data-home-study-badge="practice"
+                    >Yếu</label
+                  >
+                </div>
+
+                <div class="task-item" data-home-study-item="review">
+                  <span>2</span>
+                  <p data-home-study-text="review">Ôn lại --</p>
+                  <label class="tag-blue" data-home-study-badge="review"
+                    >Ôn lại</label
+                  >
+                </div>
+
+                <div class="task-item" data-home-study-item="new">
+                  <span>3</span>
+                  <p data-home-study-text="new">5 câu --</p>
+                  <label class="tag-green" data-home-study-badge="new"
+                    >Bài mới</label
+                  >
+                </div>
+
+                <button
+                  class="btn-primary"
+                  type="button"
+                  data-home-start-learning
                 >
-              </div>
-
-              <div class="task-item" data-home-study-item="review">
-                <span>2</span>
-                <p data-home-study-text="review">Ôn lại --</p>
-                <label class="tag-blue" data-home-study-badge="review"
-                  >Ôn lại</label
-                >
-              </div>
-
-              <div class="task-item" data-home-study-item="new">
-                <span>3</span>
-                <p data-home-study-text="new">5 câu --</p>
-                <label class="tag-green" data-home-study-badge="new"
-                  >Bài mới</label
-                >
-              </div>
-
-              <button
-                class="btn-primary"
-                type="button"
-                data-home-start-learning
-              >
-                Bắt đầu học
-              </button>
-            </div>
-
-            <div class="card" data-student-weekly-progress>
-              <h3>📊 Tiến độ tuần này</h3>
-
-              <div class="stat-row">
-                <span>Thời gian học</span>
-                <b data-weekly-study-time>-- phút</b>
-              </div>
-
-              <div class="stat-row">
-                <span>Số câu đã làm</span>
-                <b data-weekly-total-questions>-- câu</b>
-              </div>
-
-              <div class="stat-row">
-                <span>Điểm trung bình</span>
-                <b data-weekly-average-score>--%</b>
-              </div>
-
-              <button
-                class="btn-outline"
-                type="button"
-                data-weekly-progress-details
-              >
-                Xem chi tiết
-              </button>
-            </div>
-
-            <div class="card">
-              <h3>🎯 Điểm mạnh & Cần cải thiện</h3>
-
-              <p><b>Điểm mạnh</b></p>
-
-              <div class="skill-tags" data-student-strength-list>
-                <span class="green-tag" data-student-strength-item>--</span>
-                <span class="green-tag" data-student-strength-item>--</span>
-              </div>
-
-              <p><b>Cần cải thiện</b></p>
-
-              <div class="skill-tags" data-student-weakness-list>
-                <span class="red-tag" data-student-weakness-item>--</span>
-                <span class="red-tag" data-student-weakness-item>--</span>
-              </div>
-
-              <button class="btn-outline" type="button" data-open-ai-coach>
-                Xem phân tích
-              </button>
-            </div>
-          </div>
-
-          <div class="bottom-grid">
-            <div class="card">
-              <div class="card-header">
-                <h3>📚 Bài giáo viên giao</h3>
-                <button type="button" class="link-button" data-open-assignments>
-                  Xem tất cả
+                  Bắt đầu học
                 </button>
               </div>
 
-              <div class="home-assignment-list" data-student-home-assignments>
-                <div
-                  class="home-assignment-item"
-                  data-student-home-assignment-item
-                >
-                  <h4 data-student-home-assignment-title>--</h4>
+              <div class="card" data-student-weekly-progress>
+                <h3>📊 Tiến độ tuần này</h3>
 
-                  <span class="tag-orange" data-student-home-assignment-status>
-                    Chưa làm
-                  </span>
+                <div class="stat-row">
+                  <span>Thời gian học</span>
+                  <b data-weekly-study-time>-- phút</b>
                 </div>
 
-                <div
-                  class="home-assignment-item"
-                  data-student-home-assignment-item
-                >
-                  <h4 data-student-home-assignment-title>--</h4>
-
-                  <span class="tag-green" data-student-home-assignment-status>
-                    Đã làm
-                  </span>
+                <div class="stat-row">
+                  <span>Số câu đã làm</span>
+                  <b data-weekly-total-questions>-- câu</b>
                 </div>
+
+                <div class="stat-row">
+                  <span>Điểm trung bình</span>
+                  <b data-weekly-average-score>--%</b>
+                </div>
+
+                <button
+                  class="btn-outline"
+                  type="button"
+                  data-weekly-progress-details
+                >
+                  Xem chi tiết
+                </button>
+              </div>
+
+              <div class="card">
+                <h3>🎯 Điểm mạnh & Cần cải thiện</h3>
+
+                <p><b>Điểm mạnh</b></p>
+
+                <div class="skill-tags" data-student-strength-list>
+                  <span class="green-tag" data-student-strength-item>--</span>
+                  <span class="green-tag" data-student-strength-item>--</span>
+                </div>
+
+                <p><b>Cần cải thiện</b></p>
+
+                <div class="skill-tags" data-student-weakness-list>
+                  <span class="red-tag" data-student-weakness-item>--</span>
+                  <span class="red-tag" data-student-weakness-item>--</span>
+                </div>
+
+                <button class="btn-outline" type="button" data-open-ai-coach>
+                  Xem phân tích
+                </button>
               </div>
             </div>
 
-            <div class="card mistake-card">
-              <div class="mistake-card-content">
-                <div class="mistake-copy">
-                  <div class="mistake-header">
-                    <span class="mistake-icon" aria-hidden="true">😟</span>
-                    <h3>Câu sai gần đây</h3>
-                  </div>
-
-                  <h2>7 câu</h2>
-
-                  <p>Luyện lại để ghi nhớ tốt hơn nhé!</p>
-
-                  <button class="btn-danger" type="button">
-                    Luyện lại ngay
+            <div class="bottom-grid">
+              <div class="card">
+                <div class="card-header">
+                  <h3>📚 Bài giáo viên giao</h3>
+                  <button
+                    type="button"
+                    class="link-button"
+                    data-open-assignments
+                  >
+                    Xem tất cả
                   </button>
                 </div>
 
-                <div class="mistake-illustration-wrap" aria-hidden="true">
-                  <img
-                    src="/assets/home/brain.png"
-                    alt=""
-                    class="mistake-illustration"
-                  />
+                <div class="home-assignment-list" data-student-home-assignments>
+                  <div
+                    class="home-assignment-item"
+                    data-student-home-assignment-item
+                  >
+                    <h4 data-student-home-assignment-title>--</h4>
+
+                    <span
+                      class="tag-orange"
+                      data-student-home-assignment-status
+                    >
+                      Chưa làm
+                    </span>
+                  </div>
+
+                  <div
+                    class="home-assignment-item"
+                    data-student-home-assignment-item
+                  >
+                    <h4 data-student-home-assignment-title>--</h4>
+
+                    <span class="tag-green" data-student-home-assignment-status>
+                      Đã làm
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card mistake-card">
+                <div class="mistake-card-content">
+                  <div class="mistake-copy">
+                    <div class="mistake-header">
+                      <span class="mistake-icon" aria-hidden="true">😟</span>
+                      <h3>Câu sai gần đây</h3>
+                    </div>
+
+                    <h2>7 câu</h2>
+
+                    <p>Luyện lại để ghi nhớ tốt hơn nhé!</p>
+
+                    <button class="btn-danger" type="button">
+                      Luyện lại ngay
+                    </button>
+                  </div>
+
+                  <div class="mistake-illustration-wrap" aria-hidden="true">
+                    <img
+                      src="/assets/home/brain.png"
+                      alt=""
+                      class="mistake-illustration"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -3450,26 +3447,86 @@
           </div>
 
           <div class="admin-review-stats-grid">
-            <article class="admin-kpi-card" data-admin-reviews-stat="total-reviews"></article>
-            <article class="admin-kpi-card" data-admin-reviews-stat="average-rating"></article>
-            <article class="admin-kpi-card" data-admin-reviews-stat="five-star-count"></article>
-            <article class="admin-kpi-card" data-admin-reviews-stat="one-star-count"></article>
+            <article
+              class="admin-kpi-card"
+              data-admin-reviews-stat="total-reviews"
+            ></article>
+            <article
+              class="admin-kpi-card"
+              data-admin-reviews-stat="average-rating"
+            ></article>
+            <article
+              class="admin-kpi-card"
+              data-admin-reviews-stat="five-star-count"
+            ></article>
+            <article
+              class="admin-kpi-card"
+              data-admin-reviews-stat="one-star-count"
+            ></article>
           </div>
 
           <section class="admin-data-card">
             <header class="admin-data-toolbar admin-review-toolbar">
-              <div class="admin-review-rating-filters" aria-label="Lọc theo số sao">
-                <button type="button" class="admin-review-filter-btn active" data-admin-reviews-rating-filter="all" aria-pressed="true">Tất cả</button>
-                <button type="button" class="admin-review-filter-btn" data-admin-reviews-rating-filter="5" aria-pressed="false">5 sao</button>
-                <button type="button" class="admin-review-filter-btn" data-admin-reviews-rating-filter="4" aria-pressed="false">4 sao</button>
-                <button type="button" class="admin-review-filter-btn" data-admin-reviews-rating-filter="3" aria-pressed="false">3 sao</button>
-                <button type="button" class="admin-review-filter-btn" data-admin-reviews-rating-filter="2" aria-pressed="false">2 sao</button>
-                <button type="button" class="admin-review-filter-btn" data-admin-reviews-rating-filter="1" aria-pressed="false">1 sao</button>
+              <div
+                class="admin-review-rating-filters"
+                aria-label="Lọc theo số sao"
+              >
+                <button
+                  type="button"
+                  class="admin-review-filter-btn active"
+                  data-admin-reviews-rating-filter="all"
+                  aria-pressed="true"
+                >
+                  Tất cả
+                </button>
+                <button
+                  type="button"
+                  class="admin-review-filter-btn"
+                  data-admin-reviews-rating-filter="5"
+                  aria-pressed="false"
+                >
+                  5 sao
+                </button>
+                <button
+                  type="button"
+                  class="admin-review-filter-btn"
+                  data-admin-reviews-rating-filter="4"
+                  aria-pressed="false"
+                >
+                  4 sao
+                </button>
+                <button
+                  type="button"
+                  class="admin-review-filter-btn"
+                  data-admin-reviews-rating-filter="3"
+                  aria-pressed="false"
+                >
+                  3 sao
+                </button>
+                <button
+                  type="button"
+                  class="admin-review-filter-btn"
+                  data-admin-reviews-rating-filter="2"
+                  aria-pressed="false"
+                >
+                  2 sao
+                </button>
+                <button
+                  type="button"
+                  class="admin-review-filter-btn"
+                  data-admin-reviews-rating-filter="1"
+                  aria-pressed="false"
+                >
+                  1 sao
+                </button>
               </div>
 
               <label class="admin-filter-field">
                 <span>Vai trò</span>
-                <select aria-label="Lọc theo vai trò" data-admin-reviews-role-filter>
+                <select
+                  aria-label="Lọc theo vai trò"
+                  data-admin-reviews-role-filter
+                >
                   <option value="all">Tất cả</option>
                   <option value="student">Học sinh</option>
                   <option value="teacher">Giáo viên</option>
@@ -3477,7 +3534,9 @@
               </label>
             </header>
 
-            <div class="admin-review-summary" data-admin-reviews-summary>Đang tải dữ liệu đánh giá...</div>
+            <div class="admin-review-summary" data-admin-reviews-summary>
+              Đang tải dữ liệu đánh giá...
+            </div>
 
             <div class="admin-review-list" data-admin-reviews-list>
               <div class="admin-empty-state is-large">
