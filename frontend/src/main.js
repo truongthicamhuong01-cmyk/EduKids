@@ -26,6 +26,9 @@ const bootstrapState = (window.__EDUKIDS_BOOTSTRAP__ ||= {
 const AUTH_SESSION_KEY = "edukids-current-user";
 const ADMIN_AUTH_KEY = "edukids-admin-authenticated";
 const ADMIN_PASSWORD_KEY = "edukids-admin-password";
+const ADMIN_BRAND_ICON_SRC = "/assets/edukids-icon-admin.png";
+const DEFAULT_BRAND_ICON_SRC = "/assets/edukids-icon-512.png";
+const MOBILE_BRAND_ICON_SRC = "/assets/edukids-icon-192.png";
 const AUTH_ACCOUNTS_KEY = "edukids-mock-accounts";
 const AUTH_CLEAR_KEYS = [
   "token",
@@ -653,6 +656,32 @@ function setAdminMode(isAdminMode) {
   if (authRoot) {
     authRoot.hidden = isAdminMode;
   }
+
+  syncAdminBrandIcons(isAdminMode);
+}
+
+function getBrandIconSrc({ admin = false, mobile = false } = {}) {
+  if (admin) {
+    return ADMIN_BRAND_ICON_SRC;
+  }
+
+  return mobile ? MOBILE_BRAND_ICON_SRC : DEFAULT_BRAND_ICON_SRC;
+}
+
+function syncAdminBrandIcons(isAdminMode = isAdminRoute()) {
+  const adminShell = getAdminShell();
+
+  if (!adminShell) {
+    return;
+  }
+
+  const iconSrc = getBrandIconSrc({ admin: Boolean(isAdminMode) });
+
+  adminShell.querySelectorAll("[data-admin-brand-icon]").forEach((img) => {
+    if (img instanceof HTMLImageElement) {
+      img.src = iconSrc;
+    }
+  });
 }
 
 function showAdminPage(pageId) {

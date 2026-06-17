@@ -10,6 +10,7 @@ const APP_SHELL = [
   "./js/services/assignmentService.js",
   "./assets/edukids-icon-192.png",
   "./assets/edukids-icon-512.png",
+  "./assets/edukids-icon-admin.png",
   "./assets/AICoach.png",
   "./assets/robot.png",
   "./assets/userAvatar/boy.png",
