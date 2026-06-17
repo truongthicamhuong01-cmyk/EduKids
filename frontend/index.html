@@ -149,75 +149,103 @@
 
         <section id="student-home" class="page active">
           <div class="home-hero">
-            <div class="home-hero-copy">
-              <h1 id="student-home-greeting">Xin chào, ...! 👋</h1>
-              <p>Hôm nay là một ngày tuyệt vời để học hỏi!</p>
-            </div>
+            <div class="home-hero-content">
+              <div class="home-hero-copy">
+                <h1 id="student-home-greeting">Xin chào, ...! 👋</h1>
+                <p>Hôm nay là một ngày tuyệt vời để học hỏi!</p>
+              </div>
 
-            <div class="home-hero-stats" aria-label="Thống kê học tập">
-              <article class="home-stat-card">
-                <div class="home-stat-icon" aria-hidden="true">🔥</div>
-                <div class="home-stat-copy">
-                  <small>Chuỗi ngày học</small>
-                  <h3 id="student-home-streak">-- ngày</h3>
-                </div>
-              </article>
-
-              <article class="home-stat-card">
-                <div class="home-stat-icon" aria-hidden="true">🏅</div>
-                <div class="home-stat-copy">
-                  <small>Cấp độ</small>
-                  <h3 id="student-home-level">--</h3>
-                </div>
-              </article>
-
-              <article class="home-stat-card home-stat-card-exp">
-                <div class="home-stat-card-head">
+              <div class="home-hero-stats" aria-label="Thống kê học tập">
+                <article class="home-stat-card home-stat-card-streak">
+                  <div class="home-stat-icon home-stat-icon-streak" aria-hidden="true">🔥</div>
                   <div class="home-stat-copy">
-                    <small>EXP</small>
-                    <h3 id="student-home-exp">-- / --</h3>
+                    <small>Chuỗi ngày học</small>
+                    <h3 id="student-home-streak">-- ngày</h3>
+                  </div>
+                </article>
+
+                <article class="home-stat-card home-stat-card-level">
+                  <div class="home-stat-icon home-stat-icon-level" aria-hidden="true">🏅</div>
+                  <div class="home-stat-copy">
+                    <small>Cấp độ</small>
+                    <h3 id="student-home-level">--</h3>
+                  </div>
+                </article>
+
+                <article class="home-stat-card home-stat-card-exp">
+                  <div class="home-stat-card-head">
+                    <div class="home-stat-copy">
+                      <small>EXP</small>
+                      <h3 id="student-home-exp">-- / --</h3>
+                    </div>
+
+                    <div class="home-treasure-icon" aria-hidden="true">
+                      <svg viewBox="0 0 64 64" role="presentation" focusable="false">
+                        <path
+                          d="M12 26.5C12 20.7 16.7 16 22.5 16h19C47.3 16 52 20.7 52 26.5V42H12V26.5Z"
+                          fill="#F7C56A"
+                        />
+                        <path
+                          d="M16 20.5C16 17 18.8 14 22.5 14h19C45.2 14 48 17 48 20.5V24H16v-3.5Z"
+                          fill="#FFD98E"
+                        />
+                        <path
+                          d="M12 42h40v6.5C52 52 49 55 45.5 55h-27C15 55 12 52 12 48.5V42Z"
+                          fill="#E6A94A"
+                        />
+                        <path d="M30 24h4v9h-4z" fill="#FFF7E6" />
+                        <path
+                          d="M12 30h40"
+                          stroke="#C98A2E"
+                          stroke-width="2.5"
+                          stroke-linecap="round"
+                        />
+                        <path
+                          d="M32 16v39"
+                          stroke="#C98A2E"
+                          stroke-width="2.5"
+                          stroke-linecap="round"
+                        />
+                      </svg>
+                    </div>
                   </div>
 
-                  <div class="home-treasure-icon" aria-hidden="true">
-                    <svg viewBox="0 0 64 64" role="presentation" focusable="false">
-                      <path
-                        d="M12 26.5C12 20.7 16.7 16 22.5 16h19C47.3 16 52 20.7 52 26.5V42H12V26.5Z"
-                        fill="#F7C56A"
-                      />
-                      <path
-                        d="M16 20.5C16 17 18.8 14 22.5 14h19C45.2 14 48 17 48 20.5V24H16v-3.5Z"
-                        fill="#FFD98E"
-                      />
-                      <path
-                        d="M12 42h40v6.5C52 52 49 55 45.5 55h-27C15 55 12 52 12 48.5V42Z"
-                        fill="#E6A94A"
-                      />
-                      <path d="M30 24h4v9h-4z" fill="#FFF7E6" />
-                      <path
-                        d="M12 30h40"
-                        stroke="#C98A2E"
-                        stroke-width="2.5"
-                        stroke-linecap="round"
-                      />
-                      <path
-                        d="M32 16v39"
-                        stroke="#C98A2E"
-                        stroke-width="2.5"
-                        stroke-linecap="round"
-                      />
-                    </svg>
+                  <div class="progress home-exp-progress" aria-hidden="true">
+                    <div
+                      class="progress-fill"
+                      id="student-home-exp-fill"
+                      style="width: 0%"
+                    ></div>
                   </div>
-                </div>
-
-                <div class="progress home-exp-progress" aria-hidden="true">
-                  <div
-                    class="progress-fill"
-                    id="student-home-exp-fill"
-                    style="width: 0%"
-                  ></div>
-                </div>
-              </article>
+                </article>
+              </div>
             </div>
+
+            <button
+              class="home-hero-notification"
+              type="button"
+              aria-label="Thông báo"
+            >
+              <span class="home-hero-notification-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+                  <path
+                    d="M12 3.5a4.5 4.5 0 0 0-4.5 4.5v2.1c0 .8-.2 1.6-.6 2.3L6 14.2V16h12v-1.8l-.9-1.8a4.8 4.8 0 0 1-.6-2.3V8a4.5 4.5 0 0 0-4.5-4.5Z"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M9.4 16.5a2.6 2.6 0 0 0 5.2 0"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </span>
+              <span class="home-hero-notification-badge">2</span>
+            </button>
           </div>
 
           <div class="home-grid">
