@@ -52,6 +52,16 @@ const FLAG_ICON = `
   </svg>
 `;
 
+const CHECKPOINT_LAYOUT = {
+  "station-1": { left: 40.5, top: 25.5, side: "left" },
+  "station-2": { left: 47.8, top: 35.4, side: "right" },
+  "station-3": { left: 39.7, top: 48.6, side: "right" },
+  "station-4": { left: 50.8, top: 61.7, side: "right" },
+  "station-5": { left: 42.3, top: 75.4, side: "right" },
+};
+
+const PEAK_LAYOUT = { left: 43.7, top: 7.5 };
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -61,14 +71,7 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function buildBackgroundStyle(imagePath, overlay = "rgba(255,255,255,0.08)") {
-  return [
-    `linear-gradient(180deg, ${overlay}, rgba(13, 34, 74, 0.18))`,
-    `url("${escapeHtml(imagePath)}")`,
-  ].join(", ");
-}
-
-export function MountainCard(mountain, index) {
+export function MountainCard(mountain) {
   const isSelected = Boolean(mountain.selected);
   const isUnlocked = Boolean(mountain.unlocked);
 
@@ -107,12 +110,12 @@ export function MountainCard(mountain, index) {
 }
 
 export function MountainList({ mountains = [], currentMountainId = "" } = {}) {
-  const list = mountains.map((mountain, index) => {
+  const list = mountains.map((mountain) => {
     const selected =
       mountain.id === currentMountainId
         ? { ...mountain, selected: true }
         : mountain;
-    return MountainCard(selected, index);
+    return MountainCard(selected);
   });
 
   return `
@@ -134,7 +137,9 @@ function renderStationNode(station, data) {
   const isCurrent = station.status === "current";
   const isCompleted = station.status === "completed";
   const isPeak = station.status === "peak";
-  const sideClass = station.side === "left" ? " is-left" : " is-right";
+  const layout = CHECKPOINT_LAYOUT[station.id] || {};
+  const sideClass =
+    layout.side === "left" || station.side === "left" ? " is-left" : " is-right";
   const statusClass = isPeak
     ? " is-peak"
     : isCurrent
@@ -151,20 +156,23 @@ function renderStationNode(station, data) {
       `
     : isCurrent
       ? `
-          <span
-            class="learning-path-node-avatar"
-            style="background-image: ${buildBackgroundStyle(data.avatarImage, "rgba(255,255,255,0.1)")};"
-            aria-hidden="true"
-          ></span>
+          <span class="learning-path-node-avatar" aria-hidden="true">
+            <img
+              src="${escapeHtml(data.avatarImage)}"
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
+          </span>
         `
       : isCompleted
-        ? `<span class="learning-path-node-badge is-completed" aria-hidden="true">${CHECK_ICON}</span>`
-        : `<span class="learning-path-node-badge is-upcoming" aria-hidden="true"></span>`;
+        ? `<span class="learning-path-node-check" aria-hidden="true">${CHECK_ICON}</span>`
+        : `<span class="learning-path-node-placeholder" aria-hidden="true"></span>`;
 
   return `
     <div
       class="learning-path-station${sideClass}${statusClass}"
-      style="left: ${station.left}%; bottom: ${station.bottom}%"
+      style="left: ${layout.left ?? station.left}%; top: ${layout.top ?? station.top ?? (100 - station.bottom)}%;"
     >
       ${content}
       <div class="learning-path-station-copy">
@@ -201,26 +209,11 @@ export function MountainJourney({
         </div>
 
         <div class="learning-path-route" aria-hidden="true">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-            <path
-              d="M 10 92 C 18 84, 20 79, 26 72 S 38 56, 44 50 S 57 34, 64 26 S 75 16, 81 9"
-              fill="none"
-              stroke="rgba(255,255,255,0.96)"
-              stroke-width="1.9"
-              stroke-linecap="round"
-              stroke-dasharray="2.3 6.2"
-            />
-            <path
-              d="M 10 92 C 18 84, 20 79, 26 72 S 38 56, 44 50 S 57 34, 64 26 S 75 16, 81 9"
-              fill="none"
-              stroke="rgba(255,255,255,0.18)"
-              stroke-width="4.4"
-              stroke-linecap="round"
-              stroke-dasharray="2.3 6.2"
-            />
-          </svg>
           ${stations.join("")}
-          <div class="learning-path-peak" style="left: 84%; top: 10%;">
+          <div
+            class="learning-path-peak"
+            style="left: ${PEAK_LAYOUT.left}%; top: ${PEAK_LAYOUT.top}%;"
+          >
             <span class="learning-path-peak-flag" aria-hidden="true">
               ${FLAG_ICON}
             </span>
