@@ -35,31 +35,6 @@ const LOCK_ICON = `
   </svg>
 `;
 
-const FLAG_ICON = `
-  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-    <path
-      d="M6 3.75v16.5"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.8"
-      stroke-linecap="round"
-    />
-    <path
-      d="M6 5.25c3.2-1.35 5.7 1.65 9 0v6c-3.3 1.65-5.8-1.35-9 0"
-      fill="currentColor"
-      opacity=".96"
-    />
-  </svg>
-`;
-
-const CHECKPOINT_LAYOUT = {
-  "station-1": { left: 40.5, top: 25.5, side: "left" },
-  "station-2": { left: 47.8, top: 35.4, side: "right" },
-  "station-3": { left: 39.7, top: 48.6, side: "right" },
-  "station-4": { left: 50.8, top: 61.7, side: "right" },
-  "station-5": { left: 42.3, top: 75.4, side: "right" },
-};
-
 const PEAK_LAYOUT = { left: 43.7, top: 7.5 };
 
 function escapeHtml(value) {
@@ -133,30 +108,33 @@ export function MountainList({ mountains = [], currentMountainId = "" } = {}) {
   `;
 }
 
-function renderStationNode(station, data) {
-  const isCurrent = station.status === "current";
-  const isCompleted = station.status === "completed";
-  const isPeak = station.status === "peak";
-  const layout = CHECKPOINT_LAYOUT[station.id] || {};
-  const sideClass =
-    layout.side === "left" || station.side === "left" ? " is-left" : " is-right";
-  const statusClass = isPeak
-    ? " is-peak"
-    : isCurrent
-      ? " is-current"
-      : isCompleted
-        ? " is-completed"
-        : " is-upcoming";
+function resolveStationStatus(stationNumber, currentStation) {
+  if (stationNumber < currentStation) {
+    return "completed";
+  }
 
-  const content = isPeak
-    ? `
-        <span class="learning-path-node-marker is-flag" aria-hidden="true">
-          ${FLAG_ICON}
-        </span>
-      `
-    : isCurrent
+  if (stationNumber === currentStation) {
+    return "current";
+  }
+
+  return "locked";
+}
+
+function renderStationNode(station, data, currentStation, index = 0) {
+  const stationNumber = Number(station.order ?? index + 1) || 0;
+  const status = resolveStationStatus(stationNumber, currentStation);
+  const sideClass = station.side === "left" ? " is-left" : " is-right";
+  const statusClass =
+    status === "current"
+      ? " is-current"
+      : status === "completed"
+        ? " is-completed"
+        : " is-locked";
+
+  const checkpointContent =
+    status === "current"
       ? `
-          <span class="learning-path-node-avatar" aria-hidden="true">
+          <span class="learning-path-station-avatar" aria-hidden="true">
             <img
               src="${escapeHtml(data.avatarImage)}"
               alt=""
@@ -165,16 +143,28 @@ function renderStationNode(station, data) {
             />
           </span>
         `
-      : isCompleted
-        ? `<span class="learning-path-node-check" aria-hidden="true">${CHECK_ICON}</span>`
-        : `<span class="learning-path-node-placeholder" aria-hidden="true"></span>`;
+      : "";
+
+  const statusBadge =
+    status === "completed"
+      ? `
+        <span class="learning-path-station-status-badge" aria-hidden="true">
+          ${CHECK_ICON}
+        </span>
+      `
+      : "";
 
   return `
     <div
       class="learning-path-station${sideClass}${statusClass}"
-      style="left: ${layout.left ?? station.left}%; top: ${layout.top ?? station.top ?? (100 - station.bottom)}%;"
+      style="left: ${station.left}%; top: ${station.top}%;"
     >
-      ${content}
+      <div class="learning-path-station-anchor" aria-hidden="true">
+        <span class="learning-path-station-checkpoint">
+          ${checkpointContent}
+        </span>
+        ${statusBadge}
+      </div>
       <div class="learning-path-station-copy">
         <strong>${escapeHtml(station.label)}</strong>
         <span>${escapeHtml(station.altitude)}</span>
@@ -186,8 +176,11 @@ function renderStationNode(station, data) {
 export function MountainJourney({
   journey = learningPathMockData.journey,
 } = {}) {
-  const stations = (journey.stations || []).map((station) =>
-    renderStationNode(station, journey),
+  const currentStation = Number(
+    journey.currentStation ?? learningPathMockData.currentStation ?? 1,
+  );
+  const stations = (journey.stations || []).map((station, index) =>
+    renderStationNode(station, journey, currentStation, index),
   );
 
   return `
@@ -214,9 +207,6 @@ export function MountainJourney({
             class="learning-path-peak"
             style="left: ${PEAK_LAYOUT.left}%; top: ${PEAK_LAYOUT.top}%;"
           >
-            <span class="learning-path-peak-flag" aria-hidden="true">
-              ${FLAG_ICON}
-            </span>
             <span class="learning-path-peak-copy">
               <strong>${escapeHtml(journey.peakLabel)}</strong>
               <span>${escapeHtml(journey.peakAltitude)}</span>
