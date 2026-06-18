@@ -13,6 +13,7 @@ import "./services/systemSettingsService.js";
 import "./services/adminStatsService.js";
 import "./services/appReviewService.js";
 import "./services/topicAccuracyService.js";
+import { renderLearningPathPage } from "./pages/student/learning-path/learningPathPage.js";
 import "./style.css";
 
 const bootstrapState = (window.__EDUKIDS_BOOTSTRAP__ ||= {
@@ -44,6 +45,10 @@ const ROLE_DEFAULT_PAGES = {
   teacher: "teacher-dashboard",
 };
 
+const STUDENT_ROUTE_PATHS = {
+  "learning-path": "/student/learning-path",
+};
+
 const ADMIN_DEFAULT_PAGE = "admin-overview";
 
 const ROLE_ALLOWED_PAGES = {
@@ -54,6 +59,7 @@ const ROLE_ALLOWED_PAGES = {
     "assignments",
     "missions",
     "progress",
+    "learning-path",
     "profile",
   ]),
   teacher: new Set([
@@ -403,6 +409,20 @@ function getCurrentRole() {
 
 function getDefaultPageForRole(role) {
   return ROLE_DEFAULT_PAGES[normalizeRole(role)] || ROLE_DEFAULT_PAGES.student;
+}
+
+function getRoutePageForPathname(pathname = window.location?.pathname || "") {
+  const normalizedPathname = String(pathname || "").replace(/\/+$/, "") || "/";
+
+  if (normalizedPathname === STUDENT_ROUTE_PATHS["learning-path"]) {
+    return "learning-path";
+  }
+
+  return null;
+}
+
+function getRoutePathForPage(pageId) {
+  return STUDENT_ROUTE_PATHS[pageId] || "/";
 }
 
 function getProfilePageType(pageId) {
@@ -5697,6 +5717,26 @@ function showPage(pageId) {
   });
 }
 
+function syncRouteForPageChange(nextPageId, previousPageId, role) {
+  if (normalizeRole(role) !== "student") {
+    return;
+  }
+
+  const currentPath = String(window.location?.pathname || "").replace(/\/+$/, "") || "/";
+  const learningPath = getRoutePathForPage("learning-path");
+
+  if (nextPageId === "learning-path") {
+    if (currentPath !== learningPath) {
+      window.history.pushState({}, "", learningPath);
+    }
+    return;
+  }
+
+  if (previousPageId === "learning-path" && currentPath === learningPath) {
+    window.history.replaceState({}, "", "/");
+  }
+}
+
 function changePage(pageId) {
   const role = getCurrentRole();
   const targetPageId = resolvePageForRole(pageId, role);
@@ -5708,6 +5748,7 @@ function changePage(pageId) {
 
   showPage(targetPageId);
   applyRoleVisibility(role);
+  syncRouteForPageChange(targetPageId, previousPage, role);
 
   if (targetPageId === "student-home" && role === "student") {
     void syncStudentProgress(getCurrentAuthUser());
@@ -5798,6 +5839,10 @@ function changePage(pageId) {
       currentProfile,
       getProfileActivityLogs(currentProfile),
     );
+  }
+
+  if (targetPageId === "learning-path" && normalizeRole(role) === "student") {
+    renderLearningPathPage();
   }
 }
 
@@ -18545,6 +18590,7 @@ function handleLogout() {
   delete window.EduKidsCurrentAssignment;
   resetManualAssignmentState();
   setAuthMode(true);
+  redirectToLoginRoute();
   renderAuthScreen("login");
 }
 
@@ -19963,6 +20009,14 @@ function bindAppEventsOnce() {
       return;
     }
 
+    const learningPathContinueButton = event.target.closest(
+      "[data-learning-path-continue]",
+    );
+    if (learningPathContinueButton) {
+      changePage("subjects");
+      return;
+    }
+
     const menuToggle = event.target.closest("[data-mobile-menu-toggle]");
     if (menuToggle) {
       const isOpen = !document.body.classList.contains("sidebar-open");
@@ -20018,7 +20072,17 @@ function initApp(user) {
   bootstrapState.currentUser = user;
 
   bindAppEventsOnce();
-  changePage(getDefaultPageForRole(user.role));
+  const routePageId = getRoutePageForPathname();
+  const targetPageId = resolvePageForRole(
+    routePageId || getDefaultPageForRole(user.role),
+    user.role,
+  );
+  changePage(targetPageId);
+
+  if (routePageId && targetPageId !== routePageId) {
+    window.history.replaceState({}, "", "/");
+  }
+
   window.EduKidsCurrentUser = user;
   void syncSidebarProfile();
   renderStudentHomeOverview(user);
@@ -20062,6 +20126,7 @@ function initializeAuth() {
     authRoot.removeAttribute("data-rendered-mode");
   }
 
+  redirectToLoginRoute();
   renderAuthScreen("login");
 }
 
@@ -20091,6 +20156,7 @@ function syncAuthState() {
     authRoot.removeAttribute("data-rendered-mode");
   }
 
+  redirectToLoginRoute();
   renderAuthScreen("login");
 }
 

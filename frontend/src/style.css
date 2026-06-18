@@ -89,10 +89,10 @@ body.auth-mode .app {
 ========================= */
 
 .sidebar {
-  width: 280px;
+  width: 256px;
   background: #fff;
   border-right: 1px solid var(--border);
-  padding: 24px;
+  padding: 22px;
 
   position: fixed;
   top: 0;
@@ -108,15 +108,15 @@ body.auth-mode .app {
 .sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 28px;
+  gap: 12px;
+  margin-bottom: 24px;
   min-width: 0;
 }
 
 .sidebar-brand-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 18px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
   flex: none;
   display: grid;
   place-items: center;
@@ -145,7 +145,7 @@ body.auth-mode .app {
   display: inline-flex;
   align-items: baseline;
   gap: 0;
-  font-size: 31px;
+  font-size: 28px;
   line-height: 1;
   font-weight: 900;
   letter-spacing: -0.04em;
@@ -162,7 +162,7 @@ body.auth-mode .app {
 
 .sidebar-brand-tagline {
   margin-top: 4px;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.25;
   font-weight: 600;
   color: #516076;
@@ -180,25 +180,25 @@ body.auth-mode .app {
 }
 
 .sidebar hr {
-  margin: 15px 0;
+  margin: 14px 0;
   border: none;
   border-top: 1px solid var(--border);
 }
 
 .menu-item {
-  padding: 18px 20px;
-  border-radius: 14px;
+  padding: 16px 18px;
+  border-radius: 13px;
   border: none;
   background: transparent;
   color: inherit;
   cursor: pointer;
   width: 100%;
   text-align: left;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .menu-item:hover {
@@ -499,7 +499,7 @@ body.auth-mode .app {
 ========================= */
 
 .content {
-  margin-left: 280px;
+  margin-left: 256px;
   width: 100%;
   padding: 0;
   background: #f5f7fb;
@@ -6729,6 +6729,633 @@ img.profile-skeleton {
 }
 
 /* =========================
+   LEARNING PATH
+========================= */
+
+#learning-path {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 24px 24px 36px;
+}
+
+.learning-path-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.learning-path-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 34%),
+    linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  border: 1px solid #e7eefc;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.05);
+}
+
+.learning-path-header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.learning-path-title {
+  font-size: clamp(28px, 2.8vw, 36px);
+  line-height: 1.05;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: #1f3f87;
+}
+
+.learning-path-header-copy p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.learning-path-coin-card {
+  min-width: 152px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: #ffffff;
+  border: 1px solid #e6edf9;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.learning-path-coin-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #37517f;
+}
+
+.learning-path-coin-card strong {
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 900;
+  color: #f97316;
+}
+
+.learning-path-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 344px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.learning-path-left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.learning-path-right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.learning-path-panel {
+  background: #ffffff;
+  border: 1px solid #e7eefc;
+  border-radius: 28px;
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
+}
+
+.learning-path-list-panel {
+  padding: 18px;
+}
+
+.learning-path-panel-head {
+  margin-bottom: 14px;
+}
+
+.learning-path-panel-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.learning-path-panel-head h2 {
+  margin-top: 10px;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #16316d;
+}
+
+.learning-path-mountain-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.learning-path-mountain-card {
+  display: grid;
+  grid-template-columns: 28px 66px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  background: #ffffff;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04);
+  color: inherit;
+  text-align: left;
+  cursor: default;
+  transition:
+    border-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.learning-path-mountain-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 24px rgba(15, 23, 42, 0.06);
+}
+
+.learning-path-mountain-card.is-selected {
+  border-color: #3b82f6;
+  background: linear-gradient(180deg, #f8fbff 0%, #eff6ff 100%);
+  box-shadow: 0 16px 28px rgba(37, 99, 235, 0.12);
+}
+
+.learning-path-mountain-card.is-locked {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+
+.learning-path-mountain-card:disabled {
+  opacity: 0.98;
+}
+
+.learning-path-mountain-rank {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.learning-path-mountain-thumb {
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 4px solid #e7f0ff;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+}
+
+.learning-path-mountain-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 28% 24%, rgba(255, 255, 255, 0.45), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(15, 23, 42, 0.12));
+}
+
+.learning-path-mountain-thumb-label {
+  position: relative;
+  z-index: 1;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(15, 23, 42, 0.35);
+}
+
+.learning-path-mountain-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.learning-path-mountain-continent {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.learning-path-mountain-name {
+  font-size: 16px;
+  line-height: 1.15;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.learning-path-mountain-height {
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+}
+
+.learning-path-mountain-lock {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  color: #c4cfdf;
+}
+
+.learning-path-mountain-lock svg {
+  width: 18px;
+  height: 18px;
+}
+
+.learning-path-journey-panel {
+  padding: 18px;
+}
+
+.learning-path-journey-stage {
+  position: relative;
+  min-height: 650px;
+  overflow: hidden;
+  border-radius: 26px;
+  background-color: #dcedff;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.28),
+    0 20px 36px rgba(37, 99, 235, 0.14);
+}
+
+.learning-path-journey-glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.68), transparent 28%),
+    radial-gradient(circle at 80% 18%, rgba(255, 255, 255, 0.28), transparent 22%),
+    linear-gradient(180deg, rgba(248, 251, 255, 0.14), rgba(18, 56, 124, 0.18));
+}
+
+.learning-path-journey-copy {
+  position: relative;
+  z-index: 2;
+  width: min(38%, 360px);
+  padding: 22px 20px 0 22px;
+  color: #10316d;
+}
+
+.learning-path-level-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #5f92ef 0%, #4b78dd 100%);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.2);
+}
+
+.learning-path-journey-copy h2 {
+  margin-top: 12px;
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: #15316f;
+}
+
+.learning-path-location {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #1f3f78;
+}
+
+.learning-path-description {
+  margin-top: 14px;
+  max-width: 280px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #17315f;
+}
+
+.learning-path-route {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.learning-path-route svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.learning-path-station,
+.learning-path-peak {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transform: translate(-50%, -50%);
+}
+
+.learning-path-station.is-left {
+  flex-direction: row-reverse;
+}
+
+.learning-path-station.is-right {
+  flex-direction: row;
+}
+
+.learning-path-station-copy,
+.learning-path-peak-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12);
+  color: #172554;
+}
+
+.learning-path-station-copy strong,
+.learning-path-peak-copy strong {
+  font-size: 14px;
+  line-height: 1.1;
+  font-weight: 800;
+}
+
+.learning-path-station-copy span,
+.learning-path-peak-copy span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.learning-path-station-copy small,
+.learning-path-peak-copy small {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.learning-path-node-badge,
+.learning-path-node-avatar,
+.learning-path-node-marker {
+  flex: 0 0 auto;
+}
+
+.learning-path-node-badge {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 4px solid rgba(255, 255, 255, 0.98);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+}
+
+.learning-path-node-badge.is-completed {
+  background: linear-gradient(180deg, #69d36a 0%, #33b86e 100%);
+  color: #ffffff;
+}
+
+.learning-path-node-badge.is-upcoming {
+  width: 16px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 3px solid rgba(59, 130, 246, 0.75);
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.36);
+}
+
+.learning-path-node-badge svg {
+  width: 18px;
+  height: 18px;
+}
+
+.learning-path-node-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  border: 4px solid rgba(255, 255, 255, 0.98);
+  background-position: center;
+  background-size: cover;
+  box-shadow:
+    0 0 0 4px rgba(59, 130, 246, 0.78),
+    0 10px 24px rgba(15, 23, 42, 0.18);
+}
+
+.learning-path-node-marker {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.98);
+  color: #ef4444;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16);
+}
+
+.learning-path-node-marker svg {
+  width: 16px;
+  height: 16px;
+}
+
+.learning-path-peak {
+  flex-direction: row;
+}
+
+.learning-path-peak-flag {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #ef4444;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16);
+}
+
+.learning-path-peak-flag svg {
+  width: 18px;
+  height: 18px;
+}
+
+.learning-path-peak-copy {
+  min-width: 160px;
+}
+
+.learning-path-progress-card {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  z-index: 3;
+  width: min(280px, calc(100% - 44px));
+  padding: 16px 16px 14px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(8px);
+}
+
+.learning-path-progress-card h3 {
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #102c63;
+}
+
+.learning-path-progress-bar {
+  margin: 12px 0 10px;
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dce7ff;
+}
+
+.learning-path-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+}
+
+.learning-path-progress-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.learning-path-progress-meta strong {
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 900;
+  color: #1d4ed8;
+}
+
+.learning-path-progress-meta span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #47607f;
+}
+
+.learning-path-progress-card p {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.learning-path-reward-panel {
+  padding: 10px 12px 12px;
+}
+
+.learning-path-reward-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 0;
+}
+
+.learning-path-reward-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  border: 1px solid #e5eefb;
+  background: linear-gradient(180deg, #fbfdff 0%, #f6faff 100%);
+}
+
+.learning-path-reward-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.learning-path-reward-item.is-gold .learning-path-reward-icon {
+  background: linear-gradient(180deg, #ffe982 0%, #f6c84f 100%);
+}
+
+.learning-path-reward-item.is-amber .learning-path-reward-icon {
+  background: linear-gradient(180deg, #fff1a8 0%, #f8cb54 100%);
+}
+
+.learning-path-reward-item.is-blue .learning-path-reward-icon {
+  background: linear-gradient(180deg, #dbeafe 0%, #a5c8ff 100%);
+}
+
+.learning-path-reward-item.is-green .learning-path-reward-icon {
+  background: linear-gradient(180deg, #dcfce7 0%, #86efac 100%);
+}
+
+.learning-path-reward-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.learning-path-reward-copy strong {
+  font-size: 12px;
+  line-height: 1.1;
+  font-weight: 800;
+  color: #122554;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.learning-path-reward-copy span {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b7280;
+  line-height: 1.1;
+}
+
+/* =========================
    RESPONSIVE
 ========================= */
 
@@ -6773,6 +7400,26 @@ img.profile-skeleton {
   .home-content-inner {
     margin-top: -34px;
     padding: 0 24px 24px;
+  }
+
+  #learning-path {
+    padding: 20px 20px 30px;
+  }
+
+  .learning-path-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .learning-path-journey-stage {
+    min-height: 620px;
+  }
+
+  .learning-path-journey-copy {
+    width: min(44%, 360px);
+  }
+
+  .learning-path-reward-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -6843,6 +7490,96 @@ img.profile-skeleton {
 
   .page {
     padding: 16px;
+  }
+
+  #learning-path {
+    padding: 16px;
+  }
+
+  .learning-path-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .learning-path-coin-card {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .learning-path-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .learning-path-right-column {
+    gap: 16px;
+  }
+
+  .learning-path-reward-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .learning-path-list-panel,
+  .learning-path-journey-panel,
+  .learning-path-reward-panel {
+    padding: 16px;
+  }
+
+  .learning-path-mountain-card {
+    grid-template-columns: 28px 62px minmax(0, 1fr) auto;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .learning-path-mountain-thumb {
+    width: 62px;
+    height: 62px;
+  }
+
+  .learning-path-journey-stage {
+    min-height: 600px;
+  }
+
+  .learning-path-journey-copy {
+    width: auto;
+    padding: 20px 18px 0 20px;
+  }
+
+  .learning-path-journey-copy h2 {
+    font-size: clamp(30px, 8vw, 40px);
+  }
+
+  .learning-path-location {
+    font-size: 15px;
+  }
+
+  .learning-path-description {
+    max-width: 260px;
+    font-size: 14px;
+  }
+
+  .learning-path-progress-card {
+    right: 14px;
+    bottom: 14px;
+    width: calc(100% - 28px);
+  }
+
+  .learning-path-reward-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .learning-path-station-copy,
+  .learning-path-peak-copy {
+    padding: 10px 12px;
+  }
+
+  .learning-path-station-copy strong,
+  .learning-path-peak-copy strong {
+    font-size: 15px;
+  }
+
+  .learning-path-station-copy span,
+  .learning-path-peak-copy span {
+    font-size: 13px;
   }
 
   .home-content-inner {
