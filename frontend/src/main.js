@@ -5722,7 +5722,8 @@ function syncRouteForPageChange(nextPageId, previousPageId, role) {
     return;
   }
 
-  const currentPath = String(window.location?.pathname || "").replace(/\/+$/, "") || "/";
+  const currentPath =
+    String(window.location?.pathname || "").replace(/\/+$/, "") || "/";
   const learningPath = getRoutePathForPage("learning-path");
 
   if (nextPageId === "learning-path") {
@@ -6769,7 +6770,8 @@ function renderStudentStudyRecommendations(recommendations) {
   }
 
   if (practiceBadge) {
-    practiceBadge.textContent = practice?.percentage <= 33 ? "Yếu" : "Ôn tập";
+    practiceBadge.textContent =
+      practice?.percentage <= 33 ? "Cần cải thiện" : "Ôn tập";
   }
 
   if (reviewBadge) {
@@ -16836,9 +16838,9 @@ function renderTeacherStatsAi(viewModel) {
   const completionRate = `${viewModel.assignmentCompletionRate || 0}%`;
   const supportStudentCount = viewModel.supportStudentCount || 0;
   const recommendationTopic =
-    weakestTopicName !== "--" ? weakestTopicName : "chủ đề yếu nhất";
+    weakestTopicName !== "--" ? weakestTopicName : "chủ đề cần cải thiện";
   const weakerNote = viewModel.weakestTopic
-    ? `Chủ đề yếu nhất là ${weakestTopicName} (${weakestTopicAccuracy}).`
+    ? `Chủ đề cần cải thiện là ${weakestTopicName} (${weakestTopicAccuracy}).`
     : "Chưa có đủ dữ liệu chủ đề để phân tích.";
 
   return `

@@ -35,7 +35,7 @@ const LOCK_ICON = `
   </svg>
 `;
 
-const PEAK_LAYOUT = { left: 43.7, top: 7.5 };
+const PEAK_LAYOUT = { left: 41.7, top: 8.5 };
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -97,7 +97,7 @@ export function MountainList({ mountains = [], currentMountainId = "" } = {}) {
     <section class="learning-path-panel learning-path-list-panel">
       <div class="learning-path-panel-head">
         <div>
-          <span class="learning-path-panel-eyebrow">SS1 - CHINH PHỤC 7 ĐỈNH CAO THẾ GIỚI</span>
+          <span class="learning-path-panel-eyebrow">MÙA 1: 7 ĐỈNH CAO THẾ GIỚI</span>
           <h2>7 châu lục, 7 thử thách</h2>
         </div>
       </div>
@@ -141,16 +141,14 @@ function renderStationNode(station, data, currentStation, index = 0) {
               loading="lazy"
               decoding="async"
             />
-          </span>
-        `
+        </span>
+      `
       : "";
 
   const statusBadge =
     status === "completed"
       ? `
-        <span class="learning-path-station-status-badge" aria-hidden="true">
-          ${CHECK_ICON}
-        </span>
+        <span class="learning-path-station-status-badge" aria-hidden="true">${CHECK_ICON}</span>
       `
       : "";
 
@@ -162,8 +160,8 @@ function renderStationNode(station, data, currentStation, index = 0) {
       <div class="learning-path-station-anchor" aria-hidden="true">
         <span class="learning-path-station-checkpoint">
           ${checkpointContent}
+          ${statusBadge}
         </span>
-        ${statusBadge}
       </div>
       <div class="learning-path-station-copy">
         <strong>${escapeHtml(station.label)}</strong>
@@ -201,17 +199,19 @@ export function MountainJourney({
           )}</p>
         </div>
 
-        <div class="learning-path-route" aria-hidden="true">
-          ${stations.join("")}
-          <div
-            class="learning-path-peak"
-            style="left: ${PEAK_LAYOUT.left}%; top: ${PEAK_LAYOUT.top}%;"
-          >
-            <span class="learning-path-peak-copy">
-              <strong>${escapeHtml(journey.peakLabel)}</strong>
-              <span>${escapeHtml(journey.peakAltitude)}</span>
-              <small>${escapeHtml(journey.peakNote)}</small>
-            </span>
+        <div class="learning-path-journey-overlay" aria-hidden="true">
+          <div class="learning-path-route">
+            ${stations.join("")}
+            <div
+              class="learning-path-peak"
+              style="left: ${PEAK_LAYOUT.left}%; top: ${PEAK_LAYOUT.top}%;"
+            >
+              <span class="learning-path-peak-copy">
+                <strong>${escapeHtml(journey.peakLabel)}</strong>
+                <span>${escapeHtml(journey.peakAltitude)}</span>
+                <small>${escapeHtml(journey.peakNote)}</small>
+              </span>
+            </div>
           </div>
         </div>
 
