@@ -68,10 +68,6 @@ function buildBackgroundStyle(imagePath, overlay = "rgba(255,255,255,0.08)") {
   ].join(", ");
 }
 
-function buildThumbStyle(imagePath) {
-  return `url("${escapeHtml(imagePath)}")`;
-}
-
 export function MountainCard(mountain, index) {
   const isSelected = Boolean(mountain.selected);
   const isUnlocked = Boolean(mountain.unlocked);
@@ -82,12 +78,16 @@ export function MountainCard(mountain, index) {
       type="button"
       ${isUnlocked ? "" : 'aria-disabled="true" disabled'}
     >
-      <span class="learning-path-mountain-rank">${index + 1}</span>
-      <span
-        class="learning-path-mountain-thumb"
-        style="background-image: ${buildThumbStyle(mountain.image)};"
-        aria-hidden="true"
-      ></span>
+      <span class="learning-path-mountain-thumb" aria-hidden="true">
+        <img
+          class="learning-path-mountain-thumb-image"
+          src="${escapeHtml(mountain.image)}"
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onerror="console.error('[Learning Path] Failed to load mountain thumbnail:', this.getAttribute('src')); this.style.display='none'; this.parentElement?.classList.add('is-image-missing');"
+        />
+      </span>
       <span class="learning-path-mountain-copy">
         <span class="learning-path-mountain-continent">${escapeHtml(
           mountain.continent,
