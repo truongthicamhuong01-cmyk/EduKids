@@ -68,11 +68,8 @@ function buildBackgroundStyle(imagePath, overlay = "rgba(255,255,255,0.08)") {
   ].join(", ");
 }
 
-function buildThumbStyle(imagePath, accent = "rgba(37, 99, 235, 0.9)") {
-  return [
-    "radial-gradient(circle at 28% 28%, rgba(255,255,255,.98) 0 18%, rgba(255,255,255,.26) 18% 34%, transparent 34%),",
-    "linear-gradient(145deg, rgba(255,255,255,.9), rgba(240,248,255,.2))",
-  ].join(" ");
+function buildThumbStyle(imagePath) {
+  return `url("${escapeHtml(imagePath)}")`;
 }
 
 export function MountainCard(mountain, index) {
@@ -88,18 +85,9 @@ export function MountainCard(mountain, index) {
       <span class="learning-path-mountain-rank">${index + 1}</span>
       <span
         class="learning-path-mountain-thumb"
-        style="background-image: ${buildThumbStyle(mountain.image)} , url('${escapeHtml(mountain.image)}');"
+        style="background-image: ${buildThumbStyle(mountain.image)};"
         aria-hidden="true"
-      >
-        <span class="learning-path-mountain-thumb-label">${escapeHtml(
-          mountain.name
-            .split(" ")
-            .map((part) => part[0] || "")
-            .join("")
-            .slice(0, 2)
-            .toUpperCase(),
-        )}</span>
-      </span>
+      ></span>
       <span class="learning-path-mountain-copy">
         <span class="learning-path-mountain-continent">${escapeHtml(
           mountain.continent,
@@ -198,7 +186,7 @@ export function MountainJourney({
     <section class="learning-path-panel learning-path-journey-panel">
       <div
         class="learning-path-journey-stage"
-        style="background-image: ${buildBackgroundStyle(journey.backgroundImage, "rgba(173, 216, 255, 0.18)")};"
+        style="background-image: url('${escapeHtml(journey.backgroundImage)}');"
       >
         <div class="learning-path-journey-glow"></div>
         <div class="learning-path-journey-copy">
