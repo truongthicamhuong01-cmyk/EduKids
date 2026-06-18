@@ -57,7 +57,6 @@ const ROLE_ALLOWED_PAGES = {
     "ai-coach",
     "subjects",
     "assignments",
-    "missions",
     "progress",
     "learning-path",
     "profile",

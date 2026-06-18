@@ -6815,7 +6815,7 @@ img.profile-skeleton {
   display: grid;
   grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
   gap: 18px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .learning-path-left-column {
@@ -6823,6 +6823,7 @@ img.profile-skeleton {
   flex-direction: column;
   gap: 18px;
   min-width: 0;
+  height: 100%;
 }
 
 .learning-path-right-column {
@@ -6830,6 +6831,7 @@ img.profile-skeleton {
   flex-direction: column;
   gap: 18px;
   min-width: 0;
+  height: 100%;
 }
 
 .learning-path-panel {
@@ -6841,6 +6843,7 @@ img.profile-skeleton {
 
 .learning-path-list-panel {
   padding: 18px;
+  height: 100%;
 }
 
 .learning-path-panel-head {
@@ -6993,11 +6996,13 @@ img.profile-skeleton {
   background: transparent;
   border: none;
   box-shadow: none;
+  min-height: 0;
+  flex: 1 1 auto;
 }
 
 .learning-path-journey-stage {
   position: relative;
-  min-height: 700px;
+  min-height: 780px;
   overflow: hidden;
   border-radius: 28px;
   background-color: #dcedff;
@@ -7121,6 +7126,28 @@ img.profile-skeleton {
   z-index: 2;
 }
 
+.learning-path-station-checkpoint-button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  outline: none;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+.learning-path-station-checkpoint-button:hover,
+.learning-path-station-checkpoint-button:focus-visible {
+  transform: translate(-50%, -50%) scale(1.06);
+  filter: brightness(1.03);
+  box-shadow:
+    0 12px 24px rgba(15, 23, 42, 0.16),
+    inset 0 0 0 1px rgba(147, 197, 253, 0.44);
+}
+
 .learning-path-station-checkpoint::after {
   content: "";
   position: absolute;
@@ -7177,6 +7204,10 @@ img.profile-skeleton {
 .learning-path-station-status-badge svg {
   width: 13px;
   height: 13px;
+}
+
+.learning-path-station-checkpoint.is-locked {
+  opacity: 0.78;
 }
 
 .learning-path-station-copy {
@@ -7329,36 +7360,61 @@ img.profile-skeleton {
   color: #6b7280;
 }
 
-.learning-path-reward-panel {
-  padding: 10px 12px 12px;
-}
-
 .learning-path-reward-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 12px;
   margin-top: 0;
+  justify-items: stretch;
+  align-items: center;
+  width: 100%;
 }
 
 .learning-path-reward-item {
+  min-height: 66px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 56px;
-  padding: 8px 10px;
+  gap: 10px;
+  padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid #e5eefb;
   background: linear-gradient(180deg, #fbfdff 0%, #f6faff 100%);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
 }
 
 .learning-path-reward-icon {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
   border-radius: 12px;
   display: grid;
   place-items: center;
   font-size: 16px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.learning-path-reward-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.learning-path-reward-copy strong {
+  font-size: 12px;
+  line-height: 1.12;
+  font-weight: 800;
+  color: #122554;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.learning-path-reward-copy span {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b7280;
+  line-height: 1.1;
 }
 
 .learning-path-reward-item.is-gold .learning-path-reward-icon {
@@ -7377,28 +7433,344 @@ img.profile-skeleton {
   background: linear-gradient(180deg, #dcfce7 0%, #86efac 100%);
 }
 
-.learning-path-reward-copy {
-  min-width: 0;
+.learning-path-moving-avatar {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  z-index: 5;
+  transform: translate(-50%, -50%) scale(1.04);
+  transition:
+    left 1.8s cubic-bezier(0.2, 0.85, 0.2, 1),
+    top 1.8s cubic-bezier(0.2, 0.85, 0.2, 1),
+    transform 1.8s cubic-bezier(0.2, 0.85, 0.2, 1);
+}
+
+.learning-path-moving-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.learning-path-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: learning-path-modal-overlay-in 0.22s ease both;
+}
+
+.learning-path-modal-overlay.is-closing {
+  animation: learning-path-modal-overlay-out 0.2s ease both;
+}
+
+.learning-path-modal {
+  width: min(850px, 90vw);
+  max-height: min(88vh, 860px);
+  overflow: hidden;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.24);
+  animation: learning-path-modal-in 0.22s ease both;
+}
+
+.learning-path-modal.is-closing {
+  animation: learning-path-modal-out 0.2s ease both;
+}
+
+.learning-path-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 24px 16px;
+}
+
+.learning-path-modal-kicker {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.learning-path-modal-header h3 {
+  margin-top: 6px;
+  font-size: clamp(24px, 3vw, 30px);
+  line-height: 1.1;
+  font-weight: 900;
+  color: #12306b;
+}
+
+.learning-path-modal-close {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #12306b;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+.learning-path-modal-close:hover,
+.learning-path-modal-close:focus-visible {
+  transform: scale(1.04);
+  background: #dbeafe;
+}
+
+.learning-path-modal-progress {
+  padding: 0 24px 18px;
+}
+
+.learning-path-modal-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.learning-path-modal-progress-head span {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1d4ed8;
+}
+
+.learning-path-modal-progress-head strong {
+  font-size: 14px;
+  font-weight: 900;
+  color: #12306b;
+}
+
+.learning-path-modal-progress-track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dbeafe;
+}
+
+.learning-path-modal-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb 0%, #60a5fa 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+}
+
+.learning-path-modal-task-list {
+  display: grid;
+  gap: 12px;
+  padding: 0 24px 20px;
+  max-height: min(42vh, 360px);
+  overflow: auto;
+}
+
+.learning-path-task-card {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 12px;
+  padding: 16px 16px 14px;
+  border-radius: 18px;
+  border: 1px solid #e5eefb;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
 }
 
-.learning-path-reward-copy strong {
-  font-size: 12px;
-  line-height: 1.1;
+.learning-path-task-card.is-completed {
+  border-color: rgba(34, 197, 94, 0.22);
+  background: linear-gradient(180deg, #f7fff9 0%, #ecfdf3 100%);
+}
+
+.learning-path-task-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.learning-path-task-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #dbeafe 0%, #bfdbfe 100%);
+  font-size: 20px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.learning-path-task-card.is-completed .learning-path-task-icon {
+  background: linear-gradient(180deg, #dcfce7 0%, #86efac 100%);
+}
+
+.learning-path-task-copy {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.learning-path-task-copy strong {
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 900;
+  color: #12306b;
+}
+
+.learning-path-task-copy p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #4b5563;
+}
+
+.learning-path-task-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.learning-path-task-status {
+  font-size: 13px;
   font-weight: 800;
-  color: #122554;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #0f766e;
 }
 
-.learning-path-reward-copy span {
-  font-size: 10px;
-  font-weight: 600;
-  color: #6b7280;
-  line-height: 1.1;
+.learning-path-task-status.is-completed {
+  color: #16a34a;
+}
+
+.learning-path-task-action-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.24);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.learning-path-task-action-btn:hover,
+.learning-path-task-action-btn:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.28);
+}
+
+.learning-path-modal-reward-card {
+  display: grid;
+  gap: 6px;
+  margin: 0 24px 18px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(59, 130, 246, 0.18);
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.08);
+}
+
+.learning-path-modal-reward-card p {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1d4ed8;
+}
+
+.learning-path-modal-reward-card strong {
+  font-size: 16px;
+  font-weight: 900;
+  color: #12306b;
+}
+
+.learning-path-modal-reward-card.is-complete {
+  border-color: rgba(34, 197, 94, 0.24);
+  background: linear-gradient(135deg, #ecfdf3 0%, #f8fbff 100%);
+}
+
+.learning-path-modal-reward-card.is-complete p {
+  color: #16a34a;
+}
+
+.learning-path-modal-complete-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 24px 24px;
+}
+
+.learning-path-modal-next-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 14px 20px;
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 14px 24px rgba(34, 197, 94, 0.24);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.learning-path-modal-next-btn:hover,
+.learning-path-modal-next-btn:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(34, 197, 94, 0.28);
+}
+
+@keyframes learning-path-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes learning-path-modal-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+}
+
+@keyframes learning-path-modal-overlay-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes learning-path-modal-overlay-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 /* =========================
@@ -7601,6 +7973,49 @@ img.profile-skeleton {
   .learning-path-description {
     max-width: 260px;
     font-size: 14px;
+  }
+
+  .learning-path-modal-overlay {
+    padding: 14px;
+  }
+
+  .learning-path-modal {
+    width: min(94vw, 850px);
+    max-height: 92vh;
+    border-radius: 22px;
+  }
+
+  .learning-path-modal-header,
+  .learning-path-modal-progress,
+  .learning-path-modal-task-list,
+  .learning-path-modal-reward-card,
+  .learning-path-modal-complete-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .learning-path-modal-header {
+    padding-top: 18px;
+    padding-bottom: 14px;
+  }
+
+  .learning-path-modal-task-list {
+    max-height: 44vh;
+  }
+
+  .learning-path-task-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .learning-path-task-action-btn,
+  .learning-path-modal-next-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .learning-path-modal-complete-footer {
+    justify-content: stretch;
   }
 
   .learning-path-progress-card {
