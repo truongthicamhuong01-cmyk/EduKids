@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../../../config.js";
+import { adaptLearningPathState } from "../../../data/learning-path/learningPathStateAdapter.js";
 
 const MODAL_CLOSE_MS = 220;
 const TRANSITION_MS = 1700;
@@ -236,13 +237,24 @@ function getLearningPathAuthHeaders() {
 }
 
 async function requestLearningPathApi(path, { method = "GET", body } = {}) {
-  const response = await fetch(buildLearningPathApiUrl(path), {
+  const url = buildLearningPathApiUrl(path);
+
+  const response = await fetch(url, {
     method,
     headers: getLearningPathAuthHeaders(),
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  const data = await response.json().catch(() => ({}));
+  const rawText = await response.text().catch(() => "");
+  let data = {};
+
+  if (rawText) {
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      data = { rawText };
+    }
+  }
 
   if (!response.ok || data.success === false) {
     throw new Error(data.message || `Request failed: ${response.status}`);
@@ -286,7 +298,12 @@ async function hydrateLearningPathStateFromBackend() {
 
   try {
     const data = await requestLearningPathApi(`/learning-path/state/${encodeURIComponent(userId)}`);
-    const remoteState = extractRemoteLearningPathState(data?.state);
+    const backendState = extractRemoteLearningPathState(data?.state);
+    if (!backendState) {
+      throw new Error("Backend Learning Path chưa trả về state hợp lệ.");
+    }
+
+    const remoteState = adaptLearningPathState(backendState);
     uiState.backendState = remoteState;
     uiState.loading = false;
     uiState.limitNotice = "";
@@ -328,10 +345,12 @@ async function performLearningPathAction(action, payload = {}) {
       },
     });
 
-    const remoteState = extractRemoteLearningPathState(data?.state);
-    if (!remoteState) {
+    const backendState = extractRemoteLearningPathState(data?.state);
+    if (!backendState) {
       throw new Error("Learning Path backend returned an empty state");
     }
+
+    const remoteState = adaptLearningPathState(backendState);
 
     uiState.backendState = remoteState;
     uiState.errorMessage = "";
