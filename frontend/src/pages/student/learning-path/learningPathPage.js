@@ -44,6 +44,8 @@ const uiState = {
   loading: false,
   backendState: null,
   errorMessage: "",
+  authRetryTimer: null,
+  authRetryStartedAt: 0,
   modalCheckpointId: null,
   modalClosing: false,
   modalCloseTimer: null,
@@ -75,6 +77,11 @@ function scheduleRender() {
 }
 
 function clearTimers() {
+  if (uiState.authRetryTimer) {
+    window.clearTimeout(uiState.authRetryTimer);
+    uiState.authRetryTimer = null;
+  }
+
   if (uiState.modalCloseTimer) {
     window.clearTimeout(uiState.modalCloseTimer);
     uiState.modalCloseTimer = null;
@@ -134,6 +141,26 @@ function getState() {
   return uiState.backendState;
 }
 
+function getOfficialCurrentUser() {
+  if (typeof window.checkAuth === "function") {
+    const authUser = window.checkAuth();
+    if (authUser && typeof authUser === "object") {
+      return authUser;
+    }
+  }
+
+  const bootstrapUser = window.__EDUKIDS_BOOTSTRAP__?.currentUser;
+  if (bootstrapUser && typeof bootstrapUser === "object") {
+    return bootstrapUser;
+  }
+
+  if (window.EduKidsCurrentUser && typeof window.EduKidsCurrentUser === "object") {
+    return window.EduKidsCurrentUser;
+  }
+
+  return null;
+}
+
 function getCheckpointById(state, checkpointId) {
   return Array.isArray(state?.checkpoints)
     ? state.checkpoints.find((checkpoint) => checkpoint.id === checkpointId) || null
@@ -149,32 +176,39 @@ function normalizeCheckpointStatus(status) {
   return String(status || "locked").toLowerCase();
 }
 
-function getStoredCurrentUser() {
-  const storedKeys = ["currentUser", "user"];
-
-  for (let index = 0; index < storedKeys.length; index += 1) {
-    const key = storedKeys[index];
-    const rawValue = localStorage.getItem(key);
-    if (!rawValue) {
-      continue;
-    }
-
-    try {
-      const parsed = JSON.parse(rawValue);
-      if (parsed && typeof parsed === "object") {
-        return parsed;
-      }
-    } catch {
-      // Ignore invalid cached users.
-    }
-  }
-
-  return null;
+function getLearningPathUserId() {
+  const currentUser = getOfficialCurrentUser();
+  return String(currentUser?.uid || currentUser?.userId || currentUser?.id || "").trim();
 }
 
-function getLearningPathUserId() {
-  const currentUser = window.EduKidsCurrentUser || getStoredCurrentUser();
-  return String(currentUser?.uid || currentUser?.userId || currentUser?.id || "").trim();
+function scheduleAuthReadyRetry() {
+  if (uiState.authRetryTimer) {
+    return;
+  }
+
+  if (!uiState.authRetryStartedAt) {
+    uiState.authRetryStartedAt = Date.now();
+  }
+
+  const elapsedMs = Date.now() - uiState.authRetryStartedAt;
+  const maxWaitMs = 5000;
+
+  if (elapsedMs >= maxWaitMs) {
+    uiState.loading = false;
+    uiState.errorMessage =
+      "Không xác định được người dùng hiện tại để tải Learning Path.";
+    scheduleRender();
+    return;
+  }
+
+  uiState.loading = true;
+  uiState.errorMessage = "";
+  scheduleRender();
+
+  uiState.authRetryTimer = window.setTimeout(() => {
+    uiState.authRetryTimer = null;
+    void hydrateLearningPathStateFromBackend();
+  }, 120);
 }
 
 function buildLearningPathApiUrl(path) {
@@ -236,10 +270,14 @@ function extractRemoteLearningPathState(payload) {
 async function hydrateLearningPathStateFromBackend() {
   const userId = getLearningPathUserId();
   if (!userId) {
-    uiState.errorMessage = "Thiếu thông tin người dùng để tải Learning Path.";
-    uiState.loading = false;
-    scheduleRender();
+    scheduleAuthReadyRetry();
     return null;
+  }
+
+  uiState.authRetryStartedAt = 0;
+  if (uiState.authRetryTimer) {
+    window.clearTimeout(uiState.authRetryTimer);
+    uiState.authRetryTimer = null;
   }
 
   uiState.loading = true;
