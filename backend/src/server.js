@@ -7,6 +7,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const assignmentRoutes = require("./routes/assignmentRoutes");
 const classRoutes = require("./routes/classRoutes");
 const coachRoutes = require("./routes/coachRoutes");
+const learningPathRoutes = require("./routes/learningPathRoutes");
 const quizRoutes = require("./routes/quizRoutes");
 const userRoutes = require("./routes/userRoutes");
 const verifyToken = require("./middleware/verifyToken");
@@ -36,6 +37,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/classes", classRoutes);
 app.use("/api/coach", coachRoutes);
+app.use("/learning-path", learningPathRoutes);
+app.use("/api/learning-path", learningPathRoutes);
 app.use("/api/quiz", quizRoutes);
 app.use("/api/users", userRoutes);
 
