@@ -693,6 +693,7 @@ module.exports = {
   createSubmission,
   getAssignmentById,
   getSubmissionByStudent,
+  getSubmissionsByStudentId,
   getSubmissionsByAssignmentId,
   normalizeAssignmentDoc,
   applySubmissionResultToAssignment,
