@@ -1,57 +1,39 @@
 const TASK_TEMPLATES = [
   {
-    idSuffix: "assignments",
-    type: "exercise",
-    icon: "📘",
-    title: (checkpointTitle) => `Hoàn thành bài tập ${checkpointTitle}`,
-    description: (checkpointTitle) =>
-      `Làm xong ít nhất 1 bài tập ở ${checkpointTitle}`,
+    idSuffix: "assignment",
+    type: "assignment",
+    icon: "📝",
+    title: (checkpointTitle) =>
+      `Hoàn thành một bài tập thật trước khi chinh phục ${checkpointTitle}`,
+    description: () => "Cần có ít nhất một bài tập đã nộp và được chấm từ dữ liệu thật.",
     targetRoute: "/student/assignments",
   },
   {
-    idSuffix: "quiz-ai",
-    type: "quiz",
+    idSuffix: "score",
+    type: "score",
     icon: "⭐",
-    title: (checkpointTitle) => `Làm Quiz AI ${checkpointTitle}`,
-    description: (checkpointTitle) =>
-      `Kiểm tra kiến thức bằng Quiz AI tại ${checkpointTitle}`,
+    title: (checkpointTitle) =>
+      `Đạt ít nhất 8 điểm ở bài tập trước khi lên ${checkpointTitle}`,
+    description: () => "Dùng điểm bài tập thật, không dùng điểm mô phỏng.",
+    targetRoute: "/student/assignments",
+  },
+  {
+    idSuffix: "topic",
+    type: "topic",
+    icon: "📚",
+    title: (checkpointTitle) =>
+      `Hoàn thành một chủ đề học trước khi mở ${checkpointTitle}`,
+    description: () => "Dựa vào progress thật trong user_progress/topics.",
     targetRoute: "/student/quiz-ai",
   },
   {
-    idSuffix: "ai-coach",
+    idSuffix: "coach",
     type: "coach",
     icon: "⏱️",
-    title: (checkpointTitle) => `Xem AI Coach ${checkpointTitle}`,
-    description: (checkpointTitle) =>
-      `Nhận gợi ý từ AI Coach cho ${checkpointTitle}`,
+    title: (checkpointTitle) =>
+      `Sử dụng AI Coach ít nhất 1 lần trước ${checkpointTitle}`,
+    description: () => "Lấy từ log sử dụng AI Coach thật của hệ thống.",
     targetRoute: "/student/ai-coach",
-  },
-];
-
-const START_TASKS = [
-  {
-    idSuffix: "welcome",
-    type: "coach",
-    icon: "🎒",
-    title: "Bắt đầu hành trình",
-    description: "Xem giới thiệu nhanh về Learning Path",
-    targetRoute: "/student/learning-path",
-  },
-  {
-    idSuffix: "warmup",
-    type: "exercise",
-    icon: "📘",
-    title: "Bài khởi động",
-    description: "Hoàn thành một bài tập mở màn",
-    targetRoute: "/student/assignments",
-  },
-  {
-    idSuffix: "orientation",
-    type: "quiz",
-    icon: "⭐",
-    title: "Quiz làm quen",
-    description: "Làm một bài quiz ngắn để khởi động",
-    targetRoute: "/student/quiz-ai",
   },
 ];
 
@@ -359,8 +341,10 @@ function createMountain(blueprint, index) {
     height: blueprint.height,
     description: blueprint.description,
     image: blueprint.image,
+    icon: blueprint.image,
     backgroundImage: blueprint.backgroundImage,
     badge,
+    startPosition: ROUTE_POSITIONS[0],
     locked: index !== 0,
     checkpoints,
   };
@@ -387,19 +371,12 @@ export const season1 = {
 export const season1Progress = {
   currentSeason: season1.id,
   currentMountain: "everest",
-  currentCheckpoint: "everest-checkpoint-3",
-  completedTasks: [
-    "everest-checkpoint-1-task-1",
-    "everest-checkpoint-1-task-2",
-    "everest-checkpoint-2-task-1",
-    "everest-checkpoint-2-task-2",
-    "everest-checkpoint-3-task-1",
-    "everest-checkpoint-3-task-2",
-  ],
-  earnedXu: 120,
-  earnedExp: 320,
-  earnedBadges: ["badge-everest"],
-  completedCheckpoints: ["everest-checkpoint-1", "everest-checkpoint-2"],
+  currentCheckpoint: "everest-checkpoint-1",
+  completedTasks: [],
+  earnedXu: 0,
+  earnedExp: 0,
+  earnedBadges: [],
+  completedCheckpoints: [],
 };
 
 export { TASK_TEMPLATES, ROUTE_POSITIONS, PEAK_POSITION, MOUNTAIN_BLUEPRINTS };

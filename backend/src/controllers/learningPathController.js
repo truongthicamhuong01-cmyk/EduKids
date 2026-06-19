@@ -6,11 +6,11 @@ const {
 async function getState(req, res, next) {
   try {
     const { userId } = req.params;
-    const state = await getLearningPathState(userId);
+    const result = await getLearningPathState(userId);
 
     res.status(200).json({
-      state,
-      events: [],
+      state: result.state,
+      events: result.events || [],
     });
   } catch (error) {
     next(error);

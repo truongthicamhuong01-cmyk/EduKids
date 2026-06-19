@@ -42,6 +42,12 @@ function getBlueprintMountainIndex(mountainId) {
     : -1;
 }
 
+function getBlueprintMountain(mountainId) {
+  return Array.isArray(season1.mountains)
+    ? season1.mountains.find((mountain) => mountain.id === mountainId) || null
+    : null;
+}
+
 function getCanonicalCheckpointMap(state) {
   const checkpointMap = new Map();
   const checkpoints = [];
@@ -225,6 +231,17 @@ export function adaptLearningPathState(apiState) {
   const completedMountainIds = getCompletedMountainIds(progress);
   const currentMountainId = String(source.mountainId || source.currentMountainId || season1.mountains?.[0]?.id || "").trim();
   const currentCheckpointId = String(source.checkpointId || source.currentCheckpointId || "").trim();
+  const currentMountainBlueprint = getBlueprintMountain(currentMountainId) || season1.mountains?.[0] || null;
+  const startPosition = cloneValue(currentMountainBlueprint?.startPosition || season1.mountains?.[0]?.startPosition || {
+    left: 56.55,
+    top: 92.1,
+    side: "left",
+  });
+  const firstCheckpointId = currentMountainBlueprint?.checkpoints?.[0]?.id || season1.mountains?.[0]?.checkpoints?.[0]?.id || "";
+  const isFreshStart =
+    completedCheckpointIds.size === 0 &&
+    currentMountainId === String(season1.mountains?.[0]?.id || "") &&
+    currentCheckpointId === String(firstCheckpointId || "");
 
   const mountains = (Array.isArray(season1.mountains) ? season1.mountains : []).map((mountainBlueprint, mountainIndex) =>
     buildMountainView({
@@ -250,6 +267,11 @@ export function adaptLearningPathState(apiState) {
   const currentCheckpointProgress = currentCheckpoint?.progress || { completed: 0, total: 0 };
   const completedCount = completedCheckpointIds.size;
   const totalCheckpointCount = flattenedCheckpoints.length || 1;
+  const avatarPosition = isFreshStart
+    ? startPosition
+    : currentCheckpoint?.position
+      ? cloneValue(currentCheckpoint.position)
+      : { left: 0, top: 0, side: "left" };
 
   return {
     userId: String(source.userId || "").trim(),
@@ -266,11 +288,12 @@ export function adaptLearningPathState(apiState) {
     rewards: cloneValue(source.rewards || { xu: 0, exp: 0, badges: [] }),
     progress: cloneValue(progress),
     limits: cloneValue(source.limits || {}),
+    lockNotice: String(source.lockNotice || source.notice || ""),
     updatedAt: String(source.updatedAt || ""),
     avatar: {
-      position: currentCheckpoint?.position
-        ? cloneValue(currentCheckpoint.position)
-        : { left: 0, top: 0, side: "left" },
+      position: avatarPosition,
+      isAtStart: isFreshStart,
+      altitudeLabel: isFreshStart ? "0 m" : String(currentCheckpoint?.altitude || ""),
     },
     progressPercent: Math.round((completedCount / totalCheckpointCount) * 100),
     checkpointProgress: {
@@ -280,6 +303,7 @@ export function adaptLearningPathState(apiState) {
     currentMountainId,
     currentCheckpointId,
     tasks: cloneValue(currentCheckpoint?.tasks || []),
+    startPosition,
     learningPathState: cloneValue(source.learningPathState || source),
   };
 }

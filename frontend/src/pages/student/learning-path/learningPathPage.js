@@ -306,8 +306,9 @@ async function hydrateLearningPathStateFromBackend() {
     const remoteState = adaptLearningPathState(backendState);
     uiState.backendState = remoteState;
     uiState.loading = false;
-    uiState.limitNotice = "";
+    uiState.limitNotice = remoteState?.lockNotice || "";
     uiState.errorMessage = remoteState ? "" : "Backend Learning Path chưa trả về state hợp lệ.";
+    applyLearningPathEvents(data?.events);
     scheduleRender();
     return remoteState;
   } catch (error) {
@@ -354,7 +355,7 @@ async function performLearningPathAction(action, payload = {}) {
 
     uiState.backendState = remoteState;
     uiState.errorMessage = "";
-    uiState.limitNotice = "";
+    uiState.limitNotice = remoteState?.lockNotice || "";
     applyLearningPathEvents(data?.events);
     scheduleRender();
     return remoteState;
@@ -562,6 +563,7 @@ function isLoadingState() {
 
 function renderMountainCard(mountain, state) {
   const isSelected = mountain.id === state.currentMountainId;
+  const mountainIcon = mountain.icon || mountain.image || "";
 
   return `
     <button
@@ -573,7 +575,7 @@ function renderMountainCard(mountain, state) {
       <span class="learning-path-mountain-thumb" aria-hidden="true">
         <img
           class="learning-path-mountain-thumb-image"
-          src="${escapeHtml(mountain.image)}"
+          src="${escapeHtml(mountainIcon)}"
           alt=""
           loading="lazy"
           decoding="async"
@@ -624,18 +626,17 @@ function getCheckpointPosition(checkpoint) {
   return checkpoint?.position || { left: 0, top: 0 };
 }
 
-function renderCheckpointNode(checkpoint, status) {
+function renderCheckpointNode(checkpoint, status, state) {
   if (status === "locked") {
     return `
-      <span class="learning-path-station-checkpoint is-locked" aria-hidden="true">
-        ${LOCK_ICON}
-      </span>
+      <span class="learning-path-station-checkpoint is-locked" aria-hidden="true"></span>
     `;
   }
 
   if (status === "current") {
     const shouldHideStaticAvatar =
-      uiState.transition && uiState.transition.toCheckpointId === checkpoint.id;
+      (uiState.transition && uiState.transition.toCheckpointId === checkpoint.id) ||
+      state?.avatar?.isAtStart === true;
 
     return `
       <button
@@ -686,11 +687,32 @@ function renderStationNode(checkpoint, state) {
       style="left: ${position.left}%; top: ${position.top}%;"
     >
       <div class="learning-path-station-anchor" aria-hidden="true">
-        ${renderCheckpointNode(checkpoint, status)}
+        ${renderCheckpointNode(checkpoint, status, state)}
       </div>
       <div class="learning-path-station-copy">
         <strong>${escapeHtml(checkpoint.title)}</strong>
         <span>${escapeHtml(checkpoint.altitude || "")}</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderStartNode(state) {
+  const position = state.startPosition || state.avatar?.position || { left: 0, top: 0 };
+  const shouldShowAvatar = state.avatar?.isAtStart === true;
+
+  return `
+    <div
+      class="learning-path-start-node"
+      style="left: ${position.left}%; top: ${position.top}%;"
+    >
+      <div class="learning-path-start-anchor" aria-hidden="true">
+        <span class="learning-path-start-marker">0m</span>
+        ${shouldShowAvatar ? renderCurrentAvatar(state) : ""}
+      </div>
+      <div class="learning-path-start-copy">
+        <strong>Điểm xuất phát</strong>
+        <span>0 m</span>
       </div>
     </div>
   `;
@@ -764,6 +786,7 @@ function renderPeakNode(state) {
 
 function renderProgressCard(state) {
   const mountain = getCurrentMountain(state);
+  const altitudeLabel = state.avatar?.altitudeLabel || state.checkpoint?.altitude || "0 m";
   return `
     <aside class="learning-path-progress-card">
       <h3>Tiến độ của bạn</h3>
@@ -774,7 +797,7 @@ function renderProgressCard(state) {
         <strong>${Math.max(0, Math.min(Number(state.progressPercent) || 0, 100))}%</strong>
         <span>Bạn đang ở ${escapeHtml(mountain?.name || "Xuất phát")}</span>
       </div>
-      <p>${escapeHtml(state.checkpoint?.altitude || "0 m")} / ${escapeHtml(mountain?.height || "")}</p>
+      <p>${escapeHtml(altitudeLabel)} / ${escapeHtml(mountain?.height || "")}</p>
     </aside>
   `;
 }
@@ -804,8 +827,9 @@ function renderJourneyPanel(state) {
           <p class="learning-path-description">${escapeHtml(mountain?.description || "")}</p>
         </div>
 
-        <div class="learning-path-journey-overlay" aria-hidden="true">
+      <div class="learning-path-journey-overlay" aria-hidden="true">
           <div class="learning-path-route">
+            ${renderStartNode(state)}
             ${checkpointNodes.join("")}
             ${renderPeakNode(state)}
             ${renderMovingAvatar()}

@@ -1,4 +1,4 @@
-const { season1, season1Progress } = require("./learningPathData");
+const { season1 } = require("./learningPathData");
 
 const CHECKPOINT_STATE = {
   LOCKED: "LOCKED",
@@ -65,6 +65,10 @@ function getNowIsoString() {
 }
 
 function cloneValue(value) {
+  if (value === null || typeof value === "undefined") {
+    return value;
+  }
+
   if (typeof structuredClone === "function") {
     return structuredClone(value);
   }
@@ -86,6 +90,59 @@ function normalizeTaskStatus(status) {
   }
 
   return TASK_STATE.NOT_DONE;
+}
+
+const TASK_FACT_KEYS = {
+  assignment: "assignmentCompleted",
+  score: "scoreAchieved",
+  topic: "topicCompleted",
+  coach: "coachUsed",
+};
+
+function createEmptyLearningFacts() {
+  return {
+    assignmentCompleted: false,
+    scoreAchieved: false,
+    topicCompleted: false,
+    coachUsed: false,
+  };
+}
+
+function normalizeLearningFacts(candidate = {}) {
+  const source = candidate && typeof candidate === "object" ? candidate : {};
+  const facts = source.learningFacts && typeof source.learningFacts === "object" ? source.learningFacts : source;
+
+  return {
+    assignmentCompleted: Boolean(facts.assignmentCompleted),
+    scoreAchieved: Boolean(facts.scoreAchieved),
+    topicCompleted: Boolean(facts.topicCompleted),
+    coachUsed: Boolean(facts.coachUsed),
+  };
+}
+
+function isSameLocalDate(leftValue, rightValue = new Date()) {
+  if (!leftValue) {
+    return false;
+  }
+
+  const leftDate = new Date(leftValue);
+  const rightDate = rightValue instanceof Date ? rightValue : new Date(rightValue);
+
+  if (Number.isNaN(leftDate.getTime()) || Number.isNaN(rightDate.getTime())) {
+    return false;
+  }
+
+  return getLocalDateKey(leftDate) === getLocalDateKey(rightDate);
+}
+
+function isTaskSatisfiedByFacts(taskType, facts) {
+  const key = TASK_FACT_KEYS[String(taskType || "").trim().toLowerCase()];
+
+  if (!key) {
+    return false;
+  }
+
+  return Boolean(facts?.[key]);
 }
 
 function getMountainById(season, mountainId) {
@@ -181,6 +238,7 @@ function buildRawCheckpointState(
   currentCheckpointId,
   completedTaskIds,
   completedCheckpointIds,
+  learningFacts,
 ) {
   const rawCheckpoints = Array.isArray(candidate?.checkpoints) ? candidate.checkpoints : [];
   const legacyCheckpoint = rawCheckpoints.find((item) => item?.id === meta.checkpoint.id) || null;
@@ -198,11 +256,13 @@ function buildRawCheckpointState(
     const legacyTask = Array.isArray(legacyCheckpoint?.tasks)
       ? legacyCheckpoint.tasks.find((item) => item?.id === task.id)
       : null;
+    const factCompleted = isTaskSatisfiedByFacts(task.type, learningFacts);
     const taskStatus = normalizeTaskStatus(
       legacyTask?.status ||
         legacyTask?.state ||
         (legacyTask?.completed ? TASK_STATE.DONE : "") ||
-        (completedTaskIds.has(task.id) ? TASK_STATE.DONE : ""),
+        (completedTaskIds.has(task.id) ? TASK_STATE.DONE : "") ||
+        (factCompleted ? TASK_STATE.DONE : ""),
     );
 
     return {
@@ -238,9 +298,38 @@ function deriveCompletedMountains(season, checkpoints) {
     .map((mountain) => mountain.id);
 }
 
-function buildInitialState(season = season1, progress = season1Progress) {
+function applyCheckpointAvailability(state) {
+  const currentCheckpoint = getRawCheckpointById(state, state.checkpointId);
+  const completedAt = String(state?.limits?.lastCheckpointCompletedAt || "").trim();
+  const shouldHoldUntilTomorrow = Boolean(completedAt) && isSameLocalDate(completedAt);
+
+  if (!currentCheckpoint) {
+    state.lockNotice = "";
+    return state;
+  }
+
+  if (currentCheckpoint.status === CHECKPOINT_STATE.COMPLETED) {
+    state.lockNotice = "";
+    return state;
+  }
+
+  if (shouldHoldUntilTomorrow) {
+    currentCheckpoint.status = CHECKPOINT_STATE.LOCKED;
+    state.lockNotice = "Quay lại vào ngày mai để tiếp tục hành trình";
+  } else {
+    if (currentCheckpoint.status === CHECKPOINT_STATE.LOCKED) {
+      currentCheckpoint.status = CHECKPOINT_STATE.ACTIVE;
+    }
+    state.lockNotice = "";
+  }
+
+  return state;
+}
+
+function buildInitialState(season = season1, progress = {}) {
   const seasonData = cloneValue(season);
   const candidate = cloneValue(progress);
+  const learningFacts = normalizeLearningFacts(candidate);
   const userId = String(candidate?.userId || "");
   const mountainId = getCurrentMountainIdFromLegacyState(candidate, seasonData);
   const checkpointId = getCurrentCheckpointIdFromLegacyState(candidate, seasonData, mountainId);
@@ -273,6 +362,7 @@ function buildInitialState(season = season1, progress = season1Progress) {
         checkpointId,
         completedTaskIds,
         completedCheckpointIds,
+        learningFacts,
       ),
     ),
   );
@@ -288,7 +378,7 @@ function buildInitialState(season = season1, progress = season1Progress) {
         : deriveCompletedMountains(seasonData, checkpoints),
   };
 
-  return {
+  const state = {
     userId,
     seasonId: String(candidate?.seasonId || seasonData.id || ""),
     mountainId,
@@ -312,8 +402,12 @@ function buildInitialState(season = season1, progress = season1Progress) {
       lastCheckpointCompletedAt: String(candidate?.limits?.lastCheckpointCompletedAt || ""),
       lastSummitCompletedAt: String(candidate?.limits?.lastSummitCompletedAt || ""),
     },
+    learningFacts,
+    lockNotice: "",
     updatedAt: String(candidate?.updatedAt || getNowIsoString()),
   };
+
+  return applyCheckpointAvailability(state);
 }
 
 function getRawCheckpointById(state, checkpointId) {
@@ -365,7 +459,7 @@ function calculateRewards(event, context = {}) {
   };
 }
 
-function createEngine(initialSeason = season1, initialProgress = season1Progress, options = {}) {
+function createEngine(initialSeason = season1, initialProgress = {}, options = {}) {
   let seasonData = cloneValue(initialSeason);
   let state = buildInitialState(seasonData, initialProgress);
   const listeners = new Map();
@@ -465,6 +559,10 @@ function createEngine(initialSeason = season1, initialProgress = season1Progress
     state.progress.completedMountains = deriveCompletedMountains(seasonData, state.checkpoints);
   }
 
+  function hasAllTasksDone(checkpoint) {
+    return Array.isArray(checkpoint?.tasks) && checkpoint.tasks.every((task) => task.status === TASK_STATE.DONE);
+  }
+
   function applyTimeLimits() {
     const today = getLocalDateKey();
     const currentWeek = getLocalWeekKey();
@@ -549,6 +647,28 @@ function createEngine(initialSeason = season1, initialProgress = season1Progress
       return {
         ...getState(),
         success: false,
+      };
+    }
+
+    if (checkpoint.status === CHECKPOINT_STATE.LOCKED) {
+      emitCheckpointBlocked("CHECKPOINT_LOCKED", checkpointId, {
+        action: "completeCheckpoint",
+      });
+      return {
+        ...getState(),
+        success: false,
+        reason: "CHECKPOINT_LOCKED",
+      };
+    }
+
+    if (!hasAllTasksDone(checkpoint)) {
+      emitCheckpointBlocked("CHECKPOINT_TASKS_INCOMPLETE", checkpointId, {
+        action: "completeCheckpoint",
+      });
+      return {
+        ...getState(),
+        success: false,
+        reason: "CHECKPOINT_TASKS_INCOMPLETE",
       };
     }
 
@@ -675,65 +795,42 @@ function createEngine(initialSeason = season1, initialProgress = season1Progress
     }
 
     if (taskEntry.task.status === TASK_STATE.DONE) {
-      emit("TASK_BLOCKED", {
-        reason: "TASK_ALREADY_DONE",
-        taskId,
-        checkpointId: taskEntry.checkpoint.id,
-      });
-      return getState();
-    }
+      if (hasAllTasksDone(taskEntry.checkpoint) && taskEntry.checkpoint.status === CHECKPOINT_STATE.ACTIVE) {
+        const checkpointResult = completeCheckpoint(taskEntry.checkpoint.id);
+        if (checkpointResult?.success === false) {
+          return {
+            ...getState(),
+            success: false,
+            reason: checkpointResult.reason,
+          };
+        }
 
-    setTaskStatus(taskEntry.checkpoint.id, taskId, TASK_STATE.DONE);
-
-    const taskRewards = calculateRewards("task", {
-      taskReward: taskEntry.task.reward || null,
-    });
-    state.rewards.xu += taskRewards.xu;
-    state.rewards.exp += taskRewards.exp;
-    if (taskRewards.xu || taskRewards.exp || taskRewards.badges.length) {
-      emitRewardGranted(taskRewards, {
-        source: "task",
-        taskId,
-        checkpointId: taskEntry.checkpoint.id,
-      });
-    }
-
-    emit("TASK_COMPLETED", {
-      taskId,
-      checkpointId: taskEntry.checkpoint.id,
-    });
-    emit("TASK_PROGRESS_UPDATED", {
-      taskId,
-      checkpointId: taskEntry.checkpoint.id,
-      completed: true,
-    });
-
-    const allDone = taskEntry.checkpoint.tasks.every((task) =>
-      task.id === taskId ? true : task.status === TASK_STATE.DONE,
-    );
-    if (allDone) {
-      const checkpointResult = completeCheckpoint(taskEntry.checkpoint.id);
-      if (checkpointResult?.success === false) {
-        return {
-          ...getState(),
-          success: false,
-          reason: checkpointResult.reason,
-        };
+        const nextCheckpointResult = goToNextCheckpoint();
+        if (nextCheckpointResult?.success === false) {
+          return {
+            ...getState(),
+            success: false,
+            reason: nextCheckpointResult.reason,
+          };
+        }
       }
-    } else {
-      touchState();
-      syncProgressFromCheckpoints();
-      emitStateChanged({
-        action: "completeTask",
-        taskId,
-        checkpointId: taskEntry.checkpoint.id,
-      });
+
+      return {
+        ...getState(),
+        success: true,
+      };
     }
 
+    emit("TASK_BLOCKED", {
+      reason: "TASK_REQUIRES_REAL_DATA",
+      taskId,
+      checkpointId: taskEntry.checkpoint.id,
+    });
     return {
       ...getState(),
-      success: true,
-    };
+      success: false,
+      reason: "TASK_REQUIRES_REAL_DATA",
+    }
   }
 
   function goToNextCheckpoint() {
@@ -765,7 +862,7 @@ function createEngine(initialSeason = season1, initialProgress = season1Progress
 
     state.checkpoints.forEach((checkpoint) => {
       if (checkpoint.id === nextCheckpoint.id) {
-        checkpoint.status = CHECKPOINT_STATE.ACTIVE;
+        checkpoint.status = CHECKPOINT_STATE.LOCKED;
         return;
       }
 
@@ -781,8 +878,9 @@ function createEngine(initialSeason = season1, initialProgress = season1Progress
 
     syncProgressFromCheckpoints();
     touchState();
+    applyCheckpointAvailability(state);
 
-    emit("CHECKPOINT_UNLOCKED", {
+    emit("CHECKPOINT_LOCKED", {
       checkpointId: nextCheckpoint.id,
       mountainId: state.mountainId,
     });
@@ -797,7 +895,7 @@ function createEngine(initialSeason = season1, initialProgress = season1Progress
     });
 
     return {
-      ...getState(),
+      ...buildStateSnapshot(),
       success: true,
     };
   }
@@ -842,9 +940,7 @@ function createEngine(initialSeason = season1, initialProgress = season1Progress
     };
   }
 
-  function getState() {
-    applyTimeLimits();
-
+  function buildStateSnapshot() {
     const currentMountain = getCurrentMountainRecord();
     const currentCheckpointRecord = getCurrentCheckpointRecord();
     const viewCheckpoints = state.checkpoints.map((checkpoint) => buildViewCheckpoint(checkpoint));
@@ -869,6 +965,7 @@ function createEngine(initialSeason = season1, initialProgress = season1Progress
       progress: cloneValue(state.progress),
       limits: cloneValue(state.limits),
       updatedAt: state.updatedAt,
+      lockNotice: String(state.lockNotice || ""),
       avatar: {
         position: calculateAvatarPosition(state, seasonData),
       },
@@ -881,6 +978,42 @@ function createEngine(initialSeason = season1, initialProgress = season1Progress
       currentCheckpointId: state.checkpointId,
       learningPathState: exportState(),
     };
+  }
+
+  function reconcileAutoProgress() {
+    applyTimeLimits();
+    applyCheckpointAvailability(state);
+
+    const currentCheckpoint = getCurrentCheckpointRecord();
+    if (!currentCheckpoint || currentCheckpoint.status !== CHECKPOINT_STATE.ACTIVE) {
+      return;
+    }
+
+    if (!hasAllTasksDone(currentCheckpoint)) {
+      return;
+    }
+
+    const completedCheckpointResult = completeCheckpoint(currentCheckpoint.id);
+    if (completedCheckpointResult?.success === false) {
+      return;
+    }
+
+    if (getNextCheckpointRecord()) {
+      goToNextCheckpoint();
+      return;
+    }
+
+    applyCheckpointAvailability(state);
+    touchState();
+    emitStateChanged({
+      action: "autoCompleteCheckpoint",
+      checkpointId: currentCheckpoint.id,
+    });
+  }
+
+  function getState() {
+    applyTimeLimits();
+    return buildStateSnapshot();
   }
 
   function exportState() {
@@ -910,14 +1043,15 @@ function createEngine(initialSeason = season1, initialProgress = season1Progress
     state = normalizeIncomingState(nextState);
     syncProgressFromCheckpoints();
     touchState();
+    reconcileAutoProgress();
     emitStateChanged({
       action: "importState",
     });
-    return getState();
+    return buildStateSnapshot();
   }
 
   function saveState() {
-    return getState();
+    return buildStateSnapshot();
   }
 
   function loadState() {
@@ -925,11 +1059,12 @@ function createEngine(initialSeason = season1, initialProgress = season1Progress
       action: "loadState",
       hydrated: false,
     });
-    return getState();
+    return buildStateSnapshot();
   }
 
   state = buildInitialState(seasonData, initialProgress);
   syncProgressFromCheckpoints();
+  reconcileAutoProgress();
 
   return {
     getState,
