@@ -98,8 +98,8 @@ export const learningPathMockData = {
         order: 0,
         label: "Xuất phát",
         altitude: "0 m",
-        left: 46.2,
-        top: 84.6,
+        left: 50.3,
+        top: 91.4,
         side: "left",
         tasks: [
           {
@@ -133,8 +133,8 @@ export const learningPathMockData = {
         order: 1,
         label: "Trạm 1",
         altitude: "1.000 m",
-        left: 41.6,
-        top: 76.8,
+        left: 41.1,
+        top: 76.05,
         side: "left",
         tasks: [
           {
@@ -168,8 +168,8 @@ export const learningPathMockData = {
         order: 2,
         label: "Trạm 2",
         altitude: "2.500 m",
-        left: 57.7,
-        top: 62.0,
+        left: 58.2,
+        top: 61.75,
         side: "right",
         tasks: [
           {
@@ -203,7 +203,7 @@ export const learningPathMockData = {
         order: 3,
         label: "Trạm 3",
         altitude: "4.000 m",
-        left: 41.5,
+        left: 41.3,
         top: 48.5,
         side: "left",
         tasks: [
@@ -238,7 +238,7 @@ export const learningPathMockData = {
         order: 4,
         label: "Trạm 4",
         altitude: "5.500 m",
-        left: 54.4,
+        left: 54.55,
         top: 36.45,
         side: "right",
         tasks: [
@@ -273,8 +273,8 @@ export const learningPathMockData = {
         order: 5,
         label: "Trạm 5",
         altitude: "7.000 m",
-        left: 46.3,
-        top: 26.2,
+        left: 44.8,
+        top: 26.7,
         side: "left",
         tasks: [
           {
