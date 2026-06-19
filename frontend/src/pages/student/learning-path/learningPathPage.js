@@ -35,7 +35,7 @@ const LOCK_ICON = `
   </svg>
 `;
 
-const PEAK_LAYOUT = { left: 41.7, top: 10.25 };
+const PEAK_LAYOUT = { left: 41.7, top: 11.25 };
 const TASK_MODAL_CLOSE_MS = 220;
 const STATION_TRANSITION_MS = 1700;
 const TASK_TASK_PAGE_MAP = {
@@ -87,62 +87,13 @@ function getJourneyStations(journey) {
 }
 
 function getStationNumber(station, index = 0) {
-  return Number(station?.order ?? index + 1) || index + 1;
-}
-
-function normalizeStationReference(stationReference) {
-  return String(stationReference ?? "").trim();
+  const stationOrder = Number(station?.order ?? index + 1);
+  return Number.isFinite(stationOrder) ? stationOrder : index + 1;
 }
 
 function getStationByNumber(journey, stationNumber) {
-  const stations = getJourneyStations(journey);
-  const stationReference = normalizeStationReference(stationNumber);
-  const numericStationNumber =
-    stationReference && Number.isFinite(Number(stationReference))
-      ? Number(stationReference)
-      : null;
-
-  if (numericStationNumber !== null) {
-    const station = stations.find(
-      (candidate, index) => getStationNumber(candidate, index) === numericStationNumber,
-    );
-
-    if (station) {
-      return station;
-    }
-  }
-
-  const normalizedStationReference = stationReference.toLowerCase();
-  if (!normalizedStationReference) {
-    return undefined;
-  }
-
-  if (normalizedStationReference === "start" || normalizedStationReference === "station-start") {
-    return stations.find((station) => String(station?.id || "").trim() === "station-start");
-  }
-
-  return stations.find((station) => {
-    const stationId = normalizeStationReference(station?.id).toLowerCase();
-    const stationLabel = normalizeStationReference(station?.label).toLowerCase();
-    return stationId === normalizedStationReference || stationLabel === normalizedStationReference;
-  });
-}
-
-function isCurrentJourneyStation(station, currentStation, index = 0) {
-  const stationNumber = getStationNumber(station, index);
-  if (stationNumber === currentStation) {
-    return true;
-  }
-
-  const currentStationReference = normalizeStationReference(currentStation).toLowerCase();
-  if (!currentStationReference) {
-    return false;
-  }
-
-  const stationId = normalizeStationReference(station?.id).toLowerCase();
-  return (
-    currentStationReference === stationId ||
-    (currentStationReference === "start" && stationId === "station-start")
+  return getJourneyStations(journey).find(
+    (station, index) => getStationNumber(station, index) === stationNumber,
   );
 }
 
@@ -370,21 +321,19 @@ function bindLearningPathControlsOnce() {
       return;
     }
 
-    const modalOverlay = event.target.closest(
-      "[data-learning-path-modal-overlay]",
-    );
-    if (modalOverlay) {
-      if (event.target === modalOverlay) {
-        event.preventDefault();
-        requestLearningPathModalClose();
-      }
-      return;
-    }
-
     const closeButton = event.target.closest(
       "[data-learning-path-close-modal]",
     );
     if (closeButton) {
+      event.preventDefault();
+      requestLearningPathModalClose();
+      return;
+    }
+
+    const modalOverlay = event.target.closest(
+      "[data-learning-path-modal-overlay]",
+    );
+    if (modalOverlay && event.target === modalOverlay) {
       event.preventDefault();
       requestLearningPathModalClose();
       return;
@@ -492,10 +441,7 @@ function resolveStationStatus(stationNumber, currentStation) {
 
 function renderStationNode(station, journey, currentStation, index = 0) {
   const stationNumber = getStationNumber(station, index);
-  const isCurrent = isCurrentJourneyStation(station, currentStation, index);
-  const status = isCurrent
-    ? "current"
-    : resolveStationStatus(stationNumber, currentStation);
+  const status = resolveStationStatus(stationNumber, currentStation);
   const sideClass = station.side === "left" ? " is-left" : " is-right";
   const statusClass =
     status === "current"

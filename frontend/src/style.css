@@ -142,14 +142,14 @@ body.auth-mode .app {
 }
 
 .sidebar-brand-title {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0;
-  font-size: 28px;
+  display: inline-block;
+  font-size: 26px;
   line-height: 1;
   font-weight: 900;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.02em;
   white-space: nowrap;
+  font-kerning: normal;
+  font-feature-settings: "kern" 1;
 }
 
 .sidebar-brand-edu {
@@ -4607,6 +4607,203 @@ textarea {
   margin-top: 2px;
 }
 
+#profile .profile-app-info-card,
+#teacher-profile .profile-app-info-card {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  padding: 26px 28px 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.06);
+}
+
+#profile .profile-app-info-grid,
+#teacher-profile .profile-app-info-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 0.95fr);
+  gap: 22px;
+  align-items: start;
+}
+
+#profile .profile-app-info-brand,
+#teacher-profile .profile-app-info-brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+}
+
+#profile .profile-app-info-logo,
+#teacher-profile .profile-app-info-logo {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(180deg, rgba(37, 99, 235, 0.1), rgba(96, 165, 250, 0.06)),
+    #f8fbff;
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.08);
+  overflow: hidden;
+}
+
+#profile .profile-app-info-logo img,
+#teacher-profile .profile-app-info-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+#profile .profile-app-info-copy,
+#teacher-profile .profile-app-info-copy {
+  min-width: 0;
+}
+
+#profile .profile-app-info-copy h3,
+#teacher-profile .profile-app-info-copy h3 {
+  display: none;
+}
+
+#profile .profile-app-info-brand-name,
+#teacher-profile .profile-app-info-brand-name {
+  display: inline-block;
+  margin: 0 0 8px;
+  font-size: 22px;
+  line-height: 1.08;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  font-kerning: normal;
+  font-feature-settings: "kern" 1;
+}
+
+#profile .profile-app-info-brand-edu,
+#teacher-profile .profile-app-info-brand-edu {
+  color: #2563eb;
+}
+
+#profile .profile-app-info-brand-kids,
+#teacher-profile .profile-app-info-brand-kids {
+  color: #f59e0b;
+}
+
+#profile .profile-app-info-copy strong,
+#teacher-profile .profile-app-info-copy strong {
+  display: block;
+}
+
+#profile .profile-app-info-brand-name + p,
+#teacher-profile .profile-app-info-brand-name + p {
+  margin-top: 0;
+}
+
+#profile .profile-app-info-copy p,
+#teacher-profile .profile-app-info-copy p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #475569;
+}
+
+#profile .profile-app-info-column,
+#teacher-profile .profile-app-info-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+#profile .profile-app-info-column span,
+#teacher-profile .profile-app-info-column span {
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#profile .profile-app-info-column strong,
+#teacher-profile .profile-app-info-column strong {
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 400;
+  color: #1e293b;
+}
+
+#profile .profile-app-info-column p,
+#teacher-profile .profile-app-info-column p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #475569;
+}
+
+#profile .profile-app-info-author,
+#teacher-profile .profile-app-info-author {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+#profile .profile-app-info-author span,
+#teacher-profile .profile-app-info-author span {
+  font-size: 12px;
+  line-height: 1.45;
+  font-weight: 400;
+  color: #1e293b;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+#profile .profile-app-info-column p a,
+#teacher-profile .profile-app-info-column p a,
+#profile .profile-app-info-column strong a,
+#teacher-profile .profile-app-info-column strong a {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: #2563eb;
+  text-decoration: none;
+  word-break: break-word;
+}
+
+#profile .profile-app-info-column p a:hover,
+#profile .profile-app-info-column p a:focus-visible,
+#teacher-profile .profile-app-info-column p a:hover,
+#teacher-profile .profile-app-info-column p a:focus-visible,
+#profile .profile-app-info-column strong a:hover,
+#profile .profile-app-info-column strong a:focus-visible,
+#teacher-profile .profile-app-info-column strong a:hover,
+#teacher-profile .profile-app-info-column strong a:focus-visible {
+  text-decoration: underline;
+}
+
+#profile .profile-app-info-footer,
+#teacher-profile .profile-app-info-footer {
+  margin-top: 22px;
+}
+
+#profile .profile-app-info-divider,
+#teacher-profile .profile-app-info-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+  opacity: 0.9;
+}
+
+#profile .profile-app-info-footer p,
+#teacher-profile .profile-app-info-footer p {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #64748b;
+}
+
 @media (max-width: 1180px) {
   #profile .student-profile-hero {
     grid-template-columns: 1fr;
@@ -4629,6 +4826,23 @@ textarea {
 
   #profile .student-profile-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #profile .profile-app-info-grid,
+  #teacher-profile .profile-app-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  #profile .profile-app-info-brand,
+  #teacher-profile .profile-app-info-brand {
+    align-items: center;
+    grid-column: 1 / -1;
+  }
+
+  #profile .profile-app-info-column:last-child,
+  #teacher-profile .profile-app-info-column:last-child {
+    grid-column: 1 / -1;
   }
 
   .profile-edit-grid {
@@ -4665,6 +4879,39 @@ textarea {
   #profile .student-profile-stat-card + .student-profile-stat-card {
     border-left: none;
     border-top: 1px solid #e7ebf5;
+  }
+
+  #profile .profile-app-info-card,
+  #teacher-profile .profile-app-info-card {
+    padding: 20px 16px 16px;
+    margin-top: 16px;
+  }
+
+  #profile .profile-app-info-brand,
+  #teacher-profile .profile-app-info-brand {
+    align-items: flex-start;
+  }
+
+  #profile .profile-app-info-logo,
+  #teacher-profile .profile-app-info-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+  }
+
+  #profile .profile-app-info-brand-name,
+  #teacher-profile .profile-app-info-brand-name {
+    font-size: 21px;
+  }
+
+  #profile .profile-app-info-column strong,
+  #teacher-profile .profile-app-info-column strong {
+    font-size: 14px;
+  }
+
+  #profile .profile-app-info-grid,
+  #teacher-profile .profile-app-info-grid {
+    grid-template-columns: 1fr;
   }
 
   .profile-edit-overlay {
@@ -7513,6 +7760,9 @@ img.profile-skeleton {
 }
 
 .learning-path-modal-close {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
   width: 40px;
   height: 40px;
   flex: 0 0 auto;

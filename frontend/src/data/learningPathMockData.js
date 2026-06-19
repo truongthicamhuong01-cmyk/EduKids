@@ -98,8 +98,8 @@ export const learningPathMockData = {
         order: 0,
         label: "Xuất phát",
         altitude: "0 m",
-        left: 50.3,
-        top: 91.4,
+        left: 56.55,
+        top: 92.1,
         side: "left",
         tasks: [
           {
