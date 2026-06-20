@@ -140,7 +140,9 @@ const ROUTE_POSITIONS = [
   { left: 44.8, top: 26.7, side: "left" },
 ];
 
-const PEAK_POSITION = { left: 41.7, top: 11.25, side: "left" };
+const SUMMIT_CHECKPOINT_POSITION = { left: 41.7, top: 11.25, side: "left" };
+const SUMMIT_CARD_POSITION = { left: 67.5, top: 19.5 };
+const PEAK_POSITION = SUMMIT_CHECKPOINT_POSITION;
 
 const MOUNTAIN_BLUEPRINTS = [
   {
@@ -280,6 +282,8 @@ function createCheckpoint({
   type,
   altitude,
   position,
+  summitCheckpointPosition = null,
+  summitCardPosition = null,
   reward,
   taskKeys = [],
   completed = false,
@@ -296,7 +300,9 @@ function createCheckpoint({
     title: checkpointTitle,
     type,
     altitude,
-    position,
+    position: summitCheckpointPosition || position,
+    summitCheckpointPosition: summitCheckpointPosition || null,
+    summitCardPosition: summitCardPosition || null,
     reward,
     tasks: tasksSource.map((template, index) =>
       createTask({
@@ -458,7 +464,8 @@ function createMountain(blueprint, index) {
       title: "Đỉnh Núi",
       type: "summit",
       altitude: blueprint.height,
-      position: PEAK_POSITION,
+      summitCheckpointPosition: SUMMIT_CHECKPOINT_POSITION,
+      summitCardPosition: SUMMIT_CARD_POSITION,
       reward: createReward({
         id: `${blueprint.id}-summit-reward`,
         title: "+200 Xu Edu",
@@ -522,6 +529,8 @@ module.exports = {
   TASK_TEMPLATES: TASK_BLUEPRINTS,
   ROUTE_POSITIONS,
   PEAK_POSITION,
+  SUMMIT_CHECKPOINT_POSITION,
+  SUMMIT_CARD_POSITION,
   MOUNTAIN_BLUEPRINTS,
   season1,
   season1Progress,

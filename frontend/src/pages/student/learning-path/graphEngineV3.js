@@ -66,11 +66,20 @@ function getCheckpointPosition(checkpoint) {
   };
 }
 
+function getSummitCardPosition(checkpoint) {
+  const position = checkpoint?.summitCardPosition || checkpoint?.cardPosition || {};
+  return {
+    x: Number(position.left ?? position.x ?? 0),
+    y: Number(position.top ?? position.y ?? 0),
+  };
+}
+
 function buildNodeFromCheckpoint(checkpoint, index) {
   const checkpointId = String(checkpoint?.id || checkpoint?.checkpointId || "").trim();
   const nodeType = String(checkpoint?.type || "station").trim() || "station";
   const iconType = String(checkpoint?.mountainId || checkpoint?.id || nodeType).trim().toLowerCase();
   const position = getCheckpointPosition(checkpoint);
+  const cardPosition = nodeType === "summit" ? getSummitCardPosition(checkpoint) : null;
   const status = String(checkpoint?.status || checkpoint?.state || "locked").toLowerCase();
 
   return {
@@ -84,6 +93,7 @@ function buildNodeFromCheckpoint(checkpoint, index) {
     iconType,
     status,
     position,
+    cardPosition,
     checkpoint: cloneValue(checkpoint),
   };
 }
@@ -128,6 +138,8 @@ export function createGraphState(state) {
     x: node.position.x,
     y: node.position.y,
     side: node.position.side,
+    cardX: node.cardPosition?.x ?? null,
+    cardY: node.cardPosition?.y ?? null,
   }));
 
   return {
@@ -221,6 +233,45 @@ function createCheckpointButton(node) {
 
 function createGraphNodeElement(node) {
   const isSummit = node.type === "summit";
+
+  if (isSummit) {
+    const fragment = document.createDocumentFragment();
+    const summitStation = document.createElement("div");
+    summitStation.className = [
+      "learning-path-peak",
+      node.position.side === "right" ? "is-right" : "is-left",
+      node.status === "current" ? "is-current" : node.status === "completed" ? "is-completed" : "is-locked",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    summitStation.style.left = `${node.position.x}%`;
+    summitStation.style.top = `${node.position.y}%`;
+    summitStation.dataset.checkpoint = node.checkpointId;
+    summitStation.dataset.learningPathCheckpoint = node.checkpointId;
+
+    const summitAnchor = document.createElement("div");
+    summitAnchor.className = "learning-path-station-anchor";
+    summitAnchor.appendChild(createCheckpointButton(node));
+
+    summitStation.appendChild(summitAnchor);
+
+    const summitCard = document.createElement("div");
+    summitCard.className = "learning-path-peak-copy learning-path-peak-card";
+    summitCard.style.left = `${node.cardPosition?.x ?? node.position.x}%`;
+    summitCard.style.top = `${node.cardPosition?.y ?? node.position.y}%`;
+
+    const titleEl = document.createElement("strong");
+    titleEl.textContent = node.title;
+    const altitudeEl = document.createElement("span");
+    altitudeEl.textContent = node.altitude;
+    const subtitleEl = document.createElement("small");
+    subtitleEl.textContent = "Hoàn thành để nhận huy hiệu";
+    summitCard.append(titleEl, altitudeEl, subtitleEl);
+
+    fragment.append(summitStation, summitCard);
+    return fragment;
+  }
+
   const station = document.createElement("div");
   station.className = [
     isSummit ? "learning-path-peak" : "learning-path-station",

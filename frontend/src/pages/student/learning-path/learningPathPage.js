@@ -756,6 +756,24 @@ function getCurrentMountain(state) {
   return state?.mountain || state?.season?.mountains?.[0] || null;
 }
 
+function getNextMountain(state) {
+  const mountains = Array.isArray(state?.season?.mountains) ? state.season.mountains : [];
+  const currentMountainId = String(state?.currentMountainId || state?.mountainId || state?.mountain?.id || "").trim();
+  const currentIndex = mountains.findIndex((mountain) => mountain.id === currentMountainId);
+
+  if (currentIndex >= 0) {
+    return mountains[currentIndex + 1] || null;
+  }
+
+  return mountains[1] || null;
+}
+
+function getSummitCheckpoint(mountain) {
+  return Array.isArray(mountain?.checkpoints)
+    ? mountain.checkpoints.find((checkpoint) => String(checkpoint?.type || "").trim().toLowerCase() === "summit") || null
+    : null;
+}
+
 function getCurrentCheckpoint(state) {
   return state?.checkpoint || null;
 }
@@ -951,37 +969,43 @@ function renderProgressCard(state) {
 }
 
 function renderRewardSection(state) {
-  const rewards = Array.isArray(state.rewards?.badges) ? state.rewards.badges : [];
   const mountain = getCurrentMountain(state);
+  const nextMountain = getNextMountain(state);
+  const summitCheckpoint = getSummitCheckpoint(mountain);
+  const summitReward = summitCheckpoint?.reward || {};
+  const rewardXu = Number(summitReward.xu ?? 200) || 200;
+  const rewardExp = Number(summitReward.exp ?? 250) || 250;
+  const badgeName = mountain?.badge?.name || (mountain?.name ? `Huy hiệu ${mountain.name}` : "Huy hiệu đỉnh núi");
+  const unlockNextName = nextMountain?.name || "đỉnh tiếp theo";
 
   return `
     <div class="learning-path-reward-grid learning-path-reward-row">
       <div class="learning-path-reward-item is-gold">
         <span class="learning-path-reward-icon" aria-hidden="true">🪙</span>
         <div class="learning-path-reward-copy">
-          <strong>+${escapeHtml(state.rewards?.xu || 0)} Xu Edu</strong>
-          <span>Phần thưởng</span>
+          <strong>+${escapeHtml(rewardXu)} Xu Edu</strong>
+          <span>Phần thưởng chinh phục đỉnh</span>
         </div>
       </div>
       <div class="learning-path-reward-item is-amber">
         <span class="learning-path-reward-icon" aria-hidden="true">⭐</span>
         <div class="learning-path-reward-copy">
-          <strong>+${escapeHtml(state.rewards?.exp || 0)} EXP</strong>
-          <span>Kinh nghiệm Learning Path</span>
+          <strong>+${escapeHtml(rewardExp)} EXP</strong>
+          <span>Kinh nghiệm chinh phục đỉnh</span>
         </div>
       </div>
       <div class="learning-path-reward-item is-blue">
         <span class="learning-path-reward-icon" aria-hidden="true">🏅</span>
         <div class="learning-path-reward-copy">
-          <strong>${escapeHtml(mountain?.badge?.name || "Huy hiệu")}</strong>
-          <span>${escapeHtml(mountain?.badge?.description || "")}</span>
+          <strong>${escapeHtml(badgeName)}</strong>
+          <span>Huy hiệu ${escapeHtml(mountain?.name || "")}</span>
         </div>
       </div>
       <div class="learning-path-reward-item is-green">
         <span class="learning-path-reward-icon" aria-hidden="true">🏔️</span>
         <div class="learning-path-reward-copy">
-          <strong>${rewards.length > 0 ? `${rewards.length} badge` : "Mở khóa tiếp"}</strong>
-          <span>Tiến trình mùa giải</span>
+          <strong>Mở khóa ${escapeHtml(unlockNextName)}</strong>
+          <span>Ngọn núi tiếp theo</span>
         </div>
       </div>
     </div>
@@ -1107,7 +1131,7 @@ function renderLearningPathStaticShell(state) {
       </div>
 
       <div data-learning-path-popup-slot>
-        ${renderRewardPopup()}
+        ${renderRewardPopup(state)}
       </div>
     </div>
   `;
@@ -1126,7 +1150,7 @@ function syncLearningPathSlots(root, state, graphDiff) {
 
   const popupSlot = root?.querySelector?.("[data-learning-path-popup-slot]");
   if (popupSlot) {
-    popupSlot.innerHTML = renderRewardPopup();
+    popupSlot.innerHTML = renderRewardPopup(state);
   }
 
   const modalSlot = getLearningPathModalSlot(root);
@@ -1356,7 +1380,7 @@ function renderLearningPathTaskModal(state) {
   `;
 }
 
-function renderRewardPopup() {
+function renderRewardPopup(state) {
   if (!uiState.rewardPopup) {
     return "";
   }
@@ -1364,7 +1388,14 @@ function renderRewardPopup() {
   const hasBadgeReward = Boolean(uiState.rewardPopup.badgeName);
   const showExp = Number(uiState.rewardPopup.exp) > 0;
   const showUnlockNext = Boolean(uiState.rewardPopup.unlockNext);
-  const rewardIntro = showUnlockNext ? "Nhận:" : uiState.rewardPopup.checkpointTitle;
+  const mountain = getCurrentMountain(state);
+  const nextMountain = getNextMountain(state);
+  const rewardIntro = showUnlockNext
+    ? `Nhận: ${mountain?.name || uiState.rewardPopup.checkpointTitle || ""}`
+    : uiState.rewardPopup.checkpointTitle;
+  const unlockNextLabel = nextMountain?.name || "đỉnh tiếp theo";
+  const rewardXu = showUnlockNext ? Number(uiState.rewardPopup.xu) || 200 : Number(uiState.rewardPopup.xu) || 0;
+  const rewardExp = showUnlockNext ? Number(uiState.rewardPopup.exp) || 250 : Number(uiState.rewardPopup.exp) || 0;
 
   return `
     <div class="learning-path-modal-overlay is-open" role="presentation">
@@ -1377,10 +1408,10 @@ function renderRewardPopup() {
         </header>
         <div class="learning-path-modal-reward-card is-complete">
           <p>${escapeHtml(rewardIntro)}</p>
-          <strong>+${escapeHtml(uiState.rewardPopup.xu)} Xu Edu</strong>
-          ${showExp ? `<strong>+${escapeHtml(uiState.rewardPopup.exp)} EXP</strong>` : ""}
+          <strong>+${escapeHtml(rewardXu)} Xu Edu</strong>
+          ${showExp ? `<strong>+${escapeHtml(rewardExp)} EXP</strong>` : ""}
           ${hasBadgeReward ? `<strong>+${escapeHtml(uiState.rewardPopup.badgeName)}</strong>` : ""}
-          ${showUnlockNext ? "<strong>Mở khóa ngọn núi tiếp theo</strong>" : ""}
+          ${showUnlockNext ? `<strong>Mở khóa ${escapeHtml(unlockNextLabel)}</strong>` : ""}
         </div>
         <div class="learning-path-modal-complete-footer">
           <button
