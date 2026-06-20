@@ -7866,7 +7866,7 @@ img.profile-skeleton {
 }
 
 [data-learning-path-reward-slot] {
-  margin-top: 20px;
+  margin-top: 2px;
   padding-top: 0;
   display: flex;
   justify-content: flex-start;
@@ -8342,7 +8342,7 @@ img.profile-skeleton {
   }
 
   [data-learning-path-reward-slot] {
-    margin-top: 18px;
+    margin-top: 2px;
     width: 100%;
   }
 

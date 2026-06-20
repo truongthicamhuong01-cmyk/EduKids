@@ -1,6 +1,6 @@
 push code lên github:
 git add .
-git commit -m "{reason}"
+git commit -m "reason"
 git push
 
 deploy code lên firebase hosting:
