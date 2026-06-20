@@ -92,20 +92,29 @@ function normalizeTaskStatus(status) {
   return TASK_STATE.NOT_DONE;
 }
 
-const TASK_FACT_KEYS = {
-  assignment: "assignmentCompleted",
-  score: "scoreAchieved",
-  topic: "topicCompleted",
-  coach: "coachUsed",
+const TASK_METRIC_BY_TYPE = {
+  assignment: "assignmentCountToday",
+  score: "highScoreQuizCountToday",
+  topic: "lessonCountToday",
+  coach: "coachCountToday",
+  login: "loginCountToday",
+  lesson: "lessonCountToday",
+  quiz: "quizCountToday",
+  study_minutes: "studyMinutesToday",
+  quiz_score: "highScoreQuizCountToday",
 };
 
-function createEmptyLearningFacts() {
-  return {
-    assignmentCompleted: false,
-    scoreAchieved: false,
-    topicCompleted: false,
-    coachUsed: false,
-  };
+function normalizeCount(value) {
+  if (Number.isFinite(value)) {
+    return Math.max(0, Math.floor(value));
+  }
+
+  if (typeof value === "boolean") {
+    return value ? 1 : 0;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
 }
 
 function normalizeLearningFacts(candidate = {}) {
@@ -113,10 +122,25 @@ function normalizeLearningFacts(candidate = {}) {
   const facts = source.learningFacts && typeof source.learningFacts === "object" ? source.learningFacts : source;
 
   return {
-    assignmentCompleted: Boolean(facts.assignmentCompleted),
-    scoreAchieved: Boolean(facts.scoreAchieved),
-    topicCompleted: Boolean(facts.topicCompleted),
-    coachUsed: Boolean(facts.coachUsed),
+    loginCountToday: normalizeCount(
+      facts.loginCountToday ?? facts.loginCount ?? facts.loggedInToday ?? facts.loggedIn ?? facts.loginToday,
+    ),
+    studyMinutesToday: normalizeCount(
+      facts.studyMinutesToday ?? facts.studyMinutes ?? facts.studyTimeMinutes ?? facts.timeStudied,
+    ),
+    lessonCountToday: normalizeCount(
+      facts.lessonCountToday ?? facts.topicCompletedToday ?? facts.topicCompleted ?? facts.topicCountToday,
+    ),
+    quizCountToday: normalizeCount(
+      facts.quizCountToday ?? facts.quizCompletedToday ?? facts.quizCompleted ?? facts.quizCount,
+    ),
+    highScoreQuizCountToday: normalizeCount(
+      facts.highScoreQuizCountToday ?? facts.scoreAchievedToday ?? facts.scoreAchieved,
+    ),
+    assignmentCountToday: normalizeCount(
+      facts.assignmentCountToday ?? facts.assignmentCompletedToday ?? facts.assignmentCompleted,
+    ),
+    coachCountToday: normalizeCount(facts.coachCountToday ?? facts.coachUsedToday ?? facts.coachUsed),
   };
 }
 
@@ -135,14 +159,16 @@ function isSameLocalDate(leftValue, rightValue = new Date()) {
   return getLocalDateKey(leftDate) === getLocalDateKey(rightDate);
 }
 
-function isTaskSatisfiedByFacts(taskType, facts) {
-  const key = TASK_FACT_KEYS[String(taskType || "").trim().toLowerCase()];
+function isTaskSatisfiedByFacts(task, facts) {
+  const taskMetric = String(task?.metric || "").trim();
+  const metric = taskMetric || TASK_METRIC_BY_TYPE[String(task?.type || "").trim().toLowerCase()];
+  const threshold = Math.max(1, normalizeCount(task?.threshold || 1));
 
-  if (!key) {
+  if (!metric) {
     return false;
   }
 
-  return Boolean(facts?.[key]);
+  return normalizeCount(facts?.[metric]) >= threshold;
 }
 
 function getMountainById(season, mountainId) {
@@ -224,19 +250,10 @@ function getCurrentCheckpointIdFromLegacyState(candidate, season, mountainId) {
   return getFirstCheckpointIdForMountain(season, mountainId);
 }
 
-function getLegacyCompletedTaskIds(candidate) {
-  if (Array.isArray(candidate?.progress?.completedTasks)) {
-    return new Set(candidate.progress.completedTasks.map((taskId) => String(taskId)));
-  }
-
-  return new Set();
-}
-
 function buildRawCheckpointState(
   meta,
   candidate,
   currentCheckpointId,
-  completedTaskIds,
   completedCheckpointIds,
   learningFacts,
 ) {
@@ -253,17 +270,8 @@ function buildRawCheckpointState(
       : CHECKPOINT_STATE.LOCKED;
 
   const tasks = (meta.checkpoint.tasks || []).map((task) => {
-    const legacyTask = Array.isArray(legacyCheckpoint?.tasks)
-      ? legacyCheckpoint.tasks.find((item) => item?.id === task.id)
-      : null;
-    const factCompleted = isTaskSatisfiedByFacts(task.type, learningFacts);
-    const taskStatus = normalizeTaskStatus(
-      legacyTask?.status ||
-        legacyTask?.state ||
-        (legacyTask?.completed ? TASK_STATE.DONE : "") ||
-        (completedTaskIds.has(task.id) ? TASK_STATE.DONE : "") ||
-        (factCompleted ? TASK_STATE.DONE : ""),
-    );
+    const factCompleted = isTaskSatisfiedByFacts(task, learningFacts);
+    const taskStatus = normalizeTaskStatus(factCompleted ? TASK_STATE.DONE : "");
 
     return {
       id: task.id,
@@ -333,7 +341,6 @@ function buildInitialState(season = season1, progress = {}) {
   const userId = String(candidate?.userId || "");
   const mountainId = getCurrentMountainIdFromLegacyState(candidate, seasonData);
   const checkpointId = getCurrentCheckpointIdFromLegacyState(candidate, seasonData, mountainId);
-  const completedTaskIds = getLegacyCompletedTaskIds(candidate);
   const legacyCompletedCheckpointIds = Array.isArray(candidate?.checkpoints)
     ? candidate.checkpoints
         .filter(
@@ -360,7 +367,6 @@ function buildInitialState(season = season1, progress = {}) {
         },
         candidate,
         checkpointId,
-        completedTaskIds,
         completedCheckpointIds,
         learningFacts,
       ),
@@ -932,6 +938,8 @@ function createEngine(initialSeason = season1, initialProgress = {}, options = {
           targetPageId: task.targetPageId || "",
           type: task.type || "",
           icon: task.icon || "",
+          metric: task.metric || "",
+          threshold: Number(task.threshold) || 1,
           completed: currentTask?.status === TASK_STATE.DONE,
           status: currentTask?.status || TASK_STATE.NOT_DONE,
           state: currentTask?.status || TASK_STATE.NOT_DONE,

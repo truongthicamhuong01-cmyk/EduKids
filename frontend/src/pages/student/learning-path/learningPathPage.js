@@ -141,6 +141,13 @@ function requestRewardPopupClose() {
   scheduleRender();
 }
 
+function blurFocusedLearningPathElement() {
+  const activeElement = document.activeElement;
+  if (activeElement instanceof HTMLElement && typeof activeElement.blur === "function") {
+    activeElement.blur();
+  }
+}
+
 function getState() {
   return uiState.backendState;
 }
@@ -315,7 +322,6 @@ async function hydrateLearningPathStateFromBackend() {
     scheduleRender();
     return remoteState;
   } catch (error) {
-    console.warn("Learning Path backend hydrate failed:", error);
     uiState.backendState = null;
     uiState.loading = false;
     uiState.errorMessage =
@@ -363,7 +369,6 @@ async function performLearningPathAction(action, payload = {}) {
     scheduleRender();
     return remoteState;
   } catch (error) {
-    console.warn("Learning Path backend action failed:", error);
     uiState.errorMessage = error?.message || "Không thể thực hiện action Learning Path.";
     scheduleRender();
     return null;
@@ -382,10 +387,7 @@ function openCheckpointModal(checkpointId) {
     return;
   }
 
-  const activeElement = document.activeElement;
-  if (activeElement instanceof HTMLElement && typeof activeElement.blur === "function") {
-    activeElement.blur();
-  }
+  blurFocusedLearningPathElement();
 
   uiState.modalCheckpointId = checkpoint.id;
   uiState.modalClosing = false;
@@ -570,10 +572,6 @@ function getTaskActionPageId(task) {
     return "ai-coach";
   }
 
-  if (route === "/student/learning-path") {
-    return "learning-path";
-  }
-
   return "";
 }
 
@@ -654,9 +652,7 @@ function renderCheckpointNode(checkpoint, status, state) {
   }
 
   if (status === "current") {
-    const shouldHideStaticAvatar =
-      (uiState.transition && uiState.transition.toCheckpointId === checkpoint.id) ||
-      state?.avatar?.isAtStart === true;
+    const shouldHideStaticAvatar = uiState.transition && uiState.transition.toCheckpointId === checkpoint.id;
 
     return `
       <button
@@ -846,10 +842,11 @@ function renderJourneyPanel(state) {
           </p>
           <p class="learning-path-description">${escapeHtml(mountain?.description || "")}</p>
         </div>
-
-      <div class="learning-path-journey-overlay" aria-hidden="true">
+        <div
+          class="learning-path-journey-overlay"
+          ${uiState.modalCheckpointId !== null || uiState.modalClosing ? 'aria-hidden="true" inert' : ""}
+        >
           <div class="learning-path-route">
-            ${renderStartNode(state)}
             ${checkpointNodes.join("")}
             ${renderPeakNode(state)}
             ${renderMovingAvatar()}
@@ -917,20 +914,7 @@ function renderTaskActionButton(task) {
   `;
 }
 
-function renderDebugCompleteButton(task, checkpointId) {
-  return `
-    <button
-      type="button"
-      class="learning-path-task-action-btn"
-      data-learning-path-retry-action="COMPLETE_CHECKPOINT"
-      data-learning-path-checkpoint-id="${escapeHtml(checkpointId || "")}"
-    >
-      Đánh dấu hoàn thành
-    </button>
-  `;
-}
-
-function renderTaskCard(task, checkpointId) {
+function renderTaskCard(task) {
   return `
     <article class="learning-path-task-card${task.state === "DONE" ? " is-completed" : ""}">
       <div class="learning-path-task-head">
@@ -945,7 +929,6 @@ function renderTaskCard(task, checkpointId) {
           ${task.state === "DONE" ? "✓ Đã hoàn thành" : "Chưa hoàn thành"}
         </span>
         ${renderTaskActionButton(task)}
-        ${renderDebugCompleteButton(task, checkpointId)}
       </div>
     </article>
   `;
@@ -1004,7 +987,7 @@ function renderLearningPathTaskModal(state) {
         </div>
 
         <div class="learning-path-modal-task-list">
-          ${tasks.map((task) => renderTaskCard(task, checkpoint.id)).join("")}
+          ${tasks.map((task) => renderTaskCard(task)).join("")}
         </div>
 
         <div class="learning-path-modal-reward-card${allCompleted ? " is-complete" : ""}">
@@ -1079,12 +1062,6 @@ function handleNextCheckpoint() {
   void performLearningPathAction("NEXT_CHECKPOINT");
 }
 
-function handleCheckpointCompletion(checkpointId) {
-  void performLearningPathAction("COMPLETE_CHECKPOINT", {
-    checkpointId,
-  });
-}
-
 function bindLearningPathControlsOnce() {
   if (uiState.bound) {
     return;
@@ -1103,8 +1080,6 @@ function bindLearningPathControlsOnce() {
     const checkpointTriggerSnapshot = target?.closest?.("[data-learning-path-open-checkpoint]");
     const closeButtonSnapshot = target?.closest?.("[data-learning-path-close-modal]");
     const modalOverlaySnapshot = target?.closest?.("[data-learning-path-modal-overlay]");
-    const retryActionButtonSnapshot = target?.closest?.("[data-learning-path-retry-action]");
-
 
     if (modalOverlaySnapshot) {
       event.stopPropagation();
@@ -1138,6 +1113,7 @@ function bindLearningPathControlsOnce() {
     );
     if (checkpointTrigger) {
       event.preventDefault();
+      blurFocusedLearningPathElement();
       openCheckpointModal(checkpointTrigger.dataset.learningPathCheckpoint);
       return;
     }
@@ -1148,17 +1124,6 @@ function bindLearningPathControlsOnce() {
     if (nextStationButton) {
       event.preventDefault();
       handleNextCheckpoint();
-    }
-
-    const retryActionButton = target.closest("[data-learning-path-retry-action]");
-    if (retryActionButton) {
-      event.preventDefault();
-      const action = String(retryActionButton.dataset.learningPathRetryAction || "").trim();
-      const checkpointId = String(retryActionButton.dataset.learningPathCheckpointId || "").trim();
-
-      if (action === "COMPLETE_CHECKPOINT" && checkpointId) {
-        handleCheckpointCompletion(checkpointId);
-      }
     }
   });
 }
