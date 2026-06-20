@@ -7361,6 +7361,18 @@ img.profile-skeleton {
   pointer-events: none;
   display: grid;
   place-items: center;
+  transition:
+    left 1.8s cubic-bezier(0.2, 0.85, 0.2, 1),
+    top 1.8s cubic-bezier(0.2, 0.85, 0.2, 1);
+}
+
+.learning-path-avatar-button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 .learning-path-station,
@@ -7427,6 +7439,12 @@ img.profile-skeleton {
     inset 0 0 0 1px rgba(147, 197, 253, 0.44);
 }
 
+.learning-path-station-checkpoint:disabled,
+.learning-path-station-checkpoint.is-locked {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .learning-path-station-checkpoint::after {
   content: "";
   position: absolute;
@@ -7443,6 +7461,23 @@ img.profile-skeleton {
   border-radius: inherit;
   border: 2px solid rgba(59, 130, 246, 0.24);
   animation: learning-path-pulse 1.9s ease-in-out infinite;
+}
+
+.learning-path-station.is-current,
+.learning-path-station.is-completed,
+.learning-path-start-node {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.learning-path-station.is-locked,
+.learning-path-station.is-locked * {
+  pointer-events: none;
+}
+
+.learning-path-station-copy,
+.learning-path-start-copy {
+  pointer-events: auto;
 }
 
 .learning-path-station-avatar {
@@ -7462,6 +7497,10 @@ img.profile-skeleton {
   height: 100%;
   display: block;
   object-fit: cover;
+}
+
+.learning-path-avatar-attached.is-hidden-during-transition {
+  opacity: 0;
 }
 
 .learning-path-station-status-badge {
@@ -7615,11 +7654,26 @@ img.profile-skeleton {
 }
 
 .learning-path-peak {
+  width: 0;
+  height: 0;
   display: block;
+  pointer-events: none;
+}
+
+.learning-path-peak-checkpoint {
+  width: 42px;
+  height: 42px;
+}
+
+.learning-path-peak-checkpoint.is-summit-only {
+  pointer-events: none;
 }
 
 .learning-path-peak-copy {
   min-width: 118px;
+  position: absolute;
+  left: 50%;
+  top: 52px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -7631,6 +7685,8 @@ img.profile-skeleton {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   color: #172554;
+  transform: translateX(-50%);
+  text-align: center;
 }
 
 .learning-path-station-copy strong,
@@ -7716,16 +7772,16 @@ img.profile-skeleton {
 }
 
 .learning-path-progress-meta strong {
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1;
   font-weight: 900;
-  color: #1d4ed8;
+  color: #15803d;
 }
 
 .learning-path-progress-meta span {
   font-size: 11px;
   font-weight: 600;
-  color: #47607f;
+  color: #6b7280;
 }
 
 .learning-path-progress-card p {

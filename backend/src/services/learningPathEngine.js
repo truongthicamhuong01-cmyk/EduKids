@@ -453,7 +453,7 @@ function calculateRewards(event, context = {}) {
   if (event === "mountain") {
     return {
       xu: 100,
-      exp: 200,
+      exp: 0,
       badges: context.badgeId ? [context.badgeId] : [],
     };
   }
@@ -717,6 +717,8 @@ function createEngine(initialSeason = season1, initialProgress = {}, options = {
     const checkpointRewards = calculateRewards("checkpoint", {
       checkpointReward: checkpointMeta?.checkpoint?.reward,
     });
+    const nextCheckpointPreview = getNextCheckpointRecord();
+    const isFinalStationBeforeSummit = nextCheckpointPreview?.type === "summit";
     state.rewards.xu += checkpointRewards.xu;
     state.rewards.exp += checkpointRewards.exp;
     checkpointRewards.badges.forEach((badgeId) => {
@@ -767,6 +769,8 @@ function createEngine(initialSeason = season1, initialProgress = {}, options = {
       checkpoint: cloneValue(checkpoint),
       mountainId: mountainMeta?.id || state.mountainId,
       isSummit,
+      suppressRewardPopup: isFinalStationBeforeSummit,
+      isFinalStationBeforeSummit,
     });
     emitStateChanged({
       action: "completeCheckpoint",
@@ -869,16 +873,21 @@ function createEngine(initialSeason = season1, initialProgress = {}, options = {
       return getState();
     }
 
-    state.checkpoints.forEach((checkpoint) => {
-      if (checkpoint.id === nextCheckpoint.id) {
-        checkpoint.status = CHECKPOINT_STATE.LOCKED;
-        return;
-      }
+    const nextCheckpointMeta = getCheckpointMetaById(seasonData, nextCheckpoint.id);
+    const isSummitCheckpoint = nextCheckpointMeta?.checkpoint?.type === "summit";
 
-      if (checkpoint.status !== CHECKPOINT_STATE.COMPLETED) {
+    state.checkpoints.forEach((checkpoint) => {
+      if (checkpoint.id !== nextCheckpoint.id && checkpoint.status !== CHECKPOINT_STATE.COMPLETED) {
         checkpoint.status = CHECKPOINT_STATE.LOCKED;
       }
     });
+
+    if (nextCheckpoint.id) {
+      setCheckpointStatus(
+        nextCheckpoint.id,
+        isSummitCheckpoint ? CHECKPOINT_STATE.COMPLETED : CHECKPOINT_STATE.ACTIVE,
+      );
+    }
 
     state.mountainId = nextCheckpoint.id
       ? getCheckpointMetaById(seasonData, nextCheckpoint.id)?.mountain?.id || state.mountainId
@@ -892,15 +901,47 @@ function createEngine(initialSeason = season1, initialProgress = {}, options = {
     touchState();
     applyCheckpointAvailability(state);
 
-    emit("CHECKPOINT_LOCKED", {
-      checkpointId: nextCheckpoint.id,
-      mountainId: state.mountainId,
-    });
     emit("AVATAR_POSITION_CHANGED", {
       from: calculateAvatarPosition({ ...state, checkpointId: currentCheckpoint.id }, seasonData),
       to: calculateAvatarPosition(state, seasonData),
       checkpointId: nextCheckpoint.id,
     });
+
+    if (isSummitCheckpoint) {
+      const mountainRewards = calculateRewards("mountain", {
+        badgeId: nextCheckpointMeta?.mountain?.badge?.id || null,
+      });
+      state.rewards.xu += mountainRewards.xu;
+      state.rewards.exp += mountainRewards.exp;
+      mountainRewards.badges.forEach((badgeId) => {
+        if (!state.rewards.badges.includes(badgeId)) {
+          state.rewards.badges.push(badgeId);
+        }
+      });
+
+      state.progress.completedMountains = Array.from(
+        new Set([
+          ...(Array.isArray(state.progress.completedMountains) ? state.progress.completedMountains : []),
+          nextCheckpointMeta?.mountain?.id || state.mountainId,
+        ].filter(Boolean)),
+      );
+      touchState();
+
+      emit("MOUNTAIN_COMPLETED", {
+        checkpointId: nextCheckpoint.id,
+        mountainId: nextCheckpointMeta?.mountain?.id || state.mountainId,
+        mountain: cloneValue(nextCheckpointMeta?.mountain || null),
+        reward: cloneValue(mountainRewards),
+        from: calculateAvatarPosition({ ...state, checkpointId: currentCheckpoint.id }, seasonData),
+        to: calculateAvatarPosition(state, seasonData),
+      });
+    } else {
+      emit("CHECKPOINT_LOCKED", {
+        checkpointId: nextCheckpoint.id,
+        mountainId: state.mountainId,
+      });
+    }
+
     emitStateChanged({
       action: "goToNextCheckpoint",
       checkpointId: nextCheckpoint.id,

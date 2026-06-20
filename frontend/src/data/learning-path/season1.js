@@ -140,7 +140,7 @@ const ROUTE_POSITIONS = [
   { left: 44.8, top: 26.7, side: "left" },
 ];
 
-const PEAK_POSITION = { left: 41.7, top: 11.25, side: "left" };
+const PEAK_POSITION = { left: 42.2, top: 13.15, side: "left" };
 
 const MOUNTAIN_BLUEPRINTS = [
   {
@@ -413,7 +413,7 @@ function createMountain(blueprint, index) {
       checkpointNumber: 2,
       type: "station",
       altitude: "2.500 m",
-      position: ROUTE_POSITIONS[2],
+      position: { left: 59.1, top: 60.65, side: "right" },
       reward: stationRewards[2],
       taskKeys: ["assignment-1", "lesson-1", "quiz-2"],
       completed: false,
@@ -469,7 +469,7 @@ function createMountain(blueprint, index) {
         exp: 200,
         badgeId: `badge-${blueprint.id}`,
       }),
-      taskKeys: ["login", "lesson-2", "quiz-2", "study-60"],
+      taskKeys: [],
       completed: false,
       isSummit: true,
     }),

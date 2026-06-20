@@ -127,7 +127,9 @@ export function createGraphState(state) {
 
   const mountainCheckpoints = Array.isArray(mountain?.checkpoints) ? mountain.checkpoints : [];
   mountainCheckpoints.forEach((checkpoint) => {
-    rawNodes.push(checkpoint);
+    if (String(checkpoint?.id || "").trim() !== "start") {
+      rawNodes.push(checkpoint);
+    }
   });
 
   const dedupedCheckpoints = uniqueByCheckpointId(rawNodes);
@@ -224,6 +226,19 @@ export function diffGraphState(previousState, nextState) {
 }
 
 function createCheckpointButton(node) {
+  if (node.type === "summit" && (!Array.isArray(node?.checkpoint?.tasks) || node.checkpoint.tasks.length === 0)) {
+    const checkpoint = document.createElement("span");
+    checkpoint.className = [
+      "learning-path-station-checkpoint",
+      "learning-path-peak-checkpoint",
+      node.status === "current" ? "is-current" : node.status === "completed" ? "is-completed" : "is-locked",
+      "is-summit-only",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return checkpoint;
+  }
+
   const button = document.createElement("button");
   const isLocked = node.status === "locked";
   const isCurrent = node.status === "current";
@@ -244,7 +259,8 @@ function createCheckpointButton(node) {
   button.setAttribute("aria-label", node.checkpointId === "start" ? "Mở điểm xuất phát" : `Mở nhiệm vụ ${node.title}`);
 
   if (isLocked) {
-    button.setAttribute("aria-hidden", "true");
+    button.disabled = true;
+    button.setAttribute("aria-disabled", "true");
     button.classList.add("is-locked");
   } else if (node.status === "completed") {
     const badge = document.createElement("span");
@@ -273,6 +289,8 @@ function createGraphNodeElement(node) {
     startNode.className = "learning-path-start-node";
     startNode.style.left = `${node.position.x}%`;
     startNode.style.top = `${node.position.y}%`;
+    startNode.dataset.checkpoint = "start";
+    startNode.dataset.learningPathCheckpoint = "start";
 
     const anchor = document.createElement("button");
     anchor.type = "button";
@@ -306,6 +324,8 @@ function createGraphNodeElement(node) {
     .join(" ");
   station.style.left = `${node.position.x}%`;
   station.style.top = `${node.position.y}%`;
+  station.dataset.checkpoint = node.checkpointId;
+  station.dataset.learningPathCheckpoint = node.checkpointId;
 
   const anchor = document.createElement("div");
   anchor.className = "learning-path-station-anchor";
@@ -335,14 +355,14 @@ function ensureAvatarLayer(root) {
     return avatarLayer;
   }
 
-  avatarLayer = document.createElement("div");
+  avatarLayer = document.createElement("button");
   avatarLayer.id = "graph-avatar-layer";
-  avatarLayer.className = "learning-path-avatar-layer";
-  avatarLayer.setAttribute("aria-hidden", "true");
+  avatarLayer.type = "button";
+  avatarLayer.className = "learning-path-avatar-layer learning-path-avatar-button learning-path-station-avatar learning-path-avatar-attached";
+  avatarLayer.setAttribute("aria-label", "Mở nhiệm vụ");
+  avatarLayer.dataset.learningPathAvatarOpen = "true";
   avatarLayer.innerHTML = `
-    <span class="learning-path-station-avatar learning-path-avatar-attached" data-learning-path-avatar aria-hidden="true">
-      <img src="/assets/userAvatar/boy.png" alt="" loading="lazy" decoding="async" />
-    </span>
+    <img src="/assets/userAvatar/boy.png" alt="" loading="lazy" decoding="async" />
   `;
   return avatarLayer;
 }
@@ -383,8 +403,13 @@ export function renderGraphV3(root, graphState, { modalOpen = false } = {}) {
   avatarLayer.style.left = `${resolvedPosition.x}%`;
   avatarLayer.style.top = `${resolvedPosition.y}%`;
   avatarLayer.dataset.checkpoint = avatar.currentCheckpointId;
+  avatarLayer.dataset.learningPathCheckpoint = avatar.currentCheckpointId;
+  avatarLayer.setAttribute(
+    "aria-label",
+    avatar.currentCheckpointId === "start" ? "Mở nhiệm vụ Xuất Phát" : `Mở nhiệm vụ ${avatarNode?.title || "checkpoint hiện tại"}`,
+  );
   avatarLayer.style.opacity = avatar.currentCheckpointId ? "1" : "0";
-  avatarLayer.style.pointerEvents = "none";
+  avatarLayer.style.pointerEvents = "auto";
 
   graphViewport.inert = Boolean(modalOpen);
 
@@ -406,6 +431,13 @@ export function updateAvatarPosition(root, graphState) {
   avatarLayer.style.left = `${resolvedPosition.x}%`;
   avatarLayer.style.top = `${resolvedPosition.y}%`;
   avatarLayer.dataset.checkpoint = graphState.avatar.currentCheckpointId;
+  avatarLayer.dataset.learningPathCheckpoint = graphState.avatar.currentCheckpointId;
+  avatarLayer.setAttribute(
+    "aria-label",
+    graphState.avatar.currentCheckpointId === "start"
+      ? "Mở nhiệm vụ Xuất Phát"
+      : `Mở nhiệm vụ ${avatarNode?.title || "checkpoint hiện tại"}`,
+  );
   avatarLayer.style.opacity = graphState.avatar.currentCheckpointId ? "1" : "0";
   return avatarLayer;
 }

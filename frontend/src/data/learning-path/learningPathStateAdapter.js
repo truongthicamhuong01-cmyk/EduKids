@@ -240,8 +240,13 @@ function buildMountainView({
 
   const isCurrentMountain = mountainBlueprint.id === currentMountainId;
   const isCompletedMountain = completedMountainIds.has(mountainBlueprint.id);
+  const previousMountainId = mountainIndex > 0 ? season1.mountains?.[mountainIndex - 1]?.id || "" : "";
+  const previousMountainCompleted = previousMountainId ? completedMountainIds.has(previousMountainId) : false;
   const mountainUnlocked =
-    mountainIndex === 0 || mountainIndex <= getBlueprintMountainIndex(currentMountainId) || isCompletedMountain;
+    mountainIndex === 0 ||
+    mountainIndex <= getBlueprintMountainIndex(currentMountainId) ||
+    isCompletedMountain ||
+    previousMountainCompleted;
 
   return {
     ...cloneValue(mountainBlueprint),

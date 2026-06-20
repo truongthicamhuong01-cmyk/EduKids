@@ -64,6 +64,7 @@ const uiState = {
   taskResetCountdown: "00:00:00",
   taskResetTimer: null,
   rewardPopup: null,
+  pendingRewardPopup: null,
   transition: null,
   transitionTimer: null,
   limitNotice: null,
@@ -280,6 +281,7 @@ function requestLearningPathModalClose(afterClose) {
 
 function requestRewardPopupClose() {
   uiState.rewardPopup = null;
+  uiState.pendingRewardPopup = null;
   scheduleRender();
 }
 
@@ -341,6 +343,23 @@ function getActiveCheckpointRecord(state) {
 
 function normalizeCheckpointStatus(status) {
   return String(status || "locked").toLowerCase();
+}
+
+function formatLearningPathMeters(value) {
+  const digits = String(value ?? "")
+    .replace(/[^\d]/g, "")
+    .trim();
+
+  if (!digits) {
+    return "0 m";
+  }
+
+  const meters = Number(digits);
+  if (!Number.isFinite(meters)) {
+    return `${String(value).trim()} m`;
+  }
+
+  return `${meters.toLocaleString("vi-VN")} m`;
 }
 
 function getLearningPathUserId() {
@@ -543,6 +562,13 @@ function openCheckpointModal(checkpointId) {
     return;
   }
 
+  if (
+    String(checkpoint?.type || "").trim().toLowerCase() === "summit" &&
+    (!Array.isArray(checkpoint?.tasks) || checkpoint.tasks.length === 0)
+  ) {
+    return;
+  }
+
   blurFocusedLearningPathElement();
 
   uiState.modalCheckpointId = checkpoint.id;
@@ -638,6 +664,10 @@ function showCheckpointRewardPopup(event) {
     return false;
   }
 
+  if (event?.payload?.suppressRewardPopup) {
+    return false;
+  }
+
   uiState.rewardPopup = {
     title: "🎉 Trạm đã hoàn thành",
     checkpointTitle: checkpoint.title || "",
@@ -658,12 +688,35 @@ function showAvatarTransition(event) {
     from: payload.from,
     to: payload.to,
     toCheckpointId: payload.checkpointId,
+    started: false,
   };
 
   uiState.transitionTimer = window.setTimeout(() => {
+    if (uiState.pendingRewardPopup) {
+      uiState.rewardPopup = uiState.pendingRewardPopup;
+      uiState.pendingRewardPopup = null;
+    }
     uiState.transition = null;
     scheduleRender();
   }, TRANSITION_MS);
+
+  return true;
+}
+
+function showMountainCompletionPopup(event) {
+  const payload = event?.payload || {};
+  const mountain = payload.mountain || null;
+  if (!mountain) {
+    return false;
+  }
+
+  uiState.pendingRewardPopup = {
+    title: `🏆 Chinh phục thành công ${mountain.name || "ngọn núi"}`,
+    checkpointTitle: mountain.name || "",
+    xu: Number(payload.reward?.xu ?? 100) || 100,
+    exp: Number(payload.reward?.exp ?? 0) || 0,
+    badgeName: mountain.badge?.name || "",
+  };
 
   return true;
 }
@@ -681,6 +734,8 @@ function applyLearningPathEvent(event) {
       return true;
     case "CHECKPOINT_COMPLETED":
       return showCheckpointRewardPopup(event);
+    case "MOUNTAIN_COMPLETED":
+      return showMountainCompletionPopup(event);
     case "CHECKPOINT_BLOCKED":
     case "DAILY_LIMIT_REACHED":
     case "WEEKLY_LIMIT_REACHED":
@@ -804,9 +859,6 @@ function renderCheckpointNode(checkpoint, status, state) {
     return `
       <span
         class="learning-path-station-checkpoint is-locked"
-        data-checkpoint="${escapeHtml(checkpoint.id)}"
-        data-learning-path-checkpoint="${escapeHtml(checkpoint.id)}"
-        aria-hidden="true"
       ></span>
     `;
   }
@@ -854,6 +906,8 @@ function renderStationNode(checkpoint, state) {
     <div
       class="learning-path-station${sideClass}${statusClass}"
       style="left: ${position.left}%; top: ${position.top}%;"
+      data-checkpoint="${escapeHtml(checkpoint.id)}"
+      data-learning-path-checkpoint="${escapeHtml(checkpoint.id)}"
     >
       <div class="learning-path-station-anchor">
         ${renderCheckpointNode(checkpoint, status, state)}
@@ -873,12 +927,11 @@ function renderStartNode(state) {
     <div
       class="learning-path-start-node"
       style="left: ${position.left}%; top: ${position.top}%;"
+      data-checkpoint="start"
+      data-learning-path-checkpoint="start"
     >
       <div
         class="learning-path-start-anchor"
-        data-checkpoint="start"
-        data-learning-path-checkpoint="start"
-        aria-hidden="true"
       >
         <span class="learning-path-start-marker">0m</span>
       </div>
@@ -891,14 +944,20 @@ function renderStartNode(state) {
 }
 
 function renderCurrentAvatar(state) {
+  const isTransitioning = Boolean(uiState.transition);
+  const currentCheckpoint = getCurrentCheckpoint(state);
+  const checkpointId = String(state.currentCheckpointId || state.checkpointId || "start").trim() || "start";
   return `
-    <span
-      class="learning-path-station-avatar learning-path-avatar-attached"
-      data-learning-path-avatar
-      aria-hidden="true"
+    <button
+      type="button"
+      class="learning-path-station-avatar learning-path-avatar-attached learning-path-avatar-button${isTransitioning ? " is-hidden-during-transition" : ""}"
+      data-learning-path-avatar-open
+      data-checkpoint="${escapeHtml(checkpointId)}"
+      data-learning-path-checkpoint="${escapeHtml(checkpointId)}"
+      aria-label="Mở nhiệm vụ ${escapeHtml(currentCheckpoint?.title || "checkpoint hiện tại")}"
     >
       <img src="/assets/userAvatar/boy.png" alt="" loading="lazy" decoding="async" />
-    </span>
+    </button>
   `;
 }
 
@@ -933,14 +992,16 @@ function renderPeakNode(state) {
   }
 
   const status = normalizeCheckpointStatus(summitRuntime?.status || summitRuntime?.state);
+  const isSummitWithoutTasks = !Array.isArray(summit?.tasks) || summit.tasks.length === 0;
+  const statusClass =
+    status === "completed" ? "is-completed" : status === "current" ? "is-current" : "is-locked";
 
   return `
     <div
       class="learning-path-peak"
       style="left: ${summit.position.left}%; top: ${summit.position.top}%;"
-      ${status !== "locked" ? 'data-learning-path-open-checkpoint data-checkpoint="' + escapeHtml(summit.id) + '" data-learning-path-checkpoint="' + escapeHtml(summit.id) + '"' : ""}
-      ${status !== "locked" ? 'role="button" tabindex="0"' : ""}
     >
+      <span class="learning-path-peak-checkpoint learning-path-station-checkpoint ${statusClass}${isSummitWithoutTasks ? " is-summit-only" : ""}" aria-hidden="true"></span>
       <span class="learning-path-peak-copy">
         <strong>${escapeHtml(summit.title)}</strong>
         <span>${escapeHtml(summit.altitude || mountain.height)}</span>
@@ -952,7 +1013,7 @@ function renderPeakNode(state) {
 
 function renderLearningPathAvatarLayer(state) {
   return `
-    <span class="learning-path-avatar-layer" data-learning-path-avatar-layer aria-hidden="true">
+    <span class="learning-path-avatar-layer" data-learning-path-avatar-layer>
       ${renderCurrentAvatar(state)}
     </span>
   `;
@@ -960,7 +1021,8 @@ function renderLearningPathAvatarLayer(state) {
 
 function renderProgressCard(state) {
   const mountain = getCurrentMountain(state);
-  const altitudeLabel = state.avatar?.altitudeLabel || state.checkpoint?.altitude || "0 m";
+  const altitudeLabel = formatLearningPathMeters(state.avatar?.altitudeLabel || state.checkpoint?.altitude || 0);
+  const targetAltitude = formatLearningPathMeters(mountain?.height || 0);
   return `
     <aside class="learning-path-progress-card">
       <h3>Tiến độ của bạn</h3>
@@ -968,10 +1030,9 @@ function renderProgressCard(state) {
         <span style="width: ${Math.max(0, Math.min(Number(state.progressPercent) || 0, 100))}%"></span>
       </div>
       <div class="learning-path-progress-meta">
-        <strong>${Math.max(0, Math.min(Number(state.progressPercent) || 0, 100))}%</strong>
-        <span>Bạn đang ở ${escapeHtml(mountain?.name || "Xuất phát")}</span>
+        <strong>${escapeHtml(altitudeLabel)}</strong>
+        <span>/ ${escapeHtml(targetAltitude)}</span>
       </div>
-      <p>${escapeHtml(altitudeLabel)} / ${escapeHtml(mountain?.height || "")}</p>
     </aside>
   `;
 }
@@ -982,7 +1043,7 @@ function renderJourneyPanel(state) {
     ? mountain.checkpoints.filter((checkpoint) => checkpoint.type === "station" || checkpoint.id === "start")
     : [];
   const checkpoints = uniqueByCheckpointId(rawCheckpoints);
-  const startCheckpoint = checkpoints.find((checkpoint) => getLearningPathCheckpointId(checkpoint) === "start") || null;
+  const startCheckpoint = rawCheckpoints.find((checkpoint) => getLearningPathCheckpointId(checkpoint) === "start") || null;
   const startNodeState = startCheckpoint ? { ...state, startPosition: getCheckpointPosition(startCheckpoint) } : state;
   const checkpointNodes = checkpoints
     .filter((checkpoint) => getLearningPathCheckpointId(checkpoint) !== "start")
@@ -1132,6 +1193,7 @@ function renderLearningPathGraphPanelShell(state) {
         <div class="learning-path-journey-overlay">
           <div class="learning-path-route" data-learning-path-graph-viewport>
             <div data-learning-path-graph-nodes></div>
+            ${renderMovingAvatar()}
           </div>
         </div>
 
@@ -1224,6 +1286,10 @@ function syncLearningPathSlots(root, state, graphDiff) {
       rightSlot.innerHTML = renderLearningPathGraphPanelShell(state);
     }
     renderGraphV3(root, uiState.graphState, { modalOpen: Boolean(uiState.modalCheckpointId !== null || uiState.modalClosing) });
+    syncGraphAvatarVisibility(root);
+    if (uiState.transition && !uiState.transition.started) {
+      startAvatarTransitionAnimation(root);
+    }
     return;
   }
 
@@ -1234,6 +1300,51 @@ function syncLearningPathSlots(root, state, graphDiff) {
   const graphViewport = getLearningPathGraphViewport(root);
   if (graphViewport instanceof HTMLElement) {
     graphViewport.inert = Boolean(uiState.modalCheckpointId !== null || uiState.modalClosing);
+  }
+
+  syncGraphAvatarVisibility(root);
+  syncMovingAvatarLayer(root);
+}
+
+function startAvatarTransitionAnimation(root = getLearningPathRoot()) {
+  const transition = uiState.transition;
+  if (!root || !transition || transition.started) {
+    return;
+  }
+
+  const movingAvatar = root.querySelector("[data-learning-path-moving-avatar]");
+  if (!(movingAvatar instanceof HTMLElement)) {
+    return;
+  }
+
+  transition.started = true;
+  window.requestAnimationFrame(() => {
+    if (!uiState.transition || !movingAvatar.isConnected) {
+      return;
+    }
+
+    movingAvatar.style.left = `${uiState.transition.to.left}%`;
+    movingAvatar.style.top = `${uiState.transition.to.top}%`;
+  });
+}
+
+function syncGraphAvatarVisibility(root = getLearningPathRoot()) {
+  const avatarLayer = root?.querySelector?.("#graph-avatar-layer");
+  if (!(avatarLayer instanceof HTMLElement)) {
+    return;
+  }
+
+  avatarLayer.style.opacity = uiState.transition ? "0" : "1";
+}
+
+function syncMovingAvatarLayer(root = getLearningPathRoot()) {
+  const movingAvatar = root?.querySelector?.("[data-learning-path-moving-avatar]");
+  if (!(movingAvatar instanceof HTMLElement)) {
+    return;
+  }
+
+  if (!uiState.transition) {
+    movingAvatar.remove();
   }
 }
 
@@ -1363,6 +1474,9 @@ function renderRewardPopup() {
     return "";
   }
 
+  const hasBadgeReward = Boolean(uiState.rewardPopup.badgeName);
+  const showExp = Number(uiState.rewardPopup.exp) > 0;
+
   return `
     <div class="learning-path-modal-overlay is-open" role="presentation">
       <section class="learning-path-modal is-open" role="dialog" aria-modal="true">
@@ -1375,7 +1489,8 @@ function renderRewardPopup() {
         <div class="learning-path-modal-reward-card is-complete">
           <p>${escapeHtml(uiState.rewardPopup.checkpointTitle)}</p>
           <strong>+${escapeHtml(uiState.rewardPopup.xu)} Xu Edu</strong>
-          <strong>+${escapeHtml(uiState.rewardPopup.exp)} EXP</strong>
+          ${hasBadgeReward ? `<strong>+1 ${escapeHtml(uiState.rewardPopup.badgeName)}</strong>` : ""}
+          ${showExp ? `<strong>+${escapeHtml(uiState.rewardPopup.exp)} EXP</strong>` : ""}
         </div>
         <div class="learning-path-modal-complete-footer">
           <button
@@ -1432,7 +1547,13 @@ function handleLearningPathRootClick(event) {
     return;
   }
 
-  const checkpointTrigger = target?.closest?.("[data-checkpoint]");
+  const avatarTrigger = target.closest("[data-learning-path-avatar-open]");
+  if (avatarTrigger) {
+    event.preventDefault();
+    blurFocusedLearningPathElement();
+    openCheckpointModal(getState()?.currentCheckpointId || getState()?.checkpointId || "start");
+    return;
+  }
 
   const retryButton = target.closest("[data-learning-path-retry-load]");
   if (retryButton) {
@@ -1463,20 +1584,22 @@ function handleLearningPathRootClick(event) {
     return;
   }
 
+  const checkpointTrigger = target.closest("[data-checkpoint]");
+  if (checkpointTrigger && checkpointTrigger.closest(".learning-path-journey-overlay")) {
+    const checkpointId = checkpointTrigger.dataset.checkpoint;
+    if (checkpointId) {
+      event.preventDefault();
+      blurFocusedLearningPathElement();
+      openCheckpointModal(checkpointId);
+      return;
+    }
+  }
+
   const nextStationButton = target.closest("[data-learning-path-next-station]");
   if (nextStationButton) {
     event.preventDefault();
     handleNextCheckpoint();
     return;
-  }
-
-  if (checkpointTrigger && checkpointTrigger.closest(".learning-path-journey-overlay")) {
-    const checkpointId = checkpointTrigger.dataset.checkpoint;
-    if (checkpointId && checkpointTrigger.matches("[data-learning-path-open-checkpoint]")) {
-      event.preventDefault();
-      blurFocusedLearningPathElement();
-      openCheckpointModal(checkpointId);
-    }
   }
 }
 
