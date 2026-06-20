@@ -19959,6 +19959,13 @@ function bindAppEventsOnce() {
 
     const pageTrigger = event.target.closest("[data-page]");
     if (pageTrigger?.dataset.page) {
+      console.log("[EduKids][LearningPathModal] data-page-click", {
+        targetClassName: event.target?.className || "",
+        targetDataset: event.target?.dataset ? { ...event.target.dataset } : {},
+        pageTriggerClassName: pageTrigger.className || "",
+        pageTriggerDataset: pageTrigger.dataset ? { ...pageTrigger.dataset } : {},
+        pageId: pageTrigger.dataset.page,
+      });
       changePage(pageTrigger.dataset.page);
       return;
     }

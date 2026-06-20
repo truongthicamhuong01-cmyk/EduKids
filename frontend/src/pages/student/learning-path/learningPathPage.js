@@ -1143,7 +1143,53 @@ function bindLearningPathControlsOnce() {
       return;
     }
 
-    const retryButton = event.target.closest("[data-learning-path-retry-load]");
+    const target = event.target;
+    const taskActionButtonSnapshot = target?.closest?.("[data-page]");
+    const checkpointTriggerSnapshot = target?.closest?.("[data-learning-path-open-checkpoint]");
+    const closeButtonSnapshot = target?.closest?.("[data-learning-path-close-modal]");
+    const modalOverlaySnapshot = target?.closest?.("[data-learning-path-modal-overlay]");
+    const retryActionButtonSnapshot = target?.closest?.("[data-learning-path-retry-action]");
+
+    logLearningPathModal("click-snapshot", {
+      targetClassName: target?.className || "",
+      targetDataset: target?.dataset ? { ...target.dataset } : {},
+      taskActionClosest: taskActionButtonSnapshot
+        ? {
+            className: taskActionButtonSnapshot.className || "",
+            dataset: taskActionButtonSnapshot.dataset ? { ...taskActionButtonSnapshot.dataset } : {},
+          }
+        : null,
+      checkpointClosest: checkpointTriggerSnapshot
+        ? {
+            className: checkpointTriggerSnapshot.className || "",
+            dataset: checkpointTriggerSnapshot.dataset ? { ...checkpointTriggerSnapshot.dataset } : {},
+          }
+        : null,
+      closeClosest: closeButtonSnapshot
+        ? {
+            className: closeButtonSnapshot.className || "",
+            dataset: closeButtonSnapshot.dataset ? { ...closeButtonSnapshot.dataset } : {},
+          }
+        : null,
+      overlayClosest: modalOverlaySnapshot
+        ? {
+            className: modalOverlaySnapshot.className || "",
+            dataset: modalOverlaySnapshot.dataset ? { ...modalOverlaySnapshot.dataset } : {},
+          }
+        : null,
+      retryActionClosest: retryActionButtonSnapshot
+        ? {
+            className: retryActionButtonSnapshot.className || "",
+            dataset: retryActionButtonSnapshot.dataset ? { ...retryActionButtonSnapshot.dataset } : {},
+          }
+        : null,
+    });
+
+    if (modalOverlaySnapshot) {
+      event.stopPropagation();
+    }
+
+    const retryButton = target.closest("[data-learning-path-retry-load]");
     if (retryButton) {
       event.preventDefault();
       logLearningPathModal("listener-retry-load", {
@@ -1154,7 +1200,7 @@ function bindLearningPathControlsOnce() {
       return;
     }
 
-    const closeButton = event.target.closest("[data-learning-path-close-modal]");
+    const closeButton = target.closest("[data-learning-path-close-modal]");
     if (closeButton) {
       event.preventDefault();
       logLearningPathModal("listener-close-button", {
@@ -1165,7 +1211,7 @@ function bindLearningPathControlsOnce() {
       return;
     }
 
-    const rewardPopupCloseButton = event.target.closest(
+    const rewardPopupCloseButton = target.closest(
       "[data-learning-path-close-reward-popup]",
     );
     if (rewardPopupCloseButton) {
@@ -1174,7 +1220,7 @@ function bindLearningPathControlsOnce() {
       return;
     }
 
-    const checkpointTrigger = event.target.closest(
+    const checkpointTrigger = target.closest(
       "[data-learning-path-open-checkpoint]",
     );
     if (checkpointTrigger) {
@@ -1186,7 +1232,7 @@ function bindLearningPathControlsOnce() {
       return;
     }
 
-    const nextStationButton = event.target.closest(
+    const nextStationButton = target.closest(
       "[data-learning-path-next-station]",
     );
     if (nextStationButton) {
@@ -1194,7 +1240,7 @@ function bindLearningPathControlsOnce() {
       handleNextCheckpoint();
     }
 
-    const retryActionButton = event.target.closest("[data-learning-path-retry-action]");
+    const retryActionButton = target.closest("[data-learning-path-retry-action]");
     if (retryActionButton) {
       event.preventDefault();
       const action = String(retryActionButton.dataset.learningPathRetryAction || "").trim();
