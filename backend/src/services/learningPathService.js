@@ -7,6 +7,7 @@ const { findUserById } = require("./userService");
 const learningPathRoot = db.collection("users");
 const userProgressRoot = db.collection("user_progress");
 const aiUsageLogsRoot = db.collection("ai_usage_logs");
+const DEFAULT_CURRENT_CHECKPOINT_ID = "start";
 
 function getLearningPathDocRef(userId) {
   return learningPathRoot.doc(userId).collection("learningPath").doc("state");
@@ -22,6 +23,46 @@ function unwrapStoredLearningPathState(snapshotData) {
   }
 
   return snapshotData;
+}
+
+function sanitizeLearningPathState(state) {
+  const source = state && typeof state === "object" ? state : {};
+  const progressSource = source.progress && typeof source.progress === "object" ? source.progress : {};
+  const currentCheckpointId = String(
+    source.currentCheckpointId ??
+      progressSource.currentCheckpointId ??
+      progressSource.currentCheckpoint ??
+      source.checkpointId ??
+      DEFAULT_CURRENT_CHECKPOINT_ID,
+  ).trim() || DEFAULT_CURRENT_CHECKPOINT_ID;
+  const checkpointId = String(source.checkpointId ?? currentCheckpointId).trim() || currentCheckpointId;
+
+  return {
+    ...source,
+    checkpointId,
+    currentCheckpointId,
+    progress: {
+      ...progressSource,
+      currentCheckpointId,
+      currentCheckpoint: currentCheckpointId,
+      completedCheckpoints: Array.isArray(progressSource.completedCheckpoints)
+        ? progressSource.completedCheckpoints.map((item) => String(item))
+        : [],
+      completedMountains: Array.isArray(progressSource.completedMountains)
+        ? progressSource.completedMountains.map((item) => String(item))
+        : [],
+    },
+  };
+}
+
+function buildLearningPathResponse(state, events = []) {
+  const sanitizedState = sanitizeLearningPathState(state);
+  console.log("[LP_BACKEND_STATE]", sanitizedState);
+
+  return {
+    state: sanitizedState,
+    events: Array.isArray(events) ? events : [],
+  };
 }
 
 async function loadLearningPathState(userId) {
@@ -259,10 +300,7 @@ async function getLearningPathState(userId) {
     await persistLearningPathState(loaded.docRef, engine);
   }
 
-  return {
-    state,
-    events: collector.events,
-  };
+  return buildLearningPathResponse(state, collector.events);
 }
 
 async function executeLearningPathAction({ userId, action, payload = {} }) {
@@ -321,10 +359,7 @@ async function executeLearningPathAction({ userId, action, payload = {} }) {
 
   await persistLearningPathState(loaded.docRef, engine);
 
-  return {
-    state: engine.getState(),
-    events: collector.events,
-  };
+  return buildLearningPathResponse(engine.getState(), collector.events);
 }
 
 module.exports = {

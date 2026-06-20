@@ -6,6 +6,8 @@ const CHECKPOINT_STATE = {
   COMPLETED: "COMPLETED",
 };
 
+const DEFAULT_CURRENT_CHECKPOINT_ID = "start";
+
 const TASK_STATE = {
   DONE: "DONE",
   NOT_DONE: "NOT_DONE",
@@ -211,6 +213,20 @@ function getDefaultCheckpointId(season) {
   return getFirstCheckpointIdForMountain(season, firstMountain?.id || "") || "start";
 }
 
+function getSafeCurrentCheckpointId(candidate, fallback = DEFAULT_CURRENT_CHECKPOINT_ID) {
+  const source = candidate && typeof candidate === "object" ? candidate : {};
+  const progress = source.progress && typeof source.progress === "object" ? source.progress : {};
+  const resolved = String(
+    progress.currentCheckpointId ??
+      progress.currentCheckpoint ??
+      source.currentCheckpointId ??
+      source.currentCheckpoint ??
+      fallback,
+  ).trim();
+
+  return resolved || fallback;
+}
+
 function getCurrentMountainIdFromLegacyState(candidate, season) {
   if (candidate?.mountainId) {
     return String(candidate.mountainId);
@@ -346,16 +362,9 @@ function buildInitialState(season = season1, progress = {}) {
   const userId = String(candidate?.userId || "");
   const mountainId = getCurrentMountainIdFromLegacyState(candidate, seasonData);
   const startCheckpointId = getDefaultCheckpointId(seasonData);
-  const progressObject = candidate?.progress && typeof candidate.progress === "object" ? candidate.progress : null;
-  const progressCheckpointId = String(
-    progressObject?.currentCheckpointId ||
-      progressObject?.currentCheckpoint ||
-      candidate?.currentCheckpointId ||
-      candidate?.currentCheckpoint ||
-      "",
-  ).trim();
-  const checkpointId = getCheckpointMetaById(seasonData, progressCheckpointId || startCheckpointId)
-    ? progressCheckpointId || startCheckpointId
+  const currentCheckpointId = getSafeCurrentCheckpointId(candidate, DEFAULT_CURRENT_CHECKPOINT_ID);
+  const checkpointId = getCheckpointMetaById(seasonData, currentCheckpointId)
+    ? currentCheckpointId
     : startCheckpointId;
 
   const legacyCompletedCheckpointIds = Array.isArray(candidate?.checkpoints)
@@ -406,6 +415,7 @@ function buildInitialState(season = season1, progress = {}) {
     seasonId: String(candidate?.seasonId || seasonData.id || ""),
     mountainId,
     checkpointId,
+    currentCheckpointId,
     checkpoints,
     progress: normalizedProgress,
     rewards: {
@@ -433,8 +443,8 @@ function buildInitialState(season = season1, progress = {}) {
   const resolvedProgress = candidate?.progress && typeof candidate.progress === "object" ? cloneValue(candidate.progress) : {};
   state.progress = {
     ...resolvedProgress,
-    currentCheckpointId: checkpointId,
-    currentCheckpoint: checkpointId,
+    currentCheckpointId,
+    currentCheckpoint: currentCheckpointId,
     completedCheckpoints: Array.isArray(resolvedProgress.completedCheckpoints)
       ? resolvedProgress.completedCheckpoints
       : deriveCompletedCheckpoints(checkpoints),
@@ -447,7 +457,9 @@ function buildInitialState(season = season1, progress = {}) {
     state.checkpointId = startCheckpointId;
   }
 
-  state.currentCheckpointId = state.checkpointId;
+  if (!state.currentCheckpointId) {
+    state.currentCheckpointId = currentCheckpointId;
+  }
 
   return applyCheckpointAvailability(state);
 }
@@ -793,6 +805,9 @@ function createEngine(initialSeason = season1, initialProgress = {}, options = {
     }
 
     syncProgressFromCheckpoints();
+    state.currentCheckpointId = checkpointId;
+    state.progress.currentCheckpointId = checkpointId;
+    state.progress.currentCheckpoint = checkpointId;
     touchState();
 
     emit("CHECKPOINT_COMPLETED", {
@@ -917,6 +932,9 @@ function createEngine(initialSeason = season1, initialProgress = {}, options = {
       ? getCheckpointMetaById(seasonData, nextCheckpoint.id)?.mountain?.id || state.mountainId
       : state.mountainId;
     state.checkpointId = nextCheckpoint.id;
+    state.currentCheckpointId = nextCheckpoint.id;
+    state.progress.currentCheckpointId = nextCheckpoint.id;
+    state.progress.currentCheckpoint = nextCheckpoint.id;
 
     syncProgressFromCheckpoints();
     touchState();
@@ -1019,7 +1037,7 @@ function createEngine(initialSeason = season1, initialProgress = {}, options = {
         total: checkpointProgressTotal,
       },
       currentMountainId: state.mountainId,
-      currentCheckpointId: state.checkpointId,
+      currentCheckpointId: state.currentCheckpointId || state.checkpointId || DEFAULT_CURRENT_CHECKPOINT_ID,
       learningPathState: exportState(),
     };
   }
@@ -1066,6 +1084,7 @@ function createEngine(initialSeason = season1, initialProgress = {}, options = {
       seasonId: state.seasonId,
       mountainId: state.mountainId,
       checkpointId: state.checkpointId,
+      currentCheckpointId: state.currentCheckpointId || state.checkpointId || DEFAULT_CURRENT_CHECKPOINT_ID,
       checkpoints: state.checkpoints,
       progress: state.progress,
       rewards: state.rewards,
