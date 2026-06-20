@@ -68,6 +68,8 @@ const uiState = {
   transition: null,
   transitionTimer: null,
   limitNotice: null,
+  rewardLayoutLogTimer: null,
+  rewardLayoutFrame: null,
 };
 
 function getLearningPathRoot() {
@@ -162,6 +164,10 @@ function getLearningPathRewardSlot(root = getLearningPathRoot()) {
   return root?.querySelector?.("[data-learning-path-reward-slot]") || null;
 }
 
+function getLearningPathJourneyStage(root = getLearningPathRoot()) {
+  return root?.querySelector?.(".learning-path-journey-stage") || null;
+}
+
 function getLearningPathCountdownNode(root = getLearningPathRoot()) {
   return root?.querySelector?.("[data-learning-path-reset-countdown]") || null;
 }
@@ -195,6 +201,13 @@ function commitLearningPathState() {
     uiState.modalCheckpointId !== null || uiState.modalClosing,
   );
   syncLearningPathSlots(root, effectiveState, graphDiff);
+  if (uiState.rewardLayoutFrame) {
+    window.cancelAnimationFrame(uiState.rewardLayoutFrame);
+  }
+  uiState.rewardLayoutFrame = window.requestAnimationFrame(() => {
+    uiState.rewardLayoutFrame = null;
+    syncRewardLayoutWidth(root);
+  });
 
   if (uiState.modalCheckpointId !== null && uiState.modalFocusRequested) {
     uiState.modalFocusRequested = false;
@@ -247,6 +260,78 @@ function clearTimers() {
   if (uiState.transitionTimer) {
     window.clearTimeout(uiState.transitionTimer);
     uiState.transitionTimer = null;
+  }
+
+  if (uiState.rewardLayoutLogTimer) {
+    window.clearTimeout(uiState.rewardLayoutLogTimer);
+    uiState.rewardLayoutLogTimer = null;
+  }
+
+  if (uiState.rewardLayoutFrame) {
+    window.cancelAnimationFrame(uiState.rewardLayoutFrame);
+    uiState.rewardLayoutFrame = null;
+  }
+}
+
+function syncRewardLayoutWidth(root = getLearningPathRoot()) {
+  const journeyStage = getLearningPathJourneyStage(root);
+  const rewardSlot = getLearningPathRewardSlot(root);
+
+  if (
+    !(journeyStage instanceof HTMLElement) ||
+    !(rewardSlot instanceof HTMLElement)
+  ) {
+    return;
+  }
+
+  const stageRect = journeyStage.getBoundingClientRect();
+  const stageWidth = Math.max(0, Math.round(stageRect.width));
+
+  rewardSlot.style.width = `${stageWidth}px`;
+  rewardSlot.style.maxWidth = `${stageWidth}px`;
+  rewardSlot.style.minWidth = `${stageWidth}px`;
+  rewardSlot.style.marginLeft = "0px";
+  rewardSlot.style.marginRight = "0px";
+  rewardSlot.style.justifyContent = "flex-start";
+
+  const rewardRect = rewardSlot.getBoundingClientRect();
+  const rewardStyles = window.getComputedStyle(rewardSlot);
+  console.info("[LearningPath reward debug]", {
+    rewardMounted: Boolean(root.querySelector("[data-learning-path-reward-slot]")),
+    rewardSelector: "[data-learning-path-reward-slot]",
+    rewardDomRect: {
+      x: Math.round(rewardRect.x),
+      y: Math.round(rewardRect.y),
+      width: Math.round(rewardRect.width),
+      height: Math.round(rewardRect.height),
+    },
+    rewardStyles: {
+      display: rewardStyles.display,
+      visibility: rewardStyles.visibility,
+      opacity: rewardStyles.opacity,
+      overflow: rewardStyles.overflow,
+      height: rewardStyles.height,
+      maxHeight: rewardStyles.maxHeight,
+      zIndex: rewardStyles.zIndex,
+    },
+    parentOverflow: journeyStage.parentElement
+      ? window.getComputedStyle(journeyStage.parentElement).overflow
+      : "",
+  });
+
+  if (window.location?.hostname === "localhost" || window.location?.hostname === "127.0.0.1") {
+    if (uiState.rewardLayoutLogTimer) {
+      window.clearTimeout(uiState.rewardLayoutLogTimer);
+    }
+
+    uiState.rewardLayoutLogTimer = window.setTimeout(() => {
+      const latestRewardRect = rewardSlot.getBoundingClientRect();
+      console.info("[LearningPath reward layout]", {
+        everestCardWidth: Math.round(stageWidth),
+        rewardContainerWidth: Math.round(latestRewardRect.width),
+      });
+      uiState.rewardLayoutLogTimer = null;
+    }, 0);
   }
 }
 
@@ -1039,6 +1124,7 @@ function renderProgressCard(state) {
 }
 
 function renderRewardSection(state) {
+  console.log("reward mounted");
   const mountain = getCurrentMountain(state);
   const nextMountain = getNextMountain(state);
   const summitCheckpoint = getSummitCheckpoint(mountain);
@@ -1191,11 +1277,10 @@ function renderLearningPathStaticShell(state) {
         </div>
         <div class="learning-path-right-column" data-learning-path-right-slot>
           ${renderLearningPathGraphPanelShell(state)}
+          <div data-learning-path-reward-slot>
+            ${renderRewardSection(state)}
+          </div>
         </div>
-      </div>
-
-      <div data-learning-path-reward-slot>
-        ${renderRewardSection(state)}
       </div>
 
       <div data-learning-path-modal-slot>
@@ -1254,6 +1339,10 @@ function syncLearningPathSlots(root, state, graphDiff) {
     const rightSlot = getLearningPathRightSlot(root);
     if (rightSlot) {
       rightSlot.innerHTML = renderLearningPathGraphPanelShell(state);
+      const rewardSlot = rightSlot.querySelector?.("[data-learning-path-reward-slot]");
+      if (rewardSlot) {
+        rewardSlot.innerHTML = renderRewardSection(state);
+      }
     }
     renderGraphV3(root, uiState.graphState, {
       modalOpen: Boolean(

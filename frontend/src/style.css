@@ -7866,9 +7866,8 @@ img.profile-skeleton {
 }
 
 [data-learning-path-reward-slot] {
-  margin-top: -4px;
+  margin-top: 20px;
   padding-top: 0;
-  width: var(--learning-path-journey-copy-width);
   display: flex;
   justify-content: flex-start;
   align-items: flex-start;
@@ -8343,7 +8342,7 @@ img.profile-skeleton {
   }
 
   [data-learning-path-reward-slot] {
-    margin-top: -2px;
+    margin-top: 18px;
     width: 100%;
   }
 
