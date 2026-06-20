@@ -145,7 +145,7 @@ const ROUTE_POSITIONS = [
   { left: 44.8, top: 26.7, side: "left" },
 ];
 
-const PEAK_POSITION = { left: 49.5, top: 15.5, side: "left" };
+const PEAK_POSITION = { left: 52, top: 16.1, side: "left" };
 
 const MOUNTAIN_BLUEPRINTS = [
   {

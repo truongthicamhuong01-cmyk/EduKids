@@ -7091,6 +7091,7 @@ img.profile-skeleton {
 .learning-path-list-panel {
   padding: 18px;
   height: 100%;
+  min-height: 100%;
 }
 
 .learning-path-panel-head {
@@ -7809,8 +7810,8 @@ img.profile-skeleton {
 
 .learning-path-reward-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(128px, 1fr));
+  gap: 10px;
   margin-top: 0;
   justify-items: stretch;
   align-items: center;
@@ -7822,11 +7823,22 @@ img.profile-skeleton {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 10px 10px;
   border-radius: 14px;
   border: 1px solid #e5eefb;
   background: linear-gradient(180deg, #fbfdff 0%, #f6faff 100%);
   box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+}
+
+[data-learning-path-reward-slot] {
+  margin-top: -86px;
+  padding-left: 318px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+[data-learning-path-reward-slot] .learning-path-reward-grid {
+  width: min(100%, calc(100vw - 350px));
 }
 
 .learning-path-reward-icon {
@@ -8288,6 +8300,15 @@ img.profile-skeleton {
 
   .learning-path-reward-grid {
     grid-template-columns: 1fr;
+  }
+
+  [data-learning-path-reward-slot] {
+    margin-top: 0;
+    padding-left: 0;
+  }
+
+  [data-learning-path-reward-slot] .learning-path-reward-grid {
+    width: 100%;
   }
 }
 
