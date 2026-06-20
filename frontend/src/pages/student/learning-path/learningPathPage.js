@@ -63,6 +63,15 @@ function logLearningPathModal(action, details = {}) {
   console.log("[EduKids][LearningPathModal]", action, details);
 }
 
+function traceLearningPathModalStateChange(fieldName, previousValue, nextValue) {
+  console.log("[LP_MODAL_STATE_CHANGE]", {
+    fieldName,
+    previousValue,
+    nextValue,
+    stack: new Error().stack,
+  });
+}
+
 function getLearningPathRoot() {
   return document.getElementById("learning-path");
 }
@@ -110,7 +119,17 @@ function closeLearningPathModalImmediate() {
     modalClosing: uiState.modalClosing,
   });
   clearTimers();
+  traceLearningPathModalStateChange(
+    "modalCheckpointId",
+    uiState.modalCheckpointId,
+    null,
+  );
   uiState.modalCheckpointId = null;
+  traceLearningPathModalStateChange(
+    "modalClosing",
+    uiState.modalClosing,
+    false,
+  );
   uiState.modalClosing = false;
   uiState.modalFocusRequested = false;
   scheduleRender();
@@ -132,6 +151,11 @@ function requestLearningPathModalClose(afterClose) {
     return;
   }
 
+  traceLearningPathModalStateChange(
+    "modalClosing",
+    uiState.modalClosing,
+    true,
+  );
   uiState.modalClosing = true;
   scheduleRender();
 
@@ -139,7 +163,17 @@ function requestLearningPathModalClose(afterClose) {
     logLearningPathModal("close-finished", {
       modalCheckpointId: uiState.modalCheckpointId,
     });
+    traceLearningPathModalStateChange(
+      "modalCheckpointId",
+      uiState.modalCheckpointId,
+      null,
+    );
     uiState.modalCheckpointId = null;
+    traceLearningPathModalStateChange(
+      "modalClosing",
+      uiState.modalClosing,
+      false,
+    );
     uiState.modalClosing = false;
     uiState.modalFocusRequested = false;
     uiState.taskResetCountdown = "00:00:00";
@@ -423,7 +457,17 @@ function openCheckpointModal(checkpointId) {
     activeElement.blur();
   }
 
+  traceLearningPathModalStateChange(
+    "modalCheckpointId",
+    uiState.modalCheckpointId,
+    checkpoint.id,
+  );
   uiState.modalCheckpointId = checkpoint.id;
+  traceLearningPathModalStateChange(
+    "modalClosing",
+    uiState.modalClosing,
+    false,
+  );
   uiState.modalClosing = false;
   uiState.modalFocusRequested = true;
   logLearningPathModal("open", {
@@ -1143,6 +1187,18 @@ function bindLearningPathControlsOnce() {
       return;
     }
 
+    console.log("[LP_EVENT_TRACE]", {
+      time: performance.now(),
+      targetClass: event.target?.className,
+      targetOuterHTML: event.target?.outerHTML,
+      currentTarget: event.currentTarget,
+      eventPhase: event.eventPhase,
+      isTrusted: event.isTrusted,
+      detail: event.detail,
+      modalCheckpointId: uiState.modalCheckpointId,
+      modalClosing: uiState.modalClosing,
+    });
+
     const target = event.target;
     const taskActionButtonSnapshot = target?.closest?.("[data-page]");
     const checkpointTriggerSnapshot = target?.closest?.("[data-learning-path-open-checkpoint]");
@@ -1185,6 +1241,13 @@ function bindLearningPathControlsOnce() {
         : null,
     });
 
+    console.log("[LearningPath][modal-click]", {
+      className: target?.className,
+      dataset: target?.dataset,
+      text: target?.textContent,
+      outerHTML: target?.outerHTML,
+    });
+
     if (modalOverlaySnapshot) {
       event.stopPropagation();
     }
@@ -1202,6 +1265,7 @@ function bindLearningPathControlsOnce() {
 
     const closeButton = target.closest("[data-learning-path-close-modal]");
     if (closeButton) {
+      console.trace("[LP_BRANCH_CLOSE]");
       event.preventDefault();
       logLearningPathModal("listener-close-button", {
         modalCheckpointId: uiState.modalCheckpointId,
@@ -1224,6 +1288,7 @@ function bindLearningPathControlsOnce() {
       "[data-learning-path-open-checkpoint]",
     );
     if (checkpointTrigger) {
+      console.trace("[LP_BRANCH_OPEN]");
       event.preventDefault();
       logLearningPathModal("listener-open-checkpoint", {
         checkpointId: checkpointTrigger.dataset.learningPathCheckpoint || "",
@@ -1242,6 +1307,7 @@ function bindLearningPathControlsOnce() {
 
     const retryActionButton = target.closest("[data-learning-path-retry-action]");
     if (retryActionButton) {
+      console.trace("[LP_BRANCH_TASK]");
       event.preventDefault();
       const action = String(retryActionButton.dataset.learningPathRetryAction || "").trim();
       const checkpointId = String(retryActionButton.dataset.learningPathCheckpointId || "").trim();
