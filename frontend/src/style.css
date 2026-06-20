@@ -4621,7 +4621,9 @@ textarea {
 #profile .profile-app-info-grid,
 #teacher-profile .profile-app-info-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 0.95fr);
+  grid-template-columns:
+    minmax(0, 1.25fr) minmax(0, 0.8fr) minmax(0, 1fr)
+    minmax(0, 0.95fr);
   gap: 22px;
   align-items: start;
 }
@@ -7212,7 +7214,8 @@ img.profile-skeleton {
   display: none;
 }
 
-.learning-path-mountain-thumb.is-image-missing .learning-path-mountain-thumb-fallback {
+.learning-path-mountain-thumb.is-image-missing
+  .learning-path-mountain-thumb-fallback {
   opacity: 1;
 }
 
@@ -7299,7 +7302,8 @@ img.profile-skeleton {
 .learning-path-journey-copy {
   position: relative;
   z-index: 2;
-  width: min(34%, 340px);
+  --learning-path-journey-copy-width: min(34%, 340px);
+  width: var(--learning-path-journey-copy-width);
   padding: 18px 16px 0 18px;
   color: #10316d;
 }
@@ -7842,30 +7846,31 @@ img.profile-skeleton {
 }
 
 .learning-path-reward-item.is-gold {
-  flex-grow: 0.85;
-  min-width: 130px;
+  flex-grow: 0.5;
+  min-width: 70px;
 }
 
 .learning-path-reward-item.is-amber {
-  flex-grow: 0.92;
-  min-width: 140px;
+  flex-grow: 0.65;
+  min-width: 80px;
 }
 
 .learning-path-reward-item.is-blue {
-  flex-grow: 1.18;
-  min-width: 162px;
+  flex-grow: 0.8;
+  min-width: 90px;
 }
 
 .learning-path-reward-item.is-green {
-  flex-grow: 1.35;
-  min-width: 184px;
+  flex-grow: 1;
+  min-width: 100px;
 }
 
 [data-learning-path-reward-slot] {
   margin-top: -4px;
   padding-top: 0;
+  width: var(--learning-path-journey-copy-width);
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: flex-start;
 }
 
@@ -8339,8 +8344,7 @@ img.profile-skeleton {
 
   [data-learning-path-reward-slot] {
     margin-top: -2px;
-    padding-left: 0;
-    padding-right: 0;
+    width: 100%;
   }
 
   [data-learning-path-reward-slot] .learning-path-reward-grid {
