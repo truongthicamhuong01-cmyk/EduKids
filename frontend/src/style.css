@@ -6989,7 +6989,7 @@ img.profile-skeleton {
 .learning-path-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
 .learning-path-header {
@@ -7817,12 +7817,12 @@ img.profile-skeleton {
 }
 
 .learning-path-reward-grid {
-  display: inline-flex;
+  display: flex;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: 10px;
   margin-top: 0;
   align-items: center;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
 }
 
@@ -7830,19 +7830,39 @@ img.profile-skeleton {
   min-height: 66px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 10px;
+  gap: 10px;
+  padding: 10px 16px;
   border-radius: 14px;
   border: 1px solid #e5eefb;
   background: linear-gradient(180deg, #fbfdff 0%, #f6faff 100%);
   box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
-  flex: 0 1 auto;
+  flex: 1 1 0;
   width: auto;
   min-width: 0;
 }
 
+.learning-path-reward-item.is-gold {
+  flex-grow: 0.85;
+  min-width: 130px;
+}
+
+.learning-path-reward-item.is-amber {
+  flex-grow: 0.92;
+  min-width: 140px;
+}
+
+.learning-path-reward-item.is-blue {
+  flex-grow: 1.18;
+  min-width: 162px;
+}
+
+.learning-path-reward-item.is-green {
+  flex-grow: 1.35;
+  min-width: 184px;
+}
+
 [data-learning-path-reward-slot] {
-  margin-top: 0;
+  margin-top: -4px;
   padding-top: 0;
   display: flex;
   justify-content: flex-end;
@@ -7850,7 +7870,7 @@ img.profile-skeleton {
 }
 
 [data-learning-path-reward-slot] .learning-path-reward-grid {
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
 }
 
@@ -8313,13 +8333,12 @@ img.profile-skeleton {
   }
 
   .learning-path-reward-grid {
-    flex-wrap: wrap;
     width: 100%;
-    justify-content: center;
+    justify-content: stretch;
   }
 
   [data-learning-path-reward-slot] {
-    margin-top: 0;
+    margin-top: -2px;
     padding-left: 0;
     padding-right: 0;
   }
