@@ -4,13 +4,75 @@ const { createEngine } = require("./learningPathEngine");
 const { getSubmissionsByStudentId } = require("./assignmentService");
 const { findUserById } = require("./userService");
 
-const learningPathRoot = db.collection("users");
+const learningPathProgressRoot = db.collection("learningPathProgress");
 const userProgressRoot = db.collection("user_progress");
 const aiUsageLogsRoot = db.collection("ai_usage_logs");
 const DEFAULT_CURRENT_CHECKPOINT_ID = "start";
 
 function getLearningPathDocRef(userId) {
-  return learningPathRoot.doc(userId).collection("learningPath").doc("state");
+  return learningPathProgressRoot.doc(userId);
+}
+
+function getEmptyProgressState() {
+  return {
+    currentCheckpointId: DEFAULT_CURRENT_CHECKPOINT_ID,
+    currentCheckpoint: DEFAULT_CURRENT_CHECKPOINT_ID,
+    completedCheckpoints: [],
+    completedMountains: [],
+  };
+}
+
+function buildBootstrapLearningPathState(userId) {
+  const normalizedUserId = String(userId || "").trim();
+  const nowIso = new Date().toISOString();
+
+  return {
+    userId: normalizedUserId,
+    seasonId: String(season1.id || "").trim(),
+    mountainId: String(season1.mountains?.[0]?.id || "").trim(),
+    checkpointId: DEFAULT_CURRENT_CHECKPOINT_ID,
+    currentCheckpointId: DEFAULT_CURRENT_CHECKPOINT_ID,
+    progress: getEmptyProgressState(),
+    rewards: {
+      xu: 0,
+      exp: 0,
+      badges: [],
+    },
+    limits: {
+      dailyCheckpointCount: 0,
+      weeklySummitCount: 0,
+      lastResetDate: getLocalDateKey(),
+      lastResetWeek: getLocalWeekKey(),
+      lastCheckpointCompletedAt: "",
+      lastSummitCompletedAt: "",
+    },
+    updatedAt: nowIso,
+  };
+}
+
+function isBootstrapLearningPathState(state) {
+  if (!state || typeof state !== "object") {
+    return false;
+  }
+
+  const progress = state.progress && typeof state.progress === "object" ? state.progress : {};
+  const checkpointId = String(
+    progress.currentCheckpointId ??
+      progress.currentCheckpoint ??
+      state.currentCheckpointId ??
+      state.currentCheckpoint ??
+      state.checkpointId ??
+      "",
+  ).trim();
+
+  const completedCheckpoints = Array.isArray(progress.completedCheckpoints) ? progress.completedCheckpoints : [];
+  const completedMountains = Array.isArray(progress.completedMountains) ? progress.completedMountains : [];
+
+  return (
+    checkpointId === DEFAULT_CURRENT_CHECKPOINT_ID &&
+    completedCheckpoints.length === 0 &&
+    completedMountains.length === 0
+  );
 }
 
 function unwrapStoredLearningPathState(snapshotData) {
@@ -70,16 +132,37 @@ async function loadLearningPathState(userId) {
   const docRef = getLearningPathDocRef(normalizedUserId);
   const snapshot = await docRef.get();
 
-  if (!snapshot.exists) {
+  if (snapshot.exists) {
+    console.log("[LP_FIRESTORE_READ]", {
+      path: `learningPathProgress/${normalizedUserId}`,
+      exists: true,
+    });
+
     return {
-      state: null,
+      state: unwrapStoredLearningPathState(snapshot.data()),
       docRef,
+      exists: true,
+      isBootstrap: false,
     };
   }
 
+  console.log("[LP_FIRESTORE_READ]", {
+    path: `learningPathProgress/${normalizedUserId}`,
+    exists: false,
+  });
+  console.log("[LP_FIRESTORE_MISS]", {
+    path: `learningPathProgress/${normalizedUserId}`,
+    userId: normalizedUserId,
+  });
+
+  const bootstrapState = buildBootstrapLearningPathState(normalizedUserId);
+  await persistLearningPathState(docRef, { exportState: () => bootstrapState }, "create");
+
   return {
-    state: unwrapStoredLearningPathState(snapshot.data()),
+    state: bootstrapState,
     docRef,
+    exists: false,
+    isBootstrap: true,
   };
 }
 
@@ -258,17 +341,23 @@ async function loadLearningPathFacts(userId) {
   };
 }
 
-async function persistLearningPathState(docRef, engine) {
-  const state = engine.exportState();
-  await docRef.set(
-    {
-      ...state,
-      updatedAt: state.updatedAt || new Date().toISOString(),
-      seasonId: state.seasonId || season1.id,
-      userId: state.userId || "",
-    },
-    { merge: true },
-  );
+async function persistLearningPathState(docRef, engine, mode = "merge") {
+  const state = typeof engine?.exportState === "function" ? engine.exportState() : engine;
+  const payload = {
+    ...state,
+    updatedAt: state.updatedAt || new Date().toISOString(),
+    seasonId: state.seasonId || season1.id,
+    userId: state.userId || "",
+  };
+
+  console.log("[LP_FIRESTORE_WRITE]", {
+    path: `learningPathProgress/${String(payload.userId || docRef.id || "").trim()}`,
+    mode,
+    currentCheckpointId: payload.currentCheckpointId || "",
+    checkpointId: payload.checkpointId || "",
+  });
+
+  await docRef.set(payload, { merge: true });
 }
 
 async function getLearningPathState(userId) {
@@ -280,6 +369,10 @@ async function getLearningPathState(userId) {
   }
 
   const loaded = await loadLearningPathState(normalizedUserId);
+  if (isBootstrapLearningPathState(loaded.state)) {
+    return buildLearningPathResponse(loaded.state, []);
+  }
+
   const facts = await loadLearningPathFacts(normalizedUserId);
   const collector = createActionCollector();
   const engine = createEngine(

@@ -1,5 +1,7 @@
 import { season1 } from "./season1.js";
 
+const DEFAULT_CURRENT_CHECKPOINT_ID = "start";
+
 function cloneValue(value) {
   if (typeof structuredClone === "function") {
     try {
@@ -133,6 +135,7 @@ function buildCheckpointView({
   currentMountainId,
   currentCheckpointId,
   completedCheckpointIds,
+  isBootstrapStart,
 }) {
   const currentMountainIndex = getBlueprintMountainIndex(currentMountainId);
   const checkpointOrder = getCheckpointNumber(checkpointBlueprint?.id);
@@ -142,7 +145,9 @@ function buildCheckpointView({
 
   let status = canonicalStatus;
 
-  if (status === "locked") {
+  if (isBootstrapStart && status !== "completed") {
+    status = "locked";
+  } else if (status === "locked") {
     if (isCurrentCheckpoint) {
       status = "current";
     } else if (isCompletedCheckpoint) {
@@ -193,6 +198,7 @@ function buildMountainView({
   currentCheckpointId,
   completedCheckpointIds,
   completedMountainIds,
+  isBootstrapStart,
 }) {
   const checkpoints = (Array.isArray(mountainBlueprint.checkpoints) ? mountainBlueprint.checkpoints : []).map(
     (checkpointBlueprint) =>
@@ -204,6 +210,7 @@ function buildMountainView({
         currentMountainId,
         currentCheckpointId,
         completedCheckpointIds,
+        isBootstrapStart,
       }),
   );
 
@@ -239,12 +246,22 @@ export function adaptLearningPathState(apiState) {
   });
   const firstCheckpointId = currentMountainBlueprint?.checkpoints?.[0]?.id || season1.mountains?.[0]?.checkpoints?.[0]?.id || "";
   const resolvedCheckpointId = hasProgressObject
-    ? String(progress.currentCheckpoint || "").trim() || firstCheckpointId
-    : firstCheckpointId;
+    ? String(
+        progress.currentCheckpoint ||
+          progress.currentCheckpointId ||
+          source.currentCheckpointId ||
+          source.checkpointId ||
+          "",
+      ).trim() || firstCheckpointId
+    : String(source.currentCheckpointId || source.checkpointId || "").trim() || firstCheckpointId;
+  const isBootstrapStart =
+    resolvedCheckpointId === DEFAULT_CURRENT_CHECKPOINT_ID &&
+    completedCheckpointIds.size === 0 &&
+    completedMountainIds.size === 0;
   const isFreshStart =
     completedCheckpointIds.size === 0 &&
     currentMountainId === String(season1.mountains?.[0]?.id || "") &&
-    resolvedCheckpointId === String(firstCheckpointId || "");
+    (resolvedCheckpointId === String(firstCheckpointId || "") || isBootstrapStart);
 
   const mountains = (Array.isArray(season1.mountains) ? season1.mountains : []).map((mountainBlueprint, mountainIndex) =>
     buildMountainView({
@@ -255,6 +272,7 @@ export function adaptLearningPathState(apiState) {
       currentCheckpointId: resolvedCheckpointId,
       completedCheckpointIds,
       completedMountainIds,
+      isBootstrapStart,
     }),
   );
 
@@ -263,14 +281,16 @@ export function adaptLearningPathState(apiState) {
   );
   const currentMountain = mountains.find((mountain) => mountain.id === currentMountainId) || mountains[0] || null;
   const currentCheckpoint =
-    flattenedCheckpoints.find((checkpoint) => checkpoint.id === resolvedCheckpointId) ||
-    currentMountain?.checkpoints?.find((checkpoint) => checkpoint.status === "current") ||
-    currentMountain?.checkpoints?.[0] ||
-    null;
+    isBootstrapStart
+      ? null
+      : flattenedCheckpoints.find((checkpoint) => checkpoint.id === resolvedCheckpointId) ||
+        currentMountain?.checkpoints?.find((checkpoint) => checkpoint.status === "current") ||
+        currentMountain?.checkpoints?.[0] ||
+        null;
   const currentCheckpointProgress = currentCheckpoint?.progress || { completed: 0, total: 0 };
   const completedCount = completedCheckpointIds.size;
   const totalCheckpointCount = flattenedCheckpoints.length || 1;
-  const avatarPosition = isFreshStart
+  const avatarPosition = isFreshStart || isBootstrapStart
     ? startPosition
     : currentCheckpoint?.position
       ? cloneValue(currentCheckpoint.position)
@@ -312,7 +332,7 @@ export function adaptLearningPathState(apiState) {
       total: currentCheckpointProgress.total || 0,
     },
     currentMountainId,
-    currentCheckpointId,
+    currentCheckpointId: resolvedCheckpointId,
     tasks: cloneValue(currentCheckpoint?.tasks || []),
     startPosition,
     learningPathState: cloneValue(source.learningPathState || source),
