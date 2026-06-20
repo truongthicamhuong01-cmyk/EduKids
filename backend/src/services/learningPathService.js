@@ -8,7 +8,7 @@ const { getLocalDateKey, getLocalWeekKey } = require("../utils/dateUtils");
 const learningPathProgressRoot = db.collection("learningPathProgress");
 const userProgressRoot = db.collection("user_progress");
 const aiUsageLogsRoot = db.collection("ai_usage_logs");
-const DEFAULT_CURRENT_CHECKPOINT_ID = "start";
+const DEFAULT_CURRENT_CHECKPOINT_ID = String(season1.mountains?.[0]?.checkpoints?.[0]?.id || "everest-start");
 
 function getLearningPathDocRef(userId) {
   return learningPathProgressRoot.doc(userId);
@@ -91,23 +91,32 @@ function unwrapStoredLearningPathState(snapshotData) {
 function sanitizeLearningPathState(state) {
   const source = state && typeof state === "object" ? state : {};
   const progressSource = source.progress && typeof source.progress === "object" ? source.progress : {};
+  const mountainId = String(source.mountainId || source.currentMountainId || season1.mountains?.[0]?.id || "").trim();
+  const mountain = Array.isArray(season1.mountains)
+    ? season1.mountains.find((item) => item.id === mountainId) || season1.mountains[0] || null
+    : null;
+  const firstCheckpointId = String(mountain?.checkpoints?.[0]?.id || season1.mountains?.[0]?.checkpoints?.[0]?.id || DEFAULT_CURRENT_CHECKPOINT_ID);
   const currentCheckpointId = String(
     source.currentCheckpointId ??
       progressSource.currentCheckpointId ??
       progressSource.currentCheckpoint ??
       source.checkpointId ??
-      DEFAULT_CURRENT_CHECKPOINT_ID,
-  ).trim() || DEFAULT_CURRENT_CHECKPOINT_ID;
-  const checkpointId = String(source.checkpointId ?? currentCheckpointId).trim() || currentCheckpointId;
+      firstCheckpointId,
+  ).trim() || firstCheckpointId;
+  const normalizedCurrentCheckpointId =
+    currentCheckpointId === "start" || currentCheckpointId === DEFAULT_CURRENT_CHECKPOINT_ID
+      ? firstCheckpointId
+      : currentCheckpointId;
+  const checkpointId = String(source.checkpointId ?? normalizedCurrentCheckpointId).trim() || normalizedCurrentCheckpointId;
 
   return {
     ...source,
     checkpointId,
-    currentCheckpointId,
+    currentCheckpointId: normalizedCurrentCheckpointId,
     progress: {
       ...progressSource,
-      currentCheckpointId,
-      currentCheckpoint: currentCheckpointId,
+      currentCheckpointId: normalizedCurrentCheckpointId,
+      currentCheckpoint: normalizedCurrentCheckpointId,
       completedCheckpoints: Array.isArray(progressSource.completedCheckpoints)
         ? progressSource.completedCheckpoints.map((item) => String(item))
         : [],

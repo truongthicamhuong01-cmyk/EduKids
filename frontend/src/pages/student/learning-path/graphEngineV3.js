@@ -1,6 +1,4 @@
 const NODE_ICON_MAP = {
-  anchor: "",
-  start: "",
   everest: "/assets/learning-path/icon/icon-everest.png.jpg",
   elbrus: "/assets/learning-path/icon/icon-elbrus.png.jpg",
   kilimanjaro: "/assets/learning-path/icon/icon-kilimanjaro.png.jpg",
@@ -36,12 +34,6 @@ function uniqueByCheckpointId(nodes) {
     uniqueNodes.push({ ...node, checkpointId });
   });
 
-  const startNodeIndex = uniqueNodes.findIndex((node) => node.checkpointId === "start");
-  if (startNodeIndex > 0) {
-    const [startNode] = uniqueNodes.splice(startNodeIndex, 1);
-    uniqueNodes.unshift(startNode);
-  }
-
   return uniqueNodes;
 }
 
@@ -74,14 +66,9 @@ function getCheckpointPosition(checkpoint) {
   };
 }
 
-function getStartCheckpoint(state, mountain) {
-  const checkpoints = Array.isArray(mountain?.checkpoints) ? mountain.checkpoints : [];
-  return checkpoints.find((checkpoint) => String(checkpoint?.id || "") === "start") || null;
-}
-
 function buildNodeFromCheckpoint(checkpoint, index) {
   const checkpointId = String(checkpoint?.id || checkpoint?.checkpointId || "").trim();
-  const nodeType = checkpointId === "start" ? "anchor" : String(checkpoint?.type || "station").trim() || "station";
+  const nodeType = String(checkpoint?.type || "station").trim() || "station";
   const iconType = String(checkpoint?.mountainId || checkpoint?.id || nodeType).trim().toLowerCase();
   const position = getCheckpointPosition(checkpoint);
   const status = String(checkpoint?.status || checkpoint?.state || "locked").toLowerCase();
@@ -103,34 +90,9 @@ function buildNodeFromCheckpoint(checkpoint, index) {
 
 export function createGraphState(state) {
   const mountain = getCurrentMountain(state);
-  const rawNodes = [];
-
-  const startCheckpoint = getStartCheckpoint(state, mountain);
-  if (startCheckpoint) {
-    rawNodes.push(startCheckpoint);
-  } else {
-    rawNodes.push({
-      id: "start",
-      checkpointId: "start",
-      type: "anchor",
-      title: "Xuất Phát",
-      altitude: "0 m",
-      status: "current",
-      mountainId: String(mountain?.id || ""),
-      position: {
-        left: Number(state?.startPosition?.left ?? state?.avatar?.position?.left ?? 0),
-        top: Number(state?.startPosition?.top ?? state?.avatar?.position?.top ?? 0),
-        side: String(state?.startPosition?.side || "left"),
-      },
-    });
-  }
-
   const mountainCheckpoints = Array.isArray(mountain?.checkpoints) ? mountain.checkpoints : [];
-  mountainCheckpoints.forEach((checkpoint) => {
-    if (String(checkpoint?.id || "").trim() !== "start") {
-      rawNodes.push(checkpoint);
-    }
-  });
+  const rawNodes = mountainCheckpoints.slice();
+  const firstCheckpointId = String(mountainCheckpoints[0]?.id || "").trim();
 
   const dedupedCheckpoints = uniqueByCheckpointId(rawNodes);
   const nodes = new Map();
@@ -146,43 +108,17 @@ export function createGraphState(state) {
     });
   });
 
-  if (!nodes.has("start")) {
-    const startNode = buildNodeFromCheckpoint(
-      {
-        id: "start",
-        checkpointId: "start",
-        type: "anchor",
-        title: "Xuất Phát",
-        altitude: "0 m",
-        status: "current",
-        mountainId: String(mountain?.id || ""),
-        position: {
-          left: Number(state?.startPosition?.left ?? state?.avatar?.position?.left ?? 0),
-          top: Number(state?.startPosition?.top ?? state?.avatar?.position?.top ?? 0),
-          side: String(state?.startPosition?.side || "left"),
-        },
-      },
-      0,
-    );
-    nodes.set("start", startNode);
-    layout.set("start", {
-      x: startNode.position.x,
-      y: startNode.position.y,
-      side: startNode.position.side,
-    });
-  }
-
   const orderedNodeIds = Array.from(nodes.keys());
   const edges = orderedNodeIds.slice(1).map((checkpointId, index) => ({
     from: orderedNodeIds[index],
     to: checkpointId,
   }));
 
-  const currentCheckpointId = state?.currentCheckpointId === null
-    ? "start"
-    : String(state?.currentCheckpointId || state?.checkpointId || "start").trim() || "start";
-  const avatarCheckpointId = nodes.has(currentCheckpointId) ? currentCheckpointId : "start";
-  const avatarPosition = layout.get(avatarCheckpointId) || layout.get("start") || { x: 0, y: 0, side: "left" };
+  const resolvedCheckpointId = state?.currentCheckpointId === null
+    ? firstCheckpointId
+    : String(state?.currentCheckpointId || state?.checkpointId || firstCheckpointId).trim() || firstCheckpointId;
+  const avatarCheckpointId = nodes.has(resolvedCheckpointId) ? resolvedCheckpointId : firstCheckpointId || resolvedCheckpointId;
+  const avatarPosition = layout.get(avatarCheckpointId) || layout.get(firstCheckpointId) || { x: 0, y: 0, side: "left" };
   const serializableNodes = Array.from(nodes.values()).map((node) => ({
     checkpointId: node.checkpointId,
     type: node.type,
@@ -256,7 +192,7 @@ function createCheckpointButton(node) {
   button.dataset.checkpoint = node.checkpointId;
   button.dataset.learningPathCheckpoint = node.checkpointId;
   button.dataset.learningPathOpenCheckpoint = "true";
-  button.setAttribute("aria-label", node.checkpointId === "start" ? "Mở điểm xuất phát" : `Mở nhiệm vụ ${node.title}`);
+  button.setAttribute("aria-label", `Mở nhiệm vụ ${node.title}`);
 
   if (isLocked) {
     button.disabled = true;
@@ -284,35 +220,6 @@ function createCheckpointButton(node) {
 }
 
 function createGraphNodeElement(node) {
-  if (node.checkpointId === "start") {
-    const startNode = document.createElement("div");
-    startNode.className = "learning-path-start-node";
-    startNode.style.left = `${node.position.x}%`;
-    startNode.style.top = `${node.position.y}%`;
-    startNode.dataset.checkpoint = "start";
-    startNode.dataset.learningPathCheckpoint = "start";
-
-    const anchor = document.createElement("button");
-    anchor.type = "button";
-    anchor.className = "learning-path-start-anchor learning-path-start-anchor-button";
-    anchor.dataset.checkpoint = "start";
-    anchor.dataset.learningPathCheckpoint = "start";
-    anchor.dataset.learningPathOpenCheckpoint = "true";
-    anchor.setAttribute("aria-label", "Mở điểm xuất phát");
-    anchor.innerHTML = '<span class="learning-path-start-marker">0m</span>';
-
-    const copy = document.createElement("div");
-    copy.className = "learning-path-start-copy";
-    const startTitle = document.createElement("strong");
-    startTitle.textContent = "Xuất Phát";
-    const startAltitude = document.createElement("span");
-    startAltitude.textContent = "0 m";
-    copy.append(startTitle, startAltitude);
-
-    startNode.append(anchor, copy);
-    return startNode;
-  }
-
   const isSummit = node.type === "summit";
   const station = document.createElement("div");
   station.className = [
@@ -358,7 +265,7 @@ function ensureAvatarLayer(root) {
   avatarLayer = document.createElement("button");
   avatarLayer.id = "graph-avatar-layer";
   avatarLayer.type = "button";
-  avatarLayer.className = "learning-path-avatar-layer learning-path-avatar-button learning-path-station-avatar learning-path-avatar-attached";
+  avatarLayer.className = "learning-path-avatar-layer learning-path-avatar-button learning-path-avatar-attached";
   avatarLayer.setAttribute("aria-label", "Mở nhiệm vụ");
   avatarLayer.dataset.learningPathAvatarOpen = "true";
   avatarLayer.innerHTML = `
@@ -384,7 +291,10 @@ export function renderGraphV3(root, graphState, { modalOpen = false } = {}) {
   if (existingVersion !== nextVersion) {
     const fragment = document.createDocumentFragment();
     graphState.nodes.forEach((node) => {
-      fragment.appendChild(createGraphNodeElement(node));
+      const element = createGraphNodeElement(node);
+      if (element) {
+        fragment.appendChild(element);
+      }
     });
 
     nodeLayer.replaceChildren(fragment);
@@ -398,16 +308,14 @@ export function renderGraphV3(root, graphState, { modalOpen = false } = {}) {
   }
 
   const avatar = graphState.avatar;
-  const avatarNode = graphState.nodes.get(avatar.currentCheckpointId) || graphState.nodes.get("start") || null;
+  const fallbackNode = graphState.nodes.values().next().value || null;
+  const avatarNode = graphState.nodes.get(avatar.currentCheckpointId) || fallbackNode;
   const resolvedPosition = avatarNode ? avatarNode.position : { x: 0, y: 0 };
   avatarLayer.style.left = `${resolvedPosition.x}%`;
   avatarLayer.style.top = `${resolvedPosition.y}%`;
   avatarLayer.dataset.checkpoint = avatar.currentCheckpointId;
-  avatarLayer.dataset.learningPathCheckpoint = avatar.currentCheckpointId;
-  avatarLayer.setAttribute(
-    "aria-label",
-    avatar.currentCheckpointId === "start" ? "Mở nhiệm vụ Xuất Phát" : `Mở nhiệm vụ ${avatarNode?.title || "checkpoint hiện tại"}`,
-  );
+  delete avatarLayer.dataset.learningPathCheckpoint;
+  avatarLayer.setAttribute("aria-label", `Mở nhiệm vụ ${avatarNode?.title || "checkpoint hiện tại"}`);
   avatarLayer.style.opacity = avatar.currentCheckpointId ? "1" : "0";
   avatarLayer.style.pointerEvents = "auto";
 
@@ -426,18 +334,14 @@ export function updateAvatarPosition(root, graphState) {
     return renderGraphV3(root, graphState);
   }
 
-  const avatarNode = graphState.nodes.get(graphState.avatar.currentCheckpointId) || graphState.nodes.get("start") || null;
+  const fallbackNode = graphState.nodes.values().next().value || null;
+  const avatarNode = graphState.nodes.get(graphState.avatar.currentCheckpointId) || fallbackNode;
   const resolvedPosition = avatarNode ? avatarNode.position : { x: 0, y: 0 };
   avatarLayer.style.left = `${resolvedPosition.x}%`;
   avatarLayer.style.top = `${resolvedPosition.y}%`;
   avatarLayer.dataset.checkpoint = graphState.avatar.currentCheckpointId;
-  avatarLayer.dataset.learningPathCheckpoint = graphState.avatar.currentCheckpointId;
-  avatarLayer.setAttribute(
-    "aria-label",
-    graphState.avatar.currentCheckpointId === "start"
-      ? "Mở nhiệm vụ Xuất Phát"
-      : `Mở nhiệm vụ ${avatarNode?.title || "checkpoint hiện tại"}`,
-  );
+  delete avatarLayer.dataset.learningPathCheckpoint;
+  avatarLayer.setAttribute("aria-label", `Mở nhiệm vụ ${avatarNode?.title || "checkpoint hiện tại"}`);
   avatarLayer.style.opacity = graphState.avatar.currentCheckpointId ? "1" : "0";
   return avatarLayer;
 }

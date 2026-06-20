@@ -6,7 +6,8 @@ const TASK_BLUEPRINTS = [
     metric: "loginCountToday",
     threshold: 1,
     title: (checkpointTitle) => `Đăng nhập hôm nay để mở ${checkpointTitle}`,
-    description: () => "Chỉ tính đăng nhập được hệ thống ghi nhận trong ngày hiện tại.",
+    description: () =>
+      "Chỉ tính đăng nhập được hệ thống ghi nhận trong ngày hiện tại.",
     targetRoute: "/student/learning-path",
   },
   {
@@ -56,7 +57,8 @@ const TASK_BLUEPRINTS = [
     metric: "lessonCountToday",
     threshold: 1,
     title: () => "Hoàn thành 1 bài học hôm nay",
-    description: () => "Chỉ tính bài học được hệ thống ghi nhận trong ngày hiện tại.",
+    description: () =>
+      "Chỉ tính bài học được hệ thống ghi nhận trong ngày hiện tại.",
     targetRoute: "/student/quiz-ai",
   },
   {
@@ -66,7 +68,8 @@ const TASK_BLUEPRINTS = [
     metric: "lessonCountToday",
     threshold: 2,
     title: () => "Hoàn thành 2 bài học hôm nay",
-    description: () => "Chỉ tính bài học được hệ thống ghi nhận trong ngày hiện tại.",
+    description: () =>
+      "Chỉ tính bài học được hệ thống ghi nhận trong ngày hiện tại.",
     targetRoute: "/student/quiz-ai",
   },
   {
@@ -96,7 +99,8 @@ const TASK_BLUEPRINTS = [
     metric: "highScoreQuizCountToday",
     threshold: 1,
     title: () => "Đạt 8+ ở một quiz hôm nay",
-    description: () => "Chỉ tính quiz có điểm từ 8/10 hoặc 80/100 trở lên trong ngày hiện tại.",
+    description: () =>
+      "Chỉ tính quiz có điểm từ 8/10 hoặc 80/100 trở lên trong ngày hiện tại.",
     targetRoute: "/student/quiz-ai",
   },
   {
@@ -126,7 +130,8 @@ const TASK_BLUEPRINTS = [
     metric: "coachCountToday",
     threshold: 1,
     title: () => "Dùng AI Coach hôm nay",
-    description: () => "Chỉ tính lượt dùng AI Coach được hệ thống ghi nhận trong ngày hiện tại.",
+    description: () =>
+      "Chỉ tính lượt dùng AI Coach được hệ thống ghi nhận trong ngày hiện tại.",
     targetRoute: "/student/ai-coach",
   },
 ];
@@ -140,7 +145,7 @@ const ROUTE_POSITIONS = [
   { left: 44.8, top: 26.7, side: "left" },
 ];
 
-const PEAK_POSITION = { left: 48.2, top: 15.1, side: "left" };
+const PEAK_POSITION = { left: 49.5, top: 15.5, side: "left" };
 
 const MOUNTAIN_BLUEPRINTS = [
   {
@@ -233,7 +238,16 @@ function getTaskBlueprint(taskKey) {
   return TASK_BLUEPRINTS.find((task) => task.idSuffix === taskKey) || null;
 }
 
-function createReward({ id, title, subtitle, icon, theme, xu = 0, exp = 0, badgeId = null }) {
+function createReward({
+  id,
+  title,
+  subtitle,
+  icon,
+  theme,
+  xu = 0,
+  exp = 0,
+  badgeId = null,
+}) {
   return {
     id,
     title,
@@ -285,8 +299,18 @@ function createCheckpoint({
   completed = false,
   isSummit = false,
 }) {
-  const checkpointTitle = title || (isSummit ? "Đỉnh Núi" : checkpointNumber === 0 ? "Xuất Phát" : `Trạm ${checkpointNumber}`);
-  const checkpointSlug = isSummit ? "summit" : checkpointNumber === 0 ? "start" : `checkpoint-${checkpointNumber}`;
+  const checkpointTitle =
+    title ||
+    (isSummit
+      ? "Đỉnh Núi"
+      : checkpointNumber === 0
+        ? "Xuất Phát"
+        : `Trạm ${checkpointNumber}`);
+  const checkpointSlug = isSummit
+    ? "summit"
+    : checkpointNumber === 0
+      ? "start"
+      : `checkpoint-${checkpointNumber}`;
   const tasksSource = (Array.isArray(taskKeys) ? taskKeys : [])
     .map((taskKey) => getTaskBlueprint(taskKey))
     .filter(Boolean);
@@ -303,8 +327,12 @@ function createCheckpoint({
         mountainId,
         checkpointSlug,
         index,
-        title: template.title(isSummit ? `${mountainName} - đỉnh` : checkpointTitle),
-        description: template.description(isSummit ? `${mountainName} - đỉnh` : checkpointTitle),
+        title: template.title(
+          isSummit ? `${mountainName} - đỉnh` : checkpointTitle,
+        ),
+        description: template.description(
+          isSummit ? `${mountainName} - đỉnh` : checkpointTitle,
+        ),
         targetRoute: template.targetRoute,
         type: template.type,
         icon: template.icon,
@@ -503,7 +531,9 @@ export const season1 = {
     image: "/assets/learning-path/badges/badge-world-explorer.png",
     unlocked: false,
   },
-  mountains: MOUNTAIN_BLUEPRINTS.map((blueprint, index) => createMountain(blueprint, index)),
+  mountains: MOUNTAIN_BLUEPRINTS.map((blueprint, index) =>
+    createMountain(blueprint, index),
+  ),
 };
 
 export const season1Progress = {
@@ -517,4 +547,10 @@ export const season1Progress = {
   completedCheckpoints: [],
 };
 
-export { TASK_BLUEPRINTS, TASK_BLUEPRINTS as TASK_TEMPLATES, ROUTE_POSITIONS, PEAK_POSITION, MOUNTAIN_BLUEPRINTS };
+export {
+  TASK_BLUEPRINTS,
+  TASK_BLUEPRINTS as TASK_TEMPLATES,
+  ROUTE_POSITIONS,
+  PEAK_POSITION,
+  MOUNTAIN_BLUEPRINTS,
+};

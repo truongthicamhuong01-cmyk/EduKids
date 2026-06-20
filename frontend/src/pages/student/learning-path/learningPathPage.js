@@ -103,7 +103,6 @@ function normalizePublicAssetPath(value) {
 
 function uniqueByCheckpointId(checkpoints) {
   const seen = new Set();
-  const startCheckpoint = [];
   const uniqueCheckpoints = [];
 
   (Array.isArray(checkpoints) ? checkpoints : []).forEach((checkpoint) => {
@@ -113,16 +112,10 @@ function uniqueByCheckpointId(checkpoints) {
     }
 
     seen.add(checkpointId);
-
-    if (checkpointId === "start") {
-      startCheckpoint.push(checkpoint);
-      return;
-    }
-
     uniqueCheckpoints.push(checkpoint);
   });
 
-  return [...startCheckpoint, ...uniqueCheckpoints];
+  return uniqueCheckpoints;
 }
 
 function getLearningPathCheckpointId(checkpoint) {
@@ -215,8 +208,8 @@ function getEmptyLearningPathState() {
     avatar: { position: { left: 0, top: 0 } },
     checkpointProgress: { completed: 0, total: 0 },
     limits: {},
-    currentCheckpointId: "start",
-    checkpointId: "start",
+    currentCheckpointId: "everest-start",
+    checkpointId: "everest-start",
     startPosition: { left: 0, top: 0, side: "left" },
   };
 }
@@ -1424,7 +1417,7 @@ function handleLearningPathRootClick(event) {
   if (avatarTrigger) {
     event.preventDefault();
     blurFocusedLearningPathElement();
-    openCheckpointModal(getState()?.currentCheckpointId || getState()?.checkpointId || "start");
+    openCheckpointModal(getState()?.currentCheckpointId || getState()?.checkpointId || "everest-start");
     return;
   }
 

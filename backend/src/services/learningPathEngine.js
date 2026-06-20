@@ -7,7 +7,7 @@ const CHECKPOINT_STATE = {
   COMPLETED: "COMPLETED",
 };
 
-const DEFAULT_CURRENT_CHECKPOINT_ID = "start";
+const DEFAULT_CURRENT_CHECKPOINT_ID = String(season1.mountains?.[0]?.checkpoints?.[0]?.id || "everest-start");
 
 const TASK_STATE = {
   DONE: "DONE",
@@ -162,7 +162,7 @@ function getFirstCheckpointIdForMountain(season, mountainId) {
 
 function getDefaultCheckpointId(season) {
   const firstMountain = Array.isArray(season?.mountains) ? season.mountains[0] : null;
-  return getFirstCheckpointIdForMountain(season, firstMountain?.id || "") || "start";
+  return getFirstCheckpointIdForMountain(season, firstMountain?.id || "") || DEFAULT_CURRENT_CHECKPOINT_ID;
 }
 
 function getSafeCurrentCheckpointId(candidate, fallback = DEFAULT_CURRENT_CHECKPOINT_ID) {
@@ -314,7 +314,11 @@ function buildInitialState(season = season1, progress = {}) {
   const userId = String(candidate?.userId || "");
   const mountainId = getCurrentMountainIdFromLegacyState(candidate, seasonData);
   const startCheckpointId = getDefaultCheckpointId(seasonData);
-  const currentCheckpointId = getSafeCurrentCheckpointId(candidate, DEFAULT_CURRENT_CHECKPOINT_ID);
+  const currentCheckpointIdRaw = getSafeCurrentCheckpointId(candidate, startCheckpointId);
+  const currentCheckpointId =
+    currentCheckpointIdRaw === "start" || currentCheckpointIdRaw === DEFAULT_CURRENT_CHECKPOINT_ID
+      ? startCheckpointId
+      : currentCheckpointIdRaw || startCheckpointId;
   const checkpointId = getCheckpointMetaById(seasonData, currentCheckpointId)
     ? currentCheckpointId
     : startCheckpointId;
