@@ -7817,25 +7817,28 @@ img.profile-skeleton {
 }
 
 .learning-path-reward-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(124px, 1fr));
-  gap: 10px;
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 8px;
   margin-top: 0;
-  justify-items: stretch;
   align-items: center;
-  width: 100%;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .learning-path-reward-item {
   min-height: 66px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 10px;
+  gap: 8px;
+  padding: 9px 10px;
   border-radius: 14px;
   border: 1px solid #e5eefb;
   background: linear-gradient(180deg, #fbfdff 0%, #f6faff 100%);
   box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
 }
 
 [data-learning-path-reward-slot] {
@@ -7843,15 +7846,17 @@ img.profile-skeleton {
   padding-top: 0;
   display: flex;
   justify-content: flex-end;
+  align-items: flex-start;
 }
 
 [data-learning-path-reward-slot] .learning-path-reward-grid {
-  width: min(100%, 900px);
+  width: fit-content;
+  max-width: 100%;
 }
 
 .learning-path-reward-icon {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   flex: 0 0 auto;
   border-radius: 12px;
   display: grid;
@@ -7865,6 +7870,7 @@ img.profile-skeleton {
   display: flex;
   flex-direction: column;
   gap: 1px;
+  flex: 1 1 auto;
 }
 
 .learning-path-reward-copy strong {
@@ -8307,7 +8313,9 @@ img.profile-skeleton {
   }
 
   .learning-path-reward-grid {
-    grid-template-columns: 1fr;
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: center;
   }
 
   [data-learning-path-reward-slot] {
@@ -8413,7 +8421,9 @@ img.profile-skeleton {
   }
 
   .learning-path-reward-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: center;
   }
 
   .learning-path-list-panel,

@@ -146,7 +146,7 @@ const ROUTE_POSITIONS = [
 ];
 
 const SUMMIT_CHECKPOINT_POSITION = { left: 51.8, top: 16.5, side: "right" };
-const SUMMIT_CARD_POSITION = { left: 70.5, top: 24.5 };
+const SUMMIT_CARD_POSITION = { left: 40, top: 10 };
 const PEAK_POSITION = SUMMIT_CHECKPOINT_POSITION;
 
 const MOUNTAIN_BLUEPRINTS = [
