@@ -4534,73 +4534,127 @@ textarea {
   text-align: right;
 }
 
-#profile .student-profile-subject-list {
+#profile .student-profile-badge-shell {
+  display: grid;
+  gap: 12px;
+}
+
+#profile .student-profile-badge-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 152px;
+  gap: 12px;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 2px 8px;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+
+#profile .student-profile-badge-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+#profile .student-profile-badge-grid::-webkit-scrollbar-track {
+  background: #eef2f8;
+  border-radius: 999px;
+}
+
+#profile .student-profile-badge-grid::-webkit-scrollbar-thumb {
+  background: #c8d3e6;
+  border-radius: 999px;
+}
+
+#profile .student-profile-badge-empty {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-}
-
-#profile .student-profile-subject-row {
-  display: grid;
-  grid-template-columns: 92px minmax(0, 1fr) 56px;
   align-items: center;
-  gap: 14px;
+  justify-content: center;
+  gap: 10px;
+  min-height: 150px;
+  padding: 18px 16px;
+  background: #ffffff;
+  border: 1px solid #edf1f6;
+  border-radius: 18px;
+  text-align: center;
 }
 
-#profile .student-profile-subject-name {
-  font-size: 15px;
-  font-weight: 600;
+#profile .student-profile-badge-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(61, 107, 232, 0.08), rgba(61, 107, 232, 0.02));
+  border: 1px solid rgba(61, 107, 232, 0.1);
+  font-size: 28px;
+  line-height: 1;
+}
+
+#profile .student-profile-badge-empty strong {
   color: #2c3550;
+  font-size: 15px;
+  font-weight: 700;
 }
 
-#profile .student-profile-subject-track {
-  height: 14px;
-  background: #eef2f7;
-  border-radius: 999px;
+#profile .student-profile-badge-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 148px;
+  padding: 16px 14px 14px;
+  background: #ffffff;
+  border: 1px solid #edf1f6;
+  border-radius: 18px;
+  box-shadow: 0 6px 16px rgba(43, 55, 90, 0.04);
+  text-align: center;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+  scroll-snap-align: start;
+}
+
+#profile .student-profile-badge-item:hover {
+  transform: translateY(-3px);
+  border-color: rgba(61, 107, 232, 0.18);
+  box-shadow: 0 12px 24px rgba(43, 55, 90, 0.09);
+}
+
+#profile .student-profile-badge-image-wrap {
+  width: 68px;
+  height: 68px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(61, 107, 232, 0.08), rgba(61, 107, 232, 0.02));
+  border: 1px solid rgba(61, 107, 232, 0.1);
   overflow: hidden;
 }
 
-#profile .student-profile-subject-fill {
+#profile .student-profile-badge-image-wrap img {
+  width: 100%;
   height: 100%;
-  border-radius: inherit;
+  object-fit: contain;
+  display: block;
 }
 
-#profile .student-profile-subject-fill.is-green {
-  background: linear-gradient(90deg, #6bc79b 0%, #3aa36e 100%);
-}
-
-#profile .student-profile-subject-fill.is-blue {
-  background: linear-gradient(90deg, #5e86ef 0%, #3d6be8 100%);
-}
-
-#profile .student-profile-subject-fill.is-purple {
-  background: linear-gradient(90deg, #a26ae9 0%, #8f56df 100%);
-}
-
-#profile .student-profile-subject-fill.is-orange {
-  background: linear-gradient(90deg, #ffbf4a 0%, #f59f22 100%);
-}
-
-#profile .student-profile-subject-percent {
-  font-size: 15px;
+#profile .student-profile-badge-name {
+  width: 100%;
+  min-height: 34px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.35;
   font-weight: 700;
-  text-align: right;
-}
-
-#profile .student-profile-subject-percent.is-green {
-  color: #22a35f;
-}
-
-#profile .student-profile-subject-percent.is-blue {
-  color: #3d6be8;
-}
-
-#profile .student-profile-subject-percent.is-purple {
-  color: #8f56df;
-}
-
-#profile .student-profile-subject-percent.is-orange {
-  color: #f59f22;
+  color: #2c3550;
 }
 
 #profile .student-profile-extra {
@@ -4876,6 +4930,12 @@ textarea {
 
   #profile .student-profile-stats {
     grid-template-columns: 1fr;
+  }
+
+  #profile .student-profile-badge-grid {
+    grid-auto-columns: 138px;
+    gap: 10px;
+    padding-bottom: 6px;
   }
 
   #profile .student-profile-stat-card + .student-profile-stat-card {

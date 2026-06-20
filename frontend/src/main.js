@@ -14,6 +14,7 @@ import "./services/adminStatsService.js";
 import "./services/appReviewService.js";
 import "./services/topicAccuracyService.js";
 import { renderLearningPathPage } from "./pages/student/learning-path/learningPathPage.js";
+import { adaptLearningPathState } from "./data/learning-path/learningPathStateAdapter.js";
 import "./style.css";
 
 const bootstrapState = (window.__EDUKIDS_BOOTSTRAP__ ||= {
@@ -7638,47 +7639,189 @@ function applyProfileSkeleton(pageType, isLoading) {
       }
     });
   });
-
-  root.querySelectorAll("[data-student-subject]").forEach((node) => {
-    if (isLoading) {
-      node.classList.add("profile-skeleton-bar");
-    } else {
-      node.classList.remove("profile-skeleton-bar");
-    }
-  });
 }
 
-function renderStudentSubjectProgress(profile) {
-  const subjects = Array.isArray(profile?.subjects) ? profile.subjects : [];
-  const rows = document.querySelectorAll(".student-profile-subject-row");
+function extractLearningPathStatePayload(payload) {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
 
-  rows.forEach((row, index) => {
-    const subject = subjects[index];
-    const nameNode = row.querySelector(".student-profile-subject-name");
-    const fillNode = row.querySelector("[data-student-subject]");
-    const percentNode = row.querySelector("[data-student-subject-percent]");
+  if (payload.state && typeof payload.state === "object") {
+    return payload.state;
+  }
 
-    if (!subject) {
-      if (nameNode) nameNode.textContent = "--";
-      if (fillNode) fillNode.style.width = "0%";
-      if (percentNode) percentNode.textContent = "--";
+  if (
+    payload.learningPathState &&
+    typeof payload.learningPathState === "object"
+  ) {
+    return payload.learningPathState;
+  }
+
+  return payload;
+}
+
+function buildStudentLearningPathBadges(learningPathState) {
+  const state =
+    learningPathState && typeof learningPathState === "object"
+      ? learningPathState
+      : {};
+  const season =
+    state.season && typeof state.season === "object" ? state.season : null;
+  const mountains = Array.isArray(season?.mountains) ? season.mountains : [];
+  const completedMountains = new Set(
+    Array.isArray(state?.progress?.completedMountains)
+      ? state.progress.completedMountains
+          .map((id) => String(id || "").trim())
+          .filter(Boolean)
+      : [],
+  );
+  const rewardedBadges = new Set(
+    Array.isArray(state?.rewards?.badges)
+      ? state.rewards.badges.map((id) => String(id || "").trim()).filter(Boolean)
+      : [],
+  );
+  const seasonId = String(state.seasonId || season?.id || "").trim();
+  const unlockedAtFallback = String(
+    state?.limits?.lastSummitCompletedAt || state?.updatedAt || "",
+  ).trim();
+
+  return mountains
+    .map((mountain) => {
+      const badge =
+        mountain?.badge && typeof mountain.badge === "object"
+          ? mountain.badge
+          : {};
+      const mountainId = String(mountain?.id || "").trim();
+      const badgeId = String(badge.id || `badge-${mountainId}`).trim();
+
+      if (!mountainId || !badgeId) {
+        return null;
+      }
+
+      const isUnlocked =
+        completedMountains.has(mountainId) || rewardedBadges.has(badgeId);
+
+      if (!isUnlocked) {
+        return null;
+      }
+
+      return {
+        id: badgeId,
+        name: String(
+          badge.name || mountain?.badgeName || `Huy hiệu ${mountain?.name || ""}`,
+        ).trim(),
+        image: String(
+          badge.image || mountain?.badgeImage || mountain?.image || "",
+        ).trim(),
+        seasonId,
+        mountainId,
+        unlockedAt: unlockedAtFallback,
+      };
+    })
+    .filter(Boolean);
+}
+
+async function fetchStudentLearningPathState(userId) {
+  const normalizedUserId = String(userId || "").trim();
+
+  if (!normalizedUserId) {
+    return null;
+  }
+
+  const response = await apiRequestWithAuth(
+    `/api/learning-path/state/${encodeURIComponent(normalizedUserId)}`,
+    { method: "GET" },
+  );
+
+  const backendState = extractLearningPathStatePayload(response?.state);
+  if (!backendState) {
+    return null;
+  }
+
+  return adaptLearningPathState(backendState);
+}
+
+function renderStudentAchievementBadgeState(message, isLoading = false) {
+  const grid = document.querySelector("[data-student-badge-grid]");
+  const empty = document.querySelector("[data-student-badge-empty]");
+
+  if (!(grid instanceof HTMLElement) || !(empty instanceof HTMLElement)) {
+    return;
+  }
+
+  grid.innerHTML = "";
+  empty.hidden = false;
+  empty.classList.toggle("is-loading", isLoading);
+  empty.innerHTML = `
+    <span class="student-profile-badge-empty-icon" aria-hidden="true">🏅</span>
+    <strong>${escapeHtml(message)}</strong>
+  `;
+}
+
+function renderStudentAchievementBadges(profile, learningPathState) {
+  const grid = document.querySelector("[data-student-badge-grid]");
+  const empty = document.querySelector("[data-student-badge-empty]");
+
+  if (!(grid instanceof HTMLElement) || !(empty instanceof HTMLElement)) {
+    return;
+  }
+
+  const badges = buildStudentLearningPathBadges(learningPathState);
+
+  if (!Array.isArray(badges) || badges.length === 0) {
+    renderStudentAchievementBadgeState("Chưa có huy hiệu nào");
+    return;
+  }
+
+  empty.hidden = true;
+  empty.classList.remove("is-loading");
+  grid.innerHTML = badges
+    .map(
+      (badge) => `
+        <article
+          class="student-profile-badge-item"
+          data-badge-id="${escapeHtml(badge.id)}"
+          data-badge-season-id="${escapeHtml(badge.seasonId)}"
+          data-badge-mountain-id="${escapeHtml(badge.mountainId)}"
+          data-badge-unlocked-at="${escapeHtml(badge.unlockedAt)}"
+          title="${escapeHtml(badge.name)}"
+        >
+          <div class="student-profile-badge-image-wrap">
+            <img src="${escapeHtml(badge.image)}" alt="${escapeHtml(badge.name)}" loading="lazy" decoding="async" />
+          </div>
+          <span class="student-profile-badge-name">${escapeHtml(badge.name)}</span>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+async function syncStudentAchievementBadges(profile) {
+  if (normalizeRole(profile?.role) !== "student") {
+    renderStudentAchievementBadgeState("Chưa có huy hiệu nào");
+    return;
+  }
+
+  const userId = String(profile?.uid || profile?.userId || profile?.id || "").trim();
+
+  if (!userId) {
+    renderStudentAchievementBadgeState("Chưa có huy hiệu nào");
+    return;
+  }
+
+  renderStudentAchievementBadgeState("Đang tải huy hiệu...", true);
+
+  try {
+    const learningPathState = await fetchStudentLearningPathState(userId);
+    if (learningPathState) {
+      renderStudentAchievementBadges(profile, learningPathState);
       return;
     }
+  } catch (error) {
+    console.warn("Không thể tải huy hiệu Learning Path:", error);
+  }
 
-    const subjectName =
-      String(subject.name || subject.topicName || "--").trim() || "--";
-    const progress = Math.max(0, Math.min(Number(subject.progress) || 0, 100));
-
-    if (nameNode) nameNode.textContent = subjectName;
-    if (fillNode) {
-      fillNode.style.width = `${progress}%`;
-      fillNode.dataset.studentSubject = subjectName;
-    }
-    if (percentNode) {
-      percentNode.textContent = `${progress}%`;
-      percentNode.dataset.studentSubjectPercent = subjectName;
-    }
-  });
+  renderStudentAchievementBadgeState("Chưa có huy hiệu nào");
 }
 
 function renderStudentHomeOverview(profile, activityLogs = null) {
@@ -7832,8 +7975,7 @@ function renderStudentProfile(profile) {
   if (classExtra) classExtra.textContent = profile?.className || "--";
   if (hobby) hobby.textContent = profile?.hobby || "--";
   if (dream) dream.textContent = profile?.dream || "--";
-
-  renderStudentSubjectProgress(profile);
+  void syncStudentAchievementBadges(profile);
 }
 
 function renderTeacherProfile(profile) {
