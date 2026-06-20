@@ -3,6 +3,7 @@ const { season1 } = require("./learningPathData");
 const { createEngine } = require("./learningPathEngine");
 const { getSubmissionsByStudentId } = require("./assignmentService");
 const { findUserById } = require("./userService");
+const { getLocalDateKey, getLocalWeekKey } = require("../utils/dateUtils");
 
 const learningPathProgressRoot = db.collection("learningPathProgress");
 const userProgressRoot = db.collection("user_progress");
@@ -174,32 +175,6 @@ function createActionCollector() {
       events.push(event);
     },
   };
-}
-
-function getTimeZone() {
-  return process.env.LEARNING_PATH_TIMEZONE || "Asia/Ho_Chi_Minh";
-}
-
-function padTwo(value) {
-  return String(value).padStart(2, "0");
-}
-
-function getLocalDateKey(date = new Date()) {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: getTimeZone(),
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-
-  const parts = formatter.formatToParts(date).reduce((acc, part) => {
-    if (part.type !== "literal") {
-      acc[part.type] = part.value;
-    }
-    return acc;
-  }, {});
-
-  return [Number(parts.year), padTwo(Number(parts.month)), padTwo(Number(parts.day))].join("-");
 }
 
 function isSameLocalDate(leftValue, rightValue = new Date()) {
