@@ -7352,10 +7352,21 @@ img.profile-skeleton {
   pointer-events: none;
 }
 
+.learning-path-avatar-layer {
+  position: absolute;
+  z-index: 4;
+  width: 32px;
+  height: 32px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+}
+
 .learning-path-station,
 .learning-path-peak {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   transform: translate(-50%, -50%);
 }
 
@@ -7436,7 +7447,8 @@ img.profile-skeleton {
 
 .learning-path-station-avatar {
   position: relative;
-  z-index: 1;
+  display: grid;
+  place-items: center;
   width: 32px;
   height: 32px;
   border-radius: 999px;
@@ -7480,7 +7492,7 @@ img.profile-skeleton {
 
 .learning-path-start-node {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   transform: translate(-50%, -50%);
   width: 0;
   height: 0;
@@ -7491,6 +7503,21 @@ img.profile-skeleton {
   inset: 0;
   width: 0;
   height: 0;
+}
+
+.learning-path-start-anchor-button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  pointer-events: auto;
+}
+
+.learning-path-start-anchor-button:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.45);
+  outline-offset: 3px;
 }
 
 .learning-path-start-marker {

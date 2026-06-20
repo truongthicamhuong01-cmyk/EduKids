@@ -107,6 +107,30 @@ function getCompletedMountainIds(progress) {
   );
 }
 
+function uniqueByCheckpointId(checkpoints) {
+  const seen = new Set();
+  const startCheckpoint = [];
+  const uniqueCheckpoints = [];
+
+  (Array.isArray(checkpoints) ? checkpoints : []).forEach((checkpoint) => {
+    const checkpointId = String(checkpoint?.checkpointId || checkpoint?.id || "").trim();
+    if (!checkpointId || seen.has(checkpointId)) {
+      return;
+    }
+
+    seen.add(checkpointId);
+
+    if (checkpointId === "start") {
+      startCheckpoint.push(checkpoint);
+      return;
+    }
+
+    uniqueCheckpoints.push(checkpoint);
+  });
+
+  return [...startCheckpoint, ...uniqueCheckpoints];
+}
+
 function getCheckpointNumber(checkpointId) {
   const match = String(checkpointId || "").match(/checkpoint-(\d+)/);
   return match ? Number.parseInt(match[1], 10) : 0;
@@ -254,8 +278,9 @@ export function adaptLearningPathState(apiState) {
           "",
       ).trim() || firstCheckpointId
     : String(source.currentCheckpointId || source.checkpointId || "").trim() || firstCheckpointId;
+  const isStartCheckpoint = resolvedCheckpointId === DEFAULT_CURRENT_CHECKPOINT_ID;
   const isBootstrapStart =
-    resolvedCheckpointId === DEFAULT_CURRENT_CHECKPOINT_ID &&
+    isStartCheckpoint &&
     completedCheckpointIds.size === 0 &&
     completedMountainIds.size === 0;
   const isFreshStart =
@@ -276,12 +301,12 @@ export function adaptLearningPathState(apiState) {
     }),
   );
 
-  const flattenedCheckpoints = mountains.flatMap((mountain) =>
-    Array.isArray(mountain.checkpoints) ? mountain.checkpoints : [],
+  const flattenedCheckpoints = uniqueByCheckpointId(
+    mountains.flatMap((mountain) => (Array.isArray(mountain.checkpoints) ? mountain.checkpoints : [])),
   );
   const currentMountain = mountains.find((mountain) => mountain.id === currentMountainId) || mountains[0] || null;
   const currentCheckpoint =
-    isBootstrapStart
+    isStartCheckpoint || isBootstrapStart
       ? null
       : flattenedCheckpoints.find((checkpoint) => checkpoint.id === resolvedCheckpointId) ||
         currentMountain?.checkpoints?.find((checkpoint) => checkpoint.status === "current") ||
@@ -290,7 +315,7 @@ export function adaptLearningPathState(apiState) {
   const currentCheckpointProgress = currentCheckpoint?.progress || { completed: 0, total: 0 };
   const completedCount = completedCheckpointIds.size;
   const totalCheckpointCount = flattenedCheckpoints.length || 1;
-  const avatarPosition = isFreshStart || isBootstrapStart
+  const avatarPosition = isStartCheckpoint || isFreshStart || isBootstrapStart
     ? startPosition
     : currentCheckpoint?.position
       ? cloneValue(currentCheckpoint.position)
@@ -323,8 +348,8 @@ export function adaptLearningPathState(apiState) {
     updatedAt: String(source.updatedAt || ""),
     avatar: {
       position: avatarPosition,
-      isAtStart: isFreshStart,
-      altitudeLabel: isFreshStart ? "0 m" : String(currentCheckpoint?.altitude || ""),
+      isAtStart: isStartCheckpoint || isFreshStart || isBootstrapStart,
+      altitudeLabel: isStartCheckpoint || isFreshStart || isBootstrapStart ? "0 m" : String(currentCheckpoint?.altitude || ""),
     },
     progressPercent: Math.round((completedCount / totalCheckpointCount) * 100),
     checkpointProgress: {
