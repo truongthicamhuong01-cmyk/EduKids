@@ -59,19 +59,6 @@ const uiState = {
   limitNotice: null,
 };
 
-function logLearningPathModal(action, details = {}) {
-  console.log("[EduKids][LearningPathModal]", action, details);
-}
-
-function traceLearningPathModalStateChange(fieldName, previousValue, nextValue) {
-  console.log("[LP_MODAL_STATE_CHANGE]", {
-    fieldName,
-    previousValue,
-    nextValue,
-    stack: new Error().stack,
-  });
-}
-
 function getLearningPathRoot() {
   return document.getElementById("learning-path");
 }
@@ -114,32 +101,14 @@ function clearTimers() {
 }
 
 function closeLearningPathModalImmediate() {
-  logLearningPathModal("close-immediate", {
-    modalCheckpointId: uiState.modalCheckpointId,
-    modalClosing: uiState.modalClosing,
-  });
   clearTimers();
-  traceLearningPathModalStateChange(
-    "modalCheckpointId",
-    uiState.modalCheckpointId,
-    null,
-  );
   uiState.modalCheckpointId = null;
-  traceLearningPathModalStateChange(
-    "modalClosing",
-    uiState.modalClosing,
-    false,
-  );
   uiState.modalClosing = false;
   uiState.modalFocusRequested = false;
   scheduleRender();
 }
 
 function requestLearningPathModalClose(afterClose) {
-  logLearningPathModal("request-close", {
-    modalCheckpointId: uiState.modalCheckpointId,
-    modalClosing: uiState.modalClosing,
-  });
   if (uiState.modalCheckpointId === null) {
     if (typeof afterClose === "function") {
       afterClose();
@@ -151,29 +120,11 @@ function requestLearningPathModalClose(afterClose) {
     return;
   }
 
-  traceLearningPathModalStateChange(
-    "modalClosing",
-    uiState.modalClosing,
-    true,
-  );
   uiState.modalClosing = true;
   scheduleRender();
 
   uiState.modalCloseTimer = window.setTimeout(() => {
-    logLearningPathModal("close-finished", {
-      modalCheckpointId: uiState.modalCheckpointId,
-    });
-    traceLearningPathModalStateChange(
-      "modalCheckpointId",
-      uiState.modalCheckpointId,
-      null,
-    );
     uiState.modalCheckpointId = null;
-    traceLearningPathModalStateChange(
-      "modalClosing",
-      uiState.modalClosing,
-      false,
-    );
     uiState.modalClosing = false;
     uiState.modalFocusRequested = false;
     uiState.taskResetCountdown = "00:00:00";
@@ -334,10 +285,6 @@ function extractRemoteLearningPathState(payload) {
 async function hydrateLearningPathStateFromBackend() {
   const userId = getLearningPathUserId();
   if (!userId) {
-    logLearningPathModal("hydrate-no-user", {
-      modalCheckpointId: uiState.modalCheckpointId,
-      modalClosing: uiState.modalClosing,
-    });
     scheduleAuthReadyRetry();
     return null;
   }
@@ -350,11 +297,6 @@ async function hydrateLearningPathStateFromBackend() {
 
   uiState.loading = true;
   uiState.errorMessage = "";
-  logLearningPathModal("hydrate-start", {
-    userId,
-    modalCheckpointId: uiState.modalCheckpointId,
-    modalClosing: uiState.modalClosing,
-  });
   scheduleRender();
 
   try {
@@ -370,22 +312,10 @@ async function hydrateLearningPathStateFromBackend() {
     uiState.limitNotice = remoteState?.lockNotice || "";
     uiState.errorMessage = remoteState ? "" : "Backend Learning Path chưa trả về state hợp lệ.";
     applyLearningPathEvents(data?.events);
-    logLearningPathModal("hydrate-success", {
-      userId,
-      modalCheckpointId: uiState.modalCheckpointId,
-      modalClosing: uiState.modalClosing,
-      eventCount: Array.isArray(data?.events) ? data.events.length : 0,
-    });
     scheduleRender();
     return remoteState;
   } catch (error) {
     console.warn("Learning Path backend hydrate failed:", error);
-    logLearningPathModal("hydrate-fail", {
-      userId,
-      modalCheckpointId: uiState.modalCheckpointId,
-      modalClosing: uiState.modalClosing,
-      error: error?.message || String(error || ""),
-    });
     uiState.backendState = null;
     uiState.loading = false;
     uiState.errorMessage =
@@ -457,24 +387,9 @@ function openCheckpointModal(checkpointId) {
     activeElement.blur();
   }
 
-  traceLearningPathModalStateChange(
-    "modalCheckpointId",
-    uiState.modalCheckpointId,
-    checkpoint.id,
-  );
   uiState.modalCheckpointId = checkpoint.id;
-  traceLearningPathModalStateChange(
-    "modalClosing",
-    uiState.modalClosing,
-    false,
-  );
   uiState.modalClosing = false;
   uiState.modalFocusRequested = true;
-  logLearningPathModal("open", {
-    checkpointId: checkpoint.id,
-    currentCheckpointId: state?.currentCheckpointId || "",
-    status,
-  });
   scheduleRender();
 }
 
@@ -506,6 +421,19 @@ function updateTaskResetCountdown() {
   return uiState.taskResetCountdown;
 }
 
+function updateTaskResetCountdownLabel(root = getLearningPathRoot()) {
+  if (!root) {
+    return;
+  }
+
+  const countdownElement = root.querySelector(".learning-path-modal-reset-timer");
+  if (!(countdownElement instanceof HTMLElement)) {
+    return;
+  }
+
+  countdownElement.textContent = `Nhiệm vụ sẽ làm mới sau: ${uiState.taskResetCountdown || "00:00:00"}`;
+}
+
 function syncTaskResetCountdownTimer(isModalVisible) {
   if (!isModalVisible) {
     if (uiState.taskResetTimer) {
@@ -531,7 +459,7 @@ function syncTaskResetCountdownTimer(isModalVisible) {
     }
 
     updateTaskResetCountdown();
-    scheduleRender();
+    updateTaskResetCountdownLabel();
   }, 1000);
 }
 
@@ -564,11 +492,6 @@ function showAvatarTransition(event) {
   }
 
   clearTransitionTimer();
-  logLearningPathModal("avatar-transition", {
-    checkpointId: payload.checkpointId || "",
-    modalCheckpointId: uiState.modalCheckpointId,
-    modalClosing: uiState.modalClosing,
-  });
   uiState.transition = {
     from: payload.from,
     to: payload.to,
@@ -587,12 +510,6 @@ function applyLearningPathEvent(event) {
   if (!event || typeof event !== "object") {
     return;
   }
-
-  logLearningPathModal("apply-event", {
-    eventName: event.eventName || "",
-    modalCheckpointId: uiState.modalCheckpointId,
-    modalClosing: uiState.modalClosing,
-  });
 
   switch (event.eventName) {
     case "STATE_CHANGED":
@@ -906,12 +823,6 @@ function renderProgressCard(state) {
 }
 
 function renderJourneyPanel(state) {
-  logLearningPathModal("render-journey-panel", {
-    modalCheckpointId: uiState.modalCheckpointId,
-    modalClosing: uiState.modalClosing,
-    currentCheckpointId: state?.currentCheckpointId || "",
-  });
-
   const mountain = getCurrentMountain(state);
   const checkpoints = Array.isArray(mountain?.checkpoints)
     ? mountain.checkpoints.filter((checkpoint) => checkpoint.type === "station")
@@ -1187,18 +1098,6 @@ function bindLearningPathControlsOnce() {
       return;
     }
 
-    console.log("[LP_EVENT_TRACE]", {
-      time: performance.now(),
-      targetClass: event.target?.className,
-      targetOuterHTML: event.target?.outerHTML,
-      currentTarget: event.currentTarget,
-      eventPhase: event.eventPhase,
-      isTrusted: event.isTrusted,
-      detail: event.detail,
-      modalCheckpointId: uiState.modalCheckpointId,
-      modalClosing: uiState.modalClosing,
-    });
-
     const target = event.target;
     const taskActionButtonSnapshot = target?.closest?.("[data-page]");
     const checkpointTriggerSnapshot = target?.closest?.("[data-learning-path-open-checkpoint]");
@@ -1206,47 +1105,6 @@ function bindLearningPathControlsOnce() {
     const modalOverlaySnapshot = target?.closest?.("[data-learning-path-modal-overlay]");
     const retryActionButtonSnapshot = target?.closest?.("[data-learning-path-retry-action]");
 
-    logLearningPathModal("click-snapshot", {
-      targetClassName: target?.className || "",
-      targetDataset: target?.dataset ? { ...target.dataset } : {},
-      taskActionClosest: taskActionButtonSnapshot
-        ? {
-            className: taskActionButtonSnapshot.className || "",
-            dataset: taskActionButtonSnapshot.dataset ? { ...taskActionButtonSnapshot.dataset } : {},
-          }
-        : null,
-      checkpointClosest: checkpointTriggerSnapshot
-        ? {
-            className: checkpointTriggerSnapshot.className || "",
-            dataset: checkpointTriggerSnapshot.dataset ? { ...checkpointTriggerSnapshot.dataset } : {},
-          }
-        : null,
-      closeClosest: closeButtonSnapshot
-        ? {
-            className: closeButtonSnapshot.className || "",
-            dataset: closeButtonSnapshot.dataset ? { ...closeButtonSnapshot.dataset } : {},
-          }
-        : null,
-      overlayClosest: modalOverlaySnapshot
-        ? {
-            className: modalOverlaySnapshot.className || "",
-            dataset: modalOverlaySnapshot.dataset ? { ...modalOverlaySnapshot.dataset } : {},
-          }
-        : null,
-      retryActionClosest: retryActionButtonSnapshot
-        ? {
-            className: retryActionButtonSnapshot.className || "",
-            dataset: retryActionButtonSnapshot.dataset ? { ...retryActionButtonSnapshot.dataset } : {},
-          }
-        : null,
-    });
-
-    console.log("[LearningPath][modal-click]", {
-      className: target?.className,
-      dataset: target?.dataset,
-      text: target?.textContent,
-      outerHTML: target?.outerHTML,
-    });
 
     if (modalOverlaySnapshot) {
       event.stopPropagation();
@@ -1255,22 +1113,13 @@ function bindLearningPathControlsOnce() {
     const retryButton = target.closest("[data-learning-path-retry-load]");
     if (retryButton) {
       event.preventDefault();
-      logLearningPathModal("listener-retry-load", {
-        modalCheckpointId: uiState.modalCheckpointId,
-        modalClosing: uiState.modalClosing,
-      });
       void hydrateLearningPathStateFromBackend();
       return;
     }
 
     const closeButton = target.closest("[data-learning-path-close-modal]");
     if (closeButton) {
-      console.trace("[LP_BRANCH_CLOSE]");
       event.preventDefault();
-      logLearningPathModal("listener-close-button", {
-        modalCheckpointId: uiState.modalCheckpointId,
-        modalClosing: uiState.modalClosing,
-      });
       requestLearningPathModalClose();
       return;
     }
@@ -1288,11 +1137,7 @@ function bindLearningPathControlsOnce() {
       "[data-learning-path-open-checkpoint]",
     );
     if (checkpointTrigger) {
-      console.trace("[LP_BRANCH_OPEN]");
       event.preventDefault();
-      logLearningPathModal("listener-open-checkpoint", {
-        checkpointId: checkpointTrigger.dataset.learningPathCheckpoint || "",
-      });
       openCheckpointModal(checkpointTrigger.dataset.learningPathCheckpoint);
       return;
     }
@@ -1307,7 +1152,6 @@ function bindLearningPathControlsOnce() {
 
     const retryActionButton = target.closest("[data-learning-path-retry-action]");
     if (retryActionButton) {
-      console.trace("[LP_BRANCH_TASK]");
       event.preventDefault();
       const action = String(retryActionButton.dataset.learningPathRetryAction || "").trim();
       const checkpointId = String(retryActionButton.dataset.learningPathCheckpointId || "").trim();
@@ -1403,13 +1247,6 @@ export function renderLearningPathPage(root = getLearningPathRoot()) {
   if (!root) {
     return;
   }
-
-  logLearningPathModal("render", {
-    modalCheckpointId: uiState.modalCheckpointId,
-    modalClosing: uiState.modalClosing,
-    loading: uiState.loading,
-    hasBackendState: Boolean(uiState.backendState),
-  });
 
   if (!uiState.initialized) {
     uiState.initialized = true;
