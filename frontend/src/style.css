@@ -7666,18 +7666,26 @@ img.profile-skeleton {
 }
 
 .learning-path-peak-checkpoint.is-summit-only {
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%) scale(0.8);
+  transform-origin: center;
+}
+
+.learning-path-peak-checkpoint.is-summit-only {
   pointer-events: none;
 }
 
 .learning-path-peak-copy {
-  min-width: 118px;
+  min-width: 150px;
+  max-width: 188px;
   position: absolute;
-  left: 50%;
-  top: 52px;
+  right: 24px;
+  top: 50%;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 5px 8px;
+  padding: 6px 10px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.46);
   border: 1px solid rgba(255, 255, 255, 0.6);
@@ -7685,8 +7693,9 @@ img.profile-skeleton {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   color: #172554;
-  transform: translateX(-50%);
-  text-align: center;
+  transform: translateY(-50%);
+  text-align: left;
+  align-items: flex-start;
 }
 
 .learning-path-station-copy strong,
@@ -8471,6 +8480,12 @@ img.profile-skeleton {
   .learning-path-station-copy {
     min-width: 92px;
     max-width: 120px;
+  }
+
+  .learning-path-peak-copy {
+    min-width: 136px;
+    max-width: 156px;
+    right: 16px;
   }
 
   .learning-path-station-copy strong,

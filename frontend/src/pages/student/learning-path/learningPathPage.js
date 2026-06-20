@@ -920,47 +920,6 @@ function renderStationNode(checkpoint, state) {
   `;
 }
 
-function renderStartNode(state) {
-  const position = state.startPosition || state.avatar?.position || { left: 0, top: 0 };
-
-  return `
-    <div
-      class="learning-path-start-node"
-      style="left: ${position.left}%; top: ${position.top}%;"
-      data-checkpoint="start"
-      data-learning-path-checkpoint="start"
-    >
-      <div
-        class="learning-path-start-anchor"
-      >
-        <span class="learning-path-start-marker">0m</span>
-      </div>
-      <div class="learning-path-start-copy">
-        <strong>Điểm xuất phát</strong>
-        <span>0 m</span>
-      </div>
-    </div>
-  `;
-}
-
-function renderCurrentAvatar(state) {
-  const isTransitioning = Boolean(uiState.transition);
-  const currentCheckpoint = getCurrentCheckpoint(state);
-  const checkpointId = String(state.currentCheckpointId || state.checkpointId || "start").trim() || "start";
-  return `
-    <button
-      type="button"
-      class="learning-path-station-avatar learning-path-avatar-attached learning-path-avatar-button${isTransitioning ? " is-hidden-during-transition" : ""}"
-      data-learning-path-avatar-open
-      data-checkpoint="${escapeHtml(checkpointId)}"
-      data-learning-path-checkpoint="${escapeHtml(checkpointId)}"
-      aria-label="Mở nhiệm vụ ${escapeHtml(currentCheckpoint?.title || "checkpoint hiện tại")}"
-    >
-      <img src="/assets/userAvatar/boy.png" alt="" loading="lazy" decoding="async" />
-    </button>
-  `;
-}
-
 function renderMovingAvatar() {
   const transition = uiState.transition;
   if (!transition) {
@@ -975,46 +934,6 @@ function renderMovingAvatar() {
       aria-hidden="true"
     >
       <img src="/assets/userAvatar/boy.png" alt="" loading="lazy" decoding="async" />
-    </span>
-  `;
-}
-
-function renderPeakNode(state) {
-  const mountain = getCurrentMountain(state);
-  if (!mountain) {
-    return "";
-  }
-
-  const summit = mountain.checkpoints.find((checkpoint) => checkpoint.type === "summit");
-  const summitRuntime = summit ? getCheckpointById(state, summit.id) : null;
-  if (!summit) {
-    return "";
-  }
-
-  const status = normalizeCheckpointStatus(summitRuntime?.status || summitRuntime?.state);
-  const isSummitWithoutTasks = !Array.isArray(summit?.tasks) || summit.tasks.length === 0;
-  const statusClass =
-    status === "completed" ? "is-completed" : status === "current" ? "is-current" : "is-locked";
-
-  return `
-    <div
-      class="learning-path-peak"
-      style="left: ${summit.position.left}%; top: ${summit.position.top}%;"
-    >
-      <span class="learning-path-peak-checkpoint learning-path-station-checkpoint ${statusClass}${isSummitWithoutTasks ? " is-summit-only" : ""}" aria-hidden="true"></span>
-      <span class="learning-path-peak-copy">
-        <strong>${escapeHtml(summit.title)}</strong>
-        <span>${escapeHtml(summit.altitude || mountain.height)}</span>
-        <small>${escapeHtml(summit.reward?.subtitle || "Hoàn thành để nhận huy hiệu")}</small>
-      </span>
-    </div>
-  `;
-}
-
-function renderLearningPathAvatarLayer(state) {
-  return `
-    <span class="learning-path-avatar-layer" data-learning-path-avatar-layer>
-      ${renderCurrentAvatar(state)}
     </span>
   `;
 }
@@ -1034,52 +953,6 @@ function renderProgressCard(state) {
         <span>/ ${escapeHtml(targetAltitude)}</span>
       </div>
     </aside>
-  `;
-}
-
-function renderJourneyPanel(state) {
-  const mountain = getCurrentMountain(state);
-  const rawCheckpoints = Array.isArray(mountain?.checkpoints)
-    ? mountain.checkpoints.filter((checkpoint) => checkpoint.type === "station" || checkpoint.id === "start")
-    : [];
-  const checkpoints = uniqueByCheckpointId(rawCheckpoints);
-  const startCheckpoint = rawCheckpoints.find((checkpoint) => getLearningPathCheckpointId(checkpoint) === "start") || null;
-  const startNodeState = startCheckpoint ? { ...state, startPosition: getCheckpointPosition(startCheckpoint) } : state;
-  const checkpointNodes = checkpoints
-    .filter((checkpoint) => getLearningPathCheckpointId(checkpoint) !== "start")
-    .map((checkpoint) => renderStationNode(getCheckpointById(state, checkpoint.id) || checkpoint, state));
-
-  return `
-    <section class="learning-path-panel learning-path-journey-panel">
-      <div
-        class="learning-path-journey-stage"
-        style="background-image: url('${escapeHtml(mountain?.backgroundImage || "")}');"
-      >
-        <div class="learning-path-journey-glow"></div>
-        <div class="learning-path-journey-copy">
-          <span class="learning-path-level-pill">${escapeHtml(`Cấp độ ${state.season?.order || 1}`)}</span>
-          <h2>${escapeHtml(mountain?.name || "")}</h2>
-          <p class="learning-path-location">
-            📍 ${escapeHtml(mountain?.continent || "")} | ${escapeHtml(mountain?.height || "")}
-          </p>
-          <p class="learning-path-description">${escapeHtml(mountain?.description || "")}</p>
-        </div>
-        <div
-          class="learning-path-journey-overlay"
-          ${uiState.modalCheckpointId !== null || uiState.modalClosing ? "inert" : ""}
-        >
-          <div class="learning-path-route">
-            ${renderStartNode(startNodeState)}
-            ${checkpointNodes.join("")}
-            ${renderPeakNode(state)}
-            ${renderMovingAvatar()}
-            ${renderLearningPathAvatarLayer(state)}
-          </div>
-        </div>
-
-        ${renderProgressCard(state)}
-      </div>
-    </section>
   `;
 }
 
@@ -1601,86 +1474,6 @@ function handleLearningPathRootClick(event) {
     handleNextCheckpoint();
     return;
   }
-}
-
-function renderLearningPathPageShell(state) {
-  const modalHtml =
-    uiState.modalCheckpointId !== null || uiState.modalClosing
-      ? renderLearningPathTaskModal(state)
-      : "";
-  const errorNotice = uiState.errorMessage
-    ? `
-      <section class="learning-path-panel learning-path-error-panel" role="alert">
-        <div class="learning-path-panel-head">
-          <div>
-            <span class="learning-path-panel-eyebrow">Backend Learning Path</span>
-            <h2>Không thể đồng bộ dữ liệu</h2>
-          </div>
-        </div>
-        <p>${escapeHtml(uiState.errorMessage)}</p>
-        <button type="button" class="learning-path-task-action-btn" data-learning-path-retry-load>
-          Thử tải lại
-        </button>
-      </section>
-    `
-    : "";
-  const loadingNotice = isLoadingState()
-    ? `
-      <section class="learning-path-panel learning-path-error-panel" role="status">
-        <div class="learning-path-panel-head">
-          <div>
-            <span class="learning-path-panel-eyebrow">Đang tải</span>
-            <h2>Đồng bộ Learning Path từ backend</h2>
-          </div>
-        </div>
-        <p>Vui lòng chờ trong giây lát.</p>
-      </section>
-    `
-    : "";
-  const limitNotice = uiState.limitNotice
-    ? `
-      <section class="learning-path-panel learning-path-error-panel" role="status">
-        <div class="learning-path-panel-head">
-          <div>
-            <span class="learning-path-panel-eyebrow">Giới hạn backend</span>
-            <h2>Không thể tiếp tục</h2>
-          </div>
-        </div>
-        <p>${escapeHtml(uiState.limitNotice)}</p>
-      </section>
-    `
-    : "";
-
-  return `
-    <div class="learning-path-page${modalHtml || uiState.rewardPopup ? " is-modal-open" : ""}">
-      <header class="learning-path-header">
-        <div class="learning-path-header-copy">
-          <span class="learning-path-title">🏔️ Hành Trình Chinh Phục</span>
-          <p>Chinh phục 7 đỉnh núi cao nhất 7 châu lục</p>
-        </div>
-        <div class="learning-path-coin-card" aria-label="Xu Edu hiện có">
-          <span class="learning-path-coin-label">🪙 Xu Edu</span>
-          <strong>${escapeHtml(state.rewards?.xu || 0)}</strong>
-        </div>
-      </header>
-
-      <div class="learning-path-main-grid">
-        <div class="learning-path-left-column">
-          ${errorNotice}
-          ${loadingNotice}
-          ${limitNotice}
-          ${renderMountainList(state)}
-        </div>
-        <div class="learning-path-right-column">
-          ${renderJourneyPanel(state)}
-          ${renderRewardSection(state)}
-        </div>
-      </div>
-
-      ${modalHtml}
-      ${renderRewardPopup()}
-    </div>
-  `;
 }
 
 export function renderLearningPathPage(root = getLearningPathRoot()) {

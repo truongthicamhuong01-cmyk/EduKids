@@ -113,7 +113,7 @@ export function createGraphState(state) {
       id: "start",
       checkpointId: "start",
       type: "anchor",
-      title: "Điểm xuất phát",
+      title: "Xuất Phát",
       altitude: "0 m",
       status: "current",
       mountainId: String(mountain?.id || ""),
@@ -152,7 +152,7 @@ export function createGraphState(state) {
         id: "start",
         checkpointId: "start",
         type: "anchor",
-        title: "Điểm xuất phát",
+        title: "Xuất Phát",
         altitude: "0 m",
         status: "current",
         mountainId: String(mountain?.id || ""),
@@ -304,7 +304,7 @@ function createGraphNodeElement(node) {
     const copy = document.createElement("div");
     copy.className = "learning-path-start-copy";
     const startTitle = document.createElement("strong");
-    startTitle.textContent = "Điểm xuất phát";
+    startTitle.textContent = "Xuất Phát";
     const startAltitude = document.createElement("span");
     startAltitude.textContent = "0 m";
     copy.append(startTitle, startAltitude);
