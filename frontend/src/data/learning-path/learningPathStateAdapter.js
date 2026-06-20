@@ -226,11 +226,11 @@ function buildMountainView({
 export function adaptLearningPathState(apiState) {
   const source = apiState && typeof apiState === "object" ? apiState : {};
   const canonicalCheckpointMap = getCanonicalCheckpointMap(source);
-  const progress = source.progress && typeof source.progress === "object" ? source.progress : {};
+  const hasProgressObject = Boolean(source.progress && typeof source.progress === "object");
+  const progress = hasProgressObject ? source.progress : {};
   const completedCheckpointIds = getCompletedCheckpointIds(progress);
   const completedMountainIds = getCompletedMountainIds(progress);
   const currentMountainId = String(source.mountainId || source.currentMountainId || season1.mountains?.[0]?.id || "").trim();
-  const currentCheckpointId = String(source.checkpointId || source.currentCheckpointId || "").trim();
   const currentMountainBlueprint = getBlueprintMountain(currentMountainId) || season1.mountains?.[0] || null;
   const startPosition = cloneValue(currentMountainBlueprint?.startPosition || season1.mountains?.[0]?.startPosition || {
     left: 56.55,
@@ -238,10 +238,13 @@ export function adaptLearningPathState(apiState) {
     side: "left",
   });
   const firstCheckpointId = currentMountainBlueprint?.checkpoints?.[0]?.id || season1.mountains?.[0]?.checkpoints?.[0]?.id || "";
+  const resolvedCheckpointId = hasProgressObject
+    ? String(progress.currentCheckpoint || "").trim() || firstCheckpointId
+    : firstCheckpointId;
   const isFreshStart =
     completedCheckpointIds.size === 0 &&
     currentMountainId === String(season1.mountains?.[0]?.id || "") &&
-    currentCheckpointId === String(firstCheckpointId || "");
+    resolvedCheckpointId === String(firstCheckpointId || "");
 
   const mountains = (Array.isArray(season1.mountains) ? season1.mountains : []).map((mountainBlueprint, mountainIndex) =>
     buildMountainView({
@@ -249,7 +252,7 @@ export function adaptLearningPathState(apiState) {
       mountainIndex,
       canonicalCheckpointMap,
       currentMountainId,
-      currentCheckpointId,
+      currentCheckpointId: resolvedCheckpointId,
       completedCheckpointIds,
       completedMountainIds,
     }),
@@ -260,7 +263,7 @@ export function adaptLearningPathState(apiState) {
   );
   const currentMountain = mountains.find((mountain) => mountain.id === currentMountainId) || mountains[0] || null;
   const currentCheckpoint =
-    flattenedCheckpoints.find((checkpoint) => checkpoint.id === currentCheckpointId) ||
+    flattenedCheckpoints.find((checkpoint) => checkpoint.id === resolvedCheckpointId) ||
     currentMountain?.checkpoints?.find((checkpoint) => checkpoint.status === "current") ||
     currentMountain?.checkpoints?.[0] ||
     null;
@@ -272,12 +275,20 @@ export function adaptLearningPathState(apiState) {
     : currentCheckpoint?.position
       ? cloneValue(currentCheckpoint.position)
       : { left: 0, top: 0, side: "left" };
+  const resolvedProgress = hasProgressObject
+    ? cloneValue(progress)
+    : {
+        currentCheckpoint: resolvedCheckpointId,
+        completed: [],
+        completedCheckpoints: [],
+        completedMountains: [],
+      };
 
   return {
     userId: String(source.userId || "").trim(),
     seasonId: String(source.seasonId || season1.id || "").trim(),
     mountainId: currentMountainId,
-    checkpointId: currentCheckpointId,
+    checkpointId: resolvedCheckpointId,
     season: {
       ...cloneValue(season1),
       mountains,
@@ -286,7 +297,7 @@ export function adaptLearningPathState(apiState) {
     checkpoint: currentCheckpoint ? cloneValue(currentCheckpoint) : null,
     checkpoints: cloneValue(flattenedCheckpoints),
     rewards: cloneValue(source.rewards || { xu: 0, exp: 0, badges: [] }),
-    progress: cloneValue(progress),
+    progress: resolvedProgress,
     limits: cloneValue(source.limits || {}),
     lockNotice: String(source.lockNotice || source.notice || ""),
     updatedAt: String(source.updatedAt || ""),

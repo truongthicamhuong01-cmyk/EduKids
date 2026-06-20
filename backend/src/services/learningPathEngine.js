@@ -340,7 +340,15 @@ function buildInitialState(season = season1, progress = {}) {
   const learningFacts = normalizeLearningFacts(candidate);
   const userId = String(candidate?.userId || "");
   const mountainId = getCurrentMountainIdFromLegacyState(candidate, seasonData);
-  const checkpointId = getCurrentCheckpointIdFromLegacyState(candidate, seasonData, mountainId);
+  const startCheckpointId = getFirstCheckpointIdForMountain(seasonData, mountainId);
+  const hasProgressObject = Boolean(candidate?.progress && typeof candidate.progress === "object");
+  const progressCheckpointId = hasProgressObject ? String(candidate?.progress?.currentCheckpoint || "").trim() : "";
+  let checkpointId = progressCheckpointId || startCheckpointId;
+
+  if (!getCheckpointMetaById(seasonData, checkpointId)) {
+    checkpointId = startCheckpointId;
+  }
+
   const legacyCompletedCheckpointIds = Array.isArray(candidate?.checkpoints)
     ? candidate.checkpoints
         .filter(

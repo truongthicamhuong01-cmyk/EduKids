@@ -7188,6 +7188,19 @@ img.profile-skeleton {
   transform: none;
 }
 
+.learning-path-mountain-thumb-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  line-height: 1;
+  color: #8b95a7;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
+}
+
 .learning-path-mountain-thumb.is-image-missing {
   background: #eef2f7;
 }
@@ -7195,6 +7208,10 @@ img.profile-skeleton {
 .learning-path-mountain-thumb.is-image-missing
   .learning-path-mountain-thumb-image {
   display: none;
+}
+
+.learning-path-mountain-thumb.is-image-missing .learning-path-mountain-thumb-fallback {
+  opacity: 1;
 }
 
 .learning-path-mountain-copy {

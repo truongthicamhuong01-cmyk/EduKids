@@ -72,6 +72,20 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function normalizePublicAssetPath(value) {
+  const rawPath = String(value || "").trim().replaceAll("\\", "/");
+  if (!rawPath) {
+    return "";
+  }
+
+  const withoutPublicPrefix = rawPath.replace(/^\/?frontend\/public\/?/, "/").replace(/^frontend\/public\/?/, "/");
+  if (withoutPublicPrefix.startsWith("/")) {
+    return withoutPublicPrefix;
+  }
+
+  return `/${withoutPublicPrefix}`;
+}
+
 function scheduleRender() {
   requestAnimationFrame(() => {
     renderLearningPathPage();
@@ -145,6 +159,20 @@ function blurFocusedLearningPathElement() {
   const activeElement = document.activeElement;
   if (activeElement instanceof HTMLElement && typeof activeElement.blur === "function") {
     activeElement.blur();
+  }
+}
+
+function blurFocusedLearningPathStationElement(root = getLearningPathRoot()) {
+  const activeElement = document.activeElement;
+  if (!(activeElement instanceof HTMLElement)) {
+    return;
+  }
+
+  const stationContainer = activeElement.closest(".learning-path-station-anchor");
+  const journeyOverlay = activeElement.closest(".learning-path-journey-overlay");
+
+  if (stationContainer || journeyOverlay) {
+    blurFocusedLearningPathElement();
   }
 }
 
@@ -581,7 +609,7 @@ function isLoadingState() {
 
 function renderMountainCard(mountain, state) {
   const isSelected = mountain.id === state.currentMountainId;
-  const mountainIcon = mountain.icon || mountain.image || "";
+  const mountainIcon = normalizePublicAssetPath(mountain.icon || mountain.image || "");
 
   return `
     <button
@@ -591,6 +619,7 @@ function renderMountainCard(mountain, state) {
       data-page="learning-path"
     >
       <span class="learning-path-mountain-thumb" aria-hidden="true">
+        <span class="learning-path-mountain-thumb-fallback" aria-hidden="true">⛰️</span>
         <img
           class="learning-path-mountain-thumb-image"
           src="${escapeHtml(mountainIcon)}"
@@ -702,7 +731,7 @@ function renderStationNode(checkpoint, state) {
       class="learning-path-station${sideClass}${statusClass}"
       style="left: ${position.left}%; top: ${position.top}%;"
     >
-      <div class="learning-path-station-anchor" aria-hidden="true">
+      <div class="learning-path-station-anchor">
         ${renderCheckpointNode(checkpoint, status, state)}
       </div>
       <div class="learning-path-station-copy">
@@ -844,7 +873,7 @@ function renderJourneyPanel(state) {
         </div>
         <div
           class="learning-path-journey-overlay"
-          ${uiState.modalCheckpointId !== null || uiState.modalClosing ? 'aria-hidden="true" inert' : ""}
+          ${uiState.modalCheckpointId !== null || uiState.modalClosing ? "inert" : ""}
         >
           <div class="learning-path-route">
             ${checkpointNodes.join("")}
@@ -1237,6 +1266,7 @@ export function renderLearningPathPage(root = getLearningPathRoot()) {
   }
 
   syncTaskResetCountdownTimer(uiState.modalCheckpointId !== null || uiState.modalClosing);
+  blurFocusedLearningPathStationElement(root);
   root.innerHTML = renderLearningPathPageShell(state);
 
   if (uiState.modalCheckpointId !== null && uiState.modalFocusRequested) {
