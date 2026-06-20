@@ -206,6 +206,11 @@ function getFirstCheckpointIdForMountain(season, mountainId) {
   return mountain?.checkpoints?.[0]?.id || "";
 }
 
+function getDefaultCheckpointId(season) {
+  const firstMountain = Array.isArray(season?.mountains) ? season.mountains[0] : null;
+  return getFirstCheckpointIdForMountain(season, firstMountain?.id || "") || "start";
+}
+
 function getCurrentMountainIdFromLegacyState(candidate, season) {
   if (candidate?.mountainId) {
     return String(candidate.mountainId);
@@ -340,14 +345,18 @@ function buildInitialState(season = season1, progress = {}) {
   const learningFacts = normalizeLearningFacts(candidate);
   const userId = String(candidate?.userId || "");
   const mountainId = getCurrentMountainIdFromLegacyState(candidate, seasonData);
-  const startCheckpointId = getFirstCheckpointIdForMountain(seasonData, mountainId);
-  const hasProgressObject = Boolean(candidate?.progress && typeof candidate.progress === "object");
-  const progressCheckpointId = hasProgressObject ? String(candidate?.progress?.currentCheckpoint || "").trim() : "";
-  let checkpointId = progressCheckpointId || startCheckpointId;
-
-  if (!getCheckpointMetaById(seasonData, checkpointId)) {
-    checkpointId = startCheckpointId;
-  }
+  const startCheckpointId = getDefaultCheckpointId(seasonData);
+  const progressObject = candidate?.progress && typeof candidate.progress === "object" ? candidate.progress : null;
+  const progressCheckpointId = String(
+    progressObject?.currentCheckpointId ||
+      progressObject?.currentCheckpoint ||
+      candidate?.currentCheckpointId ||
+      candidate?.currentCheckpoint ||
+      "",
+  ).trim();
+  const checkpointId = getCheckpointMetaById(seasonData, progressCheckpointId || startCheckpointId)
+    ? progressCheckpointId || startCheckpointId
+    : startCheckpointId;
 
   const legacyCompletedCheckpointIds = Array.isArray(candidate?.checkpoints)
     ? candidate.checkpoints
@@ -420,6 +429,25 @@ function buildInitialState(season = season1, progress = {}) {
     lockNotice: "",
     updatedAt: String(candidate?.updatedAt || getNowIsoString()),
   };
+
+  const resolvedProgress = candidate?.progress && typeof candidate.progress === "object" ? cloneValue(candidate.progress) : {};
+  state.progress = {
+    ...resolvedProgress,
+    currentCheckpointId: checkpointId,
+    currentCheckpoint: checkpointId,
+    completedCheckpoints: Array.isArray(resolvedProgress.completedCheckpoints)
+      ? resolvedProgress.completedCheckpoints
+      : deriveCompletedCheckpoints(checkpoints),
+    completedMountains: Array.isArray(resolvedProgress.completedMountains)
+      ? resolvedProgress.completedMountains
+      : deriveCompletedMountains(seasonData, checkpoints),
+  };
+
+  if (!state.checkpointId || !getCheckpointMetaById(seasonData, state.checkpointId)) {
+    state.checkpointId = startCheckpointId;
+  }
+
+  state.currentCheckpointId = state.checkpointId;
 
   return applyCheckpointAvailability(state);
 }
