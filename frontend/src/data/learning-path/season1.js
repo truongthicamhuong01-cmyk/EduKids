@@ -137,15 +137,15 @@ const TASK_BLUEPRINTS = [
 ];
 
 const ROUTE_POSITIONS = [
-  { left: 56.55, top: 92.1, side: "left" },
-  { left: 41.1, top: 76.05, side: "left" },
-  { left: 58.2, top: 61.75, side: "right" },
+  { left: 56.5, top: 91.7, side: "left" },
+  { left: 41, top: 76, side: "left" },
+  { left: 58.25, top: 61.75, side: "right" },
   { left: 41.3, top: 48.5, side: "left" },
-  { left: 54.55, top: 36.45, side: "right" },
-  { left: 44.8, top: 26.7, side: "left" },
+  { left: 54.6, top: 36.45, side: "right" },
+  { left: 44.85, top: 26.75, side: "left" },
 ];
 
-const PEAK_POSITION = { left: 52, top: 16.1, side: "left" };
+const PEAK_POSITION = { left: 51.8, top: 16.5, side: "right" };
 
 const MOUNTAIN_BLUEPRINTS = [
   {
@@ -357,39 +357,39 @@ function createMountain(blueprint, index) {
   const stationRewards = [
     createReward({
       id: `${blueprint.id}-reward-start`,
-      title: "+10 Xu Edu",
+      title: "+50 Xu Edu",
       subtitle: "Khởi động hành trình",
       icon: "🧭",
       theme: "amber",
-      xu: 10,
-      exp: 20,
+      xu: 50,
+      exp: 100,
     }),
     createReward({
       id: `${blueprint.id}-reward-1`,
-      title: "+20 Xu Edu",
+      title: "+50 Xu Edu",
       subtitle: "Hoàn thành trạm đầu",
       icon: "🪙",
       theme: "amber",
-      xu: 20,
-      exp: 50,
+      xu: 50,
+      exp: 100,
     }),
     createReward({
       id: `${blueprint.id}-reward-2`,
-      title: "+30 Xu Edu",
+      title: "+50 Xu Edu",
       subtitle: "Giữ nhịp học",
       icon: "⭐",
       theme: "gold",
-      xu: 30,
-      exp: 75,
+      xu: 50,
+      exp: 100,
     }),
     createReward({
       id: `${blueprint.id}-reward-3`,
-      title: "+40 Xu Edu",
+      title: "+50 Xu Edu",
       subtitle: "Luyện tập thêm",
       icon: "📘",
       theme: "blue",
-      xu: 40,
-      exp: 90,
+      xu: 50,
+      exp: 100,
     }),
     createReward({
       id: `${blueprint.id}-reward-4`,
@@ -398,16 +398,16 @@ function createMountain(blueprint, index) {
       icon: "⛰️",
       theme: "green",
       xu: 50,
-      exp: 120,
+      exp: 100,
     }),
     createReward({
       id: `${blueprint.id}-reward-5`,
-      title: "+70 Xu Edu",
+      title: "+50 Xu Edu",
       subtitle: "Chuẩn bị lên đỉnh",
       icon: "🏔️",
       theme: "amber",
-      xu: 70,
-      exp: 150,
+      xu: 50,
+      exp: 100,
     }),
   ];
 
@@ -443,7 +443,7 @@ function createMountain(blueprint, index) {
       altitude: "2.500 m",
       position: { left: 59.1, top: 60.65, side: "right" },
       reward: stationRewards[2],
-      taskKeys: ["assignment-1", "lesson-1", "quiz-2"],
+      taskKeys: ["assignment-1", "lesson-1", "coach-1"],
       completed: false,
     }),
     createCheckpoint({
@@ -489,12 +489,12 @@ function createMountain(blueprint, index) {
       position: PEAK_POSITION,
       reward: createReward({
         id: `${blueprint.id}-summit-reward`,
-        title: "+100 Xu Edu",
+        title: "+200 Xu Edu",
         subtitle: "Chinh phục đỉnh núi",
         icon: "🏆",
         theme: "gold",
-        xu: 100,
-        exp: 200,
+        xu: 200,
+        exp: 250,
         badgeId: `badge-${blueprint.id}`,
       }),
       taskKeys: [],

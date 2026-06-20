@@ -7063,6 +7063,7 @@ img.profile-skeleton {
   grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
   gap: 18px;
   align-items: stretch;
+  margin-bottom: 34px;
 }
 
 .learning-path-left-column {
@@ -7091,7 +7092,7 @@ img.profile-skeleton {
 .learning-path-list-panel {
   padding: 18px;
   height: 100%;
-  min-height: 100%;
+  min-height: calc(100% + 116px);
 }
 
 .learning-path-panel-head {
@@ -7810,7 +7811,7 @@ img.profile-skeleton {
 
 .learning-path-reward-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(128px, 1fr));
+  grid-template-columns: repeat(4, minmax(124px, 1fr));
   gap: 10px;
   margin-top: 0;
   justify-items: stretch;
@@ -7831,8 +7832,10 @@ img.profile-skeleton {
 }
 
 [data-learning-path-reward-slot] {
-  margin-top: -86px;
+  margin-top: 0;
+  padding-top: 0;
   padding-left: 318px;
+  padding-right: 0;
   display: flex;
   justify-content: flex-end;
 }
@@ -8305,6 +8308,7 @@ img.profile-skeleton {
   [data-learning-path-reward-slot] {
     margin-top: 0;
     padding-left: 0;
+    padding-right: 0;
   }
 
   [data-learning-path-reward-slot] .learning-path-reward-grid {

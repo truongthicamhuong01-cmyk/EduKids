@@ -141,6 +141,7 @@ function buildTaskView(blueprintTask, canonicalTask) {
     status: status === "locked" ? "NOT_DONE" : status === "completed" ? "DONE" : "CURRENT",
     state: status === "locked" ? "NOT_DONE" : status === "completed" ? "DONE" : "CURRENT",
     targetPageId: blueprintTask?.targetPageId || "",
+    progress: cloneValue(canonicalTask?.progress || null),
   };
 }
 

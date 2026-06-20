@@ -125,6 +125,41 @@ function isTaskSatisfiedByFacts(task, facts) {
   return normalizeCount(facts?.[metric]) >= threshold;
 }
 
+const TASK_PROGRESS_UNIT_BY_TYPE = {
+  assignment: "bài tập",
+  coach: "lần",
+  lesson: "bài học",
+  login: "lần",
+  quiz: "quiz",
+  quiz_score: "lần",
+  score: "lần",
+  study_minutes: "phút",
+  topic: "bài học",
+};
+
+function getTaskProgressUnit(task) {
+  const type = String(task?.type || "").trim().toLowerCase();
+  return TASK_PROGRESS_UNIT_BY_TYPE[type] || "lần";
+}
+
+function buildTaskProgress(task, facts) {
+  const taskMetric = String(task?.metric || "").trim();
+  const metric = taskMetric || TASK_METRIC_BY_TYPE[String(task?.type || "").trim().toLowerCase()];
+  const threshold = Math.max(1, normalizeCount(task?.threshold || 1));
+  const current = metric ? normalizeCount(facts?.[metric]) : 0;
+  const displayedCurrent = Math.min(current, threshold);
+  const unit = getTaskProgressUnit(task);
+
+  return {
+    current: displayedCurrent,
+    rawCurrent: current,
+    total: threshold,
+    unit,
+    label: `${displayedCurrent} / ${threshold} ${unit}`,
+    completed: current >= threshold,
+  };
+}
+
 function getMountainById(season, mountainId) {
   return Array.isArray(season?.mountains)
     ? season.mountains.find((mountain) => mountain.id === mountainId) || null
@@ -448,16 +483,16 @@ function calculateRewards(event, context = {}) {
 
   if (event === "checkpoint") {
     return {
-      xu: Number(context.checkpointReward?.xu) || 20,
-      exp: Number(context.checkpointReward?.exp) || 50,
+      xu: Number(context.checkpointReward?.xu) || 50,
+      exp: Number(context.checkpointReward?.exp) || 100,
       badges: context.checkpointReward?.badgeId ? [context.checkpointReward.badgeId] : [],
     };
   }
 
   if (event === "mountain") {
     return {
-      xu: 100,
-      exp: 0,
+      xu: 200,
+      exp: 250,
       badges: context.badgeId ? [context.badgeId] : [],
     };
   }
@@ -980,6 +1015,7 @@ function createEngine(initialSeason = season1, initialProgress = {}, options = {
         const currentTask = Array.isArray(checkpoint.tasks)
           ? checkpoint.tasks.find((item) => item.id === task.id)
           : null;
+        const progress = buildTaskProgress(task, state.learningFacts);
 
         return {
           id: task.id,
@@ -991,9 +1027,10 @@ function createEngine(initialSeason = season1, initialProgress = {}, options = {
           icon: task.icon || "",
           metric: task.metric || "",
           threshold: Number(task.threshold) || 1,
-          completed: currentTask?.status === TASK_STATE.DONE,
+          completed: currentTask?.status === TASK_STATE.DONE || progress.completed,
           status: currentTask?.status || TASK_STATE.NOT_DONE,
           state: currentTask?.status || TASK_STATE.NOT_DONE,
+          progress,
         };
       }),
     };

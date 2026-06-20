@@ -51,31 +51,6 @@ function buildBootstrapLearningPathState(userId) {
   };
 }
 
-function isBootstrapLearningPathState(state) {
-  if (!state || typeof state !== "object") {
-    return false;
-  }
-
-  const progress = state.progress && typeof state.progress === "object" ? state.progress : {};
-  const checkpointId = String(
-    progress.currentCheckpointId ??
-      progress.currentCheckpoint ??
-      state.currentCheckpointId ??
-      state.currentCheckpoint ??
-      state.checkpointId ??
-      "",
-  ).trim();
-
-  const completedCheckpoints = Array.isArray(progress.completedCheckpoints) ? progress.completedCheckpoints : [];
-  const completedMountains = Array.isArray(progress.completedMountains) ? progress.completedMountains : [];
-
-  return (
-    checkpointId === DEFAULT_CURRENT_CHECKPOINT_ID &&
-    completedCheckpoints.length === 0 &&
-    completedMountains.length === 0
-  );
-}
-
 function unwrapStoredLearningPathState(snapshotData) {
   if (!snapshotData || typeof snapshotData !== "object") {
     return null;
@@ -353,10 +328,6 @@ async function getLearningPathState(userId) {
   }
 
   const loaded = await loadLearningPathState(normalizedUserId);
-  if (isBootstrapLearningPathState(loaded.state)) {
-    return buildLearningPathResponse(loaded.state, []);
-  }
-
   const facts = await loadLearningPathFacts(normalizedUserId);
   const collector = createActionCollector();
   const engine = createEngine(

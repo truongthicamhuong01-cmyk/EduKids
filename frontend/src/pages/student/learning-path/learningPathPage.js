@@ -664,8 +664,8 @@ function showCheckpointRewardPopup(event) {
   uiState.rewardPopup = {
     title: "🎉 Trạm đã hoàn thành",
     checkpointTitle: checkpoint.title || "",
-    xu: checkpoint.reward?.xu || 20,
-    exp: checkpoint.reward?.exp || 50,
+    xu: checkpoint.reward?.xu || 50,
+    exp: checkpoint.reward?.exp || 100,
   };
   return true;
 }
@@ -706,9 +706,10 @@ function showMountainCompletionPopup(event) {
   uiState.pendingRewardPopup = {
     title: `🏆 Chinh phục thành công ${mountain.name || "ngọn núi"}`,
     checkpointTitle: mountain.name || "",
-    xu: Number(payload.reward?.xu ?? 100) || 100,
-    exp: Number(payload.reward?.exp ?? 0) || 0,
+    xu: Number(payload.reward?.xu ?? 200) || 200,
+    exp: Number(payload.reward?.exp ?? 250) || 250,
     badgeName: mountain.badge?.name || "",
+    unlockNext: true,
   };
 
   return true;
@@ -1231,6 +1232,26 @@ function renderTaskActionButton(task) {
   `;
 }
 
+function formatTaskProgressText(task) {
+  const progress = task?.progress || {};
+  if (String(progress.label || "").trim()) {
+    return String(progress.label).trim();
+  }
+
+  const threshold = Math.max(1, Number(progress.total || task?.threshold || 1) || 1);
+  const rawCurrent = Number.isFinite(Number(progress.rawCurrent)) ? Number(progress.rawCurrent) : Number(progress.current);
+  const completed = task?.state === "DONE" || task?.status === "DONE" || progress.completed === true;
+  const currentValue = Number.isFinite(rawCurrent)
+    ? Math.max(0, Math.floor(completed ? Math.min(rawCurrent, threshold) : Math.min(rawCurrent, threshold)))
+    : completed
+      ? threshold
+      : 0;
+  const displayCurrent = Math.min(currentValue, threshold);
+  const unit = String(progress.unit || "").trim() || "lần";
+
+  return `${displayCurrent} / ${threshold} ${unit}`;
+}
+
 function renderTaskCard(task) {
   return `
     <article class="learning-path-task-card${task.state === "DONE" ? " is-completed" : ""}">
@@ -1238,7 +1259,7 @@ function renderTaskCard(task) {
         <span class="learning-path-task-icon" aria-hidden="true">${escapeHtml(task.icon || "📘")}</span>
         <div class="learning-path-task-copy">
           <strong>${escapeHtml(task.title || "Nhiệm vụ")}</strong>
-          <p>${escapeHtml(task.description || "")}</p>
+          <p>${escapeHtml(formatTaskProgressText(task))}</p>
         </div>
       </div>
       <div class="learning-path-task-footer">
@@ -1342,6 +1363,8 @@ function renderRewardPopup() {
 
   const hasBadgeReward = Boolean(uiState.rewardPopup.badgeName);
   const showExp = Number(uiState.rewardPopup.exp) > 0;
+  const showUnlockNext = Boolean(uiState.rewardPopup.unlockNext);
+  const rewardIntro = showUnlockNext ? "Nhận:" : uiState.rewardPopup.checkpointTitle;
 
   return `
     <div class="learning-path-modal-overlay is-open" role="presentation">
@@ -1353,10 +1376,11 @@ function renderRewardPopup() {
           </div>
         </header>
         <div class="learning-path-modal-reward-card is-complete">
-          <p>${escapeHtml(uiState.rewardPopup.checkpointTitle)}</p>
+          <p>${escapeHtml(rewardIntro)}</p>
           <strong>+${escapeHtml(uiState.rewardPopup.xu)} Xu Edu</strong>
-          ${hasBadgeReward ? `<strong>+1 ${escapeHtml(uiState.rewardPopup.badgeName)}</strong>` : ""}
           ${showExp ? `<strong>+${escapeHtml(uiState.rewardPopup.exp)} EXP</strong>` : ""}
+          ${hasBadgeReward ? `<strong>+${escapeHtml(uiState.rewardPopup.badgeName)}</strong>` : ""}
+          ${showUnlockNext ? "<strong>Mở khóa ngọn núi tiếp theo</strong>" : ""}
         </div>
         <div class="learning-path-modal-complete-footer">
           <button
