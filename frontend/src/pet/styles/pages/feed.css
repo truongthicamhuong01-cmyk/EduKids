@@ -1,0 +1,1320 @@
+.pet-feed-screen {
+  position: fixed;
+  inset: 0;
+  z-index: var(--pet-z-content);
+  overflow: hidden;
+  color: #2e2230;
+  background: #d8f0ff;
+}
+
+.pet-feed-screen[hidden] {
+  display: none !important;
+}
+
+body.pet-feed-active {
+  overflow: hidden;
+}
+
+.pet-feed-screen__background,
+.pet-feed-screen__veil,
+.pet-feed-screen__fx-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.pet-feed-screen__background {
+  transform: scale(1.04);
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255, 244, 198, 0.92) 0, rgba(255, 244, 198, 0.74) 14%, transparent 30%),
+    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.28) 0 4%, transparent 9%),
+    radial-gradient(circle at 20% 22%, rgba(255, 255, 255, 0.24) 0 4%, transparent 8%),
+    linear-gradient(180deg, rgba(255, 236, 159, 0.2) 0%, rgba(255, 250, 230, 0) 20%, rgba(50, 145, 84, 0.1) 100%),
+    var(--pet-feed-scene) center center / cover no-repeat;
+  filter: saturate(1.05) contrast(1.04);
+}
+
+.pet-feed-screen__background::before,
+.pet-feed-screen__background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pet-feed-screen__background::before {
+  background:
+    radial-gradient(circle at 12% 15%, rgba(255, 255, 255, 0.28) 0 4.4%, transparent 5.8%),
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.16) 0 5.2%, transparent 6.7%),
+    radial-gradient(circle at 68% 12%, rgba(255, 255, 255, 0.24) 0 4.8%, transparent 6.2%),
+    radial-gradient(circle at 76% 16%, rgba(255, 255, 255, 0.14) 0 6%, transparent 7.6%);
+  opacity: 0.82;
+  animation: pet-feed-cloud-drift 28s linear infinite;
+}
+
+.pet-feed-screen__background::after {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.08), transparent 45%),
+    radial-gradient(circle at 10% 82%, rgba(133, 189, 103, 0.16) 0 5%, transparent 6.8%),
+    radial-gradient(circle at 90% 82%, rgba(133, 189, 103, 0.16) 0 5%, transparent 6.8%);
+  opacity: 0.72;
+  animation: pet-feed-ambient-sway 16s ease-in-out infinite;
+}
+
+.pet-feed-screen__veil {
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(25, 77, 41, 0.16) 0, transparent 8%, transparent 92%, rgba(25, 77, 41, 0.16) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 24%, rgba(22, 61, 34, 0.14) 100%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.08), transparent 40%);
+  mix-blend-mode: multiply;
+}
+
+.pet-feed-screen__fx-layer {
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.pet-feed-screen__shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0.95rem;
+  min-height: 100%;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 1.15rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.pet-feed-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pet-feed-header__left {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.pet-feed-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.95rem;
+  width: fit-content;
+  max-width: min(100%, 37rem);
+  min-height: 5.25rem;
+  padding: 0.95rem 1.3rem 0.95rem 1.05rem;
+  border: 0;
+  border-radius: 26px;
+  background: linear-gradient(135deg, #5f31de 0%, #4320c4 100%);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 18px 34px rgba(51, 28, 134, 0.25);
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+
+.pet-feed-title:hover,
+.pet-feed-title:focus-visible {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 22px 38px rgba(51, 28, 134, 0.3);
+  filter: saturate(1.04);
+}
+
+.pet-feed-title:focus-visible,
+.pet-feed-food-card__action:focus-visible,
+.pet-feed-pet:focus-visible,
+.pet-feed-error .pet-btn:focus-visible {
+  outline: 3px solid rgba(99, 76, 255, 0.28);
+  outline-offset: 3px;
+}
+
+.pet-feed-title__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  flex: 0 0 auto;
+  color: #ffcb43;
+  filter: drop-shadow(0 2px 0 rgba(128, 84, 0, 0.15));
+}
+
+.pet-feed-title__icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.pet-feed-title__copy {
+  display: inline-flex;
+  align-items: center;
+}
+
+.pet-feed-title__copy strong {
+  font-size: clamp(1.9rem, 2.35vw, 2.85rem);
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+}
+
+.pet-feed-subtitle {
+  width: fit-content;
+  max-width: min(100%, 34rem);
+  padding: 0.85rem 1.05rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(109, 81, 216, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    0 14px 24px rgba(70, 51, 128, 0.12);
+  color: #2f2737;
+  font-size: clamp(1rem, 1.15vw, 1.1rem);
+  font-weight: 800;
+}
+
+.pet-feed-coin {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 9.5rem;
+  min-height: 4.8rem;
+  padding: 0.78rem 1.05rem;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 220, 118, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 16px 28px rgba(72, 58, 104, 0.12);
+  color: #1e2035;
+}
+
+.pet-feed-coin__icon {
+  display: inline-flex;
+  width: 2.3rem;
+  height: 2.3rem;
+  color: #f1af1d;
+  filter: drop-shadow(0 2px 0 rgba(139, 90, 0, 0.12));
+}
+
+.pet-feed-coin__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.pet-feed-coin strong {
+  font-size: clamp(1.55rem, 2vw, 2.05rem);
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.pet-feed-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(19rem, 0.84fr) minmax(0, 1.16fr);
+  align-items: end;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.pet-feed-status {
+  position: relative;
+  min-height: 19rem;
+  border-radius: 28px;
+  background: rgba(255, 250, 243, 0.96);
+  border: 2px solid rgba(255, 255, 255, 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 24px 44px rgba(82, 58, 15, 0.16);
+  backdrop-filter: blur(var(--pet-blur-md));
+  padding: 2.1rem 1rem 1rem;
+}
+
+.pet-feed-status__tab {
+  position: absolute;
+  top: -1px;
+  left: 1rem;
+  min-width: 9rem;
+  padding: 0.55rem 1rem 0.65rem;
+  border-radius: 18px 18px 12px 12px;
+  background: linear-gradient(180deg, #6d43ee 0%, #4c26ca 100%);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-align: center;
+  box-shadow: 0 10px 20px rgba(76, 38, 202, 0.24);
+}
+
+.pet-feed-status__list {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.pet-feed-stat {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.pet-feed-stat__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.pet-feed-stat__icon {
+  display: inline-flex;
+  width: 1.65rem;
+  height: 1.65rem;
+  flex: 0 0 auto;
+}
+
+.pet-feed-stat__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.pet-feed-stat--hunger .pet-feed-stat__icon {
+  color: #f06d6d;
+}
+
+.pet-feed-stat--happiness .pet-feed-stat__icon {
+  color: #f0a931;
+}
+
+.pet-feed-stat--energy .pet-feed-stat__icon {
+  color: #4d96ff;
+}
+
+.pet-feed-stat__label {
+  color: #3b2e23;
+  font-size: 1.03rem;
+  font-weight: 800;
+}
+
+.pet-feed-stat__value {
+  color: #5b38c8;
+  font-size: 0.98rem;
+  font-weight: 900;
+}
+
+.pet-feed-stat__bar {
+  height: 0.95rem;
+}
+
+.pet-feed-stat__fill {
+  transition: width 280ms ease;
+  transform-origin: left center;
+}
+
+.pet-feed-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 19rem;
+  padding: 1.2rem 1rem 1.8rem;
+  border-radius: 30px;
+}
+
+.pet-feed-stage__platform {
+  position: absolute;
+  left: 50%;
+  bottom: 1.2rem;
+  width: min(32rem, 52vw);
+  height: clamp(3.5rem, 6vw, 5.4rem);
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 233, 173, 0.92) 0 18%, rgba(204, 135, 255, 0.84) 35%, rgba(122, 79, 211, 0.92) 78%, rgba(95, 55, 172, 0.96) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 20px 30px rgba(66, 28, 114, 0.24);
+}
+
+.pet-feed-stage__platform::before {
+  content: "";
+  position: absolute;
+  inset: 0.4rem 1rem 0.6rem;
+  border-radius: inherit;
+  background: radial-gradient(circle at 50% 15%, rgba(255, 255, 255, 0.34) 0, transparent 55%);
+  opacity: 0.7;
+}
+
+.pet-feed-bubble {
+  position: absolute;
+  top: 0.95rem;
+  right: 1.1rem;
+  display: none;
+  align-items: center;
+  gap: 0.7rem;
+  max-width: min(26rem, calc(100vw - 2rem));
+  padding: 1rem 1.2rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.84),
+    0 16px 32px rgba(74, 57, 118, 0.14);
+  transform: translateY(8px) scale(0.985);
+  opacity: 0;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.pet-feed-bubble.is-visible {
+  display: inline-flex;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  animation: pet-feed-bubble-pop 180ms ease-out;
+}
+
+.pet-feed-bubble__icon {
+  display: inline-flex;
+  width: 1.6rem;
+  height: 1.6rem;
+  flex: 0 0 auto;
+  color: #ff9f43;
+}
+
+.pet-feed-bubble__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.pet-feed-bubble p {
+  margin: 0;
+  color: #32252f;
+  font-size: clamp(0.98rem, 1.05vw, 1.08rem);
+  font-weight: 800;
+  line-height: 1.42;
+}
+
+.pet-feed-pet {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(40vw, 41rem);
+  min-height: min(40vw, 34rem);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    transform 220ms ease,
+    filter 220ms ease;
+}
+
+.pet-feed-pet:hover,
+.pet-feed-pet:focus-visible {
+  transform: translateY(-2px) scale(1.01);
+  filter: saturate(1.03);
+}
+
+.pet-feed-pet:focus-visible {
+  outline: none;
+}
+
+.pet-feed-pet__halo {
+  position: absolute;
+  inset: auto auto 9% 50%;
+  width: min(30vw, 28rem);
+  height: min(30vw, 28rem);
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 246, 190, 0.76) 0, rgba(255, 246, 190, 0.28) 30%, rgba(255, 219, 128, 0.12) 54%, transparent 72%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.58) 0, transparent 30%);
+  filter: blur(4px);
+}
+
+.pet-feed-pet__shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  width: min(28vw, 24rem);
+  height: clamp(2.2rem, 4.8vw, 3.4rem);
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(82, 52, 14, 0.28) 0, rgba(82, 52, 14, 0.16) 35%, rgba(82, 52, 14, 0.06) 58%, transparent 76%);
+  filter: blur(9px);
+}
+
+.pet-feed-pet img {
+  position: relative;
+  z-index: 1;
+  width: min(38vw, 34rem);
+  max-height: min(62vh, 32rem);
+  object-fit: contain;
+  transform-origin: center bottom;
+  filter: drop-shadow(0 24px 20px rgba(52, 27, 9, 0.2));
+  opacity: 0;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+  animation: pet-feed-breathe 4.8s ease-in-out infinite;
+}
+
+.pet-feed-pet img.is-loaded {
+  opacity: 1;
+}
+
+.pet-feed-pet.is-bounce img {
+  animation: pet-feed-bounce 520ms ease-out;
+}
+
+.pet-feed-screen[data-mood="happy"] .pet-feed-pet img {
+  animation:
+    pet-feed-float 4.8s ease-in-out infinite,
+    pet-feed-bounce-soft 2.4s ease-in-out infinite;
+}
+
+.pet-feed-screen[data-mood="normal"] .pet-feed-pet img {
+  animation: pet-feed-float 5.2s ease-in-out infinite;
+}
+
+.pet-feed-screen[data-mood="hungry"] .pet-feed-pet img {
+  animation: pet-feed-float 5s ease-in-out infinite;
+}
+
+.pet-feed-screen[data-mood="sleepy"] .pet-feed-pet img {
+  animation: pet-feed-sway 5.4s ease-in-out infinite;
+}
+
+.pet-feed-screen[data-mood="sad"] .pet-feed-pet img {
+  opacity: 0.96;
+  transform: translateY(4px) scale(0.996);
+}
+
+.pet-feed-screen[data-mood="sick"] .pet-feed-pet img {
+  opacity: 0.92;
+  transform: translateY(2px) scale(0.992);
+}
+
+.pet-feed-screen[data-mood="happy"] .pet-feed-bubble,
+.pet-feed-screen[data-mood="normal"] .pet-feed-bubble {
+  animation: pet-feed-bubble-pop 180ms ease-out;
+}
+
+.pet-feed-screen[data-mood="hungry"] .pet-feed-bubble::after {
+  content: "";
+  position: absolute;
+  inset: auto 36px -10px auto;
+  width: 18px;
+  height: 18px;
+  transform: rotate(45deg);
+  background: inherit;
+  border-right: 1px solid rgba(255, 255, 255, 0.86);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.86);
+}
+
+.pet-feed-foods {
+  position: relative;
+  padding: 0.2rem 0.1rem 0;
+}
+
+.pet-feed-foods__grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.95rem;
+  align-items: stretch;
+}
+
+.pet-feed-food-card {
+  position: relative;
+  display: flex;
+  min-height: 19rem;
+  border-radius: 28px;
+  border: 2px solid rgba(255, 255, 255, 0.86);
+  background: rgba(255, 251, 248, 0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 16px 34px rgba(64, 45, 24, 0.1);
+  overflow: hidden;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease,
+    opacity 180ms ease;
+}
+
+.pet-feed-food-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 12%, rgba(255, 255, 255, 0.7), transparent 46%);
+  pointer-events: none;
+}
+
+.pet-feed-food-card:hover,
+.pet-feed-food-card:focus-within {
+  transform: translateY(-2px) scale(1.005);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 20px 38px rgba(64, 45, 24, 0.14);
+}
+
+.pet-feed-food-card.is-disabled {
+  opacity: 0.62;
+  filter: saturate(0.8);
+}
+
+.pet-feed-food-card__inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto auto;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 1rem 0.9rem 0.95rem;
+}
+
+.pet-feed-food-card__title {
+  margin: 0;
+  color: #273144;
+  font-size: clamp(1.05rem, 1.2vw, 1.3rem);
+  font-weight: 900;
+  line-height: 1.18;
+  text-align: center;
+}
+
+.pet-feed-food-card__visual {
+  display: grid;
+  place-items: center;
+  min-height: 7.2rem;
+  padding: 0.35rem 0;
+}
+
+.pet-feed-food-card__visual img {
+  display: block;
+  width: min(7.7rem, 90%);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 10px rgba(49, 31, 12, 0.16));
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+.pet-feed-food-card:hover .pet-feed-food-card__visual img {
+  transform: translateY(-2px) scale(1.02);
+  filter: drop-shadow(0 16px 12px rgba(49, 31, 12, 0.18));
+}
+
+.pet-feed-food-card__quantity {
+  color: #2f3143;
+  font-size: 0.96rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.pet-feed-food-card__quantity strong {
+  color: #4e37c8;
+  font-weight: 900;
+}
+
+.pet-feed-food-card__effect {
+  align-self: start;
+  color: #2f7a22;
+  font-size: 0.96rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.pet-feed-food-card__action {
+  width: 100%;
+  min-height: 3.2rem;
+  margin-top: auto;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #5f31de 0%, #4c26ca 100%);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 10px 20px rgba(76, 38, 202, 0.2);
+}
+
+.pet-feed-food-card__action:hover,
+.pet-feed-food-card__action:focus-visible {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 14px 24px rgba(76, 38, 202, 0.24);
+}
+
+.pet-feed-food-card__action:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pet-feed-food-card__loading {
+  display: inline-flex;
+  width: 0.95rem;
+  height: 0.95rem;
+  margin-left: 0.45rem;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  opacity: 0;
+  vertical-align: -0.08em;
+}
+
+.pet-feed-food-card.is-loading .pet-feed-food-card__loading {
+  opacity: 1;
+  animation: pet-feed-spin 0.75s linear infinite;
+}
+
+.pet-feed-food-card.tone-0 {
+  background: linear-gradient(180deg, rgba(255, 247, 223, 0.98) 0%, rgba(255, 240, 190, 0.94) 100%);
+}
+
+.pet-feed-food-card.tone-1 {
+  background: linear-gradient(180deg, rgba(239, 247, 255, 0.98) 0%, rgba(223, 240, 255, 0.94) 100%);
+}
+
+.pet-feed-food-card.tone-2 {
+  background: linear-gradient(180deg, rgba(248, 241, 255, 0.98) 0%, rgba(232, 222, 255, 0.95) 100%);
+}
+
+.pet-feed-food-card.tone-3 {
+  background: linear-gradient(180deg, rgba(255, 244, 237, 0.98) 0%, rgba(255, 228, 212, 0.94) 100%);
+}
+
+.pet-feed-food-card.tone-4 {
+  background: linear-gradient(180deg, rgba(255, 241, 245, 0.98) 0%, rgba(255, 226, 236, 0.94) 100%);
+}
+
+.pet-feed-error {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1.1rem;
+  width: min(30rem, calc(100vw - 2rem));
+  z-index: var(--pet-z-overlay);
+  display: grid;
+  gap: 0.6rem;
+  border-radius: 26px;
+  background: rgba(255, 252, 248, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 18px 34px rgba(72, 54, 29, 0.14);
+  backdrop-filter: blur(var(--pet-blur-md));
+}
+
+.pet-feed-error strong {
+  color: #902e20;
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.pet-feed-error p {
+  margin: 0;
+  color: #5a4c43;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.pet-feed-error__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pet-feed-error .pet-btn {
+  min-height: 2.9rem;
+  padding-inline: 1rem;
+}
+
+.pet-feed-foods__skeleton {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.95rem;
+}
+
+.pet-feed-foods__skeleton-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 19rem;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.pet-feed-foods__skeleton-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.78), transparent);
+  animation: pet-feed-shimmer 1.5s ease-in-out infinite;
+}
+
+.pet-feed-screen[data-loading-catalog="true"] .pet-feed-foods__grid {
+  opacity: 0.55;
+}
+
+.pet-feed-screen[data-loading-item-id] .pet-feed-food-card {
+  pointer-events: none;
+}
+
+.pet-feed-screen[data-mood="hungry"] .pet-feed-pet::after {
+  content: "";
+  position: absolute;
+  right: 14%;
+  bottom: 20%;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.94) 0 40%, rgba(255, 196, 91, 0.86) 41% 100%);
+  box-shadow: 0 0 18px rgba(255, 198, 86, 0.3);
+  opacity: 0;
+  animation: pet-feed-pulse 1.8s ease-in-out infinite;
+}
+
+.pet-feed-screen[data-mood="sleepy"] .pet-feed-pet::after {
+  content: "Zzz";
+  position: absolute;
+  top: 10%;
+  right: 16%;
+  color: rgba(88, 84, 155, 0.82);
+  font-size: clamp(1rem, 1.4vw, 1.3rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+  animation: pet-feed-zzz 2.8s ease-in-out infinite;
+}
+
+.pet-feed-screen[data-mood="sad"] .pet-feed-pet__halo,
+.pet-feed-screen[data-mood="sick"] .pet-feed-pet__halo {
+  opacity: 0.75;
+}
+
+.pet-feed-screen[data-mood="sad"] .pet-feed-stage__platform,
+.pet-feed-screen[data-mood="sick"] .pet-feed-stage__platform {
+  filter: saturate(0.94);
+}
+
+.pet-feed-screen[data-mood="sick"] .pet-feed-pet img {
+  filter: drop-shadow(0 22px 18px rgba(52, 27, 9, 0.15)) saturate(0.96);
+}
+
+.pet-feed-fx {
+  position: absolute;
+  left: var(--fx-x);
+  top: var(--fx-y);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.pet-feed-fx__food {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 12px 24px rgba(55, 35, 12, 0.14);
+}
+
+.pet-feed-fx__food img {
+  display: block;
+  width: 2.35rem;
+  height: 2.35rem;
+  object-fit: contain;
+}
+
+.pet-feed-fx__heart {
+  position: absolute;
+  display: inline-flex;
+  width: 1.6rem;
+  height: 1.6rem;
+  color: #ff697e;
+  opacity: 0;
+  filter: drop-shadow(0 2px 0 rgba(145, 44, 64, 0.15));
+}
+
+.pet-feed-fx__heart svg {
+  width: 100%;
+  height: 100%;
+}
+
+.pet-feed-fx__heart--one {
+  left: 0.8rem;
+  top: -0.65rem;
+}
+
+.pet-feed-fx__heart--two {
+  left: 1.3rem;
+  top: 0.55rem;
+}
+
+.pet-feed-fx__heart--three {
+  left: 2rem;
+  top: -0.1rem;
+}
+
+.pet-feed-fx.is-flight .pet-feed-fx__food {
+  animation: pet-feed-food-fly 880ms cubic-bezier(0.18, 0.88, 0.24, 1) forwards;
+}
+
+.pet-feed-fx.is-flight .pet-feed-fx__heart {
+  animation: pet-feed-heart-pop 880ms ease-out forwards;
+}
+
+.pet-feed-fx.is-flight .pet-feed-fx__heart--one {
+  animation-delay: 90ms;
+}
+
+.pet-feed-fx.is-flight .pet-feed-fx__heart--two {
+  animation-delay: 120ms;
+}
+
+.pet-feed-fx.is-flight .pet-feed-fx__heart--three {
+  animation-delay: 160ms;
+}
+
+@keyframes pet-feed-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes pet-feed-bounce {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  45% {
+    transform: translateY(-6px) scale(1.02);
+  }
+}
+
+@keyframes pet-feed-bounce-soft {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-3px) scale(1.006);
+  }
+}
+
+@keyframes pet-feed-sway {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-1deg);
+  }
+}
+
+@keyframes pet-feed-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.01);
+  }
+}
+
+@keyframes pet-feed-pulse {
+  0%,
+  100% {
+    opacity: 0.06;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes pet-feed-zzz {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes pet-feed-bubble-pop {
+  0% {
+    transform: translateY(8px) scale(0.94);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pet-feed-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes pet-feed-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pet-feed-cloud-drift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0.8%, -0.45%, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes pet-feed-ambient-sway {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -0.35%, 0);
+  }
+}
+
+@keyframes pet-feed-food-fly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  35% {
+    opacity: 1;
+    transform: translate(calc(-50% + (var(--fx-dx) * 0.45)), calc(-50% + (var(--fx-dy) * 0.45))) scale(1.02);
+  }
+  72% {
+    opacity: 0.96;
+    transform: translate(calc(-50% + (var(--fx-dx) * 0.88)), calc(-50% + (var(--fx-dy) * 0.88))) scale(0.78);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--fx-dx)), calc(-50% + var(--fx-dy))) scale(0.2);
+  }
+}
+
+@keyframes pet-feed-heart-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.55);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-24px) scale(1.08);
+  }
+}
+
+@media (max-width: 1360px) {
+  .pet-feed-screen__shell {
+    padding: 0.95rem 1rem 1rem;
+  }
+
+  .pet-feed-hero {
+    grid-template-columns: minmax(17.5rem, 0.82fr) minmax(0, 1.18fr);
+  }
+
+  .pet-feed-foods__grid,
+  .pet-feed-foods__skeleton {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1080px) {
+  .pet-feed-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pet-feed-coin {
+    align-self: flex-end;
+  }
+
+  .pet-feed-hero {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+
+  .pet-feed-status {
+    min-height: auto;
+  }
+
+  .pet-feed-stage {
+    min-height: 24rem;
+  }
+
+  .pet-feed-pet {
+    width: min(62vw, 34rem);
+  }
+
+  .pet-feed-pet img {
+    width: min(60vw, 30rem);
+  }
+
+  .pet-feed-foods__grid,
+  .pet-feed-foods__skeleton {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  .pet-feed-screen__shell {
+    padding: 0.92rem 0.95rem 1rem;
+  }
+
+  .pet-feed-pet {
+    width: min(68vw, 32rem);
+  }
+
+  .pet-feed-foods__grid,
+  .pet-feed-foods__skeleton {
+    gap: 0.85rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .pet-feed-bubble {
+    max-width: min(21rem, calc(100vw - 1rem));
+  }
+
+  .pet-feed-food-card__inner {
+    gap: 0.5rem;
+  }
+
+  .pet-feed-food-card__action {
+    min-height: 3rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .pet-feed-screen__shell {
+    padding: 0.8rem 0.8rem 0.95rem;
+  }
+
+  .pet-feed-title {
+    min-height: 4.65rem;
+    padding: 0.75rem 1rem 0.75rem 0.8rem;
+    border-radius: 22px;
+  }
+
+  .pet-feed-title__icon {
+    width: 2.4rem;
+    height: 2.4rem;
+  }
+
+  .pet-feed-title__copy strong {
+    font-size: clamp(1.45rem, 5vw, 2rem);
+  }
+
+  .pet-feed-subtitle {
+    padding: 0.72rem 0.9rem;
+    border-radius: 18px;
+  }
+
+  .pet-feed-coin {
+    min-width: 8.5rem;
+    min-height: 4.2rem;
+    padding: 0.7rem 0.9rem;
+  }
+
+  .pet-feed-coin__icon {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .pet-feed-hero {
+    gap: 0.75rem;
+  }
+
+  .pet-feed-status {
+    padding: 1.85rem 0.9rem 0.9rem;
+  }
+
+  .pet-feed-status__tab {
+    left: 0.9rem;
+    min-width: 8.4rem;
+    padding-inline: 0.8rem;
+    font-size: 0.98rem;
+  }
+
+  .pet-feed-stage {
+    min-height: 20rem;
+    padding: 0.8rem 0.6rem 1.2rem;
+  }
+
+  .pet-feed-bubble {
+    top: 0.4rem;
+    right: 0.55rem;
+    max-width: min(22rem, calc(100vw - 1.2rem));
+    padding: 0.85rem 1rem;
+  }
+
+  .pet-feed-pet {
+    width: min(86vw, 28rem);
+  }
+
+  .pet-feed-pet img {
+    width: min(82vw, 24rem);
+  }
+
+  .pet-feed-pet__halo {
+    width: min(82vw, 22rem);
+    height: min(82vw, 22rem);
+  }
+
+  .pet-feed-pet__shadow {
+    width: min(68vw, 20rem);
+  }
+
+  .pet-feed-foods__grid,
+  .pet-feed-foods__skeleton {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pet-feed-food-card {
+    min-height: 17.4rem;
+  }
+
+  .pet-feed-food-card__inner {
+    padding: 0.9rem 0.8rem 0.85rem;
+  }
+
+  .pet-feed-error {
+    left: 0.8rem;
+    right: 0.8rem;
+    bottom: 0.8rem;
+    width: auto;
+  }
+}
+
+@media (max-width: 576px) {
+  .pet-feed-screen__shell {
+    padding: 0.72rem 0.72rem 0.9rem;
+  }
+
+  .pet-feed-title {
+    width: 100%;
+  }
+
+  .pet-feed-coin {
+    min-width: 100%;
+    justify-content: space-between;
+  }
+
+  .pet-feed-foods__grid,
+  .pet-feed-foods__skeleton {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pet-feed-food-card {
+    min-height: 16.4rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .pet-feed-title__copy strong {
+    font-size: 1.2rem;
+  }
+
+  .pet-feed-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .pet-feed-stat__label,
+  .pet-feed-stat__value {
+    font-size: 0.86rem;
+  }
+
+  .pet-feed-foods__grid,
+  .pet-feed-foods__skeleton {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .pet-feed-title {
+    gap: 0.65rem;
+  }
+
+  .pet-feed-title__copy strong {
+    font-size: 1.35rem;
+  }
+
+  .pet-feed-status__list {
+    gap: 0.8rem;
+  }
+
+  .pet-feed-stat__label,
+  .pet-feed-stat__value {
+    font-size: 0.92rem;
+  }
+
+  .pet-feed-foods__grid,
+  .pet-feed-foods__skeleton {
+    grid-template-columns: 1fr;
+  }
+
+  .pet-feed-food-card {
+    min-height: 16.8rem;
+  }
+
+  .pet-feed-food-card__visual img {
+    width: min(7rem, 86%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-feed-screen__background::before,
+  .pet-feed-screen__background::after,
+  .pet-feed-pet img,
+  .pet-feed-pet,
+  .pet-feed-bubble.is-visible,
+  .pet-feed-foods__skeleton-card::after,
+  .pet-feed-fx.is-flight .pet-feed-fx__food,
+  .pet-feed-fx.is-flight .pet-feed-fx__heart {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -1,0 +1,100 @@
+.pet-home-screen,
+.pet-feed-screen,
+.pet-inventory-screen,
+.pet-shop-screen,
+.pet-choose-screen,
+.pet-feedback-layer {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+  font-kerning: normal;
+}
+
+.pet-home-screen :is(button, [role="button"], input, textarea, select),
+.pet-feed-screen :is(button, [role="button"], input, textarea, select),
+.pet-inventory-screen :is(button, [role="button"], input, textarea, select),
+.pet-shop-screen :is(button, [role="button"], input, textarea, select),
+.pet-choose-screen :is(button, [role="button"], input, textarea, select),
+.pet-feedback-layer :is(button, [role="button"], input, textarea, select) {
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.pet-home-screen :is(.pet-btn, .pet-home-mini-action, .pet-home-action-card, .pet-home-shop, .pet-home-tip, .pet-home-stat, .pet-home-profile, .pet-home-stats),
+.pet-feed-screen :is(.pet-btn, .pet-feed-title, .pet-feed-food-card__action, .pet-feed-status, .pet-feed-stage, .pet-feed-food-card, .pet-feed-coin, .pet-feed-subtitle),
+.pet-inventory-screen :is(.pet-btn, .pet-inventory-title, .pet-inventory-card__action, .pet-inventory-status, .pet-inventory-stage, .pet-inventory-card, .pet-inventory-coin, .pet-inventory-subtitle),
+.pet-shop-screen :is(.pet-btn, .pet-shop-title, .pet-shop-card__action, .pet-shop-category, .pet-shop-stage, .pet-shop-card, .pet-shop-coin, .pet-shop-subtitle),
+.pet-choose-screen :is(.pet-btn, .pet-choose-back, .pet-choose-shop, .pet-choose-banner, .pet-choice-card, .pet-choice-card__action, .pet-choice-card__name),
+.pet-feedback-layer :is(.pet-feedback-toast, .pet-feedback-popup, .pet-feedback-float) {
+  transform-origin: center center;
+  backface-visibility: hidden;
+}
+
+.pet-home-screen :is(.pet-btn, .pet-home-mini-action, .pet-home-action-card, .pet-home-shop, .pet-home-tip, .pet-home-stat, .pet-home-profile),
+.pet-feed-screen :is(.pet-btn, .pet-feed-title, .pet-feed-food-card__action, .pet-feed-status, .pet-feed-stage, .pet-feed-food-card, .pet-feed-coin),
+.pet-inventory-screen :is(.pet-btn, .pet-inventory-title, .pet-inventory-card__action, .pet-inventory-status, .pet-inventory-stage, .pet-inventory-card, .pet-inventory-coin),
+.pet-shop-screen :is(.pet-btn, .pet-shop-title, .pet-shop-card__action, .pet-shop-category, .pet-shop-stage, .pet-shop-card, .pet-shop-coin),
+.pet-choose-screen :is(.pet-btn, .pet-choose-back, .pet-choose-shop, .pet-choose-banner, .pet-choice-card, .pet-choice-card__action),
+.pet-feedback-layer :is(.pet-feedback-toast, .pet-feedback-popup, .pet-feedback-float) {
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.pet-home-screen :is(button, .pet-btn, .pet-home-mini-action, .pet-home-action-card, .pet-home-shop, .pet-home-tip, .pet-home-stat, .pet-home-profile),
+.pet-feed-screen :is(button, .pet-btn, .pet-feed-title, .pet-feed-food-card__action, .pet-feed-status, .pet-feed-stage, .pet-feed-food-card, .pet-feed-coin),
+.pet-inventory-screen :is(button, .pet-btn, .pet-inventory-title, .pet-inventory-card__action, .pet-inventory-status, .pet-inventory-stage, .pet-inventory-card, .pet-inventory-coin),
+.pet-shop-screen :is(button, .pet-btn, .pet-shop-title, .pet-shop-card__action, .pet-shop-category, .pet-shop-stage, .pet-shop-card, .pet-shop-coin),
+.pet-choose-screen :is(button, .pet-btn, .pet-choose-back, .pet-choose-shop, .pet-choose-banner, .pet-choice-card, .pet-choice-card__action),
+.pet-feedback-layer :is(.pet-feedback-toast, .pet-feedback-popup, .pet-feedback-float) {
+  will-change: transform, opacity;
+}
+
+.pet-home-screen :is(button, .pet-btn, .pet-home-mini-action, .pet-home-action-card, .pet-home-shop, .pet-home-tip, .pet-home-stat, .pet-home-profile):focus-visible,
+.pet-feed-screen :is(button, .pet-btn, .pet-feed-title, .pet-feed-food-card__action, .pet-feed-status, .pet-feed-stage, .pet-feed-food-card, .pet-feed-coin):focus-visible,
+.pet-inventory-screen :is(button, .pet-btn, .pet-inventory-title, .pet-inventory-card__action, .pet-inventory-status, .pet-inventory-stage, .pet-inventory-card, .pet-inventory-coin):focus-visible,
+.pet-shop-screen :is(button, .pet-btn, .pet-shop-title, .pet-shop-card__action, .pet-shop-category, .pet-shop-stage, .pet-shop-card, .pet-shop-coin):focus-visible,
+.pet-choose-screen :is(button, .pet-btn, .pet-choose-back, .pet-choose-shop, .pet-choose-banner, .pet-choice-card, .pet-choice-card__action):focus-visible {
+  outline-offset: 3px;
+}
+
+.pet-home-screen .pet-home-tip,
+.pet-feed-screen .pet-feed-subtitle,
+.pet-inventory-screen .pet-inventory-subtitle,
+.pet-shop-screen .pet-shop-subtitle,
+.pet-choose-screen .pet-choose-subtitle {
+  letter-spacing: 0.01em;
+}
+
+.pet-home-screen .pet-home-chip,
+.pet-home-screen .pet-home-mood,
+.pet-feed-screen .pet-feed-stat__label,
+.pet-feed-screen .pet-feed-stat__value,
+.pet-inventory-screen .pet-inventory-stat__label,
+.pet-inventory-screen .pet-inventory-stat__value,
+.pet-shop-screen .pet-shop-card__meta,
+.pet-shop-screen .pet-shop-card__hint,
+.pet-choose-screen .pet-choice-card__description {
+  letter-spacing: 0.01em;
+}
+
+.pet-home-screen .pet-home-stat__fill,
+.pet-home-screen .pet-home-exp__fill,
+.pet-feed-screen .pet-feed-stat__fill,
+.pet-inventory-screen .pet-inventory-stat__fill,
+.pet-shop-screen .pet-shop-card__action,
+.pet-shop-screen .pet-shop-category,
+.pet-choose-screen .pet-choice-card__action,
+.pet-choose-screen .pet-choice-card {
+  transition-duration: 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-home-screen :is(.pet-btn, .pet-home-mini-action, .pet-home-action-card, .pet-home-shop, .pet-home-tip, .pet-home-stat, .pet-home-profile),
+  .pet-feed-screen :is(.pet-btn, .pet-feed-title, .pet-feed-food-card__action, .pet-feed-status, .pet-feed-stage, .pet-feed-food-card, .pet-feed-coin),
+  .pet-inventory-screen :is(.pet-btn, .pet-inventory-title, .pet-inventory-card__action, .pet-inventory-status, .pet-inventory-stage, .pet-inventory-card, .pet-inventory-coin),
+  .pet-shop-screen :is(.pet-btn, .pet-shop-title, .pet-shop-card__action, .pet-shop-category, .pet-shop-stage, .pet-shop-card, .pet-shop-coin),
+  .pet-choose-screen :is(.pet-btn, .pet-choose-back, .pet-choose-shop, .pet-choose-banner, .pet-choice-card, .pet-choice-card__action),
+  .pet-feedback-layer :is(.pet-feedback-toast, .pet-feedback-popup, .pet-feedback-float) {
+    transition-duration: 1ms !important;
+  }
+}

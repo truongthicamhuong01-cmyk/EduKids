@@ -1,0 +1,153 @@
+.pet-card,
+.pet-panel,
+.pet-modal,
+.pet-toast,
+.pet-tooltip,
+.pet-empty-state,
+.pet-skeleton,
+.pet-avatar,
+.pet-chip,
+.pet-stat-card {
+  border-radius: var(--pet-radius-lg);
+  background: var(--pet-color-surface);
+  border: 1px solid var(--pet-color-border);
+  box-shadow: var(--pet-shadow-sm);
+}
+
+.pet-card,
+.pet-panel,
+.pet-modal,
+.pet-toast,
+.pet-empty-state,
+.pet-stat-card {
+  padding: var(--pet-space-4);
+}
+
+.pet-panel {
+  backdrop-filter: blur(var(--pet-blur-sm));
+  transition:
+    transform var(--pet-transition-fast),
+    box-shadow var(--pet-transition-fast);
+}
+
+.pet-panel:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--pet-shadow-md);
+}
+
+.pet-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(109, 143, 228, 0.1);
+}
+
+.pet-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pet-chip,
+.pet-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pet-space-2);
+  min-height: 24px;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--pet-radius-pill);
+  background: rgba(125, 107, 88, 0.1);
+  color: var(--pet-color-text);
+  font-size: 0.875rem;
+}
+
+.pet-badge--success,
+.pet-chip--success {
+  background: rgba(76, 175, 122, 0.12);
+  color: var(--pet-color-success);
+}
+
+.pet-badge--warning,
+.pet-chip--warning {
+  background: rgba(255, 179, 71, 0.14);
+  color: var(--pet-color-warning);
+}
+
+.pet-badge--danger,
+.pet-chip--danger {
+  background: rgba(231, 111, 81, 0.12);
+  color: var(--pet-color-danger);
+}
+
+.pet-badge--info,
+.pet-chip--info {
+  background: rgba(77, 150, 255, 0.12);
+  color: var(--pet-color-info);
+}
+
+.pet-progress {
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border-radius: var(--pet-radius-pill);
+  background: rgba(125, 107, 88, 0.12);
+}
+
+.pet-progress__fill {
+  height: 100%;
+  width: var(--pet-progress-value, 0%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--pet-color-progress-normal), var(--pet-color-progress-happy));
+  transition: width var(--pet-transition-base);
+}
+
+.pet-progress--happy .pet-progress__fill {
+  background: linear-gradient(90deg, #7ee7a1, var(--pet-color-success));
+}
+
+.pet-progress--warning .pet-progress__fill {
+  background: linear-gradient(90deg, #ffd166, var(--pet-color-warning));
+}
+
+.pet-progress--danger .pet-progress__fill {
+  background: linear-gradient(90deg, #ff8a80, var(--pet-color-danger));
+}
+
+.pet-empty-state {
+  display: grid;
+  gap: var(--pet-space-2);
+  place-items: center;
+  text-align: center;
+  color: var(--pet-color-muted);
+}
+
+.pet-skeleton {
+  position: relative;
+  overflow: hidden;
+  min-height: 24px;
+  background: rgba(125, 107, 88, 0.08);
+}
+
+.pet-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  animation: pet-shimmer 1.4s ease-in-out infinite;
+}
+
+.pet-stat-card {
+  transition:
+    transform var(--pet-transition-fast),
+    box-shadow var(--pet-transition-fast);
+}
+
+.pet-stat-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--pet-shadow-md);
+}

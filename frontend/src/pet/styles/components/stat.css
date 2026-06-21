@@ -1,0 +1,15 @@
+.pet-stat-card {
+  display: grid;
+  gap: var(--pet-space-2);
+}
+
+.pet-stat-card__label {
+  color: var(--pet-color-muted);
+  font-size: 0.875rem;
+}
+
+.pet-stat-card__value {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+

@@ -1,0 +1,74 @@
+.u-hidden {
+  display: none !important;
+}
+
+.u-block {
+  display: block !important;
+}
+
+.u-inline-flex {
+  display: inline-flex !important;
+}
+
+.u-flex {
+  display: flex !important;
+}
+
+.u-grid {
+  display: grid !important;
+}
+
+.u-flex-center {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.u-items-center {
+  align-items: center !important;
+}
+
+.u-justify-between {
+  justify-content: space-between !important;
+}
+
+.u-gap-2 {
+  gap: var(--pet-space-2) !important;
+}
+
+.u-gap-3 {
+  gap: var(--pet-space-3) !important;
+}
+
+.u-gap-4 {
+  gap: var(--pet-space-4) !important;
+}
+
+.u-text-center {
+  text-align: center !important;
+}
+
+.u-text-muted {
+  color: var(--pet-color-muted) !important;
+}
+
+.u-overflow-hidden {
+  overflow: hidden !important;
+}
+
+.u-shadow-sm {
+  box-shadow: var(--pet-shadow-sm) !important;
+}
+
+.u-shadow-md {
+  box-shadow: var(--pet-shadow-md) !important;
+}
+
+.u-shadow-lg {
+  box-shadow: var(--pet-shadow-lg) !important;
+}
+
+.u-transition {
+  transition: all var(--pet-transition-base) !important;
+}
+

@@ -1,0 +1,73 @@
+:root {
+  --pet-font-sans: "Be Vietnam Pro", "Inter", sans-serif;
+  --pet-font-display: "Be Vietnam Pro", "Inter", sans-serif;
+
+  --pet-color-bg: #fffaf3;
+  --pet-color-surface: rgba(255, 255, 255, 0.92);
+  --pet-color-surface-strong: #ffffff;
+  --pet-color-border: rgba(125, 92, 58, 0.16);
+  --pet-color-text: #2f2416;
+  --pet-color-muted: #7d6b58;
+
+  --pet-color-primary: #6d8fe4;
+  --pet-color-primary-strong: #4971d8;
+  --pet-color-secondary: #f7b267;
+  --pet-color-accent: #71c9ce;
+  --pet-color-success: #4caf7a;
+  --pet-color-warning: #ffb347;
+  --pet-color-danger: #e76f51;
+  --pet-color-info: #4d96ff;
+
+  --pet-color-progress-happy: #6fd08c;
+  --pet-color-progress-normal: #7fa6ff;
+  --pet-color-progress-warning: #ffcc66;
+  --pet-color-progress-danger: #ff8a80;
+  --pet-color-popup: rgba(255, 255, 255, 0.98);
+
+  --pet-shadow-xs: 0 4px 12px rgba(57, 45, 34, 0.08);
+  --pet-shadow-sm: 0 8px 20px rgba(57, 45, 34, 0.12);
+  --pet-shadow-md: 0 16px 36px rgba(57, 45, 34, 0.16);
+  --pet-shadow-lg: 0 24px 64px rgba(57, 45, 34, 0.2);
+
+  --pet-radius-xs: 8px;
+  --pet-radius-sm: 12px;
+  --pet-radius-md: 16px;
+  --pet-radius-lg: 24px;
+  --pet-radius-xl: 32px;
+  --pet-radius-pill: 999px;
+
+  --pet-space-1: 4px;
+  --pet-space-2: 8px;
+  --pet-space-3: 12px;
+  --pet-space-4: 16px;
+  --pet-space-5: 20px;
+  --pet-space-6: 24px;
+  --pet-space-8: 32px;
+  --pet-space-10: 40px;
+  --pet-space-12: 48px;
+
+  --pet-transition-fast: 140ms ease;
+  --pet-transition-base: 220ms ease;
+  --pet-transition-slow: 320ms ease;
+
+  --pet-z-base: 1;
+  --pet-z-content: 10;
+  --pet-z-sticky: 100;
+  --pet-z-floating: 900;
+  --pet-z-overlay: 1200;
+  --pet-z-popup: 1300;
+  --pet-z-modal: 1400;
+
+  --pet-opacity-muted: 0.7;
+  --pet-opacity-overlay: 0.72;
+  --pet-blur-sm: 6px;
+  --pet-blur-md: 12px;
+  --pet-blur-lg: 20px;
+
+  --pet-glass-bg: rgba(255, 255, 255, 0.58);
+  --pet-glass-border: rgba(255, 255, 255, 0.58);
+
+  --pet-width-content: 1200px;
+  --pet-width-card: 360px;
+}
+

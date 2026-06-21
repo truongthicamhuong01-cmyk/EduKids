@@ -1,5 +1,6 @@
 require("dotenv").config();
 
+const crypto = require("crypto");
 const express = require("express");
 const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
@@ -8,10 +9,13 @@ const assignmentRoutes = require("./routes/assignmentRoutes");
 const classRoutes = require("./routes/classRoutes");
 const coachRoutes = require("./routes/coachRoutes");
 const learningPathRoutes = require("./routes/learningPathRoutes");
+const petRoutes = require("./routes/petRoutes");
+const shopRoutes = require("./routes/shopRoutes");
 const quizRoutes = require("./routes/quizRoutes");
 const userRoutes = require("./routes/userRoutes");
 const verifyToken = require("./middleware/verifyToken");
 const { db } = require("./firebase");
+const { buildErrorResponse } = require("./utils/petResponse");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -24,6 +28,11 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+  req.requestId = req.headers["x-request-id"] || crypto.randomUUID();
+  res.setHeader("X-Request-Id", req.requestId);
+  next();
+});
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -39,6 +48,8 @@ app.use("/api/classes", classRoutes);
 app.use("/api/coach", coachRoutes);
 app.use("/learning-path", learningPathRoutes);
 app.use("/api/learning-path", learningPathRoutes);
+app.use("/api/pet", petRoutes);
+app.use("/api/shop", shopRoutes);
 app.use("/api/quiz", quizRoutes);
 app.use("/api/users", userRoutes);
 
@@ -50,18 +61,30 @@ app.get("/api/me", verifyToken, (req, res) => {
 });
 
 app.use((req, res) => {
-  res.status(404).json({
-    success: false,
+  const { payload } = buildErrorResponse({
+    statusCode: 404,
+    errorCode: "ROUTE_NOT_FOUND",
     message: "Route not found",
+    details: {
+      path: req.originalUrl,
+    },
+    requestId: req.requestId || req.headers["x-request-id"] || "",
   });
+
+  return res.status(404).json(payload);
 });
 
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
-  res.status(statusCode).json({
-    success: false,
+  const { payload } = buildErrorResponse({
+    statusCode,
+    errorCode: err.errorCode || "INTERNAL_ERROR",
     message: err.message || "Internal server error",
+    details: err.details || null,
+    requestId: req.requestId || req.headers["x-request-id"] || "",
   });
+
+  return res.status(statusCode).json(payload);
 });
 
 app.listen(port, () => {

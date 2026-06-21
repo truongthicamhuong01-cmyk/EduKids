@@ -13,6 +13,7 @@ import "./services/systemSettingsService.js";
 import "./services/adminStatsService.js";
 import "./services/appReviewService.js";
 import "./services/topicAccuracyService.js";
+import "./pet/index.js";
 import { renderLearningPathPage } from "./pages/student/learning-path/learningPathPage.js";
 import { adaptLearningPathState } from "./data/learning-path/learningPathStateAdapter.js";
 import "./style.css";
@@ -7051,7 +7052,7 @@ function renderStudentRecentWrongAnswers(progress) {
   if (button) {
     button.setAttribute("type", "button");
     button.setAttribute("data-retry-later", "true");
-    button.setAttribute("title", "TODO: triển khai chức năng luyện lại sau");
+    button.setAttribute("title", "Chức năng luyện lại sẽ được hoàn thiện ở giai đoạn sau");
   }
 }
 
@@ -11852,14 +11853,6 @@ function renderTeacherAssignmentDetail() {
     ? stats.averageScore.toFixed(1)
     : "0.0";
 
-  console.log("[TeacherAssignmentDetail]", {
-    assignment,
-    questions: assignment?.questions,
-    submissions,
-    students: studentRows,
-    classes: classStudents,
-  });
-
   root.hidden = false;
   root.innerHTML = `
     <div class="teacher-assignment-detail-shell">
@@ -12550,8 +12543,6 @@ function openStudentAssignmentDetail(assignmentId) {
   if (!normalizedId) {
     return;
   }
-
-  console.log("[EduKids][student-assignment] open detail", normalizedId);
 
   const assignment =
     currentAssignments.find((item) => item.id === normalizedId) ||
@@ -15532,9 +15523,6 @@ function logTeacherDashboardStep(label, startTime = 0, details = "") {
       : 0;
 
   const suffix = details ? `: ${details}` : "";
-  console.log(
-    `[Dashboard] ${label}${suffix}${startTime > 0 ? ` (${elapsedMs}ms)` : ""}`,
-  );
 }
 
 function startTeacherDashboardTimer() {
@@ -20101,12 +20089,6 @@ function bindAppEventsOnce() {
 
     const pageTrigger = event.target.closest("[data-page]");
     if (pageTrigger?.dataset.page) {
-      console.log("[LearningPath][data-page]", {
-        page: pageTrigger?.dataset?.page,
-        className: pageTrigger?.className,
-        text: pageTrigger?.textContent,
-        outerHTML: pageTrigger?.outerHTML,
-      });
       changePage(pageTrigger.dataset.page);
       return;
     }

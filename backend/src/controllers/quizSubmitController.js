@@ -4,6 +4,7 @@ const successResponse = require("../utils/apiResponse");
 const { gradeQuizSubmission } = require("../services/quizGradeService");
 const { awardExp } = require("../services/progressService");
 const { findUserById } = require("../services/userService");
+const { rewardLessonComplete, rewardHighScore } = require("../services/rewardService");
 
 const submitQuiz = asyncHandler(async (req, res) => {
   if (!req.user) {
@@ -35,6 +36,18 @@ const submitQuiz = asyncHandler(async (req, res) => {
   const rewardTopicKey = String(result?.topicId || quizId || "").trim();
   const quizRewardId = `topic:${rewardTopicKey}:${userId}`;
   const awardResult = await awardExp(userId, 30, "Topic Learning", quizRewardId).catch(() => null);
+  await rewardLessonComplete({
+    userId,
+    sourceId: `quiz:${quizId}`,
+    idempotencyKey: `lesson:${quizId}:${userId}`,
+  }).catch(() => null);
+
+  await rewardHighScore({
+    userId,
+    sourceId: `quiz:${quizId}`,
+    score: Number(result?.score || 0),
+    idempotencyKey: `high-score:${quizId}:${userId}`,
+  }).catch(() => null);
   const latestProfile = awardResult?.user || (await findUserById(userId).catch(() => null));
 
   return successResponse(res, 200, "Quiz submitted successfully", {

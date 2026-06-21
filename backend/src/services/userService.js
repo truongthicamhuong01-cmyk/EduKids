@@ -37,6 +37,9 @@ function getDefaultStats(role) {
     lastStudyDate: null,
     completedQuestions: 0,
     studyMinutes: 0,
+    eduCoin: 0,
+    totalEduCoinEarned: 0,
+    totalEduCoinSpent: 0,
   };
 }
 

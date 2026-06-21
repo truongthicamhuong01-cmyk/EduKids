@@ -1,0 +1,79 @@
+.pet-btn {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--pet-space-2);
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border: 0;
+  border-radius: var(--pet-radius-pill);
+  background: var(--pet-color-surface-strong);
+  color: var(--pet-color-text);
+  box-shadow: var(--pet-shadow-xs);
+  transition:
+    transform var(--pet-transition-fast),
+    box-shadow var(--pet-transition-fast),
+    background var(--pet-transition-fast),
+    color var(--pet-transition-fast);
+}
+
+.pet-btn:hover {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: var(--pet-shadow-sm);
+}
+
+.pet-btn:active {
+  transform: translateY(0);
+}
+
+.pet-btn--primary {
+  background: linear-gradient(135deg, var(--pet-color-primary) 0%, var(--pet-color-primary-strong) 100%);
+  color: #fff;
+}
+
+.pet-btn--secondary {
+  background: rgba(109, 143, 228, 0.12);
+  color: var(--pet-color-primary-strong);
+}
+
+.pet-btn--ghost {
+  background: transparent;
+  box-shadow: none;
+}
+
+.pet-btn--icon {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+
+.pet-btn:disabled,
+.pet-btn[aria-disabled="true"] {
+  transform: none;
+  box-shadow: none;
+  opacity: 0.68;
+  cursor: not-allowed;
+}
+
+.pet-btn::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 140%;
+  height: 140%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.45) 0, rgba(255, 255, 255, 0.18) 34%, transparent 70%);
+  transform: translate(-50%, -50%) scale(0.25);
+  opacity: 0;
+  transition:
+    opacity var(--pet-transition-fast),
+    transform var(--pet-transition-fast);
+  pointer-events: none;
+}
+
+.pet-btn:active::after {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}

@@ -1,0 +1,12 @@
+.pet-theme,
+[data-pet-theme] {
+  color: var(--pet-color-text);
+  background: transparent;
+}
+
+.pet-theme--glass {
+  background: var(--pet-glass-bg);
+  backdrop-filter: blur(var(--pet-blur-md));
+  border: 1px solid var(--pet-glass-border);
+}
+

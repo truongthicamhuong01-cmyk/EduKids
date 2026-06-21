@@ -14,6 +14,7 @@ const {
   applySubmissionResultToAssignment,
 } = require("../services/assignmentService");
 const { awardExp } = require("../services/progressService");
+const { rewardAssignment, rewardHighScore } = require("../services/rewardService");
 
 function uniqueStrings(values) {
   return Array.from(
@@ -216,6 +217,17 @@ const submitAssignment = asyncHandler(async (req, res) => {
     "Assignment",
     `assignment:${assignmentId}:${userId}`,
   ).catch(() => null);
+  await rewardAssignment({
+    userId,
+    sourceId: `assignment:${assignmentId}`,
+    idempotencyKey: `assignment:${assignmentId}:${userId}`,
+  }).catch(() => null);
+  await rewardHighScore({
+    userId,
+    sourceId: `assignment:${assignmentId}`,
+    score: Number(submission.score || 0),
+    idempotencyKey: `assignment-high:${assignmentId}:${userId}`,
+  }).catch(() => null);
 
   console.log("[EduKids][assignmentController] submitAssignment success", {
     assignmentId,

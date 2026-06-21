@@ -1,16 +1,25 @@
 const jwt = require("jsonwebtoken");
 const { db } = require("../firebase");
 const { readSystemSettings } = require("../services/systemSettingsService");
+const { buildErrorResponse } = require("../utils/petResponse");
+
+async function sendAuthError(res, req, statusCode, errorCode, message) {
+  const { payload } = buildErrorResponse({
+    statusCode,
+    errorCode,
+    message,
+    requestId: req.requestId || req.headers["x-request-id"] || "",
+  });
+
+  return res.status(statusCode).json(payload);
+}
 
 async function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
   if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: "Access token is required",
-    });
+    return sendAuthError(res, req, 401, "UNAUTHORIZED", "Access token is required");
   }
 
   try {
@@ -22,41 +31,33 @@ async function verifyToken(req, res, next) {
       const userSnapshot = await db.collection("users").doc(String(decoded.uid)).get();
 
       if (!userSnapshot.exists) {
-        return res.status(401).json({
-          success: false,
-          message: "User account not found",
-        });
+        return sendAuthError(res, req, 401, "UNAUTHORIZED", "User account not found");
       }
 
       const status = String(userSnapshot.data()?.status || "active").toLowerCase();
 
       if (status === "locked") {
-        return res.status(403).json({
-          success: false,
-          message: "Account is locked",
-        });
+        return sendAuthError(res, req, 403, "FORBIDDEN", "Account is locked");
       }
 
       const systemSettings = await readSystemSettings().catch(() => null);
       const role = String(userSnapshot.data()?.role || decoded.role || "").toLowerCase();
 
       if (systemSettings?.maintenance?.enabled && role !== "admin") {
-        return res.status(503).json({
-          success: false,
-          message:
-            systemSettings.maintenance.message ||
-            "Hệ thống đang bảo trì, vui lòng quay lại sau.",
-        });
+        return sendAuthError(
+          res,
+          req,
+          503,
+          "SYSTEM_MAINTENANCE",
+          systemSettings.maintenance.message || "Hệ thống đang bảo trì, vui lòng quay lại sau.",
+        );
       }
     }
 
     req.user = decoded;
     return next();
   } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: "Invalid or expired token",
-    });
+    return sendAuthError(res, req, 401, "UNAUTHORIZED", "Invalid or expired token");
   }
 }
 
