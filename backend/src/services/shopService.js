@@ -67,7 +67,9 @@ async function getShop({ uid, requestId = "" }) {
   ]);
 
   if (!catalog) {
-    throw new ApiError(500, "Shop Catalog không tồn tại", PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND);
+    throw new ApiError(404, "Shop Catalog không tồn tại", PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND, {
+      missingDocs: ["shopCatalog"],
+    });
   }
 
   const userLevel = resolvePetLevel(user, petState);
@@ -112,7 +114,9 @@ async function buyItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
 
   const catalog = await readConfigDoc("shopCatalog");
   if (!catalog) {
-    throw new ApiError(500, "Shop Catalog không tồn tại", PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND);
+    throw new ApiError(404, "Shop Catalog không tồn tại", PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND, {
+      missingDocs: ["shopCatalog"],
+    });
   }
 
   const itemConfig = getItemMap(catalog)[itemId];

@@ -190,12 +190,14 @@ async function grantReward({
 
   const rewardConfig = await readConfigDoc("rewardConfig");
   if (!rewardConfig) {
-    throw new ApiError(500, "Reward Config không tồn tại", PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND);
+    throw new ApiError(404, "Reward Config không tồn tại", PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND, {
+      missingDocs: ["rewardConfig"],
+    });
   }
 
   const rule = normalizeRewardRule(rewardRule || getRewardRule(rewardConfig, normalizedRuleKey));
   if (!rule) {
-    throw new ApiError(500, "Reward rule không tồn tại", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
+    throw new ApiError(422, "Reward rule không tồn tại", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
       ruleKey: normalizedRuleKey,
     });
   }
@@ -337,12 +339,14 @@ async function rewardAssignment({ userId, sourceId, requestId = "", idempotencyK
 async function rewardHighScore({ userId, sourceId, score = 0, requestId = "", idempotencyKey = "" }) {
   const rewardConfig = await readConfigDoc("rewardConfig");
   if (!rewardConfig) {
-    throw new ApiError(500, "Reward Config không tồn tại", PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND);
+    throw new ApiError(404, "Reward Config không tồn tại", PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND, {
+      missingDocs: ["rewardConfig"],
+    });
   }
 
   const rule = getRewardRule(rewardConfig, "highScore");
   if (!rule) {
-    throw new ApiError(500, "Reward highScore không tồn tại", PET_ERROR_CODES.INVALID_GAME_CONFIG);
+    throw new ApiError(422, "Reward highScore không tồn tại", PET_ERROR_CODES.INVALID_GAME_CONFIG);
   }
 
   const minimumScore = Math.max(0, Math.floor(toNumber(rule.minScore, 9)));
@@ -378,7 +382,9 @@ async function rewardHighScore({ userId, sourceId, score = 0, requestId = "", id
 async function rewardLearningStreak({ userId, sourceId, streak = 0, requestId = "", idempotencyKey = "" }) {
   const rewardConfig = await readConfigDoc("rewardConfig");
   if (!rewardConfig) {
-    throw new ApiError(500, "Reward Config không tồn tại", PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND);
+    throw new ApiError(404, "Reward Config không tồn tại", PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND, {
+      missingDocs: ["rewardConfig"],
+    });
   }
 
   const rule = getLearningStreakRule(rewardConfig, streak);
