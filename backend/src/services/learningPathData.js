@@ -144,72 +144,45 @@ const SUMMIT_CHECKPOINT_POSITION = { left: 41.7, top: 11.25, side: "left" };
 const SUMMIT_CARD_POSITION = { left: 67.5, top: 19.5 };
 const PEAK_POSITION = SUMMIT_CHECKPOINT_POSITION;
 
+function formatLearningPathMeters(value) {
+  const meters = Number(value);
+
+  if (!Number.isFinite(meters)) {
+    return "0 m";
+  }
+
+  return `${Math.round(meters).toLocaleString("vi-VN")} m`;
+}
+
+function getSummitHeightMeters(blueprint) {
+  const explicitHeight = Number(blueprint?.summitHeight);
+  if (Number.isFinite(explicitHeight)) {
+    return Math.max(0, Math.round(explicitHeight));
+  }
+
+  const parsedHeight = Number(String(blueprint?.height || "").replace(/[^\d]/g, ""));
+  return Number.isFinite(parsedHeight) ? Math.max(0, Math.round(parsedHeight)) : 0;
+}
+
+function getCheckpointAltitudeLabel(summitHeightMeters, checkpointNumber) {
+  if (checkpointNumber === 0) {
+    return "0 m";
+  }
+
+  if (checkpointNumber === 6) {
+    return formatLearningPathMeters(summitHeightMeters);
+  }
+
+  return formatLearningPathMeters((summitHeightMeters * checkpointNumber) / 6);
+}
+
 const MOUNTAIN_BLUEPRINTS = [
-  {
-    id: "everest",
-    name: "Everest",
-    continent: "Asia",
-    height: "8.848 m",
-    description: "Ngọn núi cao nhất thế giới, nằm trên dãy Himalaya hùng vĩ.",
-    image: "/assets/learning-path/icon/icon-everest.png.jpg",
-    icon: "/assets/learning-path/icon/icon-everest.png.jpg",
-    backgroundImage: "/assets/learning-path/backgrounds/bg-everest.png",
-    badgeImage: "/assets/learning-path/badges/badge-everest.png",
-    badgeName: "Huy hiệu Everest",
-  },
-  {
-    id: "kilimanjaro",
-    name: "Kilimanjaro",
-    continent: "Africa",
-    height: "5.895 m",
-    description: "Ngọn núi lửa cao nhất châu Phi, nổi bật trên thảo nguyên.",
-    image: "/assets/learning-path/icon/icon-kilimanjaro.png.jpg",
-    icon: "/assets/learning-path/icon/icon-kilimanjaro.png.jpg",
-    backgroundImage: "/assets/learning-path/backgrounds/bg-kilimanjaro.png",
-    badgeImage: "/assets/learning-path/badges/badge-kilimanjaro.png",
-    badgeName: "Huy hiệu Kilimanjaro",
-  },
-  {
-    id: "elbrus",
-    name: "Elbrus",
-    continent: "Europe",
-    height: "5.642 m",
-    description: "Đỉnh núi cao nhất châu Âu, phủ tuyết trắng quanh năm.",
-    image: "/assets/learning-path/icon/icon-elbrus.png.jpg",
-    icon: "/assets/learning-path/icon/icon-elbrus.png.jpg",
-    backgroundImage: "/assets/learning-path/backgrounds/bg-elbrus.png",
-    badgeImage: "/assets/learning-path/badges/badge-elbrus.png",
-    badgeName: "Huy hiệu Elbrus",
-  },
-  {
-    id: "denali",
-    name: "Denali",
-    continent: "North America",
-    height: "6.190 m",
-    description: "Đỉnh núi khắc nghiệt, biểu tượng của Alaska.",
-    image: "/assets/learning-path/icon/icon-denali.png.jpg",
-    icon: "/assets/learning-path/icon/icon-denali.png.jpg",
-    backgroundImage: "/assets/learning-path/backgrounds/bg-denali.png",
-    badgeImage: "/assets/learning-path/badges/badge-denali.png",
-    badgeName: "Huy hiệu Denali",
-  },
-  {
-    id: "aconcagua",
-    name: "Aconcagua",
-    continent: "South America",
-    height: "6.961 m",
-    description: "Đỉnh cao nhất dãy Andes, thử thách bền bỉ và ý chí.",
-    image: "/assets/learning-path/icon/icon-aconcagua.png.jpg",
-    icon: "/assets/learning-path/icon/icon-aconcagua.png.jpg",
-    backgroundImage: "/assets/learning-path/backgrounds/bg-aconcagua.png",
-    badgeImage: "/assets/learning-path/badges/badge-aconcagua.png",
-    badgeName: "Huy hiệu Aconcagua",
-  },
   {
     id: "puncak-jaya",
     name: "Puncak Jaya",
     continent: "Oceania",
-    height: "4.884 m",
+    summitHeight: 4884,
+    height: formatLearningPathMeters(4884),
     description: "Đỉnh núi đặc biệt giữa vùng nhiệt đới và băng tuyết.",
     image: "/assets/learning-path/icon/icon-puncak-jaya.png.jpg",
     icon: "/assets/learning-path/icon/icon-puncak-jaya.png.jpg",
@@ -221,7 +194,8 @@ const MOUNTAIN_BLUEPRINTS = [
     id: "vinson-massif",
     name: "Vinson Massif",
     continent: "Antarctica",
-    height: "4.892 m",
+    summitHeight: 4892,
+    height: formatLearningPathMeters(4892),
     description: "Đỉnh cao nhất Nam Cực, nơi lạnh giá và cô lập nhất.",
     image: "/assets/learning-path/icon/icon-vinson-massif.png.jpg",
     icon: "/assets/learning-path/icon/icon-vinson-massif.png.jpg",
@@ -229,7 +203,73 @@ const MOUNTAIN_BLUEPRINTS = [
     badgeImage: "/assets/learning-path/badges/badge-vinson-massif.png",
     badgeName: "Huy hiệu Vinson Massif",
   },
+  {
+    id: "elbrus",
+    name: "Elbrus",
+    continent: "Europe",
+    summitHeight: 5642,
+    height: formatLearningPathMeters(5642),
+    description: "Đỉnh núi cao nhất châu Âu, phủ tuyết trắng quanh năm.",
+    image: "/assets/learning-path/icon/icon-elbrus.png.jpg",
+    icon: "/assets/learning-path/icon/icon-elbrus.png.jpg",
+    backgroundImage: "/assets/learning-path/backgrounds/bg-elbrus.png",
+    badgeImage: "/assets/learning-path/badges/badge-elbrus.png",
+    badgeName: "Huy hiệu Elbrus",
+  },
+  {
+    id: "kilimanjaro",
+    name: "Kilimanjaro",
+    continent: "Africa",
+    summitHeight: 5895,
+    height: formatLearningPathMeters(5895),
+    description: "Ngọn núi lửa cao nhất châu Phi, nổi bật trên thảo nguyên.",
+    image: "/assets/learning-path/icon/icon-kilimanjaro.png.jpg",
+    icon: "/assets/learning-path/icon/icon-kilimanjaro.png.jpg",
+    backgroundImage: "/assets/learning-path/backgrounds/bg-kilimanjaro.png",
+    badgeImage: "/assets/learning-path/badges/badge-kilimanjaro.png",
+    badgeName: "Huy hiệu Kilimanjaro",
+  },
+  {
+    id: "denali",
+    name: "Denali",
+    continent: "North America",
+    summitHeight: 6190,
+    height: formatLearningPathMeters(6190),
+    description: "Đỉnh núi khắc nghiệt, biểu tượng của Alaska.",
+    image: "/assets/learning-path/icon/icon-denali.png.jpg",
+    icon: "/assets/learning-path/icon/icon-denali.png.jpg",
+    backgroundImage: "/assets/learning-path/backgrounds/bg-denali.png",
+    badgeImage: "/assets/learning-path/badges/badge-denali.png",
+    badgeName: "Huy hiệu Denali",
+  },
+  {
+    id: "aconcagua",
+    name: "Aconcagua",
+    continent: "South America",
+    summitHeight: 6961,
+    height: formatLearningPathMeters(6961),
+    description: "Đỉnh cao nhất dãy Andes, thử thách bền bỉ và ý chí.",
+    image: "/assets/learning-path/icon/icon-aconcagua.png.jpg",
+    icon: "/assets/learning-path/icon/icon-aconcagua.png.jpg",
+    backgroundImage: "/assets/learning-path/backgrounds/bg-aconcagua.png",
+    badgeImage: "/assets/learning-path/badges/badge-aconcagua.png",
+    badgeName: "Huy hiệu Aconcagua",
+  },
+  {
+    id: "everest",
+    name: "Everest",
+    continent: "Asia",
+    summitHeight: 8849,
+    height: formatLearningPathMeters(8849),
+    description: "Ngọn núi cao nhất thế giới, nằm trên dãy Himalaya hùng vĩ.",
+    image: "/assets/learning-path/icon/icon-everest.png.jpg",
+    icon: "/assets/learning-path/icon/icon-everest.png.jpg",
+    backgroundImage: "/assets/learning-path/backgrounds/bg-everest.png",
+    badgeImage: "/assets/learning-path/badges/badge-everest.png",
+    badgeName: "Huy hiệu Everest",
+  },
 ];
+
 
 function getTaskBlueprint(taskKey) {
   return TASK_BLUEPRINTS.find((task) => task.idSuffix === taskKey) || null;
@@ -389,6 +429,8 @@ function createMountain(blueprint, index) {
     }),
   ];
 
+  const summitHeightMeters = getSummitHeightMeters(blueprint);
+
   const checkpoints = [
     createCheckpoint({
       mountainId: blueprint.id,
@@ -396,7 +438,7 @@ function createMountain(blueprint, index) {
       checkpointNumber: 0,
       title: "Xuất Phát",
       type: "station",
-      altitude: "0 m",
+      altitude: getCheckpointAltitudeLabel(summitHeightMeters, 0),
       position: ROUTE_POSITIONS[0],
       reward: stationRewards[0],
       taskKeys: ["login", "study-15"],
@@ -407,7 +449,7 @@ function createMountain(blueprint, index) {
       mountainName: blueprint.name,
       checkpointNumber: 1,
       type: "station",
-      altitude: "1.000 m",
+      altitude: getCheckpointAltitudeLabel(summitHeightMeters, 1),
       position: ROUTE_POSITIONS[1],
       reward: stationRewards[1],
       taskKeys: ["lesson-1", "quiz-1", "study-30"],
@@ -418,7 +460,7 @@ function createMountain(blueprint, index) {
       mountainName: blueprint.name,
       checkpointNumber: 2,
       type: "station",
-      altitude: "2.500 m",
+      altitude: getCheckpointAltitudeLabel(summitHeightMeters, 2),
       position: ROUTE_POSITIONS[2],
       reward: stationRewards[2],
       taskKeys: ["assignment-1", "lesson-1", "quiz-2"],
@@ -429,7 +471,7 @@ function createMountain(blueprint, index) {
       mountainName: blueprint.name,
       checkpointNumber: 3,
       type: "station",
-      altitude: "4.000 m",
+      altitude: getCheckpointAltitudeLabel(summitHeightMeters, 3),
       position: ROUTE_POSITIONS[3],
       reward: stationRewards[3],
       taskKeys: ["coach-1", "study-30", "quiz-1"],
@@ -440,7 +482,7 @@ function createMountain(blueprint, index) {
       mountainName: blueprint.name,
       checkpointNumber: 4,
       type: "station",
-      altitude: "5.500 m",
+      altitude: getCheckpointAltitudeLabel(summitHeightMeters, 4),
       position: ROUTE_POSITIONS[4],
       reward: stationRewards[4],
       taskKeys: ["lesson-2", "assignment-1", "study-45", "quiz-1"],
@@ -451,7 +493,7 @@ function createMountain(blueprint, index) {
       mountainName: blueprint.name,
       checkpointNumber: 5,
       type: "station",
-      altitude: "7.000 m",
+      altitude: getCheckpointAltitudeLabel(summitHeightMeters, 5),
       position: ROUTE_POSITIONS[5],
       reward: stationRewards[5],
       taskKeys: ["coach-1", "quiz-2", "assignment-2", "study-60"],
@@ -463,7 +505,7 @@ function createMountain(blueprint, index) {
       checkpointNumber: 6,
       title: "Đỉnh Núi",
       type: "summit",
-      altitude: blueprint.height,
+      altitude: getCheckpointAltitudeLabel(summitHeightMeters, 6),
       summitCheckpointPosition: SUMMIT_CHECKPOINT_POSITION,
       summitCardPosition: SUMMIT_CARD_POSITION,
       reward: createReward({
@@ -515,8 +557,8 @@ const season1 = {
 
 const season1Progress = {
   currentSeason: season1.id,
-  currentMountain: "everest",
-  currentCheckpoint: "everest-start",
+  currentMountain: "puncak-jaya",
+  currentCheckpoint: "puncak-jaya-start",
   completedTasks: [],
   earnedXu: 0,
   earnedExp: 0,

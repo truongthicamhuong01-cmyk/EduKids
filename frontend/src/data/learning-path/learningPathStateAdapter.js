@@ -1,6 +1,6 @@
 import { season1 } from "./season1.js";
 
-const DEFAULT_CURRENT_CHECKPOINT_ID = String(season1.mountains?.[0]?.checkpoints?.[0]?.id || "everest-start");
+const DEFAULT_CURRENT_CHECKPOINT_ID = String(season1.mountains?.[0]?.checkpoints?.[0]?.id || "puncak-jaya-start");
 
 function cloneValue(value) {
   if (typeof structuredClone === "function") {

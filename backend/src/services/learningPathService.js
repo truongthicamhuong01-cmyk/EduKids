@@ -8,7 +8,7 @@ const { getLocalDateKey, getLocalWeekKey } = require("../utils/dateUtils");
 const learningPathProgressRoot = db.collection("learningPathProgress");
 const userProgressRoot = db.collection("user_progress");
 const aiUsageLogsRoot = db.collection("ai_usage_logs");
-const DEFAULT_CURRENT_CHECKPOINT_ID = String(season1.mountains?.[0]?.checkpoints?.[0]?.id || "everest-start");
+const DEFAULT_CURRENT_CHECKPOINT_ID = String(season1.mountains?.[0]?.checkpoints?.[0]?.id || "puncak-jaya-start");
 
 function getLearningPathDocRef(userId) {
   return learningPathProgressRoot.doc(userId);

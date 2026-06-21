@@ -7,7 +7,7 @@ const CHECKPOINT_STATE = {
   COMPLETED: "COMPLETED",
 };
 
-const DEFAULT_CURRENT_CHECKPOINT_ID = String(season1.mountains?.[0]?.checkpoints?.[0]?.id || "everest-start");
+const DEFAULT_CURRENT_CHECKPOINT_ID = String(season1.mountains?.[0]?.checkpoints?.[0]?.id || "puncak-jaya-start");
 
 const TASK_STATE = {
   DONE: "DONE",
