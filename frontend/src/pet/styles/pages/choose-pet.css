@@ -3,7 +3,6 @@
   width: 100%;
   min-height: 100%;
   overflow-x: hidden;
-  overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   color: #4a2f13;

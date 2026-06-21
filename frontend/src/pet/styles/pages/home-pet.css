@@ -68,9 +68,6 @@
   grid-template-rows: auto minmax(0, 1fr) auto;
   min-height: 100%;
   padding: 1.15rem 1.4rem 1.25rem;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
 }
 
 .pet-home-topbar {
