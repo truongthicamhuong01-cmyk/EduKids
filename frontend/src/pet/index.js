@@ -62,8 +62,8 @@ const shopPage = createShopPage({
 let petNavigationBound = false;
 let petUiBootstrapped = false;
 
-if (assetAudit?.issues?.length > 0) {
-  console.warn("[EduKids][Pet][Assets] audit issues", assetAudit.issues);
+if (assetAudit?.issues?.length > 0 && import.meta.env.DEV) {
+  console.debug("[EduKids][Pet][Assets] audit issues", assetAudit.issues);
 }
 
 function renderAll(state) {
@@ -180,6 +180,10 @@ function showPetModule() {
   }
 
   choosePetPage.show();
+
+  if (snapshot?.hasPet !== false) {
+    void choosePetPage.initialize().catch(() => {});
+  }
 }
 
 function hidePetModule() {

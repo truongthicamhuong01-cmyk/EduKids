@@ -147,6 +147,7 @@ function createDefaultState() {
     visible: false,
     initialized: false,
     openToken: 0,
+    loadPromise: null,
     loadingInventory: false,
     playingItemId: "",
     items: [],
@@ -808,8 +809,16 @@ export function createInventoryPage({ store, petApi, inventoryApi } = {}) {
     setBodyActive(true);
 
     if (!state.initialized || forceReload) {
-      await loadInventory();
-      state.initialized = true;
+      if (!forceReload && state.loadPromise) {
+        await state.loadPromise;
+      } else {
+        state.loadPromise = loadInventory()
+          .finally(() => {
+            state.loadPromise = null;
+            state.initialized = true;
+          });
+        await state.loadPromise;
+      }
     }
 
     if (state.openToken !== openToken || !state.visible) {

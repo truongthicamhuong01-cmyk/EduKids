@@ -126,6 +126,7 @@ function createDefaultState() {
     visible: false,
     initialized: false,
     openToken: 0,
+    loadPromise: null,
     loadingCatalog: false,
     buyingItemId: "",
     items: [],
@@ -1022,8 +1023,16 @@ export function createShopPage({ store, shopApi } = {}) {
     setBodyActive(true);
 
     if (!state.initialized || forceReload) {
-      await loadShop();
-      state.initialized = true;
+      if (!forceReload && state.loadPromise) {
+        await state.loadPromise;
+      } else {
+        state.loadPromise = loadShop()
+          .finally(() => {
+            state.loadPromise = null;
+            state.initialized = true;
+          });
+        await state.loadPromise;
+      }
     }
 
     if (state.openToken !== openToken || !state.visible) {

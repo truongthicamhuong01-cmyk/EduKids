@@ -437,6 +437,14 @@ function getPetModuleApi() {
   return window.EduKidsPet || null;
 }
 
+function resetPetModuleState() {
+  const pet = getPetModuleApi();
+
+  if (typeof pet?.store?.reset === "function") {
+    pet.store.reset();
+  }
+}
+
 function hidePetModulePages() {
   const pet = getPetModuleApi();
   if (typeof pet?.hidePetModule !== "function") {
@@ -18763,6 +18771,7 @@ function handleLogout() {
   clearSessionUser();
   setAdminPassword("");
   window.EduKidsCurrentUser = null;
+  resetPetModuleState();
 
   const authRoot = getAuthContainer();
 
@@ -20294,6 +20303,10 @@ function initApp(user) {
     user.uid || user.userId || user.id || user.username || user.email || "",
   ).trim();
 
+  if (bootstrapState.initializedUid && bootstrapState.initializedUid !== identityKey) {
+    resetPetModuleState();
+  }
+
   bootstrapState.initializedUid = identityKey;
   bootstrapState.currentUser = user;
 
@@ -20304,18 +20317,6 @@ function initApp(user) {
     user.role,
   );
   changePage(targetPageId);
-
-  if (targetPageId === "pet" && normalizeRole(user.role) === "student") {
-    void ensurePetModuleLoaded()
-      .then(() => {
-        if (currentPage === "pet") {
-          showPetModulePage();
-        }
-      })
-      .catch((error) => {
-        console.warn("Không thể khởi tạo Pet module:", error);
-      });
-  }
 
   if (routePageId && targetPageId !== routePageId) {
     window.history.replaceState({}, "", "/");

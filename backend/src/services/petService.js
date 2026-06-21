@@ -260,6 +260,7 @@ function buildPetResponse(petState, configs, extra = {}) {
       stage,
       mood,
     },
+    hasPet: true,
     derivedState: {
       mood,
       stage,

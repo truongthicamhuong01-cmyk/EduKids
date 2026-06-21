@@ -89,7 +89,7 @@ const levelConfig = {
 const evolutionConfig = {
   version: "1.0.0",
   defaultStage: "baby",
-  petTypes: ["horse", "cat", "dog"],
+  petTypes: ["horse", "elephant", "cat", "dog"],
   stages: [
     { id: "baby", minLevel: 1, minHealth: 0, minHappiness: 0, minHunger: 0 },
     { id: "young", minLevel: 10, minHealth: 60, minHappiness: 50, minHunger: 40 },
@@ -100,6 +100,16 @@ const evolutionConfig = {
   ],
   byPetType: {
     horse: {
+      stages: [
+        { id: "baby", minLevel: 1, minHealth: 0, minHappiness: 0, minHunger: 0 },
+        { id: "young", minLevel: 10, minHealth: 60, minHappiness: 50, minHunger: 40 },
+        { id: "teen", minLevel: 20, minHealth: 65, minHappiness: 55, minHunger: 45 },
+        { id: "hero", minLevel: 35, minHealth: 70, minHappiness: 60, minHunger: 50 },
+        { id: "legend", minLevel: 50, minHealth: 75, minHappiness: 65, minHunger: 55 },
+        { id: "mythic", minLevel: 80, minHealth: 80, minHappiness: 70, minHunger: 60 },
+      ],
+    },
+    elephant: {
       stages: [
         { id: "baby", minLevel: 1, minHealth: 0, minHappiness: 0, minHunger: 0 },
         { id: "young", minLevel: 10, minHealth: 60, minHappiness: 50, minHunger: 40 },

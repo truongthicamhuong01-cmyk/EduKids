@@ -180,6 +180,7 @@ export function createChoosePetPage({
     visible: false,
     initialized: false,
     mounted: false,
+    loadPromise: null,
     errorMessage: "",
   };
 
@@ -450,13 +451,18 @@ export function createChoosePetPage({
     } catch (error) {
       const errorCode = String(error?.errorCode || error?.payload?.errorCode || "").trim();
       if (errorCode === "PET_NOT_FOUND") {
+        if (typeof store?.reset === "function") {
+          store.reset();
+        }
+
+        if (typeof store?.setState === "function") {
+          store.setState({ hasPet: false, pet: null }, "PET_UPDATED");
+        }
+
         state.visible = true;
         root.hidden = false;
         setBodyActive(true);
         renderOptions();
-        if (store?.setState) {
-          store.setState({ hasPet: false, pet: null });
-        }
         return;
       }
 
@@ -464,7 +470,6 @@ export function createChoosePetPage({
       showError(normalized.message);
     } finally {
       setLoading(false);
-      state.initialized = true;
     }
   }
 
@@ -498,9 +503,20 @@ export function createChoosePetPage({
   }
 
   async function initialize() {
-    state.initialized = false;
     mount();
-    await loadPetState();
+
+    if (state.loadPromise) {
+      return state.loadPromise;
+    }
+
+    state.initialized = false;
+    state.loadPromise = loadPetState()
+      .finally(() => {
+        state.loadPromise = null;
+        state.initialized = true;
+      });
+
+    return state.loadPromise;
   }
 
   function destroy() {
