@@ -410,12 +410,19 @@ async function seedDoc(docId, data) {
   console.log(`[seed-pet] wrote gameConfig/${docId}`);
 }
 
+const SEED_DOCS = [
+  ["petBalance", petBalance],
+  ["levelConfig", levelConfig],
+  ["evolutionConfig", evolutionConfig],
+  ["shopCatalog", shopCatalog],
+  ["rewardConfig", rewardConfig],
+];
+
 async function main() {
-  await seedDoc("petBalance", petBalance);
-  await seedDoc("levelConfig", levelConfig);
-  await seedDoc("evolutionConfig", evolutionConfig);
-  await seedDoc("shopCatalog", shopCatalog);
-  await seedDoc("rewardConfig", rewardConfig);
+  for (const [docId, data] of SEED_DOCS) {
+    await seedDoc(docId, data);
+  }
+
   console.log("[seed-pet] done");
 }
 

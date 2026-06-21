@@ -173,7 +173,8 @@ function showPetModule() {
   bootstrapPetModule();
   hidePetModule();
 
-  if (petStore.getState()?.pet) {
+  const snapshot = petStore.getState();
+  if (snapshot?.hasPet === true && snapshot.pet) {
     homePetPage.show();
     return;
   }

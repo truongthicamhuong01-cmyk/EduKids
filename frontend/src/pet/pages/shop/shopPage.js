@@ -137,6 +137,8 @@ function createDefaultState() {
     toastMessage: "",
     toastTimer: null,
     errorMessage: "",
+    emptyTitle: "Shop chÆ°a cĂ³ váº­t pháº©m.",
+    emptyMessage: "HĂ£y quay láº¡i sau nhĂ©.",
     lastCoinValue: null,
   };
 }
@@ -308,6 +310,25 @@ export function createShopPage({ store, shopApi } = {}) {
     const refs = getRefs();
     if (refs.error) {
       refs.error.hidden = true;
+    }
+  }
+
+  function setEmptyState(title, message) {
+    state.emptyTitle = String(title || "Shop chÆ°a cĂ³ váº­t pháº©m.");
+    state.emptyMessage = String(message || "HĂ£y quay láº¡i sau nhĂ©.");
+
+    const refs = getRefs();
+    if (refs.empty) {
+      const titleEl = refs.empty.querySelector("strong");
+      const messageEl = refs.empty.querySelector("p");
+
+      if (titleEl) {
+        titleEl.textContent = state.emptyTitle;
+      }
+
+      if (messageEl) {
+        messageEl.textContent = state.emptyMessage;
+      }
     }
   }
 
@@ -700,6 +721,19 @@ export function createShopPage({ store, shopApi } = {}) {
     refs.empty.hidden = hasItems;
     refs.grid.hidden = !hasItems;
 
+    if (refs.empty) {
+      const titleEl = refs.empty.querySelector("strong");
+      const messageEl = refs.empty.querySelector("p");
+
+      if (titleEl) {
+        titleEl.textContent = state.emptyTitle;
+      }
+
+      if (messageEl) {
+        messageEl.textContent = state.emptyMessage;
+      }
+    }
+
     if (!hasItems) {
       refs.grid.innerHTML = "";
       return;
@@ -874,11 +908,25 @@ export function createShopPage({ store, shopApi } = {}) {
     try {
       const response = await shopApi.getShop();
       syncStateFromShopResponse(response);
+      setEmptyState("Shop chÆ°a cĂ³ váº­t pháº©m.", "HĂ£y quay láº¡i sau nhĂ©.");
       if (store?.applyBackendResponse) {
         store.applyBackendResponse(response, "shop-load");
       }
     } catch (error) {
       const normalized = normalizeError(error);
+      if (normalized.errorCode === "GAME_CONFIG_NOT_FOUND") {
+        state.items = [];
+        state.categories = [];
+        state.selectedCategory = "";
+        setEmptyState(
+          "Cá»­a hĂ ng hiá»‡n chÆ°a Ä‘Æ°á»£c cáº¥u hĂ¬nh.",
+          "HĂ£y quay láº¡i sau nhĂ©.",
+        );
+        hideError();
+        render(store?.getState?.() || {});
+        return;
+      }
+
       showError(normalized.message);
       throw error;
     } finally {

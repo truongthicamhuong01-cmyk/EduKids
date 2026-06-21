@@ -115,6 +115,9 @@ export function createPetStore(initialState = {}) {
 
     if (data.hasPet !== undefined) {
       nextState.hasPet = Boolean(data.hasPet);
+      if (data.hasPet === false) {
+        nextState.pet = null;
+      }
     }
 
     if (data.inventory !== undefined) {

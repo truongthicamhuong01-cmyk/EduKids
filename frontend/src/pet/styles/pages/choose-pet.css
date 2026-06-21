@@ -2,7 +2,10 @@
   position: fixed;
   inset: 0;
   z-index: var(--pet-z-content);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   color: #4a2f13;
 }
 
