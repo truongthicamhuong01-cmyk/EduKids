@@ -55,7 +55,7 @@ async function getGameConfigBundle(transaction = null) {
 
   if (missingDocs.length > 0) {
     throw new ApiError(
-      500,
+      404,
       "Thiếu cấu hình game cho module Pet",
       PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND,
       { missingDocs },

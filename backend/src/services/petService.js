@@ -39,7 +39,7 @@ function ensureStudentUser(user) {
 
 function requireObject(value, fieldName, errorCode = PET_ERROR_CODES.INVALID_GAME_CONFIG) {
   if (!value || typeof value !== "object") {
-    throw new ApiError(500, `Thiếu cấu hình ${fieldName}`, errorCode, {
+    throw new ApiError(422, `Thiếu cấu hình ${fieldName}`, errorCode, {
       fieldName,
     });
   }
@@ -82,7 +82,7 @@ function assertConfigShape(configs) {
 
   const missingPetBalance = requiredPetBalancePaths.filter((path) => !hasPath(petBalance, path));
   if (missingPetBalance.length > 0) {
-    throw new ApiError(500, "Cấu hình petBalance chưa đầy đủ", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
+    throw new ApiError(422, "Cấu hình petBalance chưa đầy đủ", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
       missingFields: missingPetBalance,
     });
   }
@@ -90,7 +90,7 @@ function assertConfigShape(configs) {
   const requiredLevelConfigPaths = ["curveType", "baseExp", "linearStep", "quadraticFactor", "levelCap"];
   const missingLevelConfig = requiredLevelConfigPaths.filter((path) => !hasPath(levelConfig, path));
   if (missingLevelConfig.length > 0) {
-    throw new ApiError(500, "Cấu hình levelConfig chưa đầy đủ", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
+    throw new ApiError(422, "Cấu hình levelConfig chưa đầy đủ", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
       missingFields: missingLevelConfig,
     });
   }
@@ -100,13 +100,13 @@ function assertConfigShape(configs) {
     (evolutionConfig.byPetType && typeof evolutionConfig.byPetType === "object");
 
   if (!hasPetTypeRules) {
-    throw new ApiError(500, "Cấu hình evolutionConfig chưa đầy đủ", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
+    throw new ApiError(422, "Cấu hình evolutionConfig chưa đầy đủ", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
       missingFields: ["petTypes|byPetType"],
     });
   }
 
   if (!Array.isArray(evolutionConfig.stages) || evolutionConfig.stages.length === 0) {
-    throw new ApiError(500, "Cấu hình evolutionConfig.stages chưa đầy đủ", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
+    throw new ApiError(422, "Cấu hình evolutionConfig.stages chưa đầy đủ", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
       missingFields: ["stages"],
     });
   }
@@ -156,7 +156,7 @@ function ensureAllowedPetType(petTypeId, evolutionConfig) {
 
   if (allowedPetTypes.length === 0) {
     throw new ApiError(
-      500,
+      422,
       "Cấu hình pet type chưa được khai báo",
       PET_ERROR_CODES.INVALID_GAME_CONFIG,
       { fieldName: "evolutionConfig.petTypes" },
@@ -379,7 +379,7 @@ function getActionConfig(petBalance = {}, actionName = "") {
   const actionConfig = actions[actionName];
 
   if (!actionConfig || typeof actionConfig !== "object") {
-    throw new ApiError(500, `Thiếu cấu hình cho hành động ${actionName}`, PET_ERROR_CODES.INVALID_GAME_CONFIG, {
+    throw new ApiError(422, `Thiếu cấu hình cho hành động ${actionName}`, PET_ERROR_CODES.INVALID_GAME_CONFIG, {
       actionName,
     });
   }
@@ -450,8 +450,6 @@ async function syncPetRuntime(uid, petState, configs, now = new Date()) {
 async function getPet({ uid, requestId = "" }) {
   const normalizedUid = normalizeText(uid);
   ensureStudentUser(await getUserById(normalizedUid));
-
-  const configs = assertConfigShape(await getGameConfigBundle());
   const now = new Date();
 
   const result = await runTransaction(async (transaction) => {
@@ -464,6 +462,7 @@ async function getPet({ uid, requestId = "" }) {
       throw new ApiError(404, "Không tìm thấy Pet của bạn", PET_ERROR_CODES.PET_NOT_FOUND);
     }
 
+    const configs = assertConfigShape(await getGameConfigBundle());
     const synced = await syncPetRuntime(normalizedUid, petState, configs, now);
     const nextVersion = Math.max(1, Math.floor(toNumber(petState.version, 0)) + 1);
     const petToSave = {
@@ -637,11 +636,6 @@ async function selectPet({ uid, body = {}, requestId = "", idempotencyKey = "" }
 async function mutatePetAction({ uid, actionName, body = {}, requestId = "", idempotencyKey = "" }) {
   const normalizedUid = normalizeText(uid);
   ensureStudentUser(await getUserById(normalizedUid));
-
-  const configs = assertConfigShape(await getGameConfigBundle());
-  const petBalance = requireObject(configs.petBalance, "petBalance");
-  const levelConfig = requireObject(configs.levelConfig, "levelConfig");
-  const evolutionConfig = requireObject(configs.evolutionConfig, "evolutionConfig");
   const now = new Date();
 
   const result = await runTransaction(async (transaction) => {
@@ -653,6 +647,11 @@ async function mutatePetAction({ uid, actionName, body = {}, requestId = "", ide
     if (!petState) {
       throw new ApiError(404, "Không tìm thấy Pet của bạn", PET_ERROR_CODES.PET_NOT_FOUND);
     }
+
+    const configs = assertConfigShape(await getGameConfigBundle());
+    const petBalance = requireObject(configs.petBalance, "petBalance");
+    const levelConfig = requireObject(configs.levelConfig, "levelConfig");
+    const evolutionConfig = requireObject(configs.evolutionConfig, "evolutionConfig");
 
     if (idempotencyKey) {
       const cached = await getPetRequest(normalizedUid, idempotencyKey, transaction);

@@ -13,7 +13,6 @@ import "./services/systemSettingsService.js";
 import "./services/adminStatsService.js";
 import "./services/appReviewService.js";
 import "./services/topicAccuracyService.js";
-import "./pet/index.js";
 import { renderLearningPathPage } from "./pages/student/learning-path/learningPathPage.js";
 import { adaptLearningPathState } from "./data/learning-path/learningPathStateAdapter.js";
 import "./style.css";
@@ -49,6 +48,7 @@ const ROLE_DEFAULT_PAGES = {
 
 const STUDENT_ROUTE_PATHS = {
   "learning-path": "/student/learning-path",
+  pet: "/pet",
 };
 
 const ADMIN_DEFAULT_PAGE = "admin-overview";
@@ -62,6 +62,7 @@ const ROLE_ALLOWED_PAGES = {
     "progress",
     "learning-path",
     "profile",
+    "pet",
   ]),
   teacher: new Set([
     "teacher-dashboard",
@@ -419,11 +420,62 @@ function getRoutePageForPathname(pathname = window.location?.pathname || "") {
     return "learning-path";
   }
 
+  if (normalizedPathname === STUDENT_ROUTE_PATHS.pet) {
+    return "pet";
+  }
+
   return null;
 }
 
 function getRoutePathForPage(pageId) {
   return STUDENT_ROUTE_PATHS[pageId] || "/";
+}
+
+let petModuleBootstrapPromise = null;
+
+function getPetModuleApi() {
+  return window.EduKidsPet || null;
+}
+
+function hidePetModulePages() {
+  const pet = getPetModuleApi();
+  if (typeof pet?.hidePetModule !== "function") {
+    return;
+  }
+
+  pet.hidePetModule();
+}
+
+function showPetModulePage() {
+  const pet = getPetModuleApi();
+  if (typeof pet?.showPetModule !== "function") {
+    return;
+  }
+
+  pet.showPetModule();
+}
+
+async function ensurePetModuleLoaded() {
+  if (getPetModuleApi()?.ui) {
+    return getPetModuleApi();
+  }
+
+  if (!petModuleBootstrapPromise) {
+    petModuleBootstrapPromise = import("./pet/index.js")
+      .then((module) => {
+        if (typeof module.bootstrapPetModule === "function") {
+          return module.bootstrapPetModule();
+        }
+
+        return getPetModuleApi();
+      })
+      .catch((error) => {
+        petModuleBootstrapPromise = null;
+        throw error;
+      });
+  }
+
+  return petModuleBootstrapPromise;
 }
 
 function getProfilePageType(pageId) {
@@ -5726,6 +5778,7 @@ function syncRouteForPageChange(nextPageId, previousPageId, role) {
   const currentPath =
     String(window.location?.pathname || "").replace(/\/+$/, "") || "/";
   const learningPath = getRoutePathForPage("learning-path");
+  const petPath = getRoutePathForPage("pet");
 
   if (nextPageId === "learning-path") {
     if (currentPath !== learningPath) {
@@ -5734,7 +5787,22 @@ function syncRouteForPageChange(nextPageId, previousPageId, role) {
     return;
   }
 
-  if (previousPageId === "learning-path" && currentPath === learningPath) {
+  if (nextPageId === "pet") {
+    if (currentPath !== petPath) {
+      window.history.pushState({}, "", petPath);
+    }
+    return;
+  }
+
+  if (
+    previousPageId === "learning-path" &&
+    currentPath === learningPath
+  ) {
+    window.history.replaceState({}, "", "/");
+    return;
+  }
+
+  if (previousPageId === "pet" && currentPath === petPath) {
     window.history.replaceState({}, "", "/");
   }
 }
@@ -5751,6 +5819,20 @@ function changePage(pageId) {
   showPage(targetPageId);
   applyRoleVisibility(role);
   syncRouteForPageChange(targetPageId, previousPage, role);
+
+  if (targetPageId === "pet" && role === "student") {
+    void ensurePetModuleLoaded()
+      .then(() => {
+        if (currentPage === "pet") {
+          showPetModulePage();
+        }
+      })
+      .catch((error) => {
+        console.warn("Không thể khởi tạo Pet module:", error);
+      });
+  } else {
+    hidePetModulePages();
+  }
 
   if (targetPageId === "student-home" && role === "student") {
     void syncStudentProgress(getCurrentAuthUser());
@@ -5867,6 +5949,10 @@ function openAdminDashboard() {
 }
 
 function goBackPage() {
+  if (currentPage === "pet") {
+    hidePetModulePages();
+  }
+
   changePage(previousPage);
 }
 
@@ -20167,6 +20253,15 @@ function bindAppEventsOnce() {
     }
   });
 
+  window.addEventListener("edukids:pet:back", () => {
+    if (currentPage !== "pet") {
+      return;
+    }
+
+    hidePetModulePages();
+    changePage(previousPage);
+  });
+
   bootstrapState.appBound = true;
 }
 
@@ -20209,6 +20304,18 @@ function initApp(user) {
     user.role,
   );
   changePage(targetPageId);
+
+  if (targetPageId === "pet" && normalizeRole(user.role) === "student") {
+    void ensurePetModuleLoaded()
+      .then(() => {
+        if (currentPage === "pet") {
+          showPetModulePage();
+        }
+      })
+      .catch((error) => {
+        console.warn("Không thể khởi tạo Pet module:", error);
+      });
+  }
 
   if (routePageId && targetPageId !== routePageId) {
     window.history.replaceState({}, "", "/");

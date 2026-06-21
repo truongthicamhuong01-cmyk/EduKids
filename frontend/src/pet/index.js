@@ -59,6 +59,8 @@ const shopPage = createShopPage({
   store: petStore,
   shopApi,
 });
+let petNavigationBound = false;
+let petUiBootstrapped = false;
 
 if (assetAudit?.issues?.length > 0) {
   console.warn("[EduKids][Pet][Assets] audit issues", assetAudit.issues);
@@ -130,6 +132,10 @@ function showShopPage() {
 }
 
 function bindPetNavigationEvents() {
+  if (petNavigationBound) {
+    return;
+  }
+
   window.addEventListener("edukids:pet:feed-requested", () => {
     showFeedPage();
   });
@@ -145,29 +151,48 @@ function bindPetNavigationEvents() {
   window.addEventListener("edukids:pet:home-requested", () => {
     showHomePetPage();
   });
+
+  petNavigationBound = true;
 }
 
-if (typeof document !== "undefined") {
-  bindPetNavigationEvents();
-
-  if (document.readyState === "loading") {
-    document.addEventListener(
-      "DOMContentLoaded",
-      () => {
-        bootstrapPetUi();
-        homePetPage.initialize().catch(() => {});
-        choosePetPage.initialize().catch(() => {});
-      },
-      { once: true },
-    );
-  } else {
+function bootstrapPetModule() {
+  if (petUiBootstrapped) {
     bootstrapPetUi();
-    homePetPage.initialize().catch(() => {});
-    choosePetPage.initialize().catch(() => {});
+    return window.EduKidsPet;
   }
+
+  bindPetNavigationEvents();
+  bootstrapPetUi();
+  homePetPage.initialize().catch(() => {});
+  choosePetPage.initialize().catch(() => {});
+  petUiBootstrapped = true;
+  return window.EduKidsPet;
+}
+
+function showPetModule() {
+  bootstrapPetModule();
+  hidePetModule();
+
+  if (petStore.getState()?.pet) {
+    homePetPage.show();
+    return;
+  }
+
+  choosePetPage.show();
+}
+
+function hidePetModule() {
+  choosePetPage.hide();
+  feedPage.hide();
+  inventoryPage.hide();
+  shopPage.hide();
+  homePetPage.hide();
 }
 
 window.EduKidsPet = {
+  bootstrapPetModule,
+  showPetModule,
+  hidePetModule,
   store: petStore,
   api: {
     pet: petApi,
@@ -216,4 +241,7 @@ export {
   feedPage,
   inventoryPage,
   shopPage,
+  bootstrapPetModule,
+  showPetModule,
+  hidePetModule,
 };

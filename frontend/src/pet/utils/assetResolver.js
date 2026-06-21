@@ -22,8 +22,26 @@ function normalizeLevelKey(value) {
   return `level${String(Number(match[1]) || 0)}`;
 }
 
+function normalizeAssetPath(value) {
+  const raw = String(value || "").trim();
+
+  if (!raw) {
+    return "";
+  }
+
+  if (/^(https?:|data:|blob:)/i.test(raw)) {
+    return raw;
+  }
+
+  if (raw.startsWith("/")) {
+    return raw;
+  }
+
+  return `/${raw.replace(/^\.\/+/, "")}`;
+}
+
 function getFirstManifestPath(collection) {
-  return Object.values(collection || {})[0] || "";
+  return normalizeAssetPath(Object.values(collection || {})[0] || "");
 }
 
 function getItemIconAlias(iconKey, category) {
@@ -81,7 +99,10 @@ export function resolvePetAssetPath({ petType = "", stage = "", mood = "", level
   const fallbackLevelKey = normalizedStage || "level1";
 
   if (!petEntry) {
-    return getFirstManifestPath(petAssetManifest.genericIcons) || getFirstManifestPath(petAssetManifest.raw);
+    return (
+      getFirstManifestPath(petAssetManifest.genericIcons) ||
+      getFirstManifestPath(petAssetManifest.raw)
+    );
   }
 
   const stageAssets = getLevelAssets(petType, fallbackLevelKey);
@@ -111,12 +132,20 @@ export function resolvePetAssetPath({ petType = "", stage = "", mood = "", level
     }
   }
 
-  return petEntry.backgrounds?.[0] || petAssetManifest.backgrounds?.[normalizeSlug(petType)] || getFirstManifestPath(petAssetManifest.raw);
+  return (
+    normalizeAssetPath(petEntry.backgrounds?.[0]) ||
+    normalizeAssetPath(petAssetManifest.backgrounds?.[normalizeSlug(petType)]) ||
+    getFirstManifestPath(petAssetManifest.raw)
+  );
 }
 
 export function resolveBackgroundPath({ petType = "" } = {}) {
   const normalizedPetType = normalizeSlug(petType);
-  return petAssetManifest.backgrounds?.[normalizedPetType] || getFirstManifestPath(petAssetManifest.backgrounds) || "";
+  return (
+    normalizeAssetPath(petAssetManifest.backgrounds?.[normalizedPetType]) ||
+    getFirstManifestPath(petAssetManifest.backgrounds) ||
+    getFirstManifestPath(petAssetManifest.raw)
+  );
 }
 
 export function resolveItemIconPath(item = {}) {
@@ -125,15 +154,15 @@ export function resolveItemIconPath(item = {}) {
   const aliasKey = getItemIconAlias(iconKey, category);
 
   if (String(item.icon || "").trim().startsWith("/")) {
-    return String(item.icon).trim();
+    return normalizeAssetPath(item.icon);
   }
 
   return (
-    petAssetManifest.shopIcons?.[iconKey] ||
-    (aliasKey ? petAssetManifest.shopIcons?.[aliasKey] : "") ||
-    petAssetManifest.genericIcons?.[iconKey] ||
-    petAssetManifest.genericIcons?.[category] ||
-    (aliasKey ? petAssetManifest.genericIcons?.[aliasKey] : "") ||
+    normalizeAssetPath(petAssetManifest.shopIcons?.[iconKey]) ||
+    (aliasKey ? normalizeAssetPath(petAssetManifest.shopIcons?.[aliasKey]) : "") ||
+    normalizeAssetPath(petAssetManifest.genericIcons?.[iconKey]) ||
+    normalizeAssetPath(petAssetManifest.genericIcons?.[category]) ||
+    (aliasKey ? normalizeAssetPath(petAssetManifest.genericIcons?.[aliasKey]) : "") ||
     getFirstManifestPath(petAssetManifest.shopIcons) ||
     getFirstManifestPath(petAssetManifest.genericIcons) ||
     ""
@@ -144,12 +173,12 @@ export function resolvePopupIconPath(icon = "") {
   const normalized = normalizeSlug(icon);
 
   if (String(icon || "").trim().startsWith("/")) {
-    return String(icon).trim();
+    return normalizeAssetPath(icon);
   }
 
   return (
-    petAssetManifest.genericIcons?.[normalized] ||
-    petAssetManifest.shopIcons?.[normalized] ||
+    normalizeAssetPath(petAssetManifest.genericIcons?.[normalized]) ||
+    normalizeAssetPath(petAssetManifest.shopIcons?.[normalized]) ||
     getFirstManifestPath(petAssetManifest.shopIcons) ||
     getFirstManifestPath(petAssetManifest.genericIcons) ||
     ""
