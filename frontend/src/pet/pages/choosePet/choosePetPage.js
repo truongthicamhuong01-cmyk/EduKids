@@ -1,5 +1,6 @@
 import { createModal } from "../../ui/modal.js";
 import { asElement, escapeHtml } from "../../utils/dom.js";
+import { mountIntoPetHost } from "../../utils/pageHost.js";
 import {
   resolveBackgroundPath,
   resolvePetAssetPath,
@@ -126,7 +127,7 @@ function ensureChoosePageRoot() {
         </div>
       </div>
     `;
-    document.body.appendChild(root);
+    mountIntoPetHost(root);
   }
 
   root.style.setProperty(
@@ -138,7 +139,7 @@ function ensureChoosePageRoot() {
 }
 
 function setBodyActive(isActive) {
-  document.body.classList.toggle("pet-choose-active", Boolean(isActive));
+  void isActive;
 }
 
 function preloadAsset(src) {
@@ -498,7 +499,7 @@ export function createChoosePetPage({
     root.addEventListener("click", handleRootClick);
     root.addEventListener("keydown", handleRootKeydown);
     renderOptions();
-    modal.mount(document.body);
+    modal.mount(root.parentElement);
     state.mounted = true;
   }
 

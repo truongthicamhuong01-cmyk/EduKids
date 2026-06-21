@@ -1,4 +1,5 @@
 import { asElement, escapeHtml } from "../../utils/dom.js";
+import { mountIntoPetHost } from "../../utils/pageHost.js";
 import {
   resolveBackgroundPath,
   resolvePetAssetPath,
@@ -324,14 +325,14 @@ function ensureHomePageRoot() {
         </div>
       </div>
     `;
-    document.body.appendChild(root);
+    mountIntoPetHost(root);
   }
 
   return root;
 }
 
 function setBodyActive(isActive) {
-  document.body.classList.toggle("pet-home-active", Boolean(isActive));
+  void isActive;
 }
 
 function formatNumber(value) {

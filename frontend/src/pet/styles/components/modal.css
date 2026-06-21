@@ -1,5 +1,5 @@
 .pet-modal-layer {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: var(--pet-z-modal);
 }

@@ -1,7 +1,7 @@
 .pet-app-shell {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  min-height: 100%;
 }
 
 .pet-header {
@@ -35,7 +35,7 @@
 .pet-popup-layer,
 .pet-overlay-layer,
 .pet-floating-layer {
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
 }
@@ -66,4 +66,3 @@
   flex-direction: column;
   gap: var(--pet-space-4);
 }
-

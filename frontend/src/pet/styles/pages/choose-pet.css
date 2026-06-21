@@ -1,7 +1,7 @@
 .pet-choose-screen {
-  position: fixed;
-  inset: 0;
-  z-index: var(--pet-z-content);
+  position: relative;
+  width: 100%;
+  min-height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -411,10 +411,6 @@
 .pet-choose-success__title {
   font-size: 1.6rem;
   font-weight: 800;
-}
-
-body.pet-choose-active {
-  overflow: hidden;
 }
 
 @media (max-width: 1180px) {

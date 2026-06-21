@@ -1,7 +1,7 @@
 .pet-inventory-screen {
-  position: fixed;
-  inset: 0;
-  z-index: var(--pet-z-content);
+  position: relative;
+  width: 100%;
+  min-height: 100%;
   overflow: hidden;
   color: #2b2230;
   background: #d8f0ff;
@@ -9,10 +9,6 @@
 
 .pet-inventory-screen[hidden] {
   display: none !important;
-}
-
-body.pet-inventory-active {
-  overflow: hidden;
 }
 
 .pet-inventory-screen__background,

@@ -1,5 +1,6 @@
 import { resolvePopupIconPath } from "../utils/assetResolver.js";
 import { escapeHtml } from "../utils/dom.js";
+import { mountIntoPetHost } from "../utils/pageHost.js";
 
 const FEEDBACK_ROOT_ID = "edukids-pet-feedback-layer";
 const MAX_QUEUE = 12;
@@ -180,7 +181,7 @@ function ensureFeedbackRoot() {
       <div class="pet-feedback-layer__center-stack" data-feedback-center-stack aria-live="polite" aria-atomic="true"></div>
       <div class="pet-feedback-layer__float-stack" data-feedback-float-stack aria-hidden="true"></div>
     `;
-    document.body.appendChild(root);
+    mountIntoPetHost(root);
   }
 
   return root;

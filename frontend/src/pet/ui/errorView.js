@@ -1,4 +1,5 @@
 import { asElement, escapeHtml } from "../utils/dom.js";
+import { mountIntoPetHost } from "../utils/pageHost.js";
 
 const ERROR_ROOT_ID = "edukids-pet-error-root";
 
@@ -10,7 +11,7 @@ function ensureErrorRoot() {
     root.id = ERROR_ROOT_ID;
     root.className = "pet-error-root";
     root.hidden = true;
-    document.body.appendChild(root);
+    mountIntoPetHost(root);
   }
 
   return root;
@@ -48,4 +49,3 @@ export function createErrorView() {
     mount,
   };
 }
-

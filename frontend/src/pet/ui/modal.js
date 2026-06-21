@@ -1,4 +1,5 @@
 import { asElement, escapeHtml } from "../utils/dom.js";
+import { mountIntoPetHost } from "../utils/pageHost.js";
 
 const MODAL_ROOT_ID = "edukids-pet-modal-root";
 
@@ -10,7 +11,7 @@ function ensureModalRoot() {
     root.id = MODAL_ROOT_ID;
     root.className = "pet-modal-layer";
     root.hidden = true;
-    document.body.appendChild(root);
+    mountIntoPetHost(root);
   }
 
   return root;
@@ -142,4 +143,3 @@ export function createModal() {
     },
   };
 }
-

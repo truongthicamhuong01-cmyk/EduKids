@@ -519,6 +519,10 @@ body.auth-mode .app {
   padding: 32px;
 }
 
+#pet.page {
+  padding: 0;
+}
+
 .page.active {
   display: block;
   animation: pageIn 0.35s ease;

@@ -1,12 +1,12 @@
 .pet-feedback-layer {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 1500;
   pointer-events: none;
 }
 
 .pet-feedback-layer__toast-stack {
-  position: fixed;
+  position: absolute;
   top: calc(var(--pet-space-4) + env(safe-area-inset-top, 0px));
   right: calc(var(--pet-space-4) + env(safe-area-inset-right, 0px));
   display: grid;
@@ -15,7 +15,7 @@
 }
 
 .pet-feedback-layer__center-stack {
-  position: fixed;
+  position: absolute;
   inset: 50% auto auto 50%;
   width: min(92vw, 36rem);
   transform: translate(-50%, -52%);
@@ -24,7 +24,7 @@
 }
 
 .pet-feedback-layer__float-stack {
-  position: fixed;
+  position: absolute;
   inset: 0;
 }
 

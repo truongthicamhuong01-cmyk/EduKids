@@ -1,7 +1,7 @@
 .pet-home-screen {
-  position: fixed;
-  inset: 0;
-  z-index: var(--pet-z-content);
+  position: relative;
+  width: 100%;
+  min-height: 100%;
   overflow: hidden;
   color: #3f2a15;
   background: #d7ecff;
@@ -9,10 +9,6 @@
 
 .pet-home-screen[hidden] {
   display: none !important;
-}
-
-body.pet-home-active {
-  overflow: hidden;
 }
 
 .pet-home-screen__background {

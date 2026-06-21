@@ -1,4 +1,5 @@
 import { escapeHtml } from "../../utils/dom.js";
+import { mountIntoPetHost } from "../../utils/pageHost.js";
 import {
   resolveBackgroundPath,
   resolveItemIconPath,
@@ -241,14 +242,14 @@ function ensureInventoryRoot() {
       </div>
     `;
 
-    document.body.appendChild(root);
+    mountIntoPetHost(root);
   }
 
   return root;
 }
 
 function setBodyActive(isActive) {
-  document.body.classList.toggle("pet-inventory-active", Boolean(isActive));
+  void isActive;
 }
 
 export function createInventoryPage({ store, petApi, inventoryApi } = {}) {

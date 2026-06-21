@@ -1,4 +1,5 @@
 import { escapeHtml } from "../../utils/dom.js";
+import { mountIntoPetHost } from "../../utils/pageHost.js";
 import {
   resolveBackgroundPath,
   resolveItemIconPath,
@@ -243,14 +244,14 @@ function ensureFeedRoot() {
       </div>
     `;
 
-    document.body.appendChild(root);
+    mountIntoPetHost(root);
   }
 
   return root;
 }
 
 function setBodyActive(isActive) {
-  document.body.classList.toggle("pet-feed-active", Boolean(isActive));
+  void isActive;
 }
 
 export function createFeedPage({ store, petApi, shopApi, inventoryApi } = {}) {

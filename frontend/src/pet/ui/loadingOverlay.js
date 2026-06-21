@@ -1,4 +1,5 @@
 import { asElement } from "../utils/dom.js";
+import { mountIntoPetHost } from "../utils/pageHost.js";
 
 const LOADING_OVERLAY_ID = "edukids-pet-loading-overlay";
 
@@ -16,7 +17,7 @@ function ensureOverlay() {
         <strong data-pet-loading-title>Đang tải dữ liệu...</strong>
       </div>
     `;
-    document.body.appendChild(overlay);
+    mountIntoPetHost(overlay);
   }
 
   return overlay;
@@ -45,4 +46,3 @@ export function createLoadingOverlay() {
     },
   };
 }
-

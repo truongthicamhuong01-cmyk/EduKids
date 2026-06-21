@@ -10,7 +10,7 @@
 }
 
 .pet-error-root {
-  position: fixed;
+  position: absolute;
   left: 50%;
   bottom: var(--pet-space-4);
   z-index: var(--pet-z-popup);
@@ -32,7 +32,7 @@
 }
 
 .pet-loading-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: var(--pet-z-overlay);
   display: grid;

@@ -1,4 +1,5 @@
 import { escapeHtml } from "../../utils/dom.js";
+import { mountIntoPetHost } from "../../utils/pageHost.js";
 import {
   resolveBackgroundPath,
   resolveItemIconPath,
@@ -233,14 +234,14 @@ function ensureShopRoot() {
       </div>
     `;
 
-    document.body.appendChild(root);
+    mountIntoPetHost(root);
   }
 
   return root;
 }
 
 function setBodyActive(isActive) {
-  document.body.classList.toggle("pet-shop-active", Boolean(isActive));
+  void isActive;
 }
 
 export function createShopPage({ store, shopApi } = {}) {

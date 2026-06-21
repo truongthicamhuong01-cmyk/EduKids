@@ -1,7 +1,7 @@
 .pet-shop-screen {
-  position: fixed;
-  inset: 0;
-  z-index: var(--pet-z-content);
+  position: relative;
+  width: 100%;
+  min-height: 100%;
   overflow: hidden;
   color: #2b2230;
   background: #d8f0ff;
@@ -9,10 +9,6 @@
 
 .pet-shop-screen[hidden] {
   display: none !important;
-}
-
-body.pet-shop-active {
-  overflow: hidden;
 }
 
 .pet-shop-screen__background,
