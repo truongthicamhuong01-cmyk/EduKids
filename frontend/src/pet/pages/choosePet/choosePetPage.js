@@ -93,9 +93,9 @@ function ensureChoosePageRoot() {
             ${iconBack()}
           </button>
 
-          <div class="pet-choose-banner" aria-label="Chọn Pet">
+          <div class="pet-choose-banner" aria-label="Chọn thú cưng">
             <span class="pet-choose-banner__star" aria-hidden="true">${iconStar()}</span>
-            <h1 class="pet-choose-banner__title">CHỌN PET</h1>
+            <h1 class="pet-choose-banner__title">Chọn thú cưng</h1>
             <span class="pet-choose-banner__star" aria-hidden="true">${iconStar()}</span>
           </div>
 

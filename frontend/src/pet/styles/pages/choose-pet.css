@@ -56,9 +56,9 @@
 
 .pet-choose-screen__header {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.9rem;
 }
 
 .pet-choose-back,
@@ -78,6 +78,10 @@
     0 10px 22px rgba(74, 46, 138, 0.28);
 }
 
+.pet-choose-back {
+  justify-self: start;
+}
+
 .pet-choose-back svg,
 .pet-choose-shop svg {
   display: block;
@@ -88,9 +92,9 @@
   justify-self: center;
   display: inline-flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.9rem 1.05rem;
-  min-width: min(52vw, 520px);
+  gap: 0.85rem;
+  padding: 0.95rem 1.5rem 1rem;
+  min-width: min(46vw, 480px);
   border-radius: 28px 28px 24px 24px;
   background: linear-gradient(180deg, #8e5fed 0%, #6f43d4 100%);
   border: 4px solid rgba(255, 255, 255, 0.18);
@@ -128,7 +132,7 @@
 .pet-choose-banner__title {
   margin: 0;
   color: #fff;
-  font-size: clamp(2rem, 2.7vw, 3.5rem);
+  font-size: clamp(1.8rem, 2.45vw, 3rem);
   line-height: 1;
   letter-spacing: 0.05em;
   text-shadow: 0 3px 0 rgba(77, 42, 138, 0.26);
@@ -153,6 +157,10 @@
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
     0 12px 24px rgba(80, 60, 120, 0.12);
+}
+
+.pet-choose-shop {
+  justify-self: end;
 }
 
 .pet-choose-shop span {

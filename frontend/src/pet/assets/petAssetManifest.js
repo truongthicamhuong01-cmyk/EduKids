@@ -95,8 +95,8 @@ export const petAssetManifest = {
     }
   },
   "backgrounds": {
-    "elephant": "/assets/pet/backrounds/pet-bg-elephant.png",
-    "horse": "/assets/pet/backrounds/pet-bg-horse.png"
+    "elephant": "/assets/pet/background/pet-bg-elephant.png",
+    "horse": "/assets/pet/background/pet-bg-horse.png"
   },
   "shopIcons": {
     "ball": "/assets/pet/shop/ball.png",
@@ -112,8 +112,8 @@ export const petAssetManifest = {
   },
   "genericIcons": {},
   "raw": [
-    "/assets/pet/backrounds/pet-bg-elephant.png",
-    "/assets/pet/backrounds/pet-bg-horse.png",
+    "/assets/pet/background/pet-bg-elephant.png",
+    "/assets/pet/background/pet-bg-horse.png",
     "/assets/pet/elephant/level1/elephant-lv1-happy.png",
     "/assets/pet/elephant/level1/elephant-lv1-hungry.png",
     "/assets/pet/elephant/level1/elephant-lv1-normal.png",

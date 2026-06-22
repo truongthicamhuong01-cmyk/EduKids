@@ -910,7 +910,7 @@ export function createShopPage({ store, shopApi } = {}) {
     try {
       const response = await shopApi.getShop();
       syncStateFromShopResponse(response);
-      setEmptyState("Shop chÆ°a cĂ³ váº­t pháº©m.", "HĂ£y quay láº¡i sau nhĂ©.");
+      setEmptyState("Shop chưa có vật phẩm.", "Hãy quay lại sau nhé.");
       if (store?.applyBackendResponse) {
         store.applyBackendResponse(response, "shop-load");
       }
@@ -921,7 +921,7 @@ export function createShopPage({ store, shopApi } = {}) {
         state.categories = [];
         state.selectedCategory = "";
         setEmptyState(
-          "Cá»­a hĂ ng hiá»‡n chÆ°a Ä‘Æ°á»£c cáº¥u hĂ¬nh.",
+          "Cửa hàng hiện chưa được cấu hình.",
           "HĂ£y quay láº¡i sau nhĂ©.",
         );
         hideError();

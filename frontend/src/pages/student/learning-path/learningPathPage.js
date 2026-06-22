@@ -253,7 +253,6 @@ function clearTimers() {
     window.clearTimeout(uiState.transitionTimer);
     uiState.transitionTimer = null;
   }
-
 }
 
 function syncRewardLayoutWidth(root = getLearningPathRoot()) {
@@ -276,7 +275,6 @@ function syncRewardLayoutWidth(root = getLearningPathRoot()) {
   rewardSlot.style.marginLeft = "0px";
   rewardSlot.style.marginRight = "0px";
   rewardSlot.style.justifyContent = "flex-start";
-
 }
 
 function closeLearningPathModalImmediate() {
@@ -431,7 +429,7 @@ function scheduleAuthReadyRetry() {
   if (elapsedMs >= maxWaitMs) {
     uiState.loading = false;
     uiState.errorMessage =
-      "KhĂ´ng xĂ¡c Ä‘á»‹nh Ä‘Æ°á»£c ngÆ°á»i dĂ¹ng hiá»‡n táº¡i Ä‘á»ƒ táº£i Learning Path.";
+      "Kh?ng x?c ??nh ???c ng??i d?ng hi?n t?i ?? t?i Learning Path.";
     scheduleRender();
     return;
   }
@@ -544,7 +542,7 @@ async function hydrateLearningPathStateFromBackend() {
     );
     const backendState = extractRemoteLearningPathState(data?.state);
     if (!backendState) {
-      throw new Error("Backend Learning Path chÆ°a tráº£ vá» state há»£p lá»‡.");
+      throw new Error("Backend Learning Path ch?a tr? v? state h?p l?.");
     }
 
     const remoteState = adaptLearningPathState(backendState);
@@ -553,7 +551,7 @@ async function hydrateLearningPathStateFromBackend() {
     uiState.limitNotice = remoteState?.lockNotice || "";
     uiState.errorMessage = remoteState
       ? ""
-      : "Backend Learning Path chÆ°a tráº£ vá» state há»£p lá»‡.";
+      : "Backend Learning Path ch?a tr? v? state h?p l?.";
     applyLearningPathEvents(data?.events);
     commitLearningPathState();
     return remoteState;
@@ -561,7 +559,7 @@ async function hydrateLearningPathStateFromBackend() {
     uiState.backendState = null;
     uiState.loading = false;
     uiState.errorMessage =
-      error?.message || "KhĂ´ng thá»ƒ táº£i Learning Path tá»« backend.";
+      error?.message || "Kh?ng th? t?i Learning Path t? backend.";
     commitLearningPathState();
     return null;
   }
@@ -577,7 +575,7 @@ async function performLearningPathAction(action, payload = {}) {
 
   if (!userId) {
     uiState.errorMessage =
-      "Thiáº¿u thĂ´ng tin ngÆ°á»i dĂ¹ng Ä‘á»ƒ gá»­i action Learning Path.";
+      "Thi?u th?ng tin ng??i d?ng ?? g?i action Learning Path.";
     scheduleRender();
     return null;
   }
@@ -607,7 +605,7 @@ async function performLearningPathAction(action, payload = {}) {
     return remoteState;
   } catch (error) {
     uiState.errorMessage =
-      error?.message || "KhĂ´ng thá»ƒ thá»±c hiá»‡n action Learning Path.";
+      error?.message || "Kh?ng th? th?c hi?n action Learning Path.";
     commitLearningPathState();
     return null;
   }
@@ -653,7 +651,7 @@ function getTaskResetCountdownTarget(now = new Date()) {
 
 function formatCountdown(totalMs) {
   if (!Number.isFinite(totalMs) || totalMs < 0) {
-    return "Äang lĂ m má»›i...";
+    return "?ang l?m m?i...";
   }
 
   const totalSeconds = Math.floor(totalMs / 1000);
@@ -686,7 +684,7 @@ function updateTaskResetCountdownLabel(root = getLearningPathRoot()) {
     return;
   }
 
-  countdownElement.textContent = `Nhiá»‡m vá»¥ sáº½ lĂ m má»›i sau: ${uiState.taskResetCountdown || "00:00:00"}`;
+  countdownElement.textContent = `Nhiệm vụ sẽ làm mới: ${uiState.taskResetCountdown || "00:00:00"}`;
 }
 
 function updateCountdownTextOnly(root = getLearningPathRoot()) {
@@ -740,7 +738,7 @@ function showCheckpointRewardPopup(event) {
   }
 
   uiState.rewardPopup = {
-    title: "đŸ‰ Tráº¡m Ä‘Ă£ hoĂ n thĂ nh",
+    title: "🎉 Trạm đã hoàn thành",
     checkpointTitle: checkpoint.title || "",
     xu: checkpoint.reward?.xu || 50,
     exp: checkpoint.reward?.exp || 100,
@@ -782,7 +780,7 @@ function showMountainCompletionPopup(event) {
   }
 
   uiState.pendingRewardPopup = {
-    title: `đŸ† Chinh phá»¥c thĂ nh cĂ´ng ${mountain.name || "ngá»n nĂºi"}`,
+    title: `🏆 Chinh phục thành công ${mountain.name || "ngọn núi"}`,
     checkpointTitle: mountain.name || "",
     xu: Number(payload.reward?.xu ?? 200) || 200,
     exp: Number(payload.reward?.exp ?? 250) || 250,
@@ -905,7 +903,7 @@ function renderMountainCard(mountain, state) {
       data-page="learning-path"
     >
       <span class="learning-path-mountain-thumb" aria-hidden="true">
-        <span class="learning-path-mountain-thumb-fallback" aria-hidden="true">â›°ï¸</span>
+        <span class="learning-path-mountain-thumb-fallback" aria-hidden="true">⛰️</span>
         <img
           class="learning-path-mountain-thumb-image"
           src="${escapeHtml(mountainIcon)}"
@@ -919,7 +917,7 @@ function renderMountainCard(mountain, state) {
         <span class="learning-path-mountain-continent">${escapeHtml(mountain.continent)}</span>
         <strong class="learning-path-mountain-name">${escapeHtml(mountain.name)}</strong>
         <span class="learning-path-mountain-height">${escapeHtml(mountain.height)}</span>
-        ${isEverest ? '<span class="learning-path-mountain-note">🏆 Hoàn thành Everest để nhận huy hiệu The Explorer</span>' : ""}
+        ${isEverest ? '<span class="learning-path-mountain-note">🏆 Ho?n th?nh Everest ?? nh?n huy hi?u The Explorer</span>' : ""}
       </span>
       <span class="learning-path-mountain-lock" aria-hidden="true">
         ${mountain.locked && !isSelected ? LOCK_ICON : ""}
@@ -937,8 +935,8 @@ function renderMountainList(state) {
     <section class="learning-path-panel learning-path-list-panel">
       <div class="learning-path-panel-head">
         <div>
-          <span class="learning-path-panel-eyebrow">MĂ¹a 1: 7 Ä‘á»‰nh cao tháº¿ giá»›i</span>
-          <h2>7 chĂ¢u lá»¥c, 7 thá»­ thĂ¡ch</h2>
+          <span class="learning-path-panel-eyebrow">M?a 1: 7 ??nh cao th? gi?i</span>
+          <h2>7 ch?u l?c, 7 th? th?ch</h2>
         </div>
       </div>
       <div class="learning-path-mountain-list">
@@ -980,7 +978,7 @@ function renderCheckpointNode(checkpoint, status, state) {
         data-learning-path-open-checkpoint
         data-checkpoint="${escapeHtml(checkpoint.id)}"
         data-learning-path-checkpoint="${escapeHtml(checkpoint.id)}"
-        aria-label="Má»Ÿ nhiá»‡m vá»¥ ${escapeHtml(checkpoint.title)}"
+        aria-label="M? nhi?m v? ${escapeHtml(checkpoint.title)}"
       >
       </button>
     `;
@@ -993,7 +991,7 @@ function renderCheckpointNode(checkpoint, status, state) {
       data-learning-path-open-checkpoint
       data-checkpoint="${escapeHtml(checkpoint.id)}"
       data-learning-path-checkpoint="${escapeHtml(checkpoint.id)}"
-      aria-label="Xem láº¡i ${escapeHtml(checkpoint.title)}"
+      aria-label="Xem l?i ${escapeHtml(checkpoint.title)}"
     >
       <span class="learning-path-station-status-badge">${CHECK_ICON}</span>
     </button>
@@ -1057,7 +1055,7 @@ function renderProgressCard(state) {
   const targetAltitude = formatLearningPathMeters(mountain?.height || 0);
   return `
     <aside class="learning-path-progress-card">
-      <h3>Tiáº¿n Ä‘á»™ cá»§a báº¡n</h3>
+      <h3>Ti?n ?? c?a b?n</h3>
       <div class="learning-path-progress-bar" aria-hidden="true">
         <span style="width: ${Math.max(0, Math.min(Number(state.progressPercent) || 0, 100))}%"></span>
       </div>
@@ -1078,37 +1076,37 @@ function renderRewardSection(state) {
   const rewardExp = Number(summitReward.exp ?? 250) || 250;
   const badgeName =
     mountain?.badge?.name ||
-    (mountain?.name ? `Huy hiá»‡u ${mountain.name}` : "Huy hiá»‡u Ä‘á»‰nh nĂºi");
-  const unlockNextName = nextMountain?.name || "Ä‘á»‰nh tiáº¿p theo";
+    (mountain?.name ? `Huy hi?u ${mountain.name}` : "Huy hi?u ??nh n?i");
+  const unlockNextName = nextMountain?.name || "??nh ti?p theo";
 
   return `
     <div class="learning-path-reward-grid learning-path-reward-row">
       <div class="learning-path-reward-item is-gold">
-        <span class="learning-path-reward-icon" aria-hidden="true">đŸª™</span>
+        <span class="learning-path-reward-icon" aria-hidden="true">🪙</span>
         <div class="learning-path-reward-copy">
           <strong>+${escapeHtml(rewardXu)} Xu Edu</strong>
-          <span>Pháº§n thÆ°á»Ÿng</span>
+          <span>Ph?n th??ng</span>
         </div>
       </div>
       <div class="learning-path-reward-item is-amber">
-        <span class="learning-path-reward-icon" aria-hidden="true">â­</span>
+        <span class="learning-path-reward-icon" aria-hidden="true">⭐</span>
         <div class="learning-path-reward-copy">
           <strong>+${escapeHtml(rewardExp)} EXP</strong>
-          <span>Kinh nghiá»‡m</span>
+          <span>Kinh nghi?m</span>
         </div>
       </div>
       <div class="learning-path-reward-item is-blue">
-        <span class="learning-path-reward-icon" aria-hidden="true">đŸ…</span>
+        <span class="learning-path-reward-icon" aria-hidden="true">🏅</span>
         <div class="learning-path-reward-copy">
           <strong>${escapeHtml(badgeName)}</strong>
-          <span>Xem á»Ÿ há»“ sÆ¡</span>
+          <span>Xem ? h? s?</span>
         </div>
       </div>
       <div class="learning-path-reward-item is-green">
-        <span class="learning-path-reward-icon" aria-hidden="true">đŸ”ï¸</span>
+        <span class="learning-path-reward-icon" aria-hidden="true">🏔️</span>
         <div class="learning-path-reward-copy">
-          <strong>Má»Ÿ khĂ³a ${escapeHtml(unlockNextName)}</strong>
-          <span>Ngá»n nĂºi tiáº¿p theo</span>
+          <strong>M? kh?a ${escapeHtml(unlockNextName)}</strong>
+          <span>Ng?n n?i ti?p theo</span>
         </div>
       </div>
     </div>
@@ -1122,12 +1120,12 @@ function renderLearningPathLeftSlot(state) {
         <div class="learning-path-panel-head">
           <div>
             <span class="learning-path-panel-eyebrow">Backend Learning Path</span>
-            <h2>KhĂ´ng thá»ƒ Ä‘á»“ng bá»™ dá»¯ liá»‡u</h2>
+            <h2>Kh?ng th? ??ng b? d? li?u</h2>
           </div>
         </div>
         <p>${escapeHtml(uiState.errorMessage)}</p>
         <button type="button" class="learning-path-task-action-btn" data-learning-path-retry-load>
-          Thá»­ táº£i láº¡i
+          Th? t?i l?i
         </button>
       </section>
     `
@@ -1137,11 +1135,11 @@ function renderLearningPathLeftSlot(state) {
       <section class="learning-path-panel learning-path-error-panel" role="status">
         <div class="learning-path-panel-head">
           <div>
-            <span class="learning-path-panel-eyebrow">Äang táº£i</span>
-            <h2>Äá»“ng bá»™ Learning Path tá»« backend</h2>
+            <span class="learning-path-panel-eyebrow">?ang t?i</span>
+            <h2>??ng b? Learning Path t? backend</h2>
           </div>
         </div>
-        <p>Vui lĂ²ng chá» trong giĂ¢y lĂ¡t.</p>
+        <p>Vui l?ng ch? trong gi?y l?t.</p>
       </section>
     `
     : "";
@@ -1150,8 +1148,8 @@ function renderLearningPathLeftSlot(state) {
       <section class="learning-path-panel learning-path-error-panel" role="status">
         <div class="learning-path-panel-head">
           <div>
-            <span class="learning-path-panel-eyebrow">Giá»›i háº¡n backend</span>
-            <h2>KhĂ´ng thá»ƒ tiáº¿p tá»¥c</h2>
+            <span class="learning-path-panel-eyebrow">Gi?i h?n backend</span>
+            <h2>Kh?ng th? ti?p t?c</h2>
           </div>
         </div>
         <p>${escapeHtml(uiState.limitNotice)}</p>
@@ -1177,10 +1175,10 @@ function renderLearningPathGraphPanelShell(state) {
       >
         <div class="learning-path-journey-glow"></div>
         <div class="learning-path-journey-copy">
-          <span class="learning-path-level-pill">${escapeHtml(`Cáº¥p Ä‘á»™ ${state.season?.order || 1}`)}</span>
+          <span class="learning-path-level-pill">${escapeHtml(`C?p ?? ${state.season?.order || 1}`)}</span>
           <h2>${escapeHtml(mountain?.name || "")}</h2>
           <p class="learning-path-location">
-            đŸ“ ${escapeHtml(mountain?.continent || "")} | ${escapeHtml(mountain?.height || "")}
+            📍 ${escapeHtml(mountain?.continent || "")} | ${escapeHtml(mountain?.height || "")}
           </p>
           <p class="learning-path-description">${escapeHtml(mountain?.description || "")}</p>
         </div>
@@ -1207,11 +1205,11 @@ function renderLearningPathStaticShell(state) {
     <div class="learning-path-page${modalHtml || uiState.rewardPopup ? " is-modal-open" : ""}" data-learning-path-page>
       <header class="learning-path-header">
         <div class="learning-path-header-copy">
-          <span class="learning-path-title" data-learning-path-header-title>đŸ”ï¸ HĂ nh TrĂ¬nh Chinh Phá»¥c</span>
-          <p>Chinh phá»¥c 7 Ä‘á»‰nh nĂºi cao nháº¥t 7 chĂ¢u lá»¥c</p>
+          <span class="learning-path-title" data-learning-path-header-title>🏔️ Hành Trình Chinh Phục</span>
+          <p>Chinh ph?c 7 ??nh n?i cao nh?t 7 ch?u l?c</p>
         </div>
-        <div class="learning-path-coin-card" aria-label="Xu Edu hiá»‡n cĂ³">
-          <span class="learning-path-coin-label">đŸª™ Xu Edu</span>
+        <div class="learning-path-coin-card" aria-label="Xu Edu hi?n c?">
+          <span class="learning-path-coin-label">🪙 Xu Edu</span>
           <strong data-learning-path-coin-count>${escapeHtml(state.rewards?.xu || 0)}</strong>
         </div>
       </header>
@@ -1373,7 +1371,7 @@ function renderTaskActionButton(task) {
       class="learning-path-task-action-btn"
       data-page="${escapeHtml(pageId)}"
     >
-      Thá»±c hiá»‡n
+      Th?c hi?n
     </button>
   `;
 }
@@ -1408,7 +1406,7 @@ function formatTaskProgressText(task) {
       ? threshold
       : 0;
   const displayCurrent = Math.min(currentValue, threshold);
-  const unit = String(progress.unit || "").trim() || "láº§n";
+  const unit = String(progress.unit || "").trim() || "l?n";
 
   return `${displayCurrent} / ${threshold} ${unit}`;
 }
@@ -1417,15 +1415,15 @@ function renderTaskCard(task) {
   return `
     <article class="learning-path-task-card${task.state === "DONE" ? " is-completed" : ""}">
       <div class="learning-path-task-head">
-        <span class="learning-path-task-icon" aria-hidden="true">${escapeHtml(task.icon || "đŸ“˜")}</span>
+        <span class="learning-path-task-icon" aria-hidden="true">${escapeHtml(task.icon || "??")}</span>
         <div class="learning-path-task-copy">
-          <strong>${escapeHtml(task.title || "Nhiá»‡m vá»¥")}</strong>
+          <strong>${escapeHtml(task.title || "Nhi?m v?")}</strong>
           <p>${escapeHtml(formatTaskProgressText(task))}</p>
         </div>
       </div>
       <div class="learning-path-task-footer">
         <span class="learning-path-task-status${task.state === "DONE" ? " is-completed" : ""}">
-          ${task.state === "DONE" ? "âœ“ ÄĂ£ hoĂ n thĂ nh" : "ChÆ°a hoĂ n thĂ nh"}
+          ${task.state === "DONE" ? "? ?? ho?n th?nh" : "Ch?a ho?n th?nh"}
         </span>
         ${renderTaskActionButton(task)}
       </div>
@@ -1444,7 +1442,7 @@ function renderLearningPathTaskModal(state) {
   const totalCount =
     Number(state.checkpointProgress?.total) || tasks.length || 3;
   const allCompleted = totalCount > 0 && completedCount >= totalCount;
-  const progressLabel = `${completedCount} / ${totalCount} nhiá»‡m vá»¥`;
+  const progressLabel = `${completedCount} / ${totalCount} nhi?m v?`;
 
   return `
     <div
@@ -1460,29 +1458,29 @@ function renderLearningPathTaskModal(state) {
       >
         <header class="learning-path-modal-header">
           <div>
-            <p class="learning-path-modal-kicker">Nhiá»‡m vá»¥ tráº¡m</p>
+            <p class="learning-path-modal-kicker">Nhi?m v? tr?m</p>
             <h3 id="learning-path-modal-title">${escapeHtml(checkpoint.title)}</h3>
           </div>
           <button
             type="button"
             class="learning-path-modal-close"
             data-learning-path-close-modal
-            aria-label="ÄĂ³ng"
+            aria-label="??ng"
           >
-            âœ•
+            ✕
           </button>
         </header>
 
         <div class="learning-path-modal-progress">
           <div class="learning-path-modal-progress-head">
-            <span>Tiáº¿n Ä‘á»™ tráº¡m</span>
+            <span>Ti?n ?? tr?m</span>
             <strong>${escapeHtml(progressLabel)}</strong>
           </div>
           <div class="learning-path-modal-progress-track" aria-hidden="true">
             <span style="width: ${totalCount ? Math.max(0, Math.min((completedCount / totalCount) * 100, 100)) : 0}%"></span>
           </div>
           <p class="learning-path-modal-reset-timer">
-            Nhiá»‡m vá»¥ sáº½ lĂ m má»›i sau: ${escapeHtml(uiState.taskResetCountdown || "00:00:00")}
+            Nhi?m v? s? l?m m?i sau: ${escapeHtml(uiState.taskResetCountdown || "00:00:00")}
           </p>
         </div>
 
@@ -1492,7 +1490,7 @@ function renderLearningPathTaskModal(state) {
 
         <div class="learning-path-modal-reward-card${allCompleted ? " is-complete" : ""}">
           <p>
-            ${allCompleted ? "đŸ‰ Tráº¡m Ä‘Ă£ hoĂ n thĂ nh" : "HoĂ n thĂ nh táº¥t cáº£ nhiá»‡m vá»¥ Ä‘á»ƒ nháº­n:"}
+            ${allCompleted ? "🎉 Trạm đã hoàn thành" : "Hoàn thành tất cả nhiệm vụ để nhận:"}
           </p>
           <strong>+${escapeHtml(checkpoint.reward?.xu || 20)} Xu Edu</strong>
           <strong>+${escapeHtml(checkpoint.reward?.exp || 50)} EXP</strong>
@@ -1507,7 +1505,7 @@ function renderLearningPathTaskModal(state) {
                   class="learning-path-modal-next-btn"
                   data-learning-path-next-station
                 >
-                  Tiáº¿n lĂªn tráº¡m tiáº¿p theo
+                  Ti?n l?n tr?m ti?p theo
                 </button>
               </div>
             `
@@ -1529,9 +1527,9 @@ function renderRewardPopup(state) {
   const mountain = getCurrentMountain(state);
   const nextMountain = getNextMountain(state);
   const rewardIntro = showUnlockNext
-    ? `Nháº­n: ${mountain?.name || uiState.rewardPopup.checkpointTitle || ""}`
+    ? `Nh?n: ${mountain?.name || uiState.rewardPopup.checkpointTitle || ""}`
     : uiState.rewardPopup.checkpointTitle;
-  const unlockNextLabel = nextMountain?.name || "Ä‘á»‰nh tiáº¿p theo";
+  const unlockNextLabel = nextMountain?.name || "Đỉnh tiếp theo";
   const rewardXu = showUnlockNext
     ? Number(uiState.rewardPopup.xu) || 200
     : Number(uiState.rewardPopup.xu) || 0;
@@ -1544,7 +1542,7 @@ function renderRewardPopup(state) {
       <section class="learning-path-modal is-open" role="dialog" aria-modal="true">
         <header class="learning-path-modal-header">
           <div>
-            <p class="learning-path-modal-kicker">Pháº§n thÆ°á»Ÿng</p>
+            <p class="learning-path-modal-kicker">Ph?n th??ng</p>
             <h3>${escapeHtml(uiState.rewardPopup.title)}</h3>
           </div>
         </header>
@@ -1553,7 +1551,7 @@ function renderRewardPopup(state) {
           <strong>+${escapeHtml(rewardXu)} Xu Edu</strong>
           ${showExp ? `<strong>+${escapeHtml(rewardExp)} EXP</strong>` : ""}
           ${hasBadgeReward ? `<strong>+${escapeHtml(uiState.rewardPopup.badgeName)}</strong>` : ""}
-          ${showUnlockNext ? `<strong>Má»Ÿ khĂ³a ${escapeHtml(unlockNextLabel)}</strong>` : ""}
+          ${showUnlockNext ? `<strong>M? kh?a ${escapeHtml(unlockNextLabel)}</strong>` : ""}
         </div>
         <div class="learning-path-modal-complete-footer">
           <button
@@ -1561,7 +1559,7 @@ function renderRewardPopup(state) {
             class="learning-path-modal-next-btn"
             data-learning-path-close-reward-popup
           >
-            Tiáº¿p tá»¥c
+            Ti?p t?c
           </button>
         </div>
       </section>
