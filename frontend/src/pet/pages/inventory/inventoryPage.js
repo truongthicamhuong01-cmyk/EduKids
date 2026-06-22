@@ -174,43 +174,48 @@ function ensureInventoryRoot() {
       <div class="pet-inventory-screen__fx-layer" data-inventory-fx-layer aria-hidden="true"></div>
 
       <div class="pet-inventory-screen__shell">
-        <header class="pet-inventory-header">
-          <div class="pet-inventory-header__left">
-            <button type="button" class="pet-inventory-title pet-theme--glass" data-action="back" aria-label="Quay lại Home">
-              <span class="pet-inventory-title__icon" aria-hidden="true">${iconToy()}</span>
-              <span class="pet-inventory-title__copy">
-                <strong>TÚI ĐỒ CHƠI</strong>
-              </span>
-            </button>
-            <div class="pet-inventory-subtitle pet-theme--glass">
-              Các món đồ chơi dành cho thú cưng của bạn.
-            </div>
-          </div>
-
-          <div class="pet-inventory-coin pet-theme--glass" data-inventory-coin>
-            <span class="pet-inventory-coin__icon" aria-hidden="true">${iconCoin()}</span>
-            <strong data-inventory-coin-value>0</strong>
-            <span class="pet-inventory-coin__plus" aria-hidden="true">+</span>
-          </div>
-        </header>
-
-        <section class="pet-inventory-hero">
-          <aside class="pet-inventory-status pet-panel" aria-label="Trạng thái">
-            <div class="pet-inventory-status__list" data-inventory-status-list></div>
-          </aside>
-
-          <section class="pet-inventory-stage" aria-label="Pet">
-            <div class="pet-inventory-bubble pet-theme--glass" data-inventory-bubble hidden role="status" aria-live="polite">
-              <span class="pet-inventory-bubble__icon" aria-hidden="true">${iconSparkle()}</span>
-              <p data-inventory-bubble-text></p>
+        <section class="pet-inventory-hero-shell">
+          <header class="pet-inventory-header">
+            <div class="pet-inventory-header__left">
+              <button type="button" class="pet-inventory-title pet-theme--glass" data-action="back" aria-label="Quay lại Home">
+                <span class="pet-inventory-title__icon" aria-hidden="true">${iconToy()}</span>
+                <span class="pet-inventory-title__copy">
+                  <strong>TÚI ĐỒ CHƠI</strong>
+                </span>
+              </button>
+              <div class="pet-inventory-subtitle pet-theme--glass">
+                Các món đồ chơi dành cho thú cưng của bạn.
+              </div>
             </div>
 
-            <div class="pet-inventory-stage__platform" aria-hidden="true"></div>
-            <button type="button" class="pet-inventory-pet" data-action="pet" aria-label="Thú cưng">
-              <span class="pet-inventory-pet__halo" aria-hidden="true"></span>
-              <span class="pet-inventory-pet__shadow" aria-hidden="true"></span>
-              <img data-inventory-pet-image src="" alt="Pet" loading="eager" decoding="async" />
-            </button>
+            <div class="pet-inventory-coin pet-theme--glass" data-inventory-coin>
+              <span class="pet-inventory-coin__icon" aria-hidden="true">${iconCoin()}</span>
+              <strong data-inventory-coin-value>0</strong>
+              <span class="pet-inventory-coin__plus" aria-hidden="true">+</span>
+            </div>
+          </header>
+
+          <section class="pet-inventory-hero">
+            <div class="pet-inventory-status-block">
+              <div class="pet-inventory-status-block__label">TRẠNG THÁI</div>
+              <aside class="pet-inventory-status pet-panel" aria-label="Trạng thái">
+                <div class="pet-inventory-status__list" data-inventory-status-list></div>
+              </aside>
+            </div>
+
+            <section class="pet-inventory-stage" aria-label="Pet">
+              <div class="pet-inventory-bubble pet-theme--glass" data-inventory-bubble hidden role="status" aria-live="polite">
+                <span class="pet-inventory-bubble__icon" aria-hidden="true">${iconSparkle()}</span>
+                <p data-inventory-bubble-text></p>
+              </div>
+
+              <div class="pet-inventory-stage__platform" aria-hidden="true"></div>
+              <button type="button" class="pet-inventory-pet" data-action="pet" aria-label="Thú cưng">
+                <span class="pet-inventory-pet__halo" aria-hidden="true"></span>
+                <span class="pet-inventory-pet__shadow" aria-hidden="true"></span>
+                <img data-inventory-pet-image src="" alt="Pet" loading="eager" decoding="async" />
+              </button>
+            </section>
           </section>
         </section>
 

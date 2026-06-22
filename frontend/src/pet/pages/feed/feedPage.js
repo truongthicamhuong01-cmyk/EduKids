@@ -183,43 +183,47 @@ function ensureFeedRoot() {
       <div class="pet-feed-screen__fx-layer" data-feed-fx-layer aria-hidden="true"></div>
 
       <div class="pet-feed-screen__shell">
-        <header class="pet-feed-header">
-          <div class="pet-feed-header__left">
-            <button type="button" class="pet-feed-title pet-theme--glass" data-action="back" aria-label="Quay về Home">
-              <span class="pet-feed-title__icon" aria-hidden="true">${iconBag()}</span>
-              <span class="pet-feed-title__copy">
-                <strong>CHO THÚ CƯNG ĂN</strong>
-              </span>
-            </button>
-            <div class="pet-feed-subtitle pet-theme--glass">
-              Chọn món ăn để chăm sóc thú cưng nhé!
-            </div>
-          </div>
-
-          <div class="pet-feed-coin pet-theme--glass" data-feed-coin>
-            <span class="pet-feed-coin__icon" aria-hidden="true">${iconCoin()}</span>
-            <strong data-feed-coin-value>0</strong>
-          </div>
-        </header>
-
-        <section class="pet-feed-hero">
-          <aside class="pet-feed-status pet-panel" aria-label="Trạng thái">
-            <div class="pet-feed-status__tab">TRẠNG THÁI</div>
-            <div class="pet-feed-status__list" data-feed-status-list></div>
-          </aside>
-
-          <section class="pet-feed-stage" aria-label="Pet">
-            <div class="pet-feed-bubble pet-theme--glass" data-feed-bubble hidden role="status" aria-live="polite">
-              <span class="pet-feed-bubble__icon" aria-hidden="true">${iconSparkle()}</span>
-              <p data-feed-bubble-text></p>
+        <section class="pet-feed-hero-shell">
+          <header class="pet-feed-header">
+            <div class="pet-feed-header__left">
+              <button type="button" class="pet-feed-title pet-theme--glass" data-action="back" aria-label="Quay về Home">
+                <span class="pet-feed-title__icon" aria-hidden="true">${iconBag()}</span>
+                <span class="pet-feed-title__copy">
+                  <strong>CHO THÚ CƯNG ĂN</strong>
+                </span>
+              </button>
+              <div class="pet-feed-subtitle pet-theme--glass">
+                Chọn món ăn để chăm sóc thú cưng nhé!
+              </div>
             </div>
 
-            <div class="pet-feed-stage__platform" aria-hidden="true"></div>
-            <button type="button" class="pet-feed-pet" data-action="pet" aria-label="Thú cưng">
-              <span class="pet-feed-pet__halo" aria-hidden="true"></span>
-              <span class="pet-feed-pet__shadow" aria-hidden="true"></span>
-              <img data-feed-pet-image src="" alt="Pet" loading="eager" decoding="async" />
-            </button>
+            <div class="pet-feed-coin pet-theme--glass" data-feed-coin>
+              <span class="pet-feed-coin__icon" aria-hidden="true">${iconCoin()}</span>
+              <strong data-feed-coin-value>0</strong>
+            </div>
+          </header>
+
+          <section class="pet-feed-hero">
+            <div class="pet-feed-status-block">
+              <div class="pet-feed-status-block__label">TRẠNG THÁI</div>
+              <aside class="pet-feed-status pet-panel" aria-label="Trạng thái">
+                <div class="pet-feed-status__list" data-feed-status-list></div>
+              </aside>
+            </div>
+
+            <section class="pet-feed-stage" aria-label="Pet">
+              <div class="pet-feed-bubble pet-theme--glass" data-feed-bubble hidden role="status" aria-live="polite">
+                <span class="pet-feed-bubble__icon" aria-hidden="true">${iconSparkle()}</span>
+                <p data-feed-bubble-text></p>
+              </div>
+
+              <div class="pet-feed-stage__platform" aria-hidden="true"></div>
+              <button type="button" class="pet-feed-pet" data-action="pet" aria-label="Thú cưng">
+                <span class="pet-feed-pet__halo" aria-hidden="true"></span>
+                <span class="pet-feed-pet__shadow" aria-hidden="true"></span>
+                <img data-feed-pet-image src="" alt="Pet" loading="eager" decoding="async" />
+              </button>
+            </section>
           </section>
         </section>
 

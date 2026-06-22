@@ -159,42 +159,44 @@ function ensureShopRoot() {
       <div class="pet-shop-screen__fx-layer" data-shop-fx-layer aria-hidden="true"></div>
 
       <div class="pet-shop-screen__shell">
-        <header class="pet-shop-header">
-          <div class="pet-shop-header__left">
-            <button type="button" class="pet-shop-title pet-theme--glass" data-action="back" aria-label="Quay lại Home">
-              <span class="pet-shop-title__icon" aria-hidden="true">${iconShop()}</span>
-              <span class="pet-shop-title__copy">
-                <strong>CỬA HÀNG</strong>
-              </span>
-            </button>
-            <div class="pet-shop-subtitle pet-theme--glass">
-              Dùng Xu Edu để mua các vật phẩm chăm sóc thú cưng của bạn nhé!
-            </div>
-          </div>
-
-          <div class="pet-shop-coin pet-theme--glass" data-shop-coin>
-            <span class="pet-shop-coin__icon" aria-hidden="true">${iconCoin()}</span>
-            <strong data-shop-coin-value>0</strong>
-          </div>
-        </header>
-
-        <section class="pet-shop-hero">
-          <aside class="pet-shop-status pet-panel" aria-label="Chỉ số">
-            <div class="pet-shop-status__list" data-shop-status-list></div>
-          </aside>
-
-          <section class="pet-shop-stage" aria-label="Pet">
-            <div class="pet-shop-bubble pet-theme--glass" data-shop-bubble hidden role="status" aria-live="polite">
-              <span class="pet-shop-bubble__icon" aria-hidden="true">${iconSparkle()}</span>
-              <p data-shop-bubble-text></p>
+        <section class="pet-shop-hero-shell">
+          <header class="pet-shop-header">
+            <div class="pet-shop-header__left">
+              <button type="button" class="pet-shop-title pet-theme--glass" data-action="back" aria-label="Quay lại Home">
+                <span class="pet-shop-title__icon" aria-hidden="true">${iconShop()}</span>
+                <span class="pet-shop-title__copy">
+                  <strong>CỬA HÀNG</strong>
+                </span>
+              </button>
+              <div class="pet-shop-subtitle pet-theme--glass">
+                Dùng Xu Edu để mua các vật phẩm chăm sóc thú cưng của bạn nhé!
+              </div>
             </div>
 
-            <div class="pet-shop-stage__platform" aria-hidden="true"></div>
-            <button type="button" class="pet-shop-pet" data-action="pet" aria-label="Thú cưng">
-              <span class="pet-shop-pet__halo" aria-hidden="true"></span>
-              <span class="pet-shop-pet__shadow" aria-hidden="true"></span>
-              <img data-shop-pet-image src="" alt="Pet" loading="eager" decoding="async" />
-            </button>
+            <div class="pet-shop-coin pet-theme--glass" data-shop-coin>
+              <span class="pet-shop-coin__icon" aria-hidden="true">${iconCoin()}</span>
+              <strong data-shop-coin-value>0</strong>
+            </div>
+          </header>
+
+          <section class="pet-shop-hero">
+            <aside class="pet-shop-status pet-panel" aria-label="Chỉ số">
+              <div class="pet-shop-status__list" data-shop-status-list></div>
+            </aside>
+
+            <section class="pet-shop-stage" aria-label="Pet">
+              <div class="pet-shop-bubble pet-theme--glass" data-shop-bubble hidden role="status" aria-live="polite">
+                <span class="pet-shop-bubble__icon" aria-hidden="true">${iconSparkle()}</span>
+                <p data-shop-bubble-text></p>
+              </div>
+
+              <div class="pet-shop-stage__platform" aria-hidden="true"></div>
+              <button type="button" class="pet-shop-pet" data-action="pet" aria-label="Thú cưng">
+                <span class="pet-shop-pet__halo" aria-hidden="true"></span>
+                <span class="pet-shop-pet__shadow" aria-hidden="true"></span>
+                <img data-shop-pet-image src="" alt="Pet" loading="eager" decoding="async" />
+              </button>
+            </section>
           </section>
         </section>
 

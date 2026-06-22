@@ -1,8 +1,7 @@
 .pet-home-screen {
   position: relative;
   width: 100%;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: auto;
   overflow: hidden;
   color: #3f2a15;
   background: #d7ecff;
@@ -67,9 +66,9 @@
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  min-height: 100%;
-  gap: 0.95rem;
-  padding: 1.15rem 1.2rem 1.35rem;
+  min-height: 0;
+  gap: 0.8rem;
+  padding: 1rem 1.2rem 1.05rem;
 }
 
 .pet-home-topbar {
@@ -156,7 +155,7 @@
   display: grid;
   place-items: center;
   min-height: 0;
-  padding: 1.05rem 0 0.8rem;
+  padding: 0.9rem 0 0.65rem;
 }
 
 .pet-home-bubble {
@@ -222,7 +221,6 @@
   display: grid;
   place-items: center;
   width: min(44vw, 470px);
-  min-height: min(38vh, 405px);
   padding: 0;
   border: 0;
   background: transparent;
@@ -271,7 +269,7 @@
   position: relative;
   z-index: 1;
   width: min(23vw, 380px);
-  max-height: min(42vh, 390px);
+  max-height: none;
   object-fit: contain;
   transform-origin: center bottom;
   filter: drop-shadow(0 26px 22px rgba(57, 33, 10, 0.2));
@@ -432,7 +430,7 @@
 
 .pet-home-skeleton__pet {
   width: min(30vw, 26rem);
-  height: min(40vh, 24rem);
+  height: clamp(18rem, 26vw, 24rem);
   border-radius: 50% 50% 46% 46%;
   align-self: center;
 }
@@ -460,7 +458,7 @@
   display: grid;
   grid-template-columns: minmax(20rem, 1.15fr) minmax(22rem, 1fr) minmax(21rem, 1.05fr);
   align-items: end;
-  gap: 0.85rem;
+  gap: 0.75rem;
   min-height: 0;
 }
 
@@ -776,7 +774,7 @@
 .pet-home-stats__list {
   display: grid;
   gap: 0.55rem;
-  min-height: 100%;
+  min-height: 0;
 }
 
 .pet-home-stat {
@@ -1118,7 +1116,6 @@
 
   .pet-home-pet {
     width: min(78vw, 460px);
-    min-height: min(38vh, 400px);
   }
 
   .pet-home-stats,
@@ -1142,7 +1139,6 @@
 
   .pet-home-pet {
     width: min(76vw, 395px);
-    min-height: min(34vh, 350px);
   }
 
   .pet-home-hud {
@@ -1207,7 +1203,6 @@
 
   .pet-home-pet {
     width: min(88vw, 520px);
-    min-height: min(31vh, 320px);
   }
 
   .pet-home-pet img {

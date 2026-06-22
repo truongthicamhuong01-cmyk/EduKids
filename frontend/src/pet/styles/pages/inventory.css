@@ -4,7 +4,7 @@
   min-height: 100%;
   overflow: hidden;
   color: #2b2230;
-  background: #d8f0ff;
+  background: #ffffff;
 }
 
 .pet-inventory-screen[hidden] {
@@ -14,8 +14,7 @@
 .pet-inventory-screen__background,
 .pet-inventory-screen__veil,
 .pet-inventory-screen__fx-layer {
-  position: absolute;
-  inset: 0;
+  display: none;
 }
 
 .pet-inventory-screen__background {
@@ -74,12 +73,54 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 0.75rem;
-  min-height: 100%;
+  grid-template-rows: auto auto auto;
+  align-content: start;
+  gap: 0.8rem;
+  min-height: 0;
   max-width: 1480px;
   margin: 0 auto;
   padding: 1rem 1.25rem 1.15rem;
+}
+
+.pet-inventory-hero-shell {
+  position: relative;
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem 1rem 1.05rem;
+  border-radius: 34px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.pet-inventory-hero-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255, 244, 198, 0.92) 0, rgba(255, 244, 198, 0.74) 14%, transparent 30%),
+    radial-gradient(circle at 82% 16%, rgba(255, 255, 255, 0.25) 0 4%, transparent 9%),
+    radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.2) 0 4%, transparent 8%),
+    linear-gradient(180deg, rgba(255, 236, 159, 0.2) 0%, rgba(255, 250, 230, 0) 20%, rgba(50, 145, 84, 0.1) 100%),
+    var(--pet-inventory-scene) center center / cover no-repeat;
+  filter: saturate(1.05) contrast(1.04);
+  pointer-events: none;
+}
+
+.pet-inventory-hero-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(25, 77, 41, 0.16) 0, transparent 8%, transparent 92%, rgba(25, 77, 41, 0.16) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 24%, rgba(22, 61, 34, 0.14) 100%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.08), transparent 40%);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.pet-inventory-hero-shell > * {
+  position: relative;
+  z-index: 1;
 }
 
 .pet-inventory-header {
@@ -229,6 +270,21 @@
   min-height: 13.25rem;
 }
 
+.pet-inventory-status-block {
+  display: grid;
+  gap: 0.65rem;
+  align-self: end;
+}
+
+.pet-inventory-status-block__label {
+  color: #4f3290;
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
 .pet-inventory-status {
   height: 13.25rem;
   min-height: 13.25rem;
@@ -239,24 +295,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.86),
     0 24px 44px rgba(82, 58, 15, 0.16);
   backdrop-filter: blur(var(--pet-blur-md));
-  padding: 2.25rem 0.85rem 0.85rem;
-}
-
-.pet-inventory-status::before {
-  content: "TR\1EA0NG TH\00C1I";
-  position: absolute;
-  top: 0;
-  left: 1rem;
-  min-width: 7.6rem;
-  padding: 0.48rem 0.85rem 0.55rem;
-  border-radius: 18px 18px 12px 12px;
-  background: linear-gradient(180deg, #6d43ee 0%, #4c26ca 100%);
-  color: #fff;
-  font-size: 0.98rem;
-  font-weight: 900;
-  letter-spacing: 0.02em;
-  text-align: center;
-  box-shadow: 0 10px 20px rgba(76, 38, 202, 0.24);
+  padding: 0.9rem 0.85rem 0.85rem;
 }
 
 .pet-inventory-status__list {
@@ -503,7 +542,7 @@
 
 .pet-inventory-grid-wrap {
   position: relative;
-  margin-top: 0.2rem;
+  margin-top: 0;
   padding: 1rem;
   border-radius: 30px;
   background: rgba(255, 255, 255, 0.94);
@@ -1112,8 +1151,16 @@
     gap: 0.9rem;
   }
 
+  .pet-inventory-status-block {
+    gap: 0.55rem;
+  }
+
+  .pet-inventory-status-block__label {
+    font-size: 0.9rem;
+  }
+
   .pet-inventory-status {
-    min-height: auto;
+    min-height: 13.25rem;
   }
 
   .pet-inventory-stage {
@@ -1199,8 +1246,16 @@
     height: 2rem;
   }
 
+  .pet-inventory-status-block {
+    gap: 0.55rem;
+  }
+
+  .pet-inventory-status-block__label {
+    font-size: 0.9rem;
+  }
+
   .pet-inventory-status {
-    padding: 1.85rem 0.9rem 0.9rem;
+    padding: 0.85rem 0.9rem 0.9rem;
   }
 
   .pet-inventory-stage {
