@@ -937,7 +937,7 @@ function renderMountainCard(mountain, state) {
 
         ${
           isEverest
-            ? '<span class="learning-path-mountain-note">🏆 Hoàn thành Everest để nhận huy hiệu The Explorer</span>'
+            ? '<span class="learning-path-mountain-note">🏆 Hoàn thành để nhận huy hiệu The Explorer</span>'
             : ""
         }
       </span>
@@ -1207,7 +1207,7 @@ function renderLearningPathGraphPanelShell(state) {
       >
         <div class="learning-path-journey-glow"></div>
         <div class="learning-path-journey-copy">
-          <span class="learning-path-level-pill">${escapeHtml(`C?p ?? ${state.season?.order || 1}`)}</span>
+          <span class="learning-path-level-pill">${escapeHtml(`Cấp độ ${state.season?.order || 1}`)}</span>
           <h2>${escapeHtml(mountain?.name || "")}</h2>
           <p class="learning-path-location">
             📍 ${escapeHtml(mountain?.continent || "")} | ${escapeHtml(mountain?.height || "")}

@@ -136,17 +136,17 @@ const TASK_BLUEPRINTS = [
   },
 ];
 
-const SUMMIT_CHECKPOINT_POSITION = { left: 50, top: 15.7, side: "right" };
-const SUMMIT_CARD_POSITION = { left: 38, top: 10 };
+const SUMMIT_CHECKPOINT_POSITION = { left: 49.5, top: 15.4, side: "right" };
+const SUMMIT_CARD_POSITION = { left: 38.5, top: 9.5 };
 const PEAK_POSITION = SUMMIT_CHECKPOINT_POSITION;
 
 const ROUTE_POSITIONS = [
-  { left: 57, top: 89.5, side: "left" },
-  { left: 40, top: 74, side: "left" },
-  { left: 58, top: 61, side: "right" },
-  { left: 41, top: 48, side: "left" },
-  { left: 55.2, top: 36, side: "right" },
-  { left: 45, top: 26, side: "left" },
+  { left: 58.2, top: 85, side: "left" },
+  { left: 39, top: 70.5, side: "left" },
+  { left: 55.3, top: 54, side: "right" },
+  { left: 40.3, top: 44.5, side: "left" },
+  { left: 58.4, top: 33, side: "right" },
+  { left: 45.5, top: 24, side: "left" },
 ];
 
 function formatLearningPathMeters(value) {

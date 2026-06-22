@@ -96,6 +96,8 @@
   content: "";
   position: absolute;
   inset: 0;
+  transform: scale(1.04) translateX(18%);
+  transform-origin: center center;
   background:
     radial-gradient(circle at 50% 8%, rgba(255, 244, 198, 0.92) 0, rgba(255, 244, 198, 0.74) 14%, transparent 30%),
     radial-gradient(circle at 82% 16%, rgba(255, 255, 255, 0.25) 0 4%, transparent 9%),
@@ -277,8 +279,15 @@
 }
 
 .pet-inventory-status-block__label {
-  color: #4f3290;
-  font-size: 0.95rem;
+  width: fit-content;
+  padding: 0.42rem 0.85rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 10px 18px rgba(79, 50, 144, 0.18);
+  color: #ffffff;
+  font-size: 0.88rem;
   font-weight: 900;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -366,27 +375,7 @@
 }
 
 .pet-inventory-stage__platform {
-  position: absolute;
-  left: 50%;
-  bottom: 0.72rem;
-  width: min(18.5rem, 35vw);
-  height: clamp(2.4rem, 3.5vw, 3rem);
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background:
-    radial-gradient(circle at 50% 42%, rgba(255, 233, 173, 0.92) 0 18%, rgba(204, 135, 255, 0.84) 35%, rgba(122, 79, 211, 0.92) 78%, rgba(95, 55, 172, 0.96) 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.26),
-    0 20px 30px rgba(66, 28, 114, 0.24);
-}
-
-.pet-inventory-stage__platform::before {
-  content: "";
-  position: absolute;
-  inset: 0.26rem 0.75rem 0.42rem;
-  border-radius: inherit;
-  background: radial-gradient(circle at 50% 15%, rgba(255, 255, 255, 0.34) 0, transparent 55%);
-  opacity: 0.7;
+  display: none;
 }
 
 .pet-inventory-bubble {
@@ -1137,6 +1126,10 @@
 }
 
 @media (max-width: 1080px) {
+  .pet-inventory-hero-shell::before {
+    transform: scale(1.04) translateX(14%);
+  }
+
   .pet-inventory-header {
     flex-direction: column;
     align-items: stretch;
@@ -1211,6 +1204,10 @@
 }
 
 @media (max-width: 760px) {
+  .pet-inventory-hero-shell::before {
+    transform: scale(1.03) translateX(10%);
+  }
+
   .pet-inventory-screen__shell {
     padding: 0.8rem 0.8rem 0.95rem;
   }
