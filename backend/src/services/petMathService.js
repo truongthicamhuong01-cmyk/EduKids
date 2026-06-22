@@ -140,36 +140,36 @@ function calculateEvolutionStage(petType, level, evolutionConfig = {}, petState 
 
 function calculateMood(petState = {}, petBalance = {}) {
   const thresholds = petBalance.moodThresholds || {};
-  const sickThreshold = toNumber(thresholds.sickThreshold, 35);
-  const sleepyThreshold = toNumber(thresholds.sleepyThreshold, 40);
-  const hungryThreshold = toNumber(thresholds.hungryThreshold, 40);
-  const sadThreshold = toNumber(thresholds.sadThreshold, 40);
+  const sickThreshold = toNumber(thresholds.sickThreshold, 20);
+  const sleepyThreshold = toNumber(thresholds.sleepyThreshold, 20);
+  const hungryThreshold = toNumber(thresholds.hungryThreshold, 20);
+  const sadThreshold = toNumber(thresholds.sadThreshold, 30);
   const happyRule = thresholds.happy || {};
   const hunger = toNumber(petState.hunger, 0);
   const happiness = toNumber(petState.happiness, 0);
   const energy = toNumber(petState.energy, 0);
   const health = toNumber(petState.health, 0);
 
-  if (health <= sickThreshold) {
+  if (health < sickThreshold) {
     return "sick";
   }
 
-  if (energy <= sleepyThreshold) {
+  if (energy < sleepyThreshold) {
     return "sleepy";
   }
 
-  if (hunger <= hungryThreshold) {
+  if (hunger < hungryThreshold) {
     return "hungry";
   }
 
-  if (happiness <= sadThreshold) {
+  if (happiness < sadThreshold) {
     return "sad";
   }
 
   const happyHunger = toNumber(happyRule.hunger, 70);
-  const happyHappiness = toNumber(happyRule.happiness, 75);
+  const happyHappiness = toNumber(happyRule.happiness, 70);
   const happyEnergy = toNumber(happyRule.energy, 70);
-  const happyHealth = toNumber(happyRule.health, 80);
+  const happyHealth = toNumber(happyRule.health, 70);
 
   if (
     hunger >= happyHunger &&

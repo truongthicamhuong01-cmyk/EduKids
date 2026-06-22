@@ -1,7 +1,7 @@
 import { escapeHtml } from "../../utils/dom.js";
 import { mountIntoPetHost } from "../../utils/pageHost.js";
 import {
-  resolveBackgroundPath,
+  resolveSceneBackgroundPath,
   resolveItemIconPath,
   resolvePetAssetPath,
 } from "../../utils/assetResolver.js";
@@ -535,7 +535,7 @@ export function createFeedPage({ store, petApi, shopApi, inventoryApi } = {}) {
 
     root.style.setProperty(
       "--pet-feed-scene",
-      `url('${resolveBackgroundPath({ petType: pet?.petTypeId || pet?.petType || "horse" })}')`,
+      `url('${resolveSceneBackgroundPath({ petType: pet?.petTypeId || pet?.petType || "horse" })}')`,
     );
 
     if (!pet) {

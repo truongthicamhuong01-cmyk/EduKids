@@ -4,13 +4,8 @@ const { getGameConfigBundle, readConfigDoc } = require("../repositories/gameConf
 const { getUserById, updateUserById } = require("../repositories/userRepository");
 const { getRewardLedger, saveRewardLedger } = require("../repositories/rewardRepository");
 const { getPetState, savePetState, runTransaction } = require("../repositories/petRepository");
-const {
-  calculateEvolutionStage,
-  calculateLevelState,
-  calculateMood,
-  clampStats,
-  toNumber,
-} = require("./petMathService");
+const { toNumber } = require("./petMathService");
+const { applyPetMutation, stripDerivedPetFields } = require("./petDecayService");
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -59,6 +54,40 @@ function normalizeRewardRule(rule = {}) {
         ? [...new Set(rule.reward.badges.map((item) => String(item || "").trim()).filter(Boolean))]
         : [],
   };
+}
+
+function isQuizHighScore(score = 0) {
+  return Math.max(0, Number(score) || 0) >= 90;
+}
+
+function isAssignmentHighScore(score = 0) {
+  return Math.max(0, Number(score) || 0) >= 9;
+}
+
+function getPetRewardBonus(sourceType = "", sourceId = "", score = 0) {
+  const normalized = String(sourceType || "").trim().toLowerCase();
+  const normalizedSourceId = String(sourceId || "").trim().toLowerCase();
+
+  if (normalized === "lesson") {
+    return {
+      happiness: 0,
+    };
+  }
+
+  if (normalized === "highscore" && normalizedSourceId.startsWith("quiz:") && isQuizHighScore(score)) {
+    return {
+      happiness: 3,
+    };
+  }
+
+  if (normalized === "learningpath") {
+    return {
+      happiness: 6,
+      energy: 5,
+    };
+  }
+
+  return {};
 }
 
 function getLearningStreakRule(rewardConfig, streakCount = 0) {
@@ -126,43 +155,27 @@ function buildRewardResponse({ reward, user, petState, requestId, sourceType, so
   };
 }
 
-function buildPetRewardState(petState, rewardRule, configs) {
+function buildPetRewardState(petState, rewardRule, configs, sourceType = "", sourceId = "", score = 0) {
   if (!petState) {
     return null;
   }
 
-  const petBalance = configs.petBalance || {};
-  const levelConfig = configs.levelConfig || {};
-  const evolutionConfig = configs.evolutionConfig || {};
-  const limits = petBalance.statLimits || { minValue: 0, maxValue: 100 };
-  const nextPetState = {
-    ...petState,
-  };
+  const bonus = getPetRewardBonus(sourceType, sourceId, score);
 
-  nextPetState.exp = toNumber(nextPetState.exp, 0) + Math.max(0, Math.floor(toNumber(rewardRule.petExp, 0)));
-  nextPetState.happiness = toNumber(nextPetState.happiness, 0) + Math.max(0, Math.floor(toNumber(rewardRule.petHappiness, 0)));
-  nextPetState.health = toNumber(nextPetState.health, 0) + Math.max(0, Math.floor(toNumber(rewardRule.petHealth, 0)));
-  nextPetState.energy = toNumber(nextPetState.energy, 0) + Math.max(0, Math.floor(toNumber(rewardRule.petEnergy, 0)));
-  nextPetState.hunger = toNumber(nextPetState.hunger, 0) + Math.max(0, Math.floor(toNumber(rewardRule.petHunger, 0)));
-  nextPetState.updatedAt = new Date().toISOString();
-  nextPetState.lastUpdateAt = new Date().toISOString();
-  nextPetState.version = Math.max(0, Number(nextPetState.version) || 0) + 1;
+  const mutation = applyPetMutation(
+    petState,
+    configs,
+    {
+      exp: Math.max(0, Math.floor(toNumber(rewardRule.petExp, 0))),
+      happiness: Math.max(0, Math.floor(toNumber(rewardRule.petHappiness, 0))) + Math.max(0, Math.floor(toNumber(bonus.happiness, 0))),
+      health: Math.max(0, Math.floor(toNumber(rewardRule.petHealth, 0))),
+      energy: Math.max(0, Math.floor(toNumber(rewardRule.petEnergy, 0))) + Math.max(0, Math.floor(toNumber(bonus.energy, 0))),
+      hunger: Math.max(0, Math.floor(toNumber(rewardRule.petHunger, 0))),
+    },
+    new Date(),
+  );
 
-  const clamped = clampStats(nextPetState, limits);
-  nextPetState.hunger = clamped.hunger;
-  nextPetState.happiness = clamped.happiness;
-  nextPetState.energy = clamped.energy;
-  nextPetState.health = clamped.health;
-
-  const levelState = calculateLevelState(nextPetState.exp, levelConfig);
-  nextPetState.level = levelState.level;
-  nextPetState.exp = levelState.exp;
-  nextPetState.requiredExpToNextLevel = levelState.requiredExpToNextLevel;
-  nextPetState.isMaxLevel = levelState.isMaxLevel;
-  nextPetState.stage = calculateEvolutionStage(nextPetState.petTypeId, nextPetState.level, evolutionConfig, nextPetState);
-  nextPetState.mood = calculateMood(nextPetState, petBalance);
-
-  return nextPetState;
+  return mutation.state;
 }
 
 async function grantReward({
@@ -171,6 +184,7 @@ async function grantReward({
   sourceId,
   ruleKey,
   rewardRule,
+  score = 0,
   requestId = "",
   idempotencyKey = "",
   title = "",
@@ -226,8 +240,8 @@ async function grantReward({
     let nextPetState = null;
     const petState = await getPetState(normalizedUserId, transaction).catch(() => null);
     if (petState) {
-      nextPetState = buildPetRewardState(petState, rule, configs);
-      await savePetState(normalizedUserId, nextPetState, transaction);
+      nextPetState = buildPetRewardState(petState, rule, configs, normalizedSourceType, normalizedSourceId, score);
+      await savePetState(normalizedUserId, stripDerivedPetFields(nextPetState), transaction);
     }
 
     await updateUserById(
@@ -349,8 +363,12 @@ async function rewardHighScore({ userId, sourceId, score = 0, requestId = "", id
     throw new ApiError(422, "Reward highScore không tồn tại", PET_ERROR_CODES.INVALID_GAME_CONFIG);
   }
 
-  const minimumScore = Math.max(0, Math.floor(toNumber(rule.minScore, 9)));
-  if (Math.floor(toNumber(score, 0)) < minimumScore) {
+  const normalizedScore = Math.max(0, Math.floor(toNumber(score, 0)));
+  const sourceIdText = normalizeText(sourceId);
+  const isQuiz = sourceIdText.startsWith("quiz:");
+  const isAssignment = sourceIdText.startsWith("assignment:");
+
+  if ((isQuiz && !isQuizHighScore(normalizedScore)) || (isAssignment && !isAssignmentHighScore(normalizedScore))) {
     return {
       statusCode: 200,
       message: "Không đủ điều kiện nhận thưởng điểm cao",
@@ -373,6 +391,7 @@ async function rewardHighScore({ userId, sourceId, score = 0, requestId = "", id
     sourceId,
     ruleKey: "highScore",
     rewardRule: rule,
+    score: normalizedScore,
     requestId,
     idempotencyKey,
     title: "Điểm số rất cao",
@@ -437,4 +456,6 @@ module.exports = {
   rewardLessonComplete,
   rewardLearningPath,
   rewardLearningStreak,
+  isAssignmentHighScore,
+  isQuizHighScore,
 };

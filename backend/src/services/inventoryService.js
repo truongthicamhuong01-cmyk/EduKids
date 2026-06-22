@@ -11,6 +11,7 @@ const { getUserById, updateUserById } = require("../repositories/userRepository"
 const { readConfigDoc } = require("../repositories/gameConfigRepository");
 const { getPetState, savePetState, runTransaction } = require("../repositories/petRepository");
 const { applyItemEffectsToPet } = require("./petItemEffectService");
+const { stripDerivedPetFields } = require("./petDecayService");
 const { clampStats, toNumber } = require("./petMathService");
 
 function normalizeText(value) {
@@ -63,6 +64,108 @@ function getItemFromCatalog(catalog, itemId) {
   return items[normalizeText(itemId)] || null;
 }
 
+function getInventoryItemDurabilityConfig(itemConfig = {}) {
+  const maxDurability = Math.max(1, Math.floor(toNumber(itemConfig.maxDurability, 100)));
+  const durabilityLossPerUse = Math.max(1, Math.floor(toNumber(itemConfig.durabilityLossPerUse, 1)));
+
+  return {
+    maxDurability,
+    durabilityLossPerUse,
+  };
+}
+
+function isToyItem(itemConfig = {}) {
+  return normalizeCategoryKey(itemConfig.category) === "toys";
+}
+
+function normalizeInventoryItemDurability(item = {}, itemConfig = {}) {
+  const nextItem = {
+    ...item,
+  };
+
+  if (!isToyItem(itemConfig)) {
+    return {
+      item: nextItem,
+      changed: false,
+    };
+  }
+
+  const { maxDurability, durabilityLossPerUse } = getInventoryItemDurabilityConfig(itemConfig);
+  const hasDurability = item?.durability !== undefined && item?.durability !== null;
+  const hasMaxDurability = item?.maxDurability !== undefined && item?.maxDurability !== null;
+  const currentDurability = hasDurability ? Math.floor(toNumber(item.durability, maxDurability)) : maxDurability;
+  const normalizedDurability = Math.max(0, Math.min(maxDurability, currentDurability));
+  let changed = Boolean(hasDurability === false || hasMaxDurability === false);
+
+  nextItem.maxDurability = maxDurability;
+  nextItem.durability = normalizedDurability;
+  nextItem.metadata = {
+    ...(nextItem.metadata || {}),
+    durabilityLossPerUse,
+    toy: true,
+  };
+
+  if (normalizedDurability <= 0 && Number(nextItem.quantity) > 0) {
+    const nextQuantity = Math.max(0, Math.floor(Number(nextItem.quantity) || 0) - 1);
+    changed = true;
+
+    if (nextQuantity > 0) {
+      nextItem.quantity = nextQuantity;
+      nextItem.durability = maxDurability;
+    } else {
+      return {
+        item: null,
+        changed: true,
+      };
+    }
+  }
+
+  if (nextItem.durability > maxDurability) {
+    nextItem.durability = maxDurability;
+    changed = true;
+  }
+
+  return {
+    item: nextItem,
+    changed,
+  };
+}
+
+function hydrateInventoryDurability(state = {}, catalog = null) {
+  const nextState = cloneInventory(state);
+  const items = catalog && typeof catalog.items === "object" ? catalog.items : {};
+  let changed = false;
+
+  Object.entries(nextState.categories || {}).forEach(([categoryKey, categoryItems]) => {
+    Object.entries(categoryItems || {}).forEach(([itemId, item]) => {
+      const itemConfig = items[normalizeText(itemId)];
+      if (!itemConfig || !isToyItem(itemConfig)) {
+        return;
+      }
+
+      const normalized = normalizeInventoryItemDurability(item, itemConfig);
+      changed = changed || normalized.changed;
+
+      if (!normalized.item) {
+        delete nextState.categories[categoryKey][itemId];
+        return;
+      }
+
+      nextState.categories[categoryKey][itemId] = normalized.item;
+    });
+  });
+
+  if (changed) {
+    nextState.updatedAt = new Date().toISOString();
+    nextState.version = Math.max(0, Number(nextState.version) || 0) + 1;
+  }
+
+  return {
+    state: nextState,
+    changed,
+  };
+}
+
 function cloneInventory(state) {
   return JSON.parse(JSON.stringify(state || {}));
 }
@@ -89,6 +192,14 @@ function addItemToInventory(state, itemConfig, quantity = 1) {
     updatedAt: "",
     metadata: {},
   };
+  const isToy = isToyItem(itemConfig);
+  const durabilityConfig = isToy ? getInventoryItemDurabilityConfig(itemConfig) : null;
+  const existingDurability = isToy
+    ? Math.max(0, Math.min(
+        durabilityConfig.maxDurability,
+        Math.floor(toNumber(existing.durability, durabilityConfig.maxDurability)),
+      ))
+    : null;
 
   const maxStack = Math.max(
     1,
@@ -105,8 +216,22 @@ function addItemToInventory(state, itemConfig, quantity = 1) {
       ...(existing.metadata || {}),
       icon: itemConfig.icon || "",
       description: itemConfig.description || "",
+      ...(isToy
+        ? {
+            durabilityLossPerUse: durabilityConfig.durabilityLossPerUse,
+            toy: true,
+          }
+        : {}),
     },
   };
+
+  if (isToy) {
+    nextState.categories[categoryKey][itemId].maxDurability = durabilityConfig.maxDurability;
+    nextState.categories[categoryKey][itemId].durability =
+      Number.isFinite(existingDurability) && existingDurability > 0
+        ? existingDurability
+        : durabilityConfig.maxDurability;
+  }
 
   nextState.updatedAt = new Date().toISOString();
   nextState.version = Math.max(0, Number(nextState.version) || 0) + 1;
@@ -134,9 +259,43 @@ function useItemFromInventory(state, itemConfig, quantity = 1) {
     throw new ApiError(400, "Số lượng vật phẩm không đủ", PET_ERROR_CODES.INSUFFICIENT_ITEM_QUANTITY);
   }
 
+  const isToy = isToyItem(itemConfig);
   const consumable = itemConfig.consumable !== false;
 
-  if (consumable) {
+  if (isToy) {
+    const durabilityConfig = getInventoryItemDurabilityConfig(itemConfig);
+    const currentDurability = Math.max(
+      0,
+      Math.min(
+        durabilityConfig.maxDurability,
+        Math.floor(toNumber(existing.durability, durabilityConfig.maxDurability)),
+      ),
+    );
+    const nextDurability = currentDurability - durabilityConfig.durabilityLossPerUse;
+    const nextQuantity = Number(existing.quantity) - 1;
+
+    if (nextDurability > 0) {
+      category[itemId] = {
+        ...existing,
+        durability: nextDurability,
+        maxDurability: durabilityConfig.maxDurability,
+        updatedAt: new Date().toISOString(),
+      };
+      nextState.categories[categoryKey] = category;
+    } else if (nextQuantity > 0) {
+      category[itemId] = {
+        ...existing,
+        quantity: nextQuantity,
+        durability: durabilityConfig.maxDurability,
+        maxDurability: durabilityConfig.maxDurability,
+        updatedAt: new Date().toISOString(),
+      };
+      nextState.categories[categoryKey] = category;
+    } else {
+      delete category[itemId];
+      nextState.categories[categoryKey] = category;
+    }
+  } else if (consumable) {
     const nextQuantity = Number(existing.quantity) - normalizedQuantity;
     if (nextQuantity > 0) {
       category[itemId] = {
@@ -168,7 +327,16 @@ async function getInventory({ uid, requestId = "" }) {
   const user = await getUserById(normalizedUid);
   ensureStudent(user);
 
-  const inventory = await getInventoryState(normalizedUid);
+  const [inventory, catalog] = await Promise.all([
+    getInventoryState(normalizedUid),
+    readConfigDoc("shopCatalog").catch(() => null),
+  ]);
+  const hydrated = catalog ? hydrateInventoryDurability(inventory, catalog) : { state: inventory, changed: false };
+  const nextInventory = hydrated.state;
+
+  if (hydrated.changed) {
+    await saveInventoryState(normalizedUid, nextInventory);
+  }
 
   console.info("[PET][INFO] inventory.get", {
     requestId,
@@ -179,10 +347,10 @@ async function getInventory({ uid, requestId = "" }) {
     message: "Lấy kho vật phẩm thành công",
     data: {
       inventory: {
-        categories: flattenInventoryState(inventory),
-        summary: buildInventorySummary(inventory),
-        version: inventory.version || 0,
-        updatedAt: inventory.updatedAt || "",
+        categories: flattenInventoryState(nextInventory),
+        summary: buildInventorySummary(nextInventory),
+        version: nextInventory.version || 0,
+        updatedAt: nextInventory.updatedAt || "",
       },
     },
     popupEvents: [],
@@ -227,7 +395,9 @@ async function useItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
     }
 
     const inventory = await getInventoryState(normalizedUid, transaction);
-    const nextInventory = useItemFromInventory(inventory, itemConfig, quantity);
+    const hydratedInventory = hydrateInventoryDurability(inventory, catalog);
+    const normalizedQuantity = isToyItem(itemConfig) ? 1 : quantity;
+    const nextInventory = useItemFromInventory(hydratedInventory.state, itemConfig, normalizedQuantity);
     let nextPetState = null;
 
     if (itemConfig.affectsPet !== false) {
@@ -239,7 +409,7 @@ async function useItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
           evolutionConfig: await readConfigDoc("evolutionConfig", transaction),
         };
         nextPetState = applyItemEffectsToPet(petState, itemConfig, bundle, new Date());
-        await savePetState(normalizedUid, nextPetState, transaction);
+        await savePetState(normalizedUid, stripDerivedPetFields(nextPetState), transaction);
       }
     }
 
@@ -292,7 +462,7 @@ async function useItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
       meta: {
         requestId,
         itemId,
-        quantity,
+        quantity: normalizedQuantity,
         targetPetId,
       },
     };
@@ -314,7 +484,7 @@ async function useItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
     console.info("[PET][INFO] item.use", {
       requestId,
       itemId,
-      quantity,
+      quantity: normalizedQuantity,
     });
 
     return response;

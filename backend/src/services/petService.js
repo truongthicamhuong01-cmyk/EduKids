@@ -10,14 +10,13 @@ const {
 } = require("../repositories/petRepository");
 const { getGameConfigBundle } = require("../repositories/gameConfigRepository");
 const { useItem: useInventoryItem } = require("./inventoryService");
-const { applyOfflineDecay } = require("./petOfflineService");
+const { toNumber } = require("./petMathService");
 const {
-  calculateEvolutionStage,
-  calculateLevelState,
-  calculateMood,
-  clampStats,
-  toNumber,
-} = require("./petMathService");
+  applyPetDecay,
+  applyPetMutation,
+  buildPetRuntimeState,
+  stripDerivedPetFields,
+} = require("./petDecayService");
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -172,77 +171,28 @@ function ensureAllowedPetType(petTypeId, evolutionConfig) {
 }
 
 function getInitialPetStats(petBalance = {}) {
-  const initialState = requireObject(petBalance.initialState, "petBalance.initialState");
-  const limits = getStatLimits(petBalance);
-  const clamped = clampStats(initialState, limits);
-
   return {
-    level: Math.max(1, Math.floor(toNumber(initialState.level, 1))),
-    exp: Math.max(0, Math.floor(toNumber(initialState.exp, 0))),
-    hunger: clamped.hunger,
-    happiness: clamped.happiness,
-    energy: clamped.energy,
-    health: clamped.health,
+    level: Math.max(1, Math.floor(toNumber(petBalance.initialState?.level, 1))),
+    exp: Math.max(0, Math.floor(toNumber(petBalance.initialState?.exp, 0))),
+    hunger: 100,
+    happiness: 100,
+    energy: 100,
+    health: 100,
+    isSleeping: false,
   };
 }
 
 function buildRuntimePetState(rawPetState, configs, now = new Date()) {
-  const petBalance = requireObject(configs.petBalance, "petBalance");
-  const levelConfig = requireObject(configs.levelConfig, "levelConfig");
-  const evolutionConfig = requireObject(configs.evolutionConfig, "evolutionConfig");
-  const statLimits = getStatLimits(petBalance);
-  const source = rawPetState || {};
-  const clampedStats = clampStats(source, statLimits);
-  const levelState = calculateLevelState(toNumber(source.exp, 0), levelConfig);
-  const petTypeId = normalizeText(source.petTypeId || source.petType || "");
-  const stage = calculateEvolutionStage(petTypeId, levelState.level, evolutionConfig, {
-    ...source,
-    ...clampedStats,
-    level: levelState.level,
+  return buildPetRuntimeState(rawPetState, configs, now, {
+    useConfigInitialState: false,
   });
-  const mood = calculateMood({ ...source, ...clampedStats }, petBalance);
-  const currentTime = now instanceof Date ? now : new Date(now);
-  const createdAt = normalizeText(source.createdAt) || currentTime.toISOString();
-  const updatedAt = currentTime.toISOString();
-
-  return {
-    petTypeId,
-    petType: petTypeId,
-    petName: normalizeText(source.petName || source.name),
-    level: levelState.level,
-    exp: levelState.exp,
-    requiredExpToNextLevel: levelState.requiredExpToNextLevel,
-    isMaxLevel: levelState.isMaxLevel,
-    hunger: clampedStats.hunger,
-    happiness: clampedStats.happiness,
-    energy: clampedStats.energy,
-    health: clampedStats.health,
-    stage,
-    mood,
-    status: normalizeText(source.status) || "active",
-    createdAt,
-    updatedAt,
-    lastUpdateAt: normalizeText(source.lastUpdateAt || source.lastUpdate) || createdAt,
-    lastLoginAt: normalizeText(source.lastLoginAt) || null,
-    lastActionAt: normalizeText(source.lastActionAt) || null,
-    lastFeedAt: normalizeText(source.lastFeedAt) || null,
-    lastPlayAt: normalizeText(source.lastPlayAt) || null,
-    lastSleepAt: normalizeText(source.lastSleepAt) || null,
-    version: Math.max(0, Math.floor(toNumber(source.version, 0))),
-    petBalanceVersion: normalizeText(source.petBalanceVersion) || normalizeText(configs.petBalance.version) || "",
-  };
 }
 
 function buildPetResponse(petState, configs, extra = {}) {
   const petBalance = requireObject(configs.petBalance, "petBalance");
-  const levelConfig = requireObject(configs.levelConfig, "levelConfig");
-  const evolutionConfig = requireObject(configs.evolutionConfig, "evolutionConfig");
-  const normalizedPet = buildRuntimePetState(petState, configs, new Date());
-  const levelState = calculateLevelState(normalizedPet.exp, levelConfig);
-  const mood = calculateMood(normalizedPet, petBalance);
-  const stage = calculateEvolutionStage(normalizedPet.petTypeId, levelState.level, evolutionConfig, normalizedPet);
   const maxStatValue = toNumber(petBalance.statLimits?.maxValue, 100);
   const minStatValue = toNumber(petBalance.statLimits?.minValue, 0);
+  const normalizedPet = buildRuntimePetState(petState, configs, new Date());
 
   const canFeed = normalizedPet.hunger < maxStatValue;
   const canPlay = normalizedPet.energy > toNumber(petBalance.actions?.play?.minEnergyToAllow, 0);
@@ -253,20 +203,16 @@ function buildPetResponse(petState, configs, extra = {}) {
       ...normalizedPet,
       petType: normalizedPet.petTypeId,
       name: normalizedPet.petName,
-      level: levelState.level,
-      exp: levelState.exp,
-      requiredExpToNextLevel: levelState.requiredExpToNextLevel,
-      isMaxLevel: levelState.isMaxLevel,
-      stage,
-      mood,
+      isSleeping: Boolean(normalizedPet.isSleeping),
     },
     hasPet: true,
     derivedState: {
-      mood,
-      stage,
+      mood: normalizedPet.mood,
+      stage: normalizedPet.stage,
       canFeed,
       canPlay,
       canSleep,
+      isSleeping: Boolean(normalizedPet.isSleeping),
       maxStatValue,
       minStatValue,
     },
@@ -332,47 +278,44 @@ function ensureCachedResponse(requestRecord, requestKey) {
 }
 
 function applyActionDelta(petState, actionName, actionConfig, petBalance, levelConfig, evolutionConfig, now = new Date()) {
-  const limits = getStatLimits(petBalance);
-  const nextState = { ...petState };
+  const deltas = {
+    hunger: 0,
+    happiness: 0,
+    energy: 0,
+    health: 0,
+    exp: 0,
+  };
 
   if (actionName === PET_ACTIONS.FEED) {
-    nextState.hunger = toNumber(nextState.hunger, 0) + toNumber(actionConfig.hungerIncrease, 0);
-    nextState.happiness = toNumber(nextState.happiness, 0) + toNumber(actionConfig.happinessIncrease, 0);
-    nextState.health = toNumber(nextState.health, 0) + toNumber(actionConfig.healthIncrease, 0);
-    nextState.exp = toNumber(nextState.exp, 0) + toNumber(actionConfig.expIncrease, 0);
-    nextState.lastFeedAt = now.toISOString();
+    deltas.hunger = toNumber(actionConfig.hungerIncrease, 0);
+    deltas.happiness = toNumber(actionConfig.happinessIncrease, 0);
+    deltas.health = toNumber(actionConfig.healthIncrease, 0);
+    deltas.exp = toNumber(actionConfig.expIncrease, 0);
+    deltas.feedAt = true;
   } else if (actionName === PET_ACTIONS.PLAY) {
-    nextState.happiness = toNumber(nextState.happiness, 0) + toNumber(actionConfig.happinessIncrease, 0);
-    nextState.energy = toNumber(nextState.energy, 0) - toNumber(actionConfig.energyDecrease, 0);
-    nextState.exp = toNumber(nextState.exp, 0) + toNumber(actionConfig.expIncrease, 0);
-    nextState.lastPlayAt = now.toISOString();
+    deltas.happiness = toNumber(actionConfig.happinessIncrease, 0);
+    deltas.energy = -toNumber(actionConfig.energyDecrease, 0);
+    deltas.exp = toNumber(actionConfig.expIncrease, 0);
+    deltas.playAt = true;
   } else if (actionName === PET_ACTIONS.SLEEP) {
-    nextState.energy = toNumber(nextState.energy, 0) + toNumber(actionConfig.energyIncrease, 0);
-    nextState.health = toNumber(nextState.health, 0) + toNumber(actionConfig.healthIncrease, 0);
-    nextState.happiness = toNumber(nextState.happiness, 0) + toNumber(actionConfig.happinessIncrease, 0);
-    nextState.lastSleepAt = now.toISOString();
+    deltas.energy = toNumber(actionConfig.energyIncrease, 0);
+    deltas.health = toNumber(actionConfig.healthIncrease, 0);
+    deltas.happiness = toNumber(actionConfig.happinessIncrease, 0);
+    deltas.sleepAt = true;
   }
 
-  nextState.lastActionAt = now.toISOString();
-  nextState.lastUpdateAt = now.toISOString();
-  nextState.updatedAt = now.toISOString();
+  const mutation = applyPetMutation(
+    petState,
+    {
+      petBalance,
+      levelConfig,
+      evolutionConfig,
+    },
+    deltas,
+    now,
+  );
 
-  const clamped = clampStats(nextState, limits);
-  nextState.hunger = clamped.hunger;
-  nextState.happiness = clamped.happiness;
-  nextState.energy = clamped.energy;
-  nextState.health = clamped.health;
-
-  const levelState = calculateLevelState(nextState.exp, levelConfig);
-  nextState.level = levelState.level;
-  nextState.exp = levelState.exp;
-  nextState.requiredExpToNextLevel = levelState.requiredExpToNextLevel;
-  nextState.isMaxLevel = levelState.isMaxLevel;
-  nextState.stage = calculateEvolutionStage(nextState.petTypeId, nextState.level, evolutionConfig, nextState);
-  nextState.mood = calculateMood(nextState, petBalance);
-  nextState.version = Math.max(0, Math.floor(toNumber(nextState.version, 0))) + 1;
-
-  return nextState;
+  return mutation.state;
 }
 
 function getActionConfig(petBalance = {}, actionName = "") {
@@ -422,20 +365,10 @@ function validateActionGate(petState, actionName, petBalance, now = new Date()) 
 }
 
 async function syncPetRuntime(uid, petState, configs, now = new Date()) {
-  const petBalance = requireObject(configs.petBalance, "petBalance");
-  const levelConfig = requireObject(configs.levelConfig, "levelConfig");
-  const evolutionConfig = requireObject(configs.evolutionConfig, "evolutionConfig");
-  const synced = applyOfflineDecay(petState, petBalance, now);
+  const synced = applyPetDecay(petState, configs, now);
   const nextState = buildRuntimePetState(synced.state, configs, now);
-  const stage = calculateEvolutionStage(nextState.petTypeId, nextState.level, evolutionConfig, nextState);
-  const mood = calculateMood(nextState, petBalance);
   const finalState = {
-    ...synced.state,
-    ...nextState,
-    stage,
-    mood,
-    level: calculateLevelState(nextState.exp, levelConfig).level,
-    exp: calculateLevelState(nextState.exp, levelConfig).exp,
+    ...stripDerivedPetFields(nextState),
     updatedAt: now.toISOString(),
     lastUpdateAt: now.toISOString(),
     version: Math.max(0, Math.floor(toNumber(petState.version, 0))),
@@ -444,7 +377,7 @@ async function syncPetRuntime(uid, petState, configs, now = new Date()) {
   return {
     state: finalState,
     offlineApplied: synced.applied && synced.didChange,
-    offlineMinutes: synced.offlineMinutes,
+    offlineMinutes: Math.round(synced.elapsedHours * 60),
   };
 }
 
@@ -467,7 +400,7 @@ async function getPet({ uid, requestId = "" }) {
     const synced = await syncPetRuntime(normalizedUid, petState, configs, now);
     const nextVersion = Math.max(1, Math.floor(toNumber(petState.version, 0)) + 1);
     const petToSave = {
-      ...synced.state,
+      ...stripDerivedPetFields(synced.state),
       version: nextVersion,
     };
     const userPatch = {
@@ -557,7 +490,7 @@ async function selectPet({ uid, body = {}, requestId = "", idempotencyKey = "" }
     };
     const runtimeState = buildRuntimePetState(initialState, configs, now);
     const payload = {
-      ...runtimeState,
+      ...stripDerivedPetFields(runtimeState),
       petTypeId,
       petName: petName || petTypeId,
       selectedAt: now.toISOString(),
@@ -675,7 +608,7 @@ async function mutatePetAction({ uid, actionName, body = {}, requestId = "", ide
       now,
     );
 
-    await savePetState(normalizedUid, nextState, transaction);
+    await savePetState(normalizedUid, stripDerivedPetFields(nextState), transaction);
     await updateUserById(
       normalizedUid,
       {

@@ -28,6 +28,7 @@ export function renderInventory(target, state = {}) {
                 <div>
                   <strong>${escapeHtml(item.itemId)}</strong>
                   <span>${escapeHtml(item.quantity ?? 0)} x</span>
+                  ${Number(item.maxDurability) > 0 ? `<span>Độ bền: ${escapeHtml(item.durability ?? item.maxDurability)} / ${escapeHtml(item.maxDurability)}</span>` : ""}
                 </div>
               </li>
             `,
@@ -39,4 +40,3 @@ export function renderInventory(target, state = {}) {
 
   return root;
 }
-

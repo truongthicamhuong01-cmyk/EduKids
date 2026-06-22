@@ -141,6 +141,21 @@ export function resolvePetAssetPath({ petType = "", stage = "", mood = "", level
 
 export function resolveBackgroundPath({ petType = "" } = {}) {
   const normalizedPetType = normalizeSlug(petType);
+  const preferredBackgrounds = {
+    elephant: "/assets/pet/background/pet-bg-elephant.png",
+    horse: "/assets/pet/background/pet-bg-horse.png",
+  };
+
+  return (
+    normalizeAssetPath(preferredBackgrounds[normalizedPetType]) ||
+    normalizeAssetPath(petAssetManifest.backgrounds?.[normalizedPetType]) ||
+    getFirstManifestPath(petAssetManifest.backgrounds) ||
+    getFirstManifestPath(petAssetManifest.raw)
+  );
+}
+
+export function resolveSceneBackgroundPath({ petType = "" } = {}) {
+  const normalizedPetType = normalizeSlug(petType);
   const preferredSceneBackgrounds = {
     elephant: "/assets/pet/background/pet-bg-elephant-small.png",
     horse: "/assets/pet/background/pet-bg-horse-small.png",

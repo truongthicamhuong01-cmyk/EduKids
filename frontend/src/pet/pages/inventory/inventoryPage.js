@@ -1,7 +1,7 @@
 import { escapeHtml } from "../../utils/dom.js";
 import { mountIntoPetHost } from "../../utils/pageHost.js";
 import {
-  resolveBackgroundPath,
+  resolveSceneBackgroundPath,
   resolveItemIconPath,
   resolvePetAssetPath,
 } from "../../utils/assetResolver.js";
@@ -121,6 +121,17 @@ function formatEffectSummary(item) {
   }
 
   return parts.length > 0 ? parts.join(" • ") : "Giúp pet vui hơn";
+}
+
+function formatDurabilitySummary(item) {
+  const durability = Number(item?.durability);
+  const maxDurability = Math.max(1, Number(item?.maxDurability) || 100);
+
+  if (!Number.isFinite(durability) || durability <= 0) {
+    return "Độ bền: 0 / " + formatNumber(maxDurability);
+  }
+
+  return `Độ bền: ${formatNumber(Math.min(maxDurability, durability))} / ${formatNumber(maxDurability)}`;
 }
 
 function buildFxId() {
@@ -423,8 +434,9 @@ export function createInventoryPage({ store, petApi, inventoryApi } = {}) {
         ...item,
         itemId: String(item?.itemId || "").trim(),
         quantity: Math.max(0, Number(item?.quantity || 0)),
+        durability: Math.max(0, Number(item?.durability || 0)),
       }))
-      .filter((item) => Boolean(item.itemId))
+      .filter((item) => Boolean(item.itemId) && item.quantity > 0 && item.durability > 0)
       .sort((left, right) => String(left.itemId).localeCompare(String(right.itemId)));
   }
 
@@ -482,7 +494,7 @@ export function createInventoryPage({ store, petApi, inventoryApi } = {}) {
 
     root.style.setProperty(
       "--pet-inventory-scene",
-      `url('${resolveBackgroundPath({ petType: pet?.petTypeId || pet?.petType || "horse" })}')`,
+      `url('${resolveSceneBackgroundPath({ petType: pet?.petTypeId || pet?.petType || "horse" })}')`,
     );
 
     if (!pet) {
@@ -524,8 +536,10 @@ export function createInventoryPage({ store, petApi, inventoryApi } = {}) {
     const icon = resolveItemIconPath(item);
     const itemId = String(item.itemId || "").trim();
     const quantity = Math.max(0, Number(item.quantity || 0));
-    const disabled = quantity <= 0 || Boolean(state.playingItemId);
+    const durability = Math.max(0, Number(item.durability || 0));
+    const disabled = quantity <= 0 || durability <= 0 || Boolean(state.playingItemId);
     const effectSummary = formatEffectSummary(item);
+    const durabilitySummary = formatDurabilitySummary(item);
     const toneClass = `tone-${index % 5}`;
 
     return `
@@ -536,6 +550,7 @@ export function createInventoryPage({ store, petApi, inventoryApi } = {}) {
             <img src="${escapeHtml(icon)}" alt="${escapeHtml(item.name || itemId)}" loading="eager" decoding="async" />
           </div>
           <div class="pet-inventory-card__quantity">Số lượng: <strong data-inventory-quantity="${escapeHtml(itemId)}">${formatNumber(quantity)}</strong></div>
+          <div class="pet-inventory-card__durability">${escapeHtml(durabilitySummary)}</div>
           <div class="pet-inventory-card__effect">${escapeHtml(effectSummary)}</div>
           <button type="button" class="pet-btn pet-btn--primary pet-inventory-card__action" data-action="play-item" data-inventory-item-id="${escapeHtml(itemId)}" ${disabled ? "disabled" : ""}>
             Chơi
@@ -670,7 +685,7 @@ export function createInventoryPage({ store, petApi, inventoryApi } = {}) {
     }
 
     const item = state.items.find((entry) => entry.itemId === itemId);
-    if (!item || Number(item.quantity || 0) <= 0) {
+    if (!item || Number(item.quantity || 0) <= 0 || Number(item.durability || 0) <= 0) {
       return;
     }
 
@@ -679,8 +694,9 @@ export function createInventoryPage({ store, petApi, inventoryApi } = {}) {
     spawnToyFx(card, item);
 
     try {
-      const response = await petApi.playPet({
+      const response = await inventoryApi.useItem({
         itemId,
+        quantity: 1,
         idempotencyKey: `inventory-play-${itemId}-${Date.now().toString(36)}`,
       });
 

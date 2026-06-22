@@ -84,13 +84,25 @@ function normalizeInventoryState(data = {}) {
 
           return [
             normalizedItemId,
-            {
+            (() => {
+              const normalizedItem = {
               itemId: normalizedItemId,
               quantity: Math.max(0, Math.floor(Number(item?.quantity || 0))),
               equipped: Boolean(item?.equipped),
               updatedAt: String(item?.updatedAt || ""),
               metadata: item?.metadata && typeof item.metadata === "object" ? { ...item.metadata } : {},
-            },
+              };
+
+              if (item?.durability !== undefined) {
+                normalizedItem.durability = Math.max(0, Math.floor(Number(item.durability || 0)));
+              }
+
+              if (item?.maxDurability !== undefined) {
+                normalizedItem.maxDurability = Math.max(0, Math.floor(Number(item.maxDurability || 0)));
+              }
+
+              return normalizedItem;
+            })(),
           ];
         })
         .filter(Boolean),

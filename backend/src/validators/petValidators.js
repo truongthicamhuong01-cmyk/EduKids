@@ -45,6 +45,33 @@ function validatePetActionBody(body = {}, actionName = "") {
     });
   }
 
+  if (actionName === "inventory-use") {
+    const itemId = normalizeText(body.itemId || body.inventoryItemId || "");
+    const targetPetId = normalizeText(body.targetPetId || body.petId || "");
+    const quantity = Math.max(1, Math.floor(Number(body.quantity || 1)));
+
+    if (!itemId) {
+      throw new ApiError(400, "itemId is required", PET_ERROR_CODES.VALIDATION_ERROR, {
+        actionName,
+        fieldErrors: [{ field: "itemId", message: "itemId is required" }],
+      });
+    }
+
+    if (quantity <= 0 || !Number.isFinite(quantity)) {
+      throw new ApiError(400, "quantity must be greater than 0", PET_ERROR_CODES.VALIDATION_ERROR, {
+        actionName,
+        fieldErrors: [{ field: "quantity", message: "quantity must be greater than 0" }],
+      });
+    }
+
+    return {
+      itemId,
+      quantity,
+      targetPetId,
+      idempotencyKey,
+    };
+  }
+
   return {
     idempotencyKey,
   };

@@ -1,12 +1,13 @@
 import { escapeHtml } from "../../utils/dom.js";
 import { mountIntoPetHost } from "../../utils/pageHost.js";
 import {
-  resolveBackgroundPath,
+  resolveSceneBackgroundPath,
   resolveItemIconPath,
   resolvePetAssetPath,
 } from "../../utils/assetResolver.js";
 
 const SHOP_PAGE_ID = "edukids-pet-shop-page";
+const SHOP_CATEGORY_ORDER = ["food", "toy", "medicine"];
 
 function iconShop() {
   return `
@@ -58,36 +59,26 @@ function normalizeCategoryKey(category = "") {
   }
 
   if (normalized === "foods" || normalized === "food") {
-    return "foods";
+    return "food";
   }
 
   if (normalized === "toys" || normalized === "toy") {
-    return "toys";
+    return "toy";
   }
 
-  if (normalized === "medicine") {
+  if (normalized === "medicine" || normalized === "medicines") {
     return "medicine";
   }
 
-  if (normalized === "decoration") {
-    return "decoration";
-  }
-
-  if (normalized === "special") {
-    return "special";
-  }
-
-  return normalized;
+  return "";
 }
 
 function normalizeCategoryLabel(category = "") {
   const normalized = normalizeCategoryKey(category);
   const labels = {
-    foods: "Thức ăn",
-    toys: "Đồ chơi",
+    food: "Thức ăn",
+    toy: "Đồ chơi",
     medicine: "Thuốc",
-    decoration: "Trang trí",
-    special: "Đặc biệt",
   };
 
   return labels[normalized] || String(category || "").trim();
@@ -510,10 +501,11 @@ export function createShopPage({ store, shopApi } = {}) {
 
     return [...items]
       .filter(Boolean)
+      .filter((item) => SHOP_CATEGORY_ORDER.includes(normalizeCategoryKey(item.category || "")))
       .sort((left, right) => {
         const leftCategory = normalizeCategoryKey(left.category || "");
         const rightCategory = normalizeCategoryKey(right.category || "");
-        const categoryOrder = state.categories;
+        const categoryOrder = SHOP_CATEGORY_ORDER;
         const leftIndex = categoryOrder.indexOf(leftCategory);
         const rightIndex = categoryOrder.indexOf(rightCategory);
         if (leftIndex !== rightIndex) {
@@ -577,7 +569,7 @@ export function createShopPage({ store, shopApi } = {}) {
 
     root.style.setProperty(
       "--pet-shop-scene",
-      `url('${resolveBackgroundPath({ petType: pet?.petTypeId || pet?.petType || "horse" })}')`,
+      `url('${resolveSceneBackgroundPath({ petType: pet?.petTypeId || pet?.petType || "horse" })}')`,
     );
 
     if (!pet) {
@@ -631,13 +623,10 @@ export function createShopPage({ store, shopApi } = {}) {
       return;
     }
 
-    const categories = state.categories.length > 0
-      ? state.categories
-      : Array.from(
-          new Set(
-            getSortedItems(snapshot).map((item) => normalizeCategoryKey(item.category || "")),
-          ),
-        ).filter(Boolean);
+    const visibleItems = getSortedItems(snapshot);
+    const categories = SHOP_CATEGORY_ORDER.filter((category) =>
+      visibleItems.some((item) => normalizeCategoryKey(item.category || "") === category),
+    );
 
     if (categories.length === 0) {
       refs.categories.innerHTML = "";
@@ -784,10 +773,10 @@ export function createShopPage({ store, shopApi } = {}) {
 
   function syncStateFromShopResponse(response) {
     const items = Array.isArray(response?.data?.items) ? response.data.items : [];
-    state.items = items;
+    state.items = items.filter((item) => SHOP_CATEGORY_ORDER.includes(normalizeCategoryKey(item.category || "")));
     state.userLevel = Math.max(1, Number(response?.data?.userLevel || state.userLevel || 1));
-    state.categories = Array.from(
-      new Set(items.map((item) => normalizeCategoryKey(item.category || "")).filter(Boolean)),
+    state.categories = SHOP_CATEGORY_ORDER.filter((category) =>
+      state.items.some((item) => normalizeCategoryKey(item.category || "") === category),
     );
     if (!state.selectedCategory) {
       state.selectedCategory = state.categories[0] || "";
