@@ -2,9 +2,7 @@
   position: relative;
   width: 100%;
   min-height: 100%;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+  overflow: clip;
   color: #4a2f13;
 }
 

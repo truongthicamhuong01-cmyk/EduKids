@@ -198,25 +198,27 @@ function ensureShopRoot() {
           </section>
         </section>
 
-        <section class="pet-shop-categories" aria-label="Danh mục">
-          <div class="pet-shop-categories__row" data-shop-category-row></div>
-        </section>
+        <section class="pet-shop-content" aria-label="Nội dung Shop">
+          <section class="pet-shop-categories" aria-label="Danh mục">
+            <div class="pet-shop-categories__row" data-shop-category-row></div>
+          </section>
 
-        <section class="pet-shop-grid-wrap" aria-label="Vật phẩm">
-          <div class="pet-shop-grid__empty" data-shop-empty hidden>
-            <div class="pet-shop-empty__icon" aria-hidden="true">${iconShop()}</div>
-            <strong>Shop chưa có vật phẩm.</strong>
-            <p>Hãy quay lại sau nhé.</p>
-          </div>
+          <section class="pet-shop-grid-wrap" aria-label="Vật phẩm">
+            <div class="pet-shop-grid__empty" data-shop-empty hidden>
+              <div class="pet-shop-empty__icon" aria-hidden="true">${iconShop()}</div>
+              <strong>Shop chưa có vật phẩm.</strong>
+              <p>Hãy quay lại sau nhé.</p>
+            </div>
 
-          <div class="pet-shop-grid" data-shop-grid></div>
-          <div class="pet-shop-skeleton" data-shop-skeleton hidden aria-hidden="true">
-            <div class="pet-shop-skeleton__card"></div>
-            <div class="pet-shop-skeleton__card"></div>
-            <div class="pet-shop-skeleton__card"></div>
-            <div class="pet-shop-skeleton__card"></div>
-            <div class="pet-shop-skeleton__card"></div>
-          </div>
+            <div class="pet-shop-grid" data-shop-grid></div>
+            <div class="pet-shop-skeleton" data-shop-skeleton hidden aria-hidden="true">
+              <div class="pet-shop-skeleton__card"></div>
+              <div class="pet-shop-skeleton__card"></div>
+              <div class="pet-shop-skeleton__card"></div>
+              <div class="pet-shop-skeleton__card"></div>
+              <div class="pet-shop-skeleton__card"></div>
+            </div>
+          </section>
         </section>
 
         <div class="pet-shop-error pet-panel" data-shop-error hidden role="alert">

@@ -75,7 +75,7 @@
   z-index: 1;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 0.95rem;
+  gap: 0.75rem;
   min-height: 100%;
   max-width: 1480px;
   margin: 0 auto;
@@ -86,19 +86,19 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .pet-feed-header__left {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.5rem;
   min-width: 0;
 }
 
 .pet-feed-title {
   display: inline-flex;
   align-items: center;
-  gap: 0.95rem;
+  gap: 0.75rem;
   width: fit-content;
   max-width: min(100%, 37rem);
   min-height: 5.25rem;
@@ -218,12 +218,13 @@
   display: grid;
   grid-template-columns: minmax(16rem, 0.76fr) minmax(0, 1.24fr);
   align-items: end;
-  gap: 1rem;
-  min-height: 13.75rem;
+  gap: 0.75rem;
+  min-height: 13.25rem;
 }
 
 .pet-feed-status {
   position: relative;
+  height: 13.25rem;
   min-height: 13.25rem;
   border-radius: 22px;
   background: rgba(255, 250, 243, 0.96);
@@ -232,12 +233,12 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.86),
     0 24px 44px rgba(82, 58, 15, 0.16);
   backdrop-filter: blur(var(--pet-blur-md));
-  padding: 1.3rem 0.85rem 0.85rem;
+  padding: 2.25rem 0.85rem 0.85rem;
 }
 
 .pet-feed-status__tab {
   position: absolute;
-  top: -1px;
+  top: 0;
   left: 1rem;
   min-width: 7.6rem;
   padding: 0.48rem 0.85rem 0.55rem;
@@ -253,12 +254,12 @@
 
 .pet-feed-status__list {
   display: grid;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .pet-feed-stat {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.4rem;
 }
 
 .pet-feed-stat__head {
@@ -317,8 +318,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 14.8rem;
-  padding: 0.45rem 0.45rem 0.9rem;
+  min-height: 14.2rem;
+  padding: 0.35rem 0.35rem 0.8rem;
   border-radius: 30px;
 }
 
@@ -352,7 +353,7 @@
   right: 1.1rem;
   display: none;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.5rem;
   max-width: min(26rem, calc(100vw - 2rem));
   padding: 1rem 1.2rem;
   border-radius: 22px;
@@ -400,8 +401,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: min(23vw, 22rem);
-  min-height: min(23vw, 18rem);
+  width: min(20vw, 18rem);
+  min-height: min(20vw, 15.5rem);
   padding: 0;
   border: 0;
   background: transparent;
@@ -424,8 +425,8 @@
 .pet-feed-pet__halo {
   position: absolute;
   inset: auto auto 9% 50%;
-  width: min(18vw, 16rem);
-  height: min(18vw, 16rem);
+  width: min(15vw, 14rem);
+  height: min(15vw, 14rem);
   transform: translateX(-50%);
   border-radius: 50%;
   background:
@@ -438,8 +439,8 @@
   position: absolute;
   left: 50%;
   bottom: 6%;
-  width: min(16vw, 13rem);
-  height: clamp(1.8rem, 3.4vw, 2.6rem);
+  width: min(13vw, 11rem);
+  height: clamp(1.6rem, 3vw, 2.3rem);
   transform: translateX(-50%);
   border-radius: 50%;
   background: radial-gradient(circle, rgba(82, 52, 14, 0.28) 0, rgba(82, 52, 14, 0.16) 35%, rgba(82, 52, 14, 0.06) 58%, transparent 76%);
@@ -449,8 +450,8 @@
 .pet-feed-pet img {
   position: relative;
   z-index: 1;
-  width: min(22vw, 19rem);
-  max-height: min(54vh, 24rem);
+  width: min(18vw, 16rem);
+  max-height: min(46vh, 20rem);
   object-fit: contain;
   transform-origin: center bottom;
   filter: drop-shadow(0 24px 20px rgba(52, 27, 9, 0.2));
@@ -516,13 +517,20 @@
 
 .pet-feed-foods {
   position: relative;
-  padding: 0.2rem 0.1rem 0;
+  margin-top: 0.2rem;
+  padding: 1rem;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 20px 38px rgba(64, 45, 24, 0.1);
 }
 
 .pet-feed-foods__grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.75rem;
   align-items: stretch;
 }
 
@@ -561,8 +569,8 @@
 }
 
 .pet-feed-food-card.is-disabled {
-  opacity: 0.62;
-  filter: saturate(0.8);
+  opacity: 1;
+  filter: none;
 }
 
 .pet-feed-food-card__inner {
@@ -570,9 +578,9 @@
   z-index: 1;
   display: grid;
   grid-template-rows: auto auto 1fr auto auto;
-  gap: 0.45rem;
+  gap: 0.4rem;
   width: 100%;
-  padding: 0.85rem 0.8rem 0.85rem;
+  padding: 0.8rem 0.75rem 0.8rem;
 }
 
 .pet-feed-food-card__title {
@@ -587,8 +595,8 @@
 .pet-feed-food-card__visual {
   display: grid;
   place-items: center;
-  min-height: 6.4rem;
-  padding: 0.2rem 0;
+  min-height: 5.8rem;
+  padding: 0.1rem 0;
 }
 
 .pet-feed-food-card__visual img {
@@ -607,7 +615,7 @@
 
 .pet-feed-food-card__quantity {
   color: #2f3143;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-weight: 800;
   text-align: center;
 }
@@ -620,14 +628,14 @@
 .pet-feed-food-card__effect {
   align-self: start;
   color: #2f7a22;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-weight: 800;
   text-align: center;
 }
 
 .pet-feed-food-card__action {
   width: 100%;
-  min-height: 2.9rem;
+  min-height: 2.7rem;
   margin-top: auto;
   border: 0;
   border-radius: 16px;
@@ -698,7 +706,7 @@
   width: min(30rem, calc(100vw - 2rem));
   z-index: var(--pet-z-overlay);
   display: grid;
-  gap: 0.6rem;
+  gap: 0.5rem;
   border-radius: 26px;
   background: rgba(255, 252, 248, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.78);
@@ -727,20 +735,20 @@
 }
 
 .pet-feed-error .pet-btn {
-  min-height: 2.9rem;
+  min-height: 2.7rem;
   padding-inline: 1rem;
 }
 
 .pet-feed-foods__skeleton {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.95rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.75rem;
 }
 
 .pet-feed-foods__skeleton-card {
   position: relative;
   overflow: hidden;
-  min-height: 19rem;
+  min-height: 16.5rem;
   border-radius: 28px;
   background: rgba(255, 255, 255, 0.52);
 }
@@ -755,7 +763,7 @@
 }
 
 .pet-feed-screen[data-loading-catalog="true"] .pet-feed-foods__grid {
-  opacity: 0.55;
+  opacity: 0.5;
 }
 
 .pet-feed-screen[data-loading-item-id] .pet-feed-food-card {
@@ -1104,7 +1112,7 @@
 
   .pet-feed-foods__grid,
   .pet-feed-foods__skeleton {
-    gap: 0.85rem;
+    gap: 0.75rem;
   }
 }
 

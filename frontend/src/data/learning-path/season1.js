@@ -2,136 +2,136 @@ const TASK_BLUEPRINTS = [
   {
     idSuffix: "login",
     type: "login",
-    icon: "đŸ”",
+    icon: "🔐",
     metric: "loginCountToday",
     threshold: 1,
-    title: (checkpointTitle) => `ÄÄƒng nháº­p hĂ´m nay Ä‘á»ƒ má»Ÿ ${checkpointTitle}`,
+    title: (checkpointTitle) => `Đăng nhập hôm nay để mở ${checkpointTitle}`,
     description: () =>
-      "Chá»‰ tĂ­nh Ä‘Äƒng nháº­p Ä‘Æ°á»£c há»‡ thá»‘ng ghi nháº­n trong ngĂ y hiá»‡n táº¡i.",
+      "Chỉ tính đăng nhập được hệ thống ghi nhận trong ngày hiện tại.",
     targetRoute: "/student/learning-path",
   },
   {
     idSuffix: "study-15",
     type: "study_minutes",
-    icon: "â±ï¸",
+    icon: "⏱️",
     metric: "studyMinutesToday",
     threshold: 15,
-    title: () => "Há»c Ä‘á»§ 15 phĂºt hĂ´m nay",
-    description: () => "Chá»‰ tĂ­nh thá»i lÆ°á»£ng há»c phĂ¡t sinh trong ngĂ y hiá»‡n táº¡i.",
+    title: () => "Học đủ 15 phút hôm nay",
+    description: () => "Chỉ tính thời lượng học phát sinh trong ngày hiện tại.",
     targetRoute: "/student/learning-path",
   },
   {
     idSuffix: "study-30",
     type: "study_minutes",
-    icon: "đŸ”¥",
+    icon: "🔥",
     metric: "studyMinutesToday",
     threshold: 30,
-    title: () => "Há»c Ä‘á»§ 30 phĂºt hĂ´m nay",
-    description: () => "Chá»‰ tĂ­nh thá»i lÆ°á»£ng há»c phĂ¡t sinh trong ngĂ y hiá»‡n táº¡i.",
+    title: () => "Học đủ 30 phút hôm nay",
+    description: () => "Chỉ tính thời lượng học phát sinh trong ngày hiện tại.",
     targetRoute: "/student/learning-path",
   },
   {
     idSuffix: "study-45",
     type: "study_minutes",
-    icon: "â›°ï¸",
+    icon: "⛰️",
     metric: "studyMinutesToday",
     threshold: 45,
-    title: () => "Há»c Ä‘á»§ 45 phĂºt hĂ´m nay",
-    description: () => "Chá»‰ tĂ­nh thá»i lÆ°á»£ng há»c phĂ¡t sinh trong ngĂ y hiá»‡n táº¡i.",
+    title: () => "Học đủ 45 phút hôm nay",
+    description: () => "Chỉ tính thời lượng học phát sinh trong ngày hiện tại.",
     targetRoute: "/student/learning-path",
   },
   {
     idSuffix: "study-60",
     type: "study_minutes",
-    icon: "đŸ”ï¸",
+    icon: "🏔️",
     metric: "studyMinutesToday",
     threshold: 60,
-    title: () => "Há»c Ä‘á»§ 60 phĂºt hĂ´m nay",
-    description: () => "Chá»‰ tĂ­nh thá»i lÆ°á»£ng há»c phĂ¡t sinh trong ngĂ y hiá»‡n táº¡i.",
+    title: () => "Học đủ 60 phút hôm nay",
+    description: () => "Chỉ tính thời lượng học phát sinh trong ngày hiện tại.",
     targetRoute: "/student/learning-path",
   },
   {
     idSuffix: "lesson-1",
     type: "lesson",
-    icon: "đŸ“˜",
+    icon: "📘",
     metric: "lessonCountToday",
     threshold: 1,
-    title: () => "HoĂ n thĂ nh 1 bĂ i há»c hĂ´m nay",
+    title: () => "Hoàn thành 1 bài học hôm nay",
     description: () =>
-      "Chá»‰ tĂ­nh bĂ i há»c Ä‘Æ°á»£c há»‡ thá»‘ng ghi nháº­n trong ngĂ y hiá»‡n táº¡i.",
+      "Chỉ tính bài học được hệ thống ghi nhận trong ngày hiện tại.",
     targetRoute: "/student/quiz-ai",
   },
   {
     idSuffix: "lesson-2",
     type: "lesson",
-    icon: "đŸ“—",
+    icon: "📗",
     metric: "lessonCountToday",
     threshold: 2,
-    title: () => "HoĂ n thĂ nh 2 bĂ i há»c hĂ´m nay",
+    title: () => "Hoàn thành 2 bài học hôm nay",
     description: () =>
-      "Chá»‰ tĂ­nh bĂ i há»c Ä‘Æ°á»£c há»‡ thá»‘ng ghi nháº­n trong ngĂ y hiá»‡n táº¡i.",
+      "Chỉ tính bài học được hệ thống ghi nhận trong ngày hiện tại.",
     targetRoute: "/student/quiz-ai",
   },
   {
     idSuffix: "quiz-1",
     type: "quiz",
-    icon: "đŸ§ ",
+    icon: "🧠",
     metric: "quizCountToday",
     threshold: 1,
-    title: () => "LĂ m 1 quiz hĂ´m nay",
-    description: () => "Chá»‰ tĂ­nh quiz Ä‘Ă£ ná»™p trong ngĂ y hiá»‡n táº¡i.",
+    title: () => "Làm 1 quiz hôm nay",
+    description: () => "Chỉ tính quiz đã nộp trong ngày hiện tại.",
     targetRoute: "/student/quiz-ai",
   },
   {
     idSuffix: "quiz-2",
     type: "quiz",
-    icon: "â­",
+    icon: "⭐",
     metric: "quizCountToday",
     threshold: 2,
-    title: () => "LĂ m 2 quiz hĂ´m nay",
-    description: () => "Chá»‰ tĂ­nh quiz Ä‘Ă£ ná»™p trong ngĂ y hiá»‡n táº¡i.",
+    title: () => "Làm 2 quiz hôm nay",
+    description: () => "Chỉ tính quiz đã nộp trong ngày hiện tại.",
     targetRoute: "/student/quiz-ai",
   },
   {
     idSuffix: "quiz-strong",
     type: "quiz_score",
-    icon: "đŸ…",
+    icon: "🏅",
     metric: "highScoreQuizCountToday",
     threshold: 1,
-    title: () => "Äáº¡t 8+ á»Ÿ má»™t quiz hĂ´m nay",
+    title: () => "Đạt 8+ ở một quiz hôm nay",
     description: () =>
-      "Chá»‰ tĂ­nh quiz cĂ³ Ä‘iá»ƒm tá»« 8/10 hoáº·c 80/100 trá»Ÿ lĂªn trong ngĂ y hiá»‡n táº¡i.",
+      "Chỉ tính quiz có điểm từ 8/10 hoặc 80/100 trở lên trong ngày hiện tại.",
     targetRoute: "/student/quiz-ai",
   },
   {
     idSuffix: "assignment-1",
     type: "assignment",
-    icon: "đŸ“",
+    icon: "📝",
     metric: "assignmentCountToday",
     threshold: 1,
-    title: () => "HoĂ n thĂ nh 1 bĂ i táº­p hĂ´m nay",
-    description: () => "Chá»‰ tĂ­nh bĂ i táº­p Ä‘Æ°á»£c ná»™p vĂ  cháº¥m trong ngĂ y hiá»‡n táº¡i.",
+    title: () => "Hoàn thành 1 bài tập hôm nay",
+    description: () => "Chỉ tính bài tập được nộp và chấm trong ngày hiện tại.",
     targetRoute: "/student/assignments",
   },
   {
     idSuffix: "assignment-2",
     type: "assignment",
-    icon: "đŸ“„",
+    icon: "📄",
     metric: "assignmentCountToday",
     threshold: 2,
-    title: () => "HoĂ n thĂ nh 2 bĂ i táº­p hĂ´m nay",
-    description: () => "Chá»‰ tĂ­nh bĂ i táº­p Ä‘Æ°á»£c ná»™p vĂ  cháº¥m trong ngĂ y hiá»‡n táº¡i.",
+    title: () => "Hoàn thành 2 bài tập hôm nay",
+    description: () => "Chỉ tính bài tập được nộp và chấm trong ngày hiện tại.",
     targetRoute: "/student/assignments",
   },
   {
     idSuffix: "coach-1",
     type: "coach",
-    icon: "đŸ¯",
+    icon: "🎯",
     metric: "coachCountToday",
     threshold: 1,
-    title: () => "DĂ¹ng AI Coach hĂ´m nay",
+    title: () => "Dùng AI Coach hôm nay",
     description: () =>
-      "Chá»‰ tĂ­nh lÆ°á»£t dĂ¹ng AI Coach Ä‘Æ°á»£c há»‡ thá»‘ng ghi nháº­n trong ngĂ y hiá»‡n táº¡i.",
+      "Chỉ tính lượt dùng AI Coach được hệ thống ghi nhận trong ngày hiện tại.",
     targetRoute: "/student/ai-coach",
   },
 ];
@@ -139,7 +139,6 @@ const TASK_BLUEPRINTS = [
 const SUMMIT_CHECKPOINT_POSITION = { left: 51.65, top: 17, side: "right" };
 const SUMMIT_CARD_POSITION = { left: 40, top: 10.5 };
 const PEAK_POSITION = SUMMIT_CHECKPOINT_POSITION;
-
 
 const ROUTE_POSITIONS = [
   { left: 56.5, top: 91.7, side: "left" },
@@ -149,7 +148,6 @@ const ROUTE_POSITIONS = [
   { left: 54.6, top: 36.45, side: "right" },
   { left: 44.85, top: 26.75, side: "left" },
 ];
-
 
 function formatLearningPathMeters(value) {
   const meters = Number(value);
@@ -167,8 +165,12 @@ function getSummitHeightMeters(blueprint) {
     return Math.max(0, Math.round(explicitHeight));
   }
 
-  const parsedHeight = Number(String(blueprint?.height || "").replace(/[^\d]/g, ""));
-  return Number.isFinite(parsedHeight) ? Math.max(0, Math.round(parsedHeight)) : 0;
+  const parsedHeight = Number(
+    String(blueprint?.height || "").replace(/[^\d]/g, ""),
+  );
+  return Number.isFinite(parsedHeight)
+    ? Math.max(0, Math.round(parsedHeight))
+    : 0;
 }
 
 function getCheckpointAltitudeLabel(summitHeightMeters, checkpointNumber) {
@@ -187,96 +189,95 @@ const MOUNTAIN_BLUEPRINTS = [
   {
     id: "puncak-jaya",
     name: "Puncak Jaya",
-    continent: "ChĂ¢u Äáº¡i DÆ°Æ¡ng",
+    continent: "Châu Đại Dương",
     summitHeight: 4884,
     height: formatLearningPathMeters(4884),
-    description: "Äá»‰nh nĂºi Ä‘áº·c biá»‡t giá»¯a vĂ¹ng nhiá»‡t Ä‘á»›i vĂ  bÄƒng tuyáº¿t.",
+    description: "Đỉnh núi đặc biệt giữa vùng nhiệt đới và băng tuyết.",
     image: "/assets/learning-path/icon/icon-puncak-jaya.png.jpg",
     icon: "/assets/learning-path/icon/icon-puncak-jaya.png.jpg",
     backgroundImage: "/assets/learning-path/backgrounds/bg-puncak-jaya.png",
     badgeImage: "/assets/learning-path/badges/badge-puncak-jaya.png",
-    badgeName: "Huy hiá»‡u Puncak Jaya",
+    badgeName: "Huy hiệu Puncak Jaya",
   },
   {
     id: "vinson-massif",
     name: "Vinson Massif",
-    continent: "Nam Cá»±c",
+    continent: "Nam Cực",
     summitHeight: 4892,
     height: formatLearningPathMeters(4892),
-    description: "Äá»‰nh cao nháº¥t Nam Cá»±c, nÆ¡i láº¡nh giĂ¡ vĂ  cĂ´ láº­p nháº¥t.",
+    description: "Đỉnh cao nhất Nam Cực, nơi lạnh giá và cô lập nhất.",
     image: "/assets/learning-path/icon/icon-vinson-massif.png.jpg",
     icon: "/assets/learning-path/icon/icon-vinson-massif.png.jpg",
     backgroundImage: "/assets/learning-path/backgrounds/bg-vinson-massif.png",
     badgeImage: "/assets/learning-path/badges/badge-vinson-massif.png",
-    badgeName: "Huy hiá»‡u Vinson Massif",
+    badgeName: "Huy hiệu Vinson Massif",
   },
   {
     id: "elbrus",
     name: "Elbrus",
-    continent: "ChĂ¢u Ă‚u",
+    continent: "Châu Âu",
     summitHeight: 5642,
     height: formatLearningPathMeters(5642),
-    description: "Äá»‰nh nĂºi cao nháº¥t chĂ¢u Ă‚u, phá»§ tuyáº¿t tráº¯ng quanh nÄƒm.",
+    description: "Đỉnh núi cao nhất châu Âu, phủ tuyết trắng quanh năm.",
     image: "/assets/learning-path/icon/icon-elbrus.png.jpg",
     icon: "/assets/learning-path/icon/icon-elbrus.png.jpg",
     backgroundImage: "/assets/learning-path/backgrounds/bg-elbrus.png",
     badgeImage: "/assets/learning-path/badges/badge-elbrus.png",
-    badgeName: "Huy hiá»‡u Elbrus",
+    badgeName: "Huy hiệu Elbrus",
   },
   {
     id: "kilimanjaro",
     name: "Kilimanjaro",
-    continent: "ChĂ¢u Phi",
+    continent: "Châu Phi",
     summitHeight: 5895,
     height: formatLearningPathMeters(5895),
-    description: "Ngá»n nĂºi lá»­a cao nháº¥t chĂ¢u Phi, ná»•i báº­t trĂªn tháº£o nguyĂªn.",
+    description: "Ngọn núi lửa cao nhất châu Phi, nổi bật trên thảo nguyên.",
     image: "/assets/learning-path/icon/icon-kilimanjaro.png.jpg",
     icon: "/assets/learning-path/icon/icon-kilimanjaro.png.jpg",
     backgroundImage: "/assets/learning-path/backgrounds/bg-kilimanjaro.png",
     badgeImage: "/assets/learning-path/badges/badge-kilimanjaro.png",
-    badgeName: "Huy hiá»‡u Kilimanjaro",
+    badgeName: "Huy hiệu Kilimanjaro",
   },
   {
     id: "denali",
     name: "Denali",
-    continent: "Báº¯c Má»¹",
+    continent: "Bắc Mỹ",
     summitHeight: 6190,
     height: formatLearningPathMeters(6190),
-    description: "Äá»‰nh nĂºi kháº¯c nghiá»‡t, biá»ƒu tÆ°á»£ng cá»§a Alaska.",
+    description: "Đỉnh núi khắc nghiệt, biểu tượng của Alaska.",
     image: "/assets/learning-path/icon/icon-denali.png.jpg",
     icon: "/assets/learning-path/icon/icon-denali.png.jpg",
     backgroundImage: "/assets/learning-path/backgrounds/bg-denali.png",
     badgeImage: "/assets/learning-path/badges/badge-denali.png",
-    badgeName: "Huy hiá»‡u Denali",
+    badgeName: "Huy hiệu Denali",
   },
   {
     id: "aconcagua",
     name: "Aconcagua",
-    continent: "Nam Má»¹",
+    continent: "Nam Mỹ",
     summitHeight: 6961,
     height: formatLearningPathMeters(6961),
-    description: "Äá»‰nh cao nháº¥t dĂ£y Andes, thá»­ thĂ¡ch bá»n bá»‰ vĂ  Ă½ chĂ­.",
+    description: "Đỉnh cao nhất dãy Andes, thử thách bền bỉ và ý chí.",
     image: "/assets/learning-path/icon/icon-aconcagua.png.jpg",
     icon: "/assets/learning-path/icon/icon-aconcagua.png.jpg",
     backgroundImage: "/assets/learning-path/backgrounds/bg-aconcagua.png",
     badgeImage: "/assets/learning-path/badges/badge-aconcagua.png",
-    badgeName: "Huy hiá»‡u Aconcagua",
+    badgeName: "Huy hiệu Aconcagua",
   },
   {
     id: "everest",
     name: "Everest",
-    continent: "ChĂ¢u Ă",
+    continent: "Châu Á",
     summitHeight: 8849,
     height: formatLearningPathMeters(8849),
-    description: "Ngá»n nĂºi cao nháº¥t tháº¿ giá»›i, náº±m trĂªn dĂ£y Himalaya hĂ¹ng vÄ©.",
+    description: "Ngọn núi cao nhất thế giới, nằm trên dãy Himalaya hùng vĩ.",
     image: "/assets/learning-path/icon/icon-everest.png.jpg",
     icon: "/assets/learning-path/icon/icon-everest.png.jpg",
     backgroundImage: "/assets/learning-path/backgrounds/bg-everest.png",
     badgeImage: "/assets/learning-path/badges/badge-everest.png",
-    badgeName: "Huy hiá»‡u Everest",
+    badgeName: "Huy hiệu Everest",
   },
 ];
-
 
 function getTaskBlueprint(taskKey) {
   return TASK_BLUEPRINTS.find((task) => task.idSuffix === taskKey) || null;
@@ -348,15 +349,17 @@ function createCheckpoint({
   const checkpointTitle =
     title ||
     (isSummit
-      ? "Äá»‰nh NĂºi"
+      ? "Đỉnh Núi"
       : checkpointNumber === 0
-        ? "Xuáº¥t PhĂ¡t"
-        : `Tráº¡m ${checkpointNumber}`);
+        ? "Xuất Phát"
+        : `Trạm ${checkpointNumber}`);
+
   const checkpointSlug = isSummit
     ? "summit"
     : checkpointNumber === 0
       ? "start"
       : `checkpoint-${checkpointNumber}`;
+
   const tasksSource = (Array.isArray(taskKeys) ? taskKeys : [])
     .map((taskKey) => getTaskBlueprint(taskKey))
     .filter(Boolean);
@@ -370,16 +373,17 @@ function createCheckpoint({
     summitCheckpointPosition: summitCheckpointPosition || null,
     summitCardPosition: summitCardPosition || null,
     reward,
+
     tasks: tasksSource.map((template, index) =>
       createTask({
         mountainId,
         checkpointSlug,
         index,
         title: template.title(
-          isSummit ? `${mountainName} - Ä‘á»‰nh` : checkpointTitle,
+          isSummit ? `${mountainName} - đỉnh` : checkpointTitle,
         ),
         description: template.description(
-          isSummit ? `${mountainName} - Ä‘á»‰nh` : checkpointTitle,
+          isSummit ? `${mountainName} - đỉnh` : checkpointTitle,
         ),
         targetRoute: template.targetRoute,
         type: template.type,
@@ -389,6 +393,7 @@ function createCheckpoint({
         completed: false,
       }),
     ),
+
     completed,
   };
 }
@@ -397,7 +402,7 @@ function createMountain(blueprint, index) {
   const badge = {
     id: `badge-${blueprint.id}`,
     name: blueprint.badgeName,
-    description: `HoĂ n thĂ nh ${blueprint.name} Ä‘á»ƒ nháº­n huy hiá»‡u.`,
+    description: `Hoàn thành ${blueprint.name} để nhận huy hiệu.`,
     image: blueprint.badgeImage,
     unlocked: index === 0,
   };
@@ -406,8 +411,8 @@ function createMountain(blueprint, index) {
     createReward({
       id: `${blueprint.id}-reward-start`,
       title: "+50 Xu Edu",
-      subtitle: "Khá»Ÿi Ä‘á»™ng hĂ nh trĂ¬nh",
-      icon: "đŸ§­",
+      subtitle: "Khởi động hành trình",
+      icon: "🧭",
       theme: "amber",
       xu: 50,
       exp: 100,
@@ -415,8 +420,8 @@ function createMountain(blueprint, index) {
     createReward({
       id: `${blueprint.id}-reward-1`,
       title: "+50 Xu Edu",
-      subtitle: "HoĂ n thĂ nh tráº¡m Ä‘áº§u",
-      icon: "đŸª™",
+      subtitle: "Hoàn thành trạm đầu",
+      icon: "🪙",
       theme: "amber",
       xu: 50,
       exp: 100,
@@ -424,8 +429,8 @@ function createMountain(blueprint, index) {
     createReward({
       id: `${blueprint.id}-reward-2`,
       title: "+50 Xu Edu",
-      subtitle: "Giá»¯ nhá»‹p há»c",
-      icon: "â­",
+      subtitle: "Giữ nhịp học",
+      icon: "⭐",
       theme: "gold",
       xu: 50,
       exp: 100,
@@ -433,8 +438,8 @@ function createMountain(blueprint, index) {
     createReward({
       id: `${blueprint.id}-reward-3`,
       title: "+50 Xu Edu",
-      subtitle: "Luyá»‡n táº­p thĂªm",
-      icon: "đŸ“˜",
+      subtitle: "Luyện tập thêm",
+      icon: "📘",
       theme: "blue",
       xu: 50,
       exp: 100,
@@ -442,8 +447,8 @@ function createMountain(blueprint, index) {
     createReward({
       id: `${blueprint.id}-reward-4`,
       title: "+50 Xu Edu",
-      subtitle: "HoĂ n thiá»‡n ká»¹ nÄƒng",
-      icon: "â›°ï¸",
+      subtitle: "Hoàn thiện kỹ năng",
+      icon: "⛰️",
       theme: "green",
       xu: 50,
       exp: 100,
@@ -451,8 +456,8 @@ function createMountain(blueprint, index) {
     createReward({
       id: `${blueprint.id}-reward-5`,
       title: "+50 Xu Edu",
-      subtitle: "Chuáº©n bá»‹ lĂªn Ä‘á»‰nh",
-      icon: "đŸ”ï¸",
+      subtitle: "Chuẩn bị lên đỉnh",
+      icon: "🏔️",
       theme: "amber",
       xu: 50,
       exp: 100,
@@ -466,7 +471,7 @@ function createMountain(blueprint, index) {
       mountainId: blueprint.id,
       mountainName: blueprint.name,
       checkpointNumber: 0,
-      title: "Xuáº¥t PhĂ¡t",
+      title: "Xuất Phát",
       type: "station",
       altitude: getCheckpointAltitudeLabel(summitHeightMeters, 0),
       position: ROUTE_POSITIONS[0],
@@ -474,6 +479,7 @@ function createMountain(blueprint, index) {
       taskKeys: ["login", "study-15"],
       completed: index === 0,
     }),
+
     createCheckpoint({
       mountainId: blueprint.id,
       mountainName: blueprint.name,
@@ -485,6 +491,7 @@ function createMountain(blueprint, index) {
       taskKeys: ["lesson-1", "quiz-1", "study-30"],
       completed: index === 0,
     }),
+
     createCheckpoint({
       mountainId: blueprint.id,
       mountainName: blueprint.name,
@@ -496,6 +503,7 @@ function createMountain(blueprint, index) {
       taskKeys: ["assignment-1", "lesson-1", "coach-1"],
       completed: false,
     }),
+
     createCheckpoint({
       mountainId: blueprint.id,
       mountainName: blueprint.name,
@@ -507,6 +515,7 @@ function createMountain(blueprint, index) {
       taskKeys: ["coach-1", "study-30", "quiz-1"],
       completed: false,
     }),
+
     createCheckpoint({
       mountainId: blueprint.id,
       mountainName: blueprint.name,
@@ -518,6 +527,7 @@ function createMountain(blueprint, index) {
       taskKeys: ["lesson-2", "assignment-1", "study-45", "quiz-1"],
       completed: false,
     }),
+
     createCheckpoint({
       mountainId: blueprint.id,
       mountainName: blueprint.name,
@@ -529,25 +539,28 @@ function createMountain(blueprint, index) {
       taskKeys: ["coach-1", "quiz-2", "assignment-2", "study-60"],
       completed: false,
     }),
+
     createCheckpoint({
       mountainId: blueprint.id,
       mountainName: blueprint.name,
       checkpointNumber: 6,
-      title: "Äá»‰nh NĂºi",
+      title: "Đỉnh Núi",
       type: "summit",
       altitude: getCheckpointAltitudeLabel(summitHeightMeters, 6),
       summitCheckpointPosition: SUMMIT_CHECKPOINT_POSITION,
       summitCardPosition: SUMMIT_CARD_POSITION,
+
       reward: createReward({
         id: `${blueprint.id}-summit-reward`,
         title: "+200 Xu Edu",
-        subtitle: "Chinh phá»¥c Ä‘á»‰nh nĂºi",
-        icon: "đŸ†",
+        subtitle: "Chinh phục đỉnh núi",
+        icon: "🏆",
         theme: "gold",
         xu: 200,
         exp: 250,
         badgeId: `badge-${blueprint.id}`,
       }),
+
       taskKeys: [],
       completed: false,
       isSummit: true,
@@ -573,15 +586,23 @@ export const season1 = {
   id: "season-1",
   order: 1,
   name: "Season 1",
-  title: "7 Ä‘á»‰nh cao tháº¿ giá»›i",
-  description: "KhĂ¡m phĂ¡ 7 ngá»n nĂºi biá»ƒu tÆ°á»£ng cá»§a hĂ nh trĂ¬nh Learning Path.",
+
+  title: "7 đỉnh cao thế giới",
+
+  description: "Khám phá 7 ngọn núi biểu tượng của hành trình Learning Path.",
+
   badge: {
     id: "badge-world-explorer",
+
     name: "World Explorer Badge",
-    description: "HoĂ n thĂ nh toĂ n bá»™ 7 ngá»n nĂºi cá»§a Season 1.",
+
+    description: "Hoàn thành toàn bộ 7 ngọn núi của Season 1.",
+
     image: "/assets/learning-path/badges/badge-world-explorer.png",
+
     unlocked: false,
   },
+
   mountains: MOUNTAIN_BLUEPRINTS.map((blueprint, index) =>
     createMountain(blueprint, index),
   ),

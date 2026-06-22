@@ -10,19 +10,18 @@ const HOME_PAGE_ID = "edukids-pet-home-page";
 function iconCart() {
   return `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M3.5 5.5h2l1.15 8.2A2 2 0 0 0 8.62 15h7.5a2 2 0 0 0 1.94-1.55L19.9 8H6.1" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
-      <circle cx="8.2" cy="19.2" r="1.2" fill="currentColor"></circle>
-      <circle cx="17.5" cy="19.2" r="1.2" fill="currentColor"></circle>
-      <path d="M10.2 6.2h.01M14.6 6.2h.01" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path>
+      <path d="M3.5 5.5h2l1.15 8.2A2 2 0 0 0 8.62 15h7.5a2 2 0 0 0 1.94-1.55L19.9 8H6.1" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"></path>
+      <circle cx="8.2" cy="19.2" r="1.15" fill="currentColor"></circle>
+      <circle cx="17.5" cy="19.2" r="1.15" fill="currentColor"></circle>
+      <path d="M10.2 6.2h.01M14.6 6.2h.01" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
     </svg>
   `;
 }
 
 function iconHand() {
   return `
-    <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false">
-      <path d="M17 29.5v-9a4 4 0 0 1 8 0v11m8-8v-7a4 4 0 0 1 8 0v12m8-3v-6a4 4 0 0 1 8 0v14c0 12-7.3 20-18 20s-18-6.7-18-17V23a4 4 0 0 1 8 0v14" fill="none" stroke="currentColor" stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round"></path>
-      <path d="M16.5 31.5 18 47c.7 6.6 6.8 11.6 14.3 11.6h5.4c8.9 0 16.2-7.1 16.2-15.9V35.2" fill="none" stroke="currentColor" stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round"></path>
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M6.9 11.1V7.6a1.8 1.8 0 0 1 3.6 0v4.8m3.2-3.6V5.8a1.8 1.8 0 0 1 3.6 0v5m2.8-.9V8.5a1.8 1.8 0 0 1 3.6 0v4.7c0 4.4-2.8 7.8-7.9 7.8-3.8 0-6.7-2.2-7.6-6.2V10a1.8 1.8 0 0 1 3.6 0v3.3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
     </svg>
   `;
 }
@@ -41,7 +40,7 @@ function iconCoin() {
 function iconLevel() {
   return `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="m12 3 2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8Z" fill="currentColor"></path>
+      <path d="m12 3 2.4 4.9 5.4.8-3.9 3.8.9 5.5-4.8-2.5-4.8 2.5.9-5.5-3.9-3.8 5.4-.8Z" fill="currentColor"></path>
     </svg>
   `;
 }
@@ -49,9 +48,9 @@ function iconLevel() {
 function iconFeed() {
   return `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M6 16.5c1.6-2.4 2.8-4.4 3.7-6.2 1.2-2.4 2.3-4.6 4.5-4.6 2.1 0 3.8 1.7 3.8 3.8 0 2.8-2.2 4.2-4.8 5.5-.8.4-1.9 1-2.8 1.9H6Z" fill="currentColor"></path>
-      <path d="M10 15.7c-.7.7-1.2 1.7-1.4 2.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
-      <path d="M16.7 7.8c.7.7 1.2 1.7 1.4 2.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+      <path d="M6.5 16.6c1.4-2.1 2.6-4.1 3.5-5.8 1.2-2.4 2.3-4.5 4.4-4.5 2.1 0 3.7 1.6 3.7 3.7 0 2.7-2.1 4-4.7 5.3-.8.4-1.8.9-2.7 1.8H6.5Z" fill="currentColor"></path>
+      <path d="M10.1 15.7c-.7.8-1.2 1.7-1.4 2.9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+      <path d="M16.8 7.8c.7.8 1.2 1.7 1.4 2.9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
     </svg>
   `;
 }
@@ -59,8 +58,8 @@ function iconFeed() {
 function iconPlay() {
   return `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M8 6.8v10.4l8.8-5.2L8 6.8Z" fill="currentColor"></path>
-      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" opacity="0.2"></circle>
+      <path d="M8.1 6.7v10.6L17 12 8.1 6.7Z" fill="currentColor"></path>
+      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" opacity="0.22"></circle>
     </svg>
   `;
 }
@@ -68,7 +67,7 @@ function iconPlay() {
 function iconSleep() {
   return `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M15.5 5.8c-2.6.4-4.6 2.6-4.6 5.3 0 3 2.4 5.4 5.4 5.4.5 0 1-.1 1.5-.2-1.1 1.5-2.8 2.4-4.8 2.4-3.4 0-6.2-2.8-6.2-6.2 0-2.8 1.8-5.1 4.3-5.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
+      <path d="M15.4 5.8c-2.6.4-4.5 2.6-4.5 5.3 0 3 2.4 5.3 5.3 5.3.5 0 1-.1 1.5-.2-1 1.5-2.8 2.4-4.8 2.4-3.4 0-6.1-2.8-6.1-6.2 0-2.8 1.7-5 4.2-5.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
     </svg>
   `;
 }
@@ -76,7 +75,7 @@ function iconSleep() {
 function iconInventory() {
   return `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M7.5 6h9a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" fill="currentColor" opacity="0.18"></path>
+      <path d="M7.5 6h9a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" fill="currentColor" opacity="0.16"></path>
       <path d="M8 8.2h8M8 11.9h8M8 15.6h5.1" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
       <path d="M8.5 6.2c.5-1.2 1.4-1.9 2.8-1.9h2.4c1.4 0 2.3.7 2.8 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path>
     </svg>
@@ -86,7 +85,7 @@ function iconInventory() {
 function iconSmile() {
   return `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <circle cx="12" cy="12" r="9" fill="currentColor" opacity="0.18"></circle>
+      <circle cx="12" cy="12" r="9" fill="currentColor" opacity="0.16"></circle>
       <path d="M8.8 11.2h.01M15.2 11.2h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
       <path d="M8.8 14.3c.9 1.2 2.1 1.8 3.2 1.8s2.3-.6 3.2-1.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
     </svg>
@@ -104,7 +103,7 @@ function iconBolt() {
 function iconShield() {
   return `
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M12 3.2 19 6v5.4c0 4.4-2.7 7.7-7 9.4-4.3-1.7-7-5-7-9.4V6l7-2.8Z" fill="currentColor" opacity="0.18"></path>
+      <path d="M12 3.2 19 6v5.4c0 4.4-2.7 7.7-7 9.4-4.3-1.7-7-5-7-9.4V6l7-2.8Z" fill="currentColor" opacity="0.16"></path>
       <path d="M12 6.4v10.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
       <path d="M8.1 10.2h7.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
     </svg>
@@ -283,19 +282,6 @@ function ensureHomePageRoot() {
           </article>
 
           <section class="pet-home-actions" aria-label="Hành động">
-            <div class="pet-home-actions__mini">
-              <button type="button" class="pet-home-mini-action pet-theme--glass" data-action="play">
-                <span class="pet-home-mini-action__icon" aria-hidden="true">${iconPlay()}</span>
-                <span>Chơi</span>
-                <span class="pet-home-mini-action__loading" aria-hidden="true"></span>
-              </button>
-              <button type="button" class="pet-home-mini-action pet-theme--glass" data-action="sleep">
-                <span class="pet-home-mini-action__icon" aria-hidden="true">${iconSleep()}</span>
-                <span>Ngủ</span>
-                <span class="pet-home-mini-action__loading" aria-hidden="true"></span>
-              </button>
-            </div>
-
             <div class="pet-home-actions__primary">
               <button type="button" class="pet-home-action-card pet-home-action-card--feed pet-theme--glass" data-action="feed">
                 <span class="pet-home-action-card__icon" aria-hidden="true">${iconFeed()}</span>
@@ -725,7 +711,7 @@ export function createHomePetPage({ store, petApi } = {}) {
 
     const actionButtons = root.querySelectorAll("[data-action='feed'], [data-action='play'], [data-action='sleep']");
     actionButtons.forEach((button) => {
-      const icon = button.querySelector(".pet-home-action-card__icon, .pet-home-mini-action__icon");
+      const icon = button.querySelector(".pet-home-action-card__icon");
       if (!icon) {
         return;
       }
