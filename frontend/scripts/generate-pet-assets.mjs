@@ -7,9 +7,22 @@ const __dirname = path.dirname(__filename);
 
 const repoRoot = path.resolve(__dirname, "..");
 const assetsRoot = path.join(repoRoot, "public", "assets", "pet");
-const outputFile = path.join(repoRoot, "src", "pet", "assets", "petAssetManifest.js");
+const outputFile = path.join(
+  repoRoot,
+  "src",
+  "pet",
+  "assets",
+  "petAssetManifest.js",
+);
 
-const imageExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"]);
+const imageExtensions = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".gif",
+  ".svg",
+]);
 
 function toPosix(value) {
   return String(value || "").replaceAll("\\", "/");
@@ -72,6 +85,7 @@ async function main() {
     duplicates: [],
     issues: [],
     summary: {
+      avatarPetTypes: [],
       petTypes: [],
       backgrounds: [],
       shopIcons: [],
@@ -80,6 +94,7 @@ async function main() {
   };
 
   const manifest = {
+    avatarPet: {},
     petTypes: {},
     backgrounds: {},
     shopIcons: {},
@@ -92,7 +107,9 @@ async function main() {
   for (const filePath of files) {
     const relativePath = makeRelativeAssetPath(filePath);
     const fileName = path.basename(filePath);
-    const dirParts = toPosix(path.relative(assetsRoot, path.dirname(filePath))).split("/").filter(Boolean);
+    const dirParts = toPosix(path.relative(assetsRoot, path.dirname(filePath)))
+      .split("/")
+      .filter(Boolean);
     const baseName = path.basename(fileName, path.extname(fileName));
     const normalizedBaseName = toSlug(baseName);
 
@@ -110,9 +127,34 @@ async function main() {
       continue;
     }
 
-    if (dirParts[0] === "backrounds" || dirParts[0] === "backgrounds") {
+    if (dirParts[0] === "avatarPet") {
+      const petType = toSlug(dirParts[1]);
+      const avatarMatch = normalizedBaseName.match(/^icon-(.+)-level(\d+)$/);
+
+      if (petType && avatarMatch) {
+        const levelKey = `level${String(avatarMatch[2]).replace(/^0+/, "") || "0"}`;
+
+        if (!manifest.avatarPet[petType]) {
+          manifest.avatarPet[petType] = {
+            levels: {},
+            displayName: toTitleCase(petType),
+          };
+        }
+
+        manifest.avatarPet[petType].levels[levelKey] = relativePath;
+        continue;
+      }
+    }
+
+    if (
+      dirParts[0] === "backrounds" ||
+      dirParts[0] === "backgrounds" ||
+      dirParts[0] === "background"
+    ) {
       const backgroundMatch = normalizedBaseName.match(/^pet-bg-(.+)$/);
-      const petType = toSlug(backgroundMatch?.[1] || normalizedBaseName.replace(/^pet-bg-/, ""));
+      const petType = toSlug(
+        backgroundMatch?.[1] || normalizedBaseName.replace(/^pet-bg-/, ""),
+      );
 
       if (petType) {
         manifest.backgrounds[petType] = relativePath;
@@ -126,7 +168,12 @@ async function main() {
     const petType = toSlug(dirParts[0]);
     const levelMatch = normalizedBaseName.match(/-lv(\d+)-([a-z0-9-]+)$/);
 
-    if (petType && levelMatch && dirParts[1] && /^level\d+$/i.test(dirParts[1])) {
+    if (
+      petType &&
+      levelMatch &&
+      dirParts[1] &&
+      /^level\d+$/i.test(dirParts[1])
+    ) {
       const levelKey = `level${String(levelMatch[1]).replace(/^0+/, "") || "0"}`;
       const moodKey = toSlug(levelMatch[2]);
 
@@ -150,13 +197,23 @@ async function main() {
     manifest.genericIcons[normalizedBaseName] = relativePath;
   }
 
+  const avatarPetTypes = Object.keys(manifest.avatarPet).sort();
   const petTypes = Object.keys(manifest.petTypes).sort();
   const backgroundKeys = Object.keys(manifest.backgrounds).sort();
   const shopIconKeys = Object.keys(manifest.shopIcons).sort();
 
+  audit.summary.avatarPetTypes = avatarPetTypes;
   audit.summary.petTypes = petTypes;
   audit.summary.backgrounds = backgroundKeys;
   audit.summary.shopIcons = shopIconKeys;
+
+  if (avatarPetTypes.length === 0) {
+    audit.issues.push({
+      type: "missing-avatar-pet",
+      message:
+        "Không phát hiện avatarPet nào trong frontend/public/assets/pet.",
+    });
+  }
 
   if (petTypes.length === 0) {
     audit.issues.push({
@@ -172,22 +229,31 @@ async function main() {
     });
   }
 
-  if (!manifest.genericIcons["default"] && !manifest.genericIcons["pet-default"]) {
+  if (
+    !manifest.genericIcons["default"] &&
+    !manifest.genericIcons["pet-default"]
+  ) {
     audit.issues.push({
       type: "missing-global-default",
       message: "Không có asset mặc định dùng làm fallback toàn cục.",
     });
   }
 
-  if (Object.keys(manifest.backgrounds).some((key) => key.includes("backround"))) {
+  if (
+    Object.keys(manifest.backgrounds).some((key) => key.includes("backround"))
+  ) {
     audit.issues.push({
       type: "folder-typo",
-      message: "Phát hiện thư mục backrounds bị sai chính tả. Nên đổi thành backgrounds để đồng bộ quy ước.",
+      message:
+        "Phát hiện thư mục backrounds bị sai chính tả. Nên đổi thành backgrounds để đồng bộ quy ước.",
     });
-  } else if (files.some((filePath) => toPosix(filePath).includes("/backrounds/"))) {
+  } else if (
+    files.some((filePath) => toPosix(filePath).includes("/backrounds/"))
+  ) {
     audit.issues.push({
       type: "folder-typo",
-      message: "Phát hiện thư mục backrounds bị sai chính tả. Nên đổi thành backgrounds để đồng bộ quy ước.",
+      message:
+        "Phát hiện thư mục backrounds bị sai chính tả. Nên đổi thành backgrounds để đồng bộ quy ước.",
     });
   }
 
@@ -198,7 +264,9 @@ export const petAssetAudit = ${JSON.stringify(audit, null, 2)};
 `;
 
   await fs.writeFile(outputFile, content, "utf8");
-  console.log(`[pet-assets] generated ${toPosix(path.relative(repoRoot, outputFile))}`);
+  console.log(
+    `[pet-assets] generated ${toPosix(path.relative(repoRoot, outputFile))}`,
+  );
   console.log(`[pet-assets] total assets: ${files.length}`);
   if (audit.issues.length > 0) {
     console.log("[pet-assets] audit issues:");
@@ -212,4 +280,3 @@ main().catch((error) => {
   console.error("[pet-assets] generation failed", error);
   process.exitCode = 1;
 });
-

@@ -2,6 +2,7 @@ import { asElement, escapeHtml } from "../../utils/dom.js";
 import { mountIntoPetHost } from "../../utils/pageHost.js";
 import {
   resolveBackgroundPath,
+  resolvePetAvatarPath,
   resolvePetAssetPath,
 } from "../../utils/assetResolver.js";
 
@@ -609,7 +610,11 @@ export function createHomePetPage({ store, petApi } = {}) {
       mood: pet.mood,
       level: `level${pet.level || 1}`,
     });
-    const avatarImage = petImage;
+    const avatarImage = resolvePetAvatarPath({
+      petType: pet.petTypeId || pet.petType,
+      stage: pet.stage,
+      level: `level${pet.level || 1}`,
+    });
     const petKey = getPetKey(snapshot);
 
     if (refs.petImage && refs.petImage.src !== new URL(petImage, window.location.href).href) {

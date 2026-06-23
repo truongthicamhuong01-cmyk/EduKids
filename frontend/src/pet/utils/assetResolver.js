@@ -92,6 +92,77 @@ function getLevelAssets(petType, levelKey) {
   return petEntry.levels?.[levelKey] || null;
 }
 
+function getAvatarPetEntry(petType) {
+  const key = normalizeSlug(petType);
+  return petAssetManifest.avatarPet?.[key] || null;
+}
+
+function getAvatarLevelKey({ stage = "", level = "" } = {}) {
+  const normalizedStage = normalizeSlug(stage);
+  const normalizedLevel = normalizeLevelKey(level);
+
+  const stageMap = {
+    baby: "level1",
+    young: "level10",
+    teen: "level20",
+    hero: "level30",
+    legend: "level50",
+    mythic: "level50",
+  };
+
+  if (normalizedStage && stageMap[normalizedStage]) {
+    return stageMap[normalizedStage];
+  }
+
+  if (normalizedLevel) {
+    const levelNumber = Number(normalizedLevel.replace("level", ""));
+    if (Number.isFinite(levelNumber)) {
+      if (levelNumber < 5) {
+        return "level1";
+      }
+      if (levelNumber < 12) {
+        return "level10";
+      }
+      if (levelNumber < 20) {
+        return "level20";
+      }
+      if (levelNumber < 30) {
+        return "level30";
+      }
+      return "level50";
+    }
+  }
+
+  return "level1";
+}
+
+export function resolvePetAvatarPath({ petType = "", stage = "", level = "" } = {}) {
+  const petEntry = getAvatarPetEntry(petType);
+  const fallbackLevelKey = getAvatarLevelKey({ stage, level });
+
+  if (!petEntry) {
+    return resolvePetAssetPath({ petType, stage, level });
+  }
+
+  const stageAsset = normalizeAssetPath(petEntry.levels?.[fallbackLevelKey]);
+  if (stageAsset) {
+    return stageAsset;
+  }
+
+  const availableLevels = Object.keys(petEntry.levels || {}).sort((left, right) => {
+    return Number(left.replace("level", "")) - Number(right.replace("level", ""));
+  });
+
+  for (const key of availableLevels) {
+    const assetPath = normalizeAssetPath(petEntry.levels?.[key]);
+    if (assetPath) {
+      return assetPath;
+    }
+  }
+
+  return resolvePetAssetPath({ petType, stage, level });
+}
+
 export function resolvePetAssetPath({ petType = "", stage = "", mood = "", level = "" } = {}) {
   const petEntry = getPetEntry(petType);
   const normalizedMood = normalizeSlug(mood);

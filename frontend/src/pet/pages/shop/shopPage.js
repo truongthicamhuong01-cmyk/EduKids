@@ -48,7 +48,9 @@ function iconHeartSmall() {
 }
 
 function normalizeText(value) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || "")
+    .trim()
+    .toLowerCase();
 }
 
 function normalizeCategoryKey(category = "") {
@@ -130,8 +132,8 @@ function createDefaultState() {
     toastMessage: "",
     toastTimer: null,
     errorMessage: "",
-    emptyTitle: "Shop chÆ°a cĂ³ váº­t pháº©m.",
-    emptyMessage: "HĂ£y quay láº¡i sau nhĂ©.",
+    emptyTitle: "Shop chưa có sản phẩm",
+    emptyMessage: "Hãy quay lại sau nhé!",
     lastCoinValue: null,
   };
 }
@@ -294,15 +296,19 @@ export function createShopPage({ store, shopApi } = {}) {
       }
 
       const currentItemId = card.dataset.shopItemId || "";
-      const isCurrent = Boolean(state.buyingItemId) && currentItemId === state.buyingItemId;
+      const isCurrent =
+        Boolean(state.buyingItemId) && currentItemId === state.buyingItemId;
       const shouldDisable = Boolean(state.buyingItemId) && !isCurrent;
-      const item = state.items.find((entry) => String(entry?.itemId || "") === currentItemId)
-        || snapshot.shop?.items?.find?.((entry) => String(entry?.itemId || "") === currentItemId);
+      const item =
+        state.items.find(
+          (entry) => String(entry?.itemId || "") === currentItemId,
+        ) ||
+        snapshot.shop?.items?.find?.(
+          (entry) => String(entry?.itemId || "") === currentItemId,
+        );
       const reason = item ? getItemReason(item, snapshot) : null;
       const actionText = card.querySelector("[data-shop-action-text]");
       const actionStatus = card.querySelector("[data-shop-action-status]");
-      const actionIcon = card.querySelector("[data-shop-action-icon]");
-
       card.classList.toggle("is-loading", isCurrent);
       card.querySelectorAll("button").forEach((button) => {
         button.disabled = shouldDisable || isCurrent;
@@ -313,10 +319,6 @@ export function createShopPage({ store, shopApi } = {}) {
       }
 
       actionText.textContent = getActionButtonText(item, reason, isCurrent);
-      actionStatus.textContent = getActionStatusText(item, reason, isCurrent);
-      if (actionIcon) {
-        actionIcon.hidden = isCurrent;
-      }
     });
   }
 
@@ -328,8 +330,8 @@ export function createShopPage({ store, shopApi } = {}) {
   }
 
   function setEmptyState(title, message) {
-    state.emptyTitle = String(title || "Shop chÆ°a cĂ³ váº­t pháº©m.");
-    state.emptyMessage = String(message || "HĂ£y quay láº¡i sau nhĂ©.");
+    state.emptyTitle = String(title || "Shop chưa có sản phẩm.");
+    state.emptyMessage = String(message || "Hãy quay lại sau nhé!");
 
     const refs = getRefs();
     if (refs.empty) {
@@ -356,7 +358,9 @@ export function createShopPage({ store, shopApi } = {}) {
       refs.errorTitle.textContent = "Không thể tải Shop.";
     }
     if (refs.errorMessage) {
-      refs.errorMessage.textContent = String(message || "Vui lòng thử lại nhé.");
+      refs.errorMessage.textContent = String(
+        message || "Vui lòng thử lại nhé.",
+      );
     }
 
     refs.error.hidden = false;
@@ -452,11 +456,15 @@ export function createShopPage({ store, shopApi } = {}) {
     const normalizedItemId = String(item?.itemId || "").trim();
 
     if (Array.isArray(categoryItems)) {
-      const found = categoryItems.find((entry) => String(entry?.itemId || "").trim() === normalizedItemId);
+      const found = categoryItems.find(
+        (entry) => String(entry?.itemId || "").trim() === normalizedItemId,
+      );
       return Math.max(0, Number(found?.quantity ?? item.ownedQuantity ?? 0));
     }
 
-    const owned = Number(categoryItems?.[normalizedItemId]?.quantity ?? item.ownedQuantity ?? 0);
+    const owned = Number(
+      categoryItems?.[normalizedItemId]?.quantity ?? item.ownedQuantity ?? 0,
+    );
     return Math.max(0, owned);
   }
 
@@ -468,13 +476,22 @@ export function createShopPage({ store, shopApi } = {}) {
     const currentCoin = getCurrentCoin(snapshot);
     const currentLevel = Math.max(
       1,
-      Number(snapshot.shop?.raw?.userLevel || snapshot.shop?.userLevel || snapshot.pet?.level || state.userLevel || 1),
+      Number(
+        snapshot.shop?.raw?.userLevel ||
+          snapshot.shop?.userLevel ||
+          snapshot.pet?.level ||
+          state.userLevel ||
+          1,
+      ),
     );
     const unlockLevel = Math.max(1, Number(item.unlockLevel || 1));
     const ownedQuantity = getInventoryOwnedQuantity(snapshot, item);
     const maxStack = Math.max(1, Number(item.maxStack || 99));
     const price = Math.max(0, Number(item.price || 0));
-    const canBuy = item.canBuy !== false && currentLevel >= unlockLevel && ownedQuantity < maxStack;
+    const canBuy =
+      item.canBuy !== false &&
+      currentLevel >= unlockLevel &&
+      ownedQuantity < maxStack;
 
     if (!canBuy) {
       if (currentLevel < unlockLevel) {
@@ -538,15 +555,18 @@ export function createShopPage({ store, shopApi } = {}) {
   }
 
   function getSortedItems(snapshot = {}) {
-    const items = Array.isArray(state.items) && state.items.length > 0
-      ? state.items
-      : Array.isArray(snapshot.shop?.items)
-        ? snapshot.shop.items
-        : [];
+    const items =
+      Array.isArray(state.items) && state.items.length > 0
+        ? state.items
+        : Array.isArray(snapshot.shop?.items)
+          ? snapshot.shop.items
+          : [];
 
     return [...items]
       .filter(Boolean)
-      .filter((item) => SHOP_CATEGORY_ORDER.includes(normalizeCategoryKey(item.category || "")))
+      .filter((item) =>
+        SHOP_CATEGORY_ORDER.includes(normalizeCategoryKey(item.category || "")),
+      )
       .sort((left, right) => {
         const leftCategory = normalizeCategoryKey(left.category || "");
         const rightCategory = normalizeCategoryKey(right.category || "");
@@ -568,8 +588,20 @@ export function createShopPage({ store, shopApi } = {}) {
 
     const pet = snapshot.pet || {};
     const stats = [
-      { key: "happiness", label: "Hạnh phúc", value: pet.happiness, icon: iconHeart(), tone: "warning" },
-      { key: "energy", label: "Năng lượng", value: pet.energy, icon: iconBolt(), tone: "info" },
+      {
+        key: "happiness",
+        label: "Hạnh phúc",
+        value: pet.happiness,
+        icon: iconHeart(),
+        tone: "warning",
+      },
+      {
+        key: "energy",
+        label: "Năng lượng",
+        value: pet.energy,
+        icon: iconBolt(),
+        tone: "info",
+      },
     ];
 
     refs.statusList.innerHTML = stats
@@ -596,8 +628,12 @@ export function createShopPage({ store, shopApi } = {}) {
 
     stats.forEach((stat) => {
       const value = Math.max(0, Math.min(100, Number(stat.value) || 0));
-      const valueEl = refs.statusList.querySelector(`[data-shop-stat-value="${stat.key}"]`);
-      const fillEl = refs.statusList.querySelector(`[data-shop-stat-fill="${stat.key}"]`);
+      const valueEl = refs.statusList.querySelector(
+        `[data-shop-stat-value="${stat.key}"]`,
+      );
+      const fillEl = refs.statusList.querySelector(
+        `[data-shop-stat-fill="${stat.key}"]`,
+      );
       animateNumber(valueEl, value);
       if (fillEl) {
         fillEl.style.width = `${value}%`;
@@ -670,7 +706,9 @@ export function createShopPage({ store, shopApi } = {}) {
 
     const visibleItems = getSortedItems(snapshot);
     const categories = SHOP_CATEGORY_ORDER.filter((category) =>
-      visibleItems.some((item) => normalizeCategoryKey(item.category || "") === category),
+      visibleItems.some(
+        (item) => normalizeCategoryKey(item.category || "") === category,
+      ),
     );
 
     if (categories.length === 0) {
@@ -684,7 +722,9 @@ export function createShopPage({ store, shopApi } = {}) {
 
     refs.categories.innerHTML = categories
       .map((category) => {
-        const active = state.selectedCategory === category || (!state.selectedCategory && category === categories[0]);
+        const active =
+          state.selectedCategory === category ||
+          (!state.selectedCategory && category === categories[0]);
         return `
           <button
             type="button"
@@ -709,7 +749,8 @@ export function createShopPage({ store, shopApi } = {}) {
     const categoryLabel = normalizeCategoryLabel(item.category || "");
     const toneClass = `tone-${index % 5}`;
     const categoryKey = normalizeCategoryKey(item.category || "");
-    const quantityReached = ownedQuantity >= Math.max(1, Number(item.maxStack || 99));
+    const quantityReached =
+      ownedQuantity >= Math.max(1, Number(item.maxStack || 99));
     const isBuying = state.buyingItemId === itemId;
     const actionText = getActionButtonText(item, reason, isBuying);
     const actionStatus = getActionStatusText(item, reason, isBuying);
@@ -721,10 +762,10 @@ export function createShopPage({ store, shopApi } = {}) {
           <div class="pet-shop-card__visual">
             <img src="${escapeHtml(icon)}" alt="${escapeHtml(item.name || itemId)}" loading="eager" decoding="async" />
           </div>
-          <p class="pet-shop-card__description">${escapeHtml(item.description || "M�n �? h?u �ch cho pet.")}</p>
+          <p class="pet-shop-card__description">${escapeHtml(item.description || "Món đồ hữu ích cho pet.")}</p>
           <div class="pet-shop-card__meta">
             <span class="pet-shop-card__category">${escapeHtml(categoryLabel)}</span>
-            <span class="pet-shop-card__quantity">�? c�: <strong data-shop-owned="${escapeHtml(itemId)}">${formatNumber(ownedQuantity)}</strong></span>
+            <span class="pet-shop-card__quantity">Hiện có: <strong data-shop-owned="${escapeHtml(itemId)}">${formatNumber(ownedQuantity)}</strong></span>
           </div>
           <div class="pet-shop-card__price-row">
             <button
@@ -736,7 +777,6 @@ export function createShopPage({ store, shopApi } = {}) {
               aria-label="${escapeHtml(actionStatus)} ${escapeHtml(item.name || itemId)}"
               ${reason.disabled ? "disabled" : ""}
             >
-              <span class="pet-shop-card__action-icon" data-shop-action-icon aria-hidden="true"${isBuying ? " hidden" : ""}>${iconCoin()}</span>
               <span class="pet-shop-card__action-text" data-shop-action-text>${escapeHtml(actionText)}</span>
               <span class="pet-shop-card__action-loading" data-shop-action-status aria-hidden="true"></span>
             </button>
@@ -757,7 +797,11 @@ export function createShopPage({ store, shopApi } = {}) {
 
     const items = getSortedItems(snapshot);
     const visibleItems = state.selectedCategory
-      ? items.filter((item) => normalizeCategoryKey(item.category || "") === state.selectedCategory)
+      ? items.filter(
+          (item) =>
+            normalizeCategoryKey(item.category || "") ===
+            state.selectedCategory,
+        )
       : items;
 
     const hasItems = visibleItems.length > 0;
@@ -782,7 +826,9 @@ export function createShopPage({ store, shopApi } = {}) {
       return;
     }
 
-    refs.grid.innerHTML = visibleItems.map((item, index) => renderCard(item, index, snapshot)).join("");
+    refs.grid.innerHTML = visibleItems
+      .map((item, index) => renderCard(item, index, snapshot))
+      .join("");
   }
 
   function render(snapshot = {}) {
@@ -820,11 +866,20 @@ export function createShopPage({ store, shopApi } = {}) {
   }
 
   function syncStateFromShopResponse(response) {
-    const items = Array.isArray(response?.data?.items) ? response.data.items : [];
-    state.items = items.filter((item) => SHOP_CATEGORY_ORDER.includes(normalizeCategoryKey(item.category || "")));
-    state.userLevel = Math.max(1, Number(response?.data?.userLevel || state.userLevel || 1));
+    const items = Array.isArray(response?.data?.items)
+      ? response.data.items
+      : [];
+    state.items = items.filter((item) =>
+      SHOP_CATEGORY_ORDER.includes(normalizeCategoryKey(item.category || "")),
+    );
+    state.userLevel = Math.max(
+      1,
+      Number(response?.data?.userLevel || state.userLevel || 1),
+    );
     state.categories = SHOP_CATEGORY_ORDER.filter((category) =>
-      state.items.some((item) => normalizeCategoryKey(item.category || "") === category),
+      state.items.some(
+        (item) => normalizeCategoryKey(item.category || "") === category,
+      ),
     );
     if (!state.selectedCategory) {
       state.selectedCategory = state.categories[0] || "";
@@ -837,9 +892,15 @@ export function createShopPage({ store, shopApi } = {}) {
       return;
     }
 
-    const target = root.querySelector(`[data-shop-item-category="${String(normalized).replace(/"/g, '\\"')}"]`);
+    const target = root.querySelector(
+      `[data-shop-item-category="${String(normalized).replace(/"/g, '\\"')}"]`,
+    );
     if (target?.scrollIntoView) {
-      target.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
+      target.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+        inline: "nearest",
+      });
     }
   }
 
@@ -868,7 +929,9 @@ export function createShopPage({ store, shopApi } = {}) {
     }
 
     const cardRect = card.getBoundingClientRect();
-    const coinRect = root.querySelector(".pet-shop-coin")?.getBoundingClientRect();
+    const coinRect = root
+      .querySelector(".pet-shop-coin")
+      ?.getBoundingClientRect();
     if (!coinRect) {
       return;
     }
@@ -906,7 +969,10 @@ export function createShopPage({ store, shopApi } = {}) {
       return;
     }
 
-    const item = getSortedItems(store?.getState?.() || {}).find((entry) => entry.itemId === itemId) || state.items.find((entry) => entry.itemId === itemId);
+    const item =
+      getSortedItems(store?.getState?.() || {}).find(
+        (entry) => entry.itemId === itemId,
+      ) || state.items.find((entry) => entry.itemId === itemId);
     if (!item) {
       return;
     }
@@ -930,7 +996,11 @@ export function createShopPage({ store, shopApi } = {}) {
         store.applyBackendResponse(response, "shop-buy");
       }
 
-      showToast(response?.popupEvents?.[0]?.message || response?.message || "Mua thành công.");
+      showToast(
+        response?.popupEvents?.[0]?.message ||
+          response?.message ||
+          "Mua thành công.",
+      );
       pulsePet();
     } catch (error) {
       const normalized = normalizeError(error);
@@ -986,7 +1056,11 @@ export function createShopPage({ store, shopApi } = {}) {
     const action = actionButton.dataset.action;
 
     if (action === "back") {
-      window.dispatchEvent(new CustomEvent("edukids:pet:home-requested", { detail: { source: "shop" } }));
+      window.dispatchEvent(
+        new CustomEvent("edukids:pet:home-requested", {
+          detail: { source: "shop" },
+        }),
+      );
       return;
     }
 
@@ -1068,11 +1142,10 @@ export function createShopPage({ store, shopApi } = {}) {
       if (!forceReload && state.loadPromise) {
         await state.loadPromise;
       } else {
-        state.loadPromise = loadShop()
-          .finally(() => {
-            state.loadPromise = null;
-            state.initialized = true;
-          });
+        state.loadPromise = loadShop().finally(() => {
+          state.loadPromise = null;
+          state.initialized = true;
+        });
         await state.loadPromise;
       }
     }
@@ -1131,5 +1204,3 @@ export function createShopPage({ store, shopApi } = {}) {
     },
   };
 }
-
-
