@@ -96,8 +96,6 @@
   content: "";
   position: absolute;
   inset: 0;
-  transform: scale(1.04) translateX(18%);
-  transform-origin: center center;
   background:
     radial-gradient(circle at 50% 8%, rgba(255, 244, 198, 0.92) 0, rgba(255, 244, 198, 0.74) 14%, transparent 30%),
     radial-gradient(circle at 82% 16%, rgba(255, 255, 255, 0.25) 0 4%, transparent 9%),
@@ -432,8 +430,10 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: min(20vw, 18rem);
-  min-height: min(20vw, 15.5rem);
+  width: min(17vw, 15.3rem);
+  min-height: min(17vw, 13.2rem);
+  margin-left: -5px;
+  margin-top: -12px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -456,8 +456,8 @@
 .pet-inventory-pet__halo {
   position: absolute;
   inset: auto auto 9% 50%;
-  width: min(15vw, 14rem);
-  height: min(15vw, 14rem);
+  width: min(12.8vw, 11.9rem);
+  height: min(12.8vw, 11.9rem);
   transform: translateX(-50%);
   border-radius: 50%;
   background:
@@ -470,7 +470,7 @@
   position: absolute;
   left: 50%;
   bottom: 6%;
-  width: min(13vw, 11rem);
+  width: min(11vw, 9.3rem);
   height: clamp(1.6rem, 3vw, 2.3rem);
   transform: translateX(-50%);
   border-radius: 50%;
@@ -481,8 +481,8 @@
 .pet-inventory-pet img {
   position: relative;
   z-index: 1;
-  width: min(18vw, 16rem);
-  max-height: min(46vh, 20rem);
+  width: min(15.3vw, 13.6rem);
+  max-height: min(42vh, 17rem);
   object-fit: contain;
   transform-origin: center bottom;
   filter: drop-shadow(0 24px 20px rgba(52, 27, 9, 0.2));
@@ -1126,10 +1126,6 @@
 }
 
 @media (max-width: 1080px) {
-  .pet-inventory-hero-shell::before {
-    transform: scale(1.04) translateX(14%);
-  }
-
   .pet-inventory-header {
     flex-direction: column;
     align-items: stretch;
@@ -1161,11 +1157,11 @@
   }
 
   .pet-inventory-pet {
-    width: min(54vw, 24rem);
+    width: min(46vw, 20.4rem);
   }
 
   .pet-inventory-pet img {
-    width: min(52vw, 21rem);
+    width: min(44vw, 18.9rem);
   }
 
   .pet-inventory-grid,
@@ -1180,7 +1176,7 @@
   }
 
   .pet-inventory-pet {
-    width: min(58vw, 22rem);
+    width: min(49vw, 19rem);
   }
 
   .pet-inventory-grid,
@@ -1204,10 +1200,6 @@
 }
 
 @media (max-width: 760px) {
-  .pet-inventory-hero-shell::before {
-    transform: scale(1.03) translateX(10%);
-  }
-
   .pet-inventory-screen__shell {
     padding: 0.8rem 0.8rem 0.95rem;
   }
@@ -1268,20 +1260,20 @@
   }
 
   .pet-inventory-pet {
-    width: min(86vw, 28rem);
+    width: min(73vw, 23.8rem);
   }
 
   .pet-inventory-pet img {
-    width: min(82vw, 24rem);
+    width: min(70vw, 20.4rem);
   }
 
   .pet-inventory-pet__halo {
-    width: min(82vw, 22rem);
-    height: min(82vw, 22rem);
+    width: min(70vw, 18.7rem);
+    height: min(70vw, 18.7rem);
   }
 
   .pet-inventory-pet__shadow {
-    width: min(68vw, 20rem);
+    width: min(58vw, 17rem);
   }
 
   .pet-inventory-grid,

@@ -1,9 +1,9 @@
 import { escapeHtml } from "../../utils/dom.js";
 import { mountIntoPetHost } from "../../utils/pageHost.js";
 import {
-  resolveSceneBackgroundPath,
   resolveItemIconPath,
   resolvePetAssetPath,
+  resolveShopBackgroundPath,
 } from "../../utils/assetResolver.js";
 
 const SHOP_PAGE_ID = "edukids-pet-shop-page";
@@ -569,7 +569,7 @@ export function createShopPage({ store, shopApi } = {}) {
 
     root.style.setProperty(
       "--pet-shop-scene",
-      `url('${resolveSceneBackgroundPath({ petType: pet?.petTypeId || pet?.petType || "horse" })}')`,
+      `url('${resolveShopBackgroundPath({ petType: pet?.petTypeId || pet?.petType || "horse" })}')`,
     );
 
     if (!pet) {

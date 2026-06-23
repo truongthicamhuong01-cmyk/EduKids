@@ -157,12 +157,27 @@ export function resolveBackgroundPath({ petType = "" } = {}) {
 export function resolveSceneBackgroundPath({ petType = "" } = {}) {
   const normalizedPetType = normalizeSlug(petType);
   const preferredSceneBackgrounds = {
-    elephant: "/assets/pet/background/pet-bg-elephant-small.png",
-    horse: "/assets/pet/background/pet-bg-horse-small.png",
+    elephant: "/assets/pet/background/pet-bg-elephant-fein.png",
+    horse: "/assets/pet/background/pet-bg-horse-fein.png",
   };
 
   return (
     normalizeAssetPath(preferredSceneBackgrounds[normalizedPetType]) ||
+    normalizeAssetPath(petAssetManifest.backgrounds?.[normalizedPetType]) ||
+    getFirstManifestPath(petAssetManifest.backgrounds) ||
+    getFirstManifestPath(petAssetManifest.raw)
+  );
+}
+
+export function resolveShopBackgroundPath({ petType = "" } = {}) {
+  const normalizedPetType = normalizeSlug(petType);
+  const preferredShopBackgrounds = {
+    elephant: "/assets/pet/background/pet-bg-elephant-shop.png",
+    horse: "/assets/pet/background/pet-bg-horse-shop.png",
+  };
+
+  return (
+    normalizeAssetPath(preferredShopBackgrounds[normalizedPetType]) ||
     normalizeAssetPath(petAssetManifest.backgrounds?.[normalizedPetType]) ||
     getFirstManifestPath(petAssetManifest.backgrounds) ||
     getFirstManifestPath(petAssetManifest.raw)

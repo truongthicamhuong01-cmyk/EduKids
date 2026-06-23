@@ -17,9 +17,11 @@ const PET_OPTIONS = [
     background: resolveBackgroundPath({ petType: "elephant" }),
     petImage: resolvePetAssetPath({
       petType: "elephant",
-      level: "level1",
-      mood: "happy",
+      level: "level30",
+      mood: "normal",
     }),
+    petScale: 0.80,
+    petOffsetY: -8,
   },
   {
     petTypeId: "horse",
@@ -28,9 +30,11 @@ const PET_OPTIONS = [
     background: resolveBackgroundPath({ petType: "horse" }),
     petImage: resolvePetAssetPath({
       petType: "horse",
-      level: "level1",
-      mood: "happy",
+      level: "level30",
+      mood: "normal",
     }),
+    petScale: 0.78,
+    petOffsetY: -14,
   },
 ];
 
@@ -89,20 +93,11 @@ function ensureChoosePageRoot() {
       <div class="pet-choose-screen__background" aria-hidden="true"></div>
       <div class="pet-choose-screen__shell">
         <header class="pet-choose-screen__header">
-          <button type="button" class="pet-choose-back" data-action="back" aria-label="Quay lại">
-            ${iconBack()}
-          </button>
-
           <div class="pet-choose-banner" aria-label="Chọn thú cưng">
             <span class="pet-choose-banner__star" aria-hidden="true">${iconStar()}</span>
             <h1 class="pet-choose-banner__title">Chọn thú cưng</h1>
             <span class="pet-choose-banner__star" aria-hidden="true">${iconStar()}</span>
           </div>
-
-          <button type="button" class="pet-choose-shop" data-action="shop" aria-label="Mở Cửa hàng">
-            <span aria-hidden="true">${iconShop()}</span>
-            <span>Cửa hàng</span>
-          </button>
         </header>
 
         <p class="pet-choose-subtitle">
@@ -280,6 +275,7 @@ export function createChoosePetPage({
           <div class="pet-choice-card__art" style="--pet-card-scene: url('${escapeHtml(option.background)}')">
             <img
               class="pet-choice-card__pet"
+              style="--pet-choice-pet-scale: ${escapeHtml(option.petScale ?? 1)}; --pet-choice-pet-offset-y: ${escapeHtml(option.petOffsetY ?? 0)}px"
               src="${escapeHtml(option.petImage)}"
               alt="${escapeHtml(option.displayName)}"
               loading="eager"
