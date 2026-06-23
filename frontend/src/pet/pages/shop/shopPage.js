@@ -287,6 +287,7 @@ export function createShopPage({ store, shopApi } = {}) {
       delete root.dataset.buyingItemId;
     }
 
+    const snapshot = store?.getState?.() || {};
     root.querySelectorAll("[data-shop-item-id]").forEach((card) => {
       if (!(card instanceof HTMLElement)) {
         return;
@@ -295,11 +296,27 @@ export function createShopPage({ store, shopApi } = {}) {
       const currentItemId = card.dataset.shopItemId || "";
       const isCurrent = Boolean(state.buyingItemId) && currentItemId === state.buyingItemId;
       const shouldDisable = Boolean(state.buyingItemId) && !isCurrent;
+      const item = state.items.find((entry) => String(entry?.itemId || "") === currentItemId)
+        || snapshot.shop?.items?.find?.((entry) => String(entry?.itemId || "") === currentItemId);
+      const reason = item ? getItemReason(item, snapshot) : null;
+      const actionText = card.querySelector("[data-shop-action-text]");
+      const actionStatus = card.querySelector("[data-shop-action-status]");
+      const actionIcon = card.querySelector("[data-shop-action-icon]");
 
       card.classList.toggle("is-loading", isCurrent);
       card.querySelectorAll("button").forEach((button) => {
         button.disabled = shouldDisable || isCurrent;
       });
+
+      if (!item || !reason || !actionText || !actionStatus) {
+        return;
+      }
+
+      actionText.textContent = getActionButtonText(item, reason, isCurrent);
+      actionStatus.textContent = getActionStatusText(item, reason, isCurrent);
+      if (actionIcon) {
+        actionIcon.hidden = isCurrent;
+      }
     });
   }
 
@@ -492,6 +509,34 @@ export function createShopPage({ store, shopApi } = {}) {
     };
   }
 
+  function getActionButtonText(item, reason, isBuying) {
+    if (isBuying) {
+      return "Đang mua...";
+    }
+
+    return `🪙 ${formatNumber(item?.price || 0)}`;
+  }
+
+  function getActionStatusText(item, reason, isBuying) {
+    if (isBuying) {
+      return "Đang mua...";
+    }
+
+    if (reason.tone === "coin") {
+      return "Không đủ xu";
+    }
+
+    if (reason.tone === "locked") {
+      return `Mở khóa ở cấp ${formatNumber(item?.unlockLevel || 1)}`;
+    }
+
+    if (reason.tone === "full") {
+      return "Đã đủ số lượng";
+    }
+
+    return "Đã mở khóa";
+  }
+
   function getSortedItems(snapshot = {}) {
     const items = Array.isArray(state.items) && state.items.length > 0
       ? state.items
@@ -665,6 +710,9 @@ export function createShopPage({ store, shopApi } = {}) {
     const toneClass = `tone-${index % 5}`;
     const categoryKey = normalizeCategoryKey(item.category || "");
     const quantityReached = ownedQuantity >= Math.max(1, Number(item.maxStack || 99));
+    const isBuying = state.buyingItemId === itemId;
+    const actionText = getActionButtonText(item, reason, isBuying);
+    const actionStatus = getActionStatusText(item, reason, isBuying);
 
     return `
       <article class="pet-shop-card ${toneClass} ${reason.disabled ? "is-disabled" : ""}" data-shop-item-id="${escapeHtml(itemId)}" data-shop-item-category="${escapeHtml(categoryKey)}">
@@ -673,10 +721,10 @@ export function createShopPage({ store, shopApi } = {}) {
           <div class="pet-shop-card__visual">
             <img src="${escapeHtml(icon)}" alt="${escapeHtml(item.name || itemId)}" loading="eager" decoding="async" />
           </div>
-          <p class="pet-shop-card__description">${escapeHtml(item.description || "Món đồ hữu ích cho pet.")}</p>
+          <p class="pet-shop-card__description">${escapeHtml(item.description || "M�n �? h?u �ch cho pet.")}</p>
           <div class="pet-shop-card__meta">
             <span class="pet-shop-card__category">${escapeHtml(categoryLabel)}</span>
-            <span class="pet-shop-card__quantity">Đã có: <strong data-shop-owned="${escapeHtml(itemId)}">${formatNumber(ownedQuantity)}</strong></span>
+            <span class="pet-shop-card__quantity">�? c�: <strong data-shop-owned="${escapeHtml(itemId)}">${formatNumber(ownedQuantity)}</strong></span>
           </div>
           <div class="pet-shop-card__price-row">
             <button
@@ -685,15 +733,15 @@ export function createShopPage({ store, shopApi } = {}) {
               data-action="buy-item"
               data-shop-item-id="${escapeHtml(itemId)}"
               data-shop-price="${escapeHtml(price)}"
-              aria-label="${escapeHtml(reason.label)} ${escapeHtml(item.name || itemId)}"
+              aria-label="${escapeHtml(actionStatus)} ${escapeHtml(item.name || itemId)}"
               ${reason.disabled ? "disabled" : ""}
             >
-              <span class="pet-shop-card__action-icon" aria-hidden="true">${iconCoin()}</span>
-              <span class="pet-shop-card__action-text">${escapeHtml(reason.label === "Mua" ? `${formatNumber(price)}` : reason.label)}</span>
-              <span class="pet-shop-card__action-loading" aria-hidden="true"></span>
+              <span class="pet-shop-card__action-icon" data-shop-action-icon aria-hidden="true"${isBuying ? " hidden" : ""}>${iconCoin()}</span>
+              <span class="pet-shop-card__action-text" data-shop-action-text>${escapeHtml(actionText)}</span>
+              <span class="pet-shop-card__action-loading" data-shop-action-status aria-hidden="true"></span>
             </button>
             <span class="pet-shop-card__hint ${reason.tone === "coin" ? "is-warning" : reason.tone === "locked" ? "is-locked" : quantityReached ? "is-full" : ""}">
-              ${reason.tone === "coin" ? "Không đủ Xu" : reason.tone === "locked" ? "Đã khóa" : quantityReached ? "Đã đủ số lượng" : item.unlockLevel ? `Mở ở cấp ${formatNumber(item.unlockLevel)}` : "Sẵn sàng mua"}
+              ${escapeHtml(actionStatus)}
             </span>
           </div>
         </div>
@@ -1083,3 +1131,5 @@ export function createShopPage({ store, shopApi } = {}) {
     },
   };
 }
+
+
