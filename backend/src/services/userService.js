@@ -138,6 +138,7 @@ function mapUserDoc(doc) {
     address: data.address || "",
     note: data.note || "",
     stats: normalizeStats(data.role, data.stats),
+    rewards: data.rewards && typeof data.rewards === "object" ? data.rewards : { badges: [] },
     subjects: Array.isArray(data.subjects) ? data.subjects : getDefaultSubjects(data.role),
     classTags: Array.isArray(data.classTags) ? data.classTags : [],
     classTagNames: Array.isArray(data.classTagNames) ? data.classTagNames : [],

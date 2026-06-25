@@ -227,9 +227,18 @@ async function grantReward({
     ensureStudent(user);
 
     const configs = await getGameConfigBundle(transaction);
+    const currentRewards = user?.rewards && typeof user.rewards === "object" ? user.rewards : {};
     const currentCoin = Math.max(0, Number(user?.stats?.eduCoin || 0));
     const coinDelta = Math.max(0, Math.floor(toNumber(rule.coin, 0)));
     const nextCoin = currentCoin + coinDelta;
+    const nextRewardBadges = Array.from(
+      new Set([
+        ...(Array.isArray(currentRewards.badges)
+          ? currentRewards.badges.map((item) => String(item || "").trim()).filter(Boolean)
+          : []),
+        ...rule.badges,
+      ]),
+    );
     const nextStats = {
       ...(user.stats || {}),
       eduCoin: nextCoin,
@@ -248,6 +257,11 @@ async function grantReward({
       normalizedUserId,
       {
         stats: nextStats,
+        rewards: {
+          ...currentRewards,
+          badges: nextRewardBadges,
+          lastRewardAt: new Date().toISOString(),
+        },
         updatedAt: new Date().toISOString(),
       },
       transaction,

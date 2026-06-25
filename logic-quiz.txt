@@ -1,0 +1,350 @@
+# EDUKIDS QUIZ GAME LOGIC (MVP v1.0)
+
+---
+
+## 1. Khởi tạo Quiz
+
+Khi người chơi bắt đầu bài Quiz:
+
+```javascript
+playerHP = Math.ceil(totalQuestions / 2);
+combo = 0;
+bossHP = 100;
+hint = 3;
+currentQuestion = 1;
+correctAnswers = 0;
+wrongQuestions = [];
+```
+
+Hiển thị:
+
+* Pet hiện tại.
+* Mini Boss.
+* Thanh HP Boss.
+* Tim người chơi.
+* Edu Coin.
+* XP.
+
+---
+
+## 2. Hiển thị Tim
+
+Nếu:
+
+```
+playerHP <= 3
+```
+
+Hiển thị:
+
+❤️ ❤️ ❤️
+
+Nếu:
+
+```
+playerHP > 3
+```
+
+Hiển thị:
+
+```
+x5 ❤️
+x6 ❤️
+x10 ❤️
+```
+
+---
+
+## 3. Boss
+
+Boss luôn bắt đầu với:
+
+```
+bossHP = 100
+```
+
+Boss có 4 trạng thái animation:
+
+```
+76% - 100%
+
+Idle Animation
+
+51% - 75%
+
+Angry Animation
+
+26% - 50%
+
+Rage Animation
+
+0%
+
+Die Animation
+```
+
+Boss không hồi máu khi người chơi trả lời sai.
+
+---
+
+## 4. Trả lời đúng
+
+```javascript
+combo++;
+correctAnswers++;
+
+bossHP -= Math.ceil(100 / totalQuestions);
+
+totalXP += 10;
+
+eduCoin += random(3,8);
+```
+
+Hiệu ứng:
+
+* Đáp án phát sáng.
+* Boss rung.
+* Boss chuyển animation theo HP.
+* Thanh HP giảm mượt.
+* Pet nhảy.
+* Coin bay lên.
+* XP bay lên.
+
+Hiển thị:
+
+```
+🎉 Chính xác!
+
++10 XP
+
++Edu Coin
+```
+
+Combo:
+
+```
+combo >=3
+
++10 XP
+```
+
+```
+combo >=5
+
++20 Edu Coin
+```
+
+Nếu:
+
+```
+bossHP <=0
+```
+
+Boss phát animation chết.
+
+Sau khi animation kết thúc:
+
+Hiện Popup Victory.
+
+---
+
+## 5. Trả lời sai
+
+```javascript
+playerHP--;
+
+combo = 0;
+
+wrongQuestions.push(currentQuestion);
+```
+
+Hiệu ứng:
+
+* Đáp án đỏ.
+* Boss cười.
+* Pet buồn.
+* Tim giảm.
+* Màn hình rung nhẹ.
+
+Nếu:
+
+```
+playerHP == 0
+```
+
+Hiện Popup Warning.
+
+Người chơi có thể:
+
+* Làm lại bài.
+* Làm lại câu sai.
+* Thoát.
+
+---
+
+## 6. Gợi ý
+
+Mỗi bài:
+
+```
+hint = 3
+```
+
+Mỗi lần sử dụng:
+
+```
+hint--;
+```
+
+Ẩn ngẫu nhiên 2 đáp án sai.
+
+Khi:
+
+```
+hint ==0
+```
+
+Ẩn nút Gợi ý.
+
+---
+
+## 7. Hoàn thành bài
+
+Sau câu cuối cùng:
+
+Tính:
+
+```
+accuracy =
+correctAnswers / totalQuestions
+```
+
+Nếu:
+
+```
+bossHP >0
+```
+
+Hiện Popup Default.
+
+Hiển thị:
+
+* Boss còn bao nhiêu HP.
+* Đúng bao nhiêu câu.
+* Accuracy.
+* XP nhận.
+* Edu Coin nhận.
+
+Nút:
+
+* Làm lại.
+* Làm lại câu sai.
+* Thoát.
+
+---
+
+## 8. Boss Defeated
+
+Nếu Boss HP = 0
+
+Thưởng thêm:
+
+```
++50 XP
+
++50 Edu Coin
+```
+
+Hiện Popup Victory.
+
+Hiệu ứng:
+
+* Confetti.
+* Pet ăn mừng.
+* Boss Die Animation.
+* Coin tăng.
+* XP tăng.
+
+Nút:
+
+* Tiếp tục.
+* Làm lại.
+* Thoát.
+
+---
+
+## 9. Xếp hạng
+
+Accuracy ≥90%
+
+⭐⭐⭐
+
++100 Edu Coin
+
+Accuracy 70~89%
+
+⭐⭐
+
++50 Edu Coin
+
+Accuracy <70%
+
+⭐
+
++20 Edu Coin
+
+---
+
+## 10. Thành tích
+
+Mở khóa khi:
+
+* Hoàn thành Quiz đầu tiên.
+* Combo x5.
+* Trả lời đúng 100 câu.
+
+---
+
+## 11. Lưu dữ liệu
+
+Sau khi đóng Popup:
+
+Đồng bộ Firebase:
+
+* totalXP
+* eduCoin
+* achievement
+* progress
+* pet
+
+Sau đó cập nhật lại giao diện người dùng.
+
+---
+
+## 12. Nút điều hướng
+
+Tất cả Popup đều có nút:
+
+* ⬅ Quay lại
+  hoặc
+* ✖ Thoát
+
+Không để người chơi bị "kẹt" trong bất kỳ màn hình nào.
+
+Popup Victory:
+
+* Tiếp tục
+* Làm lại
+* Thoát
+
+Popup Default:
+
+* Làm lại
+* Làm lại câu sai
+* Thoát
+
+Popup Warning:
+
+* Làm lại
+* Làm lại câu sai
+* Thoát

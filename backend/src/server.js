@@ -8,6 +8,7 @@ const adminRoutes = require("./routes/adminRoutes");
 const assignmentRoutes = require("./routes/assignmentRoutes");
 const classRoutes = require("./routes/classRoutes");
 const coachRoutes = require("./routes/coachRoutes");
+const battleSessionRoutes = require("./routes/battleSessionRoutes");
 const learningPathRoutes = require("./routes/learningPathRoutes");
 const petRoutes = require("./routes/petRoutes");
 const shopRoutes = require("./routes/shopRoutes");
@@ -44,6 +45,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/assignments", assignmentRoutes);
+app.use("/api/battle-sessions", battleSessionRoutes);
 app.use("/api/classes", classRoutes);
 app.use("/api/coach", coachRoutes);
 app.use("/learning-path", learningPathRoutes);

@@ -5885,6 +5885,18 @@ function changePage(pageId) {
     typeof initializeStudentQuizPage === "function"
   ) {
     void initializeStudentQuizPage();
+    const recoveryState = getBossBattleRecoveryStorageState();
+    if (recoveryState?.topicId && recoveryState?.sessionId) {
+      queueMicrotask(() => {
+        if (
+          currentPage === "subjects" &&
+          !studentQuizState.loadingQuiz &&
+          !bossBattleState.loadingSession
+        ) {
+          void loadStudentQuizByTopic(recoveryState.topicId);
+        }
+      });
+    }
   }
 
   if (
@@ -7861,7 +7873,21 @@ function renderStudentAchievementBadges(profile, learningPathState) {
     return;
   }
 
-  const badges = buildStudentLearningPathBadges(learningPathState);
+  const learningPathBadges = buildStudentLearningPathBadges(learningPathState);
+  const bossBattleBadges = getBossBattleAchievementBadgeList(
+    Array.isArray(profile?.rewards?.badges) ? profile.rewards.badges : [],
+  );
+  const badgeMap = new Map();
+
+  [...learningPathBadges, ...bossBattleBadges].forEach((badge) => {
+    if (!badge || !badge.id || badgeMap.has(badge.id)) {
+      return;
+    }
+
+    badgeMap.set(badge.id, badge);
+  });
+
+  const badges = Array.from(badgeMap.values());
 
   if (!Array.isArray(badges) || badges.length === 0) {
     renderStudentAchievementBadgeState("Chưa có huy hiệu nào");
@@ -7876,9 +7902,9 @@ function renderStudentAchievementBadges(profile, learningPathState) {
         <article
           class="student-profile-badge-item"
           data-badge-id="${escapeHtml(badge.id)}"
-          data-badge-season-id="${escapeHtml(badge.seasonId)}"
-          data-badge-mountain-id="${escapeHtml(badge.mountainId)}"
-          data-badge-unlocked-at="${escapeHtml(badge.unlockedAt)}"
+          data-badge-season-id="${escapeHtml(badge.seasonId || "")}"
+          data-badge-mountain-id="${escapeHtml(badge.mountainId || "")}"
+          data-badge-unlocked-at="${escapeHtml(badge.unlockedAt || "")}"
           title="${escapeHtml(badge.name)}"
         >
           <div class="student-profile-badge-image-wrap">
@@ -7916,7 +7942,7 @@ async function syncStudentAchievementBadges(profile) {
     console.warn("Không thể tải huy hiệu Learning Path:", error);
   }
 
-  renderStudentAchievementBadgeState("Chưa có huy hiệu nào");
+  renderStudentAchievementBadges(profile, null);
 }
 
 function renderStudentHomeOverview(profile, activityLogs = null) {
@@ -8995,6 +9021,130 @@ const studentQuizState = {
   pendingTopicId: "",
 };
 
+const bossBattleState = {
+  sessionId: "",
+  topicId: "",
+  quizId: "",
+  session: null,
+  loadingSession: false,
+  answering: false,
+  currentQuestionIndex: 0,
+  totalQuestions: 0,
+  bossHP: 100,
+  playerHP: 0,
+  combo: 0,
+  bossState: "idle",
+  battleStatus: "idle",
+  visualBossHP: 100,
+  visualPlayerHP: 0,
+  hintRemaining: 3,
+  hintLoading: false,
+  hiddenOptions: [],
+  assetPreloading: false,
+};
+
+const bossBattleReviewMode = {
+  active: false,
+  wrongQuestions: [],
+  currentQuestionIndex: 0,
+  selectedAnswer: "",
+  locked: false,
+  reviewedCount: 0,
+  correctCount: 0,
+  completedVisible: false,
+  advanceTimerId: null,
+};
+
+const BOSS_BATTLE_BOSS_FRAME_COUNTS = {
+  idle: 7,
+  angry: 7,
+  rage: 8,
+  die: 8,
+};
+
+const bossBattleAnimationState = {
+  timerId: null,
+  currentState: "idle",
+  currentFrame: 1,
+  playOnce: false,
+  frameDelay: 120,
+  feedbackTimerId: null,
+  petTimerId: null,
+  comboTimerId: null,
+  effectId: 0,
+  frameRequestId: null,
+};
+
+const bossBattlePopupManager = {
+  mode: "none",
+  visible: false,
+  lastStatus: "idle",
+};
+
+const bossBattleRewardPreview = {
+  earnedXP: 0,
+  earnedCoin: 0,
+  comboBonusXP: 0,
+  comboBonusCoin: 0,
+  victoryBonusXP: 0,
+  victoryBonusCoin: 0,
+  rankStars: 0,
+  rankBonusCoin: 0,
+  accuracy: 0,
+  rankLabel: "",
+  active: false,
+  lastBattleStatus: "idle",
+  lastRankKey: "",
+  lastRewardEventKey: "",
+  baseXP: 0,
+  baseCoin: 0,
+};
+
+const bossBattleRewardCounterState = {
+  animationFrameId: null,
+  startTime: 0,
+  duration: 420,
+  fromXP: 0,
+  fromCoin: 0,
+  toXP: 0,
+  toCoin: 0,
+  displayXP: 0,
+  displayCoin: 0,
+  pendingSync: false,
+};
+
+const bossBattleRewardSyncState = {
+  sessionId: "",
+  status: "idle",
+  summary: null,
+  promise: null,
+};
+
+const bossBattleAchievementPopupState = {
+  visible: false,
+  badges: [],
+  title: "",
+  description: "",
+  timerId: null,
+};
+
+const BOSS_BATTLE_SOUND_PATHS = {
+  correct: "/assets/game/sounds/correct.mp3",
+  wrong: "/assets/game/sounds/wrong.mp3",
+  reward: "/assets/game/sounds/reward.mp3",
+  bossDie: "/assets/game/sounds/boss_die.mp3",
+  click: "/assets/game/sounds/click.mp3",
+};
+
+const bossBattleAssetManagerState = {
+  status: "idle",
+  promise: null,
+  imageCache: new Map(),
+  audioCache: new Map(),
+};
+
+const BOSS_BATTLE_RECOVERY_STORAGE_KEY = "bossBattleRecoveryState";
+
 let studentQuizControlsBound = false;
 
 function getStudentQuizRoot() {
@@ -9145,6 +9295,2254 @@ function getSubmittedAnswerOption(question, selectedLabel) {
     : null;
 }
 
+const BOSS_BATTLE_OPTION_META = [
+  { icon: "⚔️", tone: "blue" },
+  { icon: "✨", tone: "gold" },
+  { icon: "🛡️", tone: "green" },
+  { icon: "🚀", tone: "violet" },
+];
+
+function getBossBattleOptionMeta(index) {
+  return BOSS_BATTLE_OPTION_META[index % BOSS_BATTLE_OPTION_META.length];
+}
+
+function getBossBattleCoins(profile) {
+  return Math.max(0, Math.floor(Number(profile?.stats?.eduCoin || 0)));
+}
+
+function getBossBattleExp(profile) {
+  return Math.max(0, Math.floor(Number(profile?.stats?.exp || 0)));
+}
+
+function getBossBattleHearts(answeredCount, totalQuestions) {
+  const playerHP = Math.max(0, Number(answeredCount || 0));
+  const total = Math.max(1, Number(totalQuestions || 0));
+  return Math.min(total, Math.max(1, playerHP));
+}
+
+function getBossBattleQuestionStageIndex(totalQuestions, answeredCount) {
+  const total = Math.max(1, Number(totalQuestions || 0));
+  const answered = Math.max(0, Number(answeredCount || 0));
+  return Math.min(total, Math.max(1, answered + 1));
+}
+
+function normalizeBossBattleStatus(value) {
+  const normalized = normalizeQuizText(value).toLowerCase();
+  return ["active", "victory", "defeat", "completed"].includes(normalized)
+    ? normalized
+    : "idle";
+}
+
+function getBossBattleStateFromHP(hp) {
+  const normalizedHP = Math.max(0, Math.floor(Number(hp) || 0));
+
+  if (normalizedHP <= 0) {
+    return "die";
+  }
+
+  if (normalizedHP <= 50) {
+    return "rage";
+  }
+
+  if (normalizedHP <= 75) {
+    return "angry";
+  }
+
+  return "idle";
+}
+
+function getBossBattleStatusLabel(status) {
+  switch (normalizeBossBattleStatus(status)) {
+    case "victory":
+      return "Victory";
+    case "defeat":
+      return "Defeat";
+    case "completed":
+      return "Completed";
+    case "active":
+      return "Đang chiến đấu";
+    default:
+      return "Chưa khởi tạo";
+  }
+}
+
+function getBossBattleCurrentPetState() {
+  const petState = getPetModuleApi()?.store?.getState?.()?.pet || null;
+
+  if (!petState || typeof petState !== "object") {
+    return null;
+  }
+
+  const petType = normalizeQuizText(petState.petTypeId || petState.petType).toLowerCase();
+  const petLevelValue = Number.parseInt(
+    String(petState.level || petState.petLevel || "")
+      .replace(/[^\d]/g, ""),
+    10,
+  );
+  const petLevel = Number.isFinite(petLevelValue) && petLevelValue > 0 ? petLevelValue : 0;
+
+  if (!petType || !petLevel) {
+    return null;
+  }
+
+  const petName = normalizeQuizText(petState.petName || petState.name || petType);
+
+  return {
+    petType,
+    petLevel,
+    petName,
+    imagePath: `assets/game/pets/${petType}/level_${petLevel}.png`,
+  };
+}
+
+function getBossBattleAssetPath(...segments) {
+  return `/assets/game/${segments.map((segment) => String(segment || "").trim()).join("/")}`;
+}
+
+function getBossBattleSoundPath(soundName) {
+  const normalized = normalizeQuizText(soundName).toLowerCase();
+
+  if (normalized === "correct") {
+    return BOSS_BATTLE_SOUND_PATHS.correct;
+  }
+
+  if (normalized === "wrong") {
+    return BOSS_BATTLE_SOUND_PATHS.wrong;
+  }
+
+  if (normalized === "reward") {
+    return BOSS_BATTLE_SOUND_PATHS.reward;
+  }
+
+  if (normalized === "bossdie" || normalized === "boss_die") {
+    return BOSS_BATTLE_SOUND_PATHS.bossDie;
+  }
+
+  if (normalized === "click") {
+    return BOSS_BATTLE_SOUND_PATHS.correct;
+  }
+
+  return BOSS_BATTLE_SOUND_PATHS.correct;
+}
+
+function getBossBattleImageAssetManifest() {
+  const bossStates = ["idle", "angry", "rage", "die"];
+  const manifest = [
+    "/assets/game/background.png",
+    getBossBattleAssetPath("popup", "popup_panel_default.png"),
+    getBossBattleAssetPath("popup", "popup_panel_victory.png"),
+    getBossBattleAssetPath("popup", "popup_panel_warning.png"),
+    getBossBattleAssetPath("icons", "icon_coin.png"),
+    getBossBattleAssetPath("icons", "icon_continue.png"),
+    getBossBattleAssetPath("icons", "icon_heart.png"),
+    getBossBattleAssetPath("icons", "icon_hint.png"),
+    getBossBattleAssetPath("icons", "icon_quit.png"),
+    getBossBattleAssetPath("icons", "icon_restart.png"),
+    getBossBattleAssetPath("icons", "icon_review.png"),
+    getBossBattleAssetPath("icons", "icon_xp.png"),
+    getBossBattleAssetPath("badges", "badge_achievement.png"),
+    getBossBattleAssetPath("badges", "badge_boss_defeated.png"),
+    getBossBattleAssetPath("badges", "badge_combo.png"),
+    getBossBattleAssetPath("badges", "badge_perfect.png"),
+    getBossBattleAssetPath("effects", "effect_sparkle.png"),
+    getBossBattleAssetPath("effects", "effect_confetti.png"),
+    getBossBattleAssetPath("effects", "effect_xp_burst.png"),
+    getBossBattleAssetPath("effects", "effect_coin_burst.png"),
+    getBossBattleAssetPath("hp", "boss_hp_frame.png"),
+    getBossBattleAssetPath("hp", "boss_hp_fill.png"),
+  ];
+
+  bossStates.forEach((state) => {
+    const frameCount = getBossBattleBossFrameCount(state);
+    for (let frame = 1; frame <= frameCount; frame += 1) {
+      manifest.push(getBossBattleAssetPath("boss", state, `${frame}.png`));
+    }
+  });
+
+  ["elephant", "horse"].forEach((petType) => {
+    [1, 10, 20, 30, 50].forEach((level) => {
+      manifest.push(getBossBattleAssetPath("pets", petType, `level_${level}.png`));
+    });
+  });
+
+  return Array.from(new Set(manifest));
+}
+
+function getBossBattleAudioAssetManifest() {
+  return [
+    BOSS_BATTLE_SOUND_PATHS.correct,
+    BOSS_BATTLE_SOUND_PATHS.wrong,
+    BOSS_BATTLE_SOUND_PATHS.reward,
+    BOSS_BATTLE_SOUND_PATHS.bossDie,
+  ].filter(Boolean);
+}
+
+function preloadBossBattleImage(path) {
+  const normalizedPath = normalizeQuizText(path);
+
+  if (!normalizedPath) {
+    return Promise.resolve(null);
+  }
+
+  if (bossBattleAssetManagerState.imageCache.has(normalizedPath)) {
+    return bossBattleAssetManagerState.imageCache.get(normalizedPath);
+  }
+
+  const promise = new Promise((resolve) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(image);
+    image.src = normalizedPath;
+  });
+
+  bossBattleAssetManagerState.imageCache.set(normalizedPath, promise);
+  return promise;
+}
+
+function preloadBossBattleAudio(path) {
+  const normalizedPath = normalizeQuizText(path);
+
+  if (!normalizedPath) {
+    return Promise.resolve(null);
+  }
+
+  if (bossBattleAssetManagerState.audioCache.has(normalizedPath)) {
+    return bossBattleAssetManagerState.audioCache.get(normalizedPath);
+  }
+
+  const audio = new Audio(normalizedPath);
+  audio.preload = "auto";
+  const promise = new Promise((resolve) => {
+    const done = () => resolve(audio);
+    audio.addEventListener("canplaythrough", done, { once: true });
+    audio.addEventListener("loadeddata", done, { once: true });
+    audio.addEventListener("error", done, { once: true });
+    audio.load();
+  });
+
+  bossBattleAssetManagerState.audioCache.set(normalizedPath, promise);
+  return promise;
+}
+
+async function ensureBossBattleAssetsPreloaded() {
+  if (
+    bossBattleAssetManagerState.status === "ready" &&
+    bossBattleAssetManagerState.promise
+  ) {
+    return bossBattleAssetManagerState.promise;
+  }
+
+  if (
+    bossBattleAssetManagerState.status === "loading" &&
+    bossBattleAssetManagerState.promise
+  ) {
+    return bossBattleAssetManagerState.promise;
+  }
+
+  bossBattleAssetManagerState.status = "loading";
+  bossBattleAssetManagerState.promise = (async () => {
+    const imagePaths = getBossBattleImageAssetManifest();
+    const audioPaths = getBossBattleAudioAssetManifest();
+
+    await Promise.all([
+      ...imagePaths.map((path) => preloadBossBattleImage(path)),
+      ...audioPaths.map((path) => preloadBossBattleAudio(path)),
+    ]);
+
+    bossBattleAssetManagerState.status = "ready";
+    return true;
+  })().catch((error) => {
+    bossBattleAssetManagerState.status = "error";
+    throw error;
+  });
+
+  return bossBattleAssetManagerState.promise;
+}
+
+function stopBossBattleAudio() {
+  bossBattleAssetManagerState.audioCache.forEach((entry) => {
+    Promise.resolve(entry)
+      .then((audio) => {
+        if (!audio) {
+          return;
+        }
+
+        audio.pause();
+        audio.currentTime = 0;
+      })
+      .catch(() => {});
+  });
+}
+
+function playBossBattleSound(soundName) {
+  const path = getBossBattleSoundPath(soundName);
+  const cached = bossBattleAssetManagerState.audioCache.get(path);
+
+  const handleAudio = (audio) => {
+    if (!audio) {
+      return;
+    }
+
+    try {
+      audio.currentTime = 0;
+    } catch (_) {
+      /* noop */
+    }
+
+    void audio.play().catch(() => {});
+  };
+
+  if (cached) {
+    Promise.resolve(cached)
+      .then(handleAudio)
+      .catch(() => {});
+    return;
+  }
+
+  const audio = new Audio(path);
+  audio.preload = "auto";
+  bossBattleAssetManagerState.audioCache.set(path, Promise.resolve(audio));
+  handleAudio(audio);
+}
+
+function playCorrect() {
+  playBossBattleSound("correct");
+}
+
+function playWrong() {
+  playBossBattleSound("wrong");
+}
+
+function playReward() {
+  playBossBattleSound("reward");
+}
+
+function playBossDie() {
+  playBossBattleSound("boss_die");
+}
+
+function playClick() {
+  playBossBattleSound("click");
+}
+
+function getBossBattleBossImagePath(state) {
+  const normalizedState = normalizeQuizText(state).toLowerCase();
+  const allowedState = ["idle", "angry", "rage", "die"].includes(
+    normalizedState,
+  )
+    ? normalizedState
+    : "idle";
+  const frame = allowedState === "die" ? 8 : 1;
+  return getBossBattleAssetPath("boss", allowedState, `${frame}.png`);
+}
+
+function getBossBattleBossFrameCount(state) {
+  const normalizedState = normalizeQuizText(state).toLowerCase();
+  return BOSS_BATTLE_BOSS_FRAME_COUNTS[normalizedState] || 7;
+}
+
+function getBossBattleBossFramePath(state, frameIndex) {
+  const normalizedState = normalizeQuizText(state).toLowerCase();
+  const frameCount = getBossBattleBossFrameCount(normalizedState);
+  const frame = Math.max(1, Math.min(frameCount, Math.floor(Number(frameIndex) || 1)));
+  return getBossBattleAssetPath("boss", normalizedState || "idle", `${frame}.png`);
+}
+
+function getBossBattleStateFromBossHP(hp) {
+  return getBossBattleStateFromHP(hp);
+}
+
+function isBossBattleSceneMounted() {
+  return Boolean(getStudentQuizScreen()?.querySelector(".boss-battle-panel"));
+}
+
+function clearBossBattleAnimationTimers() {
+  if (bossBattleAnimationState.timerId) {
+    clearInterval(bossBattleAnimationState.timerId);
+    bossBattleAnimationState.timerId = null;
+  }
+
+  if (bossBattleAnimationState.frameRequestId) {
+    cancelAnimationFrame(bossBattleAnimationState.frameRequestId);
+    bossBattleAnimationState.frameRequestId = null;
+  }
+
+  if (bossBattleAnimationState.feedbackTimerId) {
+    clearTimeout(bossBattleAnimationState.feedbackTimerId);
+    bossBattleAnimationState.feedbackTimerId = null;
+  }
+
+  if (bossBattleAnimationState.petTimerId) {
+    clearTimeout(bossBattleAnimationState.petTimerId);
+    bossBattleAnimationState.petTimerId = null;
+  }
+
+  if (bossBattleAnimationState.comboTimerId) {
+    clearTimeout(bossBattleAnimationState.comboTimerId);
+    bossBattleAnimationState.comboTimerId = null;
+  }
+}
+
+function ensureBossBattleAnimationLoop() {
+  if (bossBattleAnimationState.timerId) {
+    return;
+  }
+
+  bossBattleAnimationState.timerId = setInterval(() => {
+    if (!isBossBattleSceneMounted()) {
+      clearBossBattleAnimationTimers();
+      return;
+    }
+
+    syncBossBattleBossAnimation();
+  }, bossBattleAnimationState.frameDelay);
+}
+
+function getBossBattleAnimationTargets() {
+  const screen = getStudentQuizScreen();
+
+  if (!screen) {
+    return [];
+  }
+
+  return Array.from(screen.querySelectorAll("[data-boss-anim]"));
+}
+
+function getBossBattleCurrentAnimationState() {
+  return getBossBattleStateFromBossHP(bossBattleState.bossHP);
+}
+
+function syncBossBattleBossAnimation(forceReset = false) {
+  const nextState = getBossBattleCurrentAnimationState();
+  const previousState = bossBattleAnimationState.currentState;
+  const stateChanged = forceReset || nextState !== previousState;
+
+  if (stateChanged) {
+    bossBattleAnimationState.currentState = nextState;
+    bossBattleAnimationState.currentFrame = 1;
+    bossBattleAnimationState.playOnce = nextState === "die";
+  }
+
+  const frameCount = getBossBattleBossFrameCount(nextState);
+  const shouldStopAfterDie =
+    bossBattleAnimationState.playOnce &&
+    nextState === "die" &&
+    bossBattleAnimationState.currentFrame >= frameCount;
+  const nextFrame = shouldStopAfterDie
+    ? frameCount
+    : bossBattleAnimationState.currentFrame;
+  const framePath = getBossBattleBossFramePath(nextState, nextFrame);
+
+  getBossBattleAnimationTargets().forEach((target) => {
+    if (target instanceof HTMLImageElement) {
+      target.src = framePath;
+      target.dataset.bossAnimState = nextState;
+      target.dataset.bossAnimFrame = String(nextFrame);
+    }
+  });
+
+  if (!bossBattleAnimationState.playOnce || nextState !== "die") {
+    bossBattleAnimationState.currentFrame =
+      nextFrame >= frameCount ? 1 : nextFrame + 1;
+  }
+}
+
+function syncBossBattleHPVisuals() {
+  const screen = getStudentQuizScreen();
+
+  if (!screen) {
+    return;
+  }
+
+  const bossFill = screen.querySelector(".boss-battle-header-card__track-fill");
+  const bossHP = Math.max(0, Math.min(100, Number(bossBattleState.bossHP) || 0));
+
+  if (bossFill) {
+    bossFill.style.width = `${bossHP}%`;
+  }
+
+  bossBattleState.visualBossHP = bossHP;
+}
+
+function setBossBattleEffect(type, duration = 420) {
+  const screen = getStudentQuizScreen();
+
+  if (!screen) {
+    return;
+  }
+
+  const effectLayer = screen.querySelector(".boss-battle-effects");
+
+  if (!effectLayer) {
+    return;
+  }
+
+  const effectId = ++bossBattleAnimationState.effectId;
+  const effect = document.createElement("span");
+  effect.className = `boss-battle-effect boss-battle-effect--${type}`;
+  effectLayer.appendChild(effect);
+
+  window.setTimeout(() => {
+    if (effectId !== bossBattleAnimationState.effectId) {
+      return;
+    }
+
+    effect.remove();
+  }, duration);
+}
+
+function triggerBossBattleFeedback(type) {
+  const screen = getStudentQuizScreen();
+
+  if (!screen) {
+    return;
+  }
+
+  const bossCard = screen.querySelector(".boss-battle-header-card__boss");
+  const bossImage = screen.querySelector(".boss-battle-header-card__boss-image");
+  const petCard = screen.querySelector(".boss-battle-sidebar__pet");
+  const petImage = screen.querySelector(".boss-battle-sidebar__pet-image");
+  const comboCard = screen.querySelector(
+    ".boss-battle-sidebar__metric--combo",
+  );
+
+  const addClass = (node, className) => {
+    if (!node) {
+      return;
+    }
+
+    node.classList.remove(
+      "is-boss-hit",
+      "is-boss-flicker",
+      "is-pet-bounce",
+      "is-pet-shake",
+      "is-pet-celebrate",
+      "is-combo-glow",
+      "is-combo-strong",
+    );
+    node.classList.add(className);
+  };
+
+  const clearClasses = () => {
+    [bossCard, bossImage, petCard, petImage, comboCard].forEach((node) => {
+      if (!node) {
+        return;
+      }
+
+      node.classList.remove(
+        "is-boss-hit",
+        "is-boss-flicker",
+        "is-pet-bounce",
+        "is-pet-shake",
+        "is-pet-celebrate",
+      );
+    });
+  };
+
+  clearTimeout(bossBattleAnimationState.feedbackTimerId);
+  clearTimeout(bossBattleAnimationState.petTimerId);
+  clearTimeout(bossBattleAnimationState.comboTimerId);
+
+  if (type === "correct") {
+    addClass(bossCard, "is-boss-hit");
+    addClass(bossImage, "is-boss-flicker");
+    addClass(petCard, "is-pet-bounce");
+    addClass(petImage, "is-pet-bounce");
+    setBossBattleEffect("sparkle", 450);
+  } else if (type === "wrong") {
+    addClass(petCard, "is-pet-shake");
+    addClass(petImage, "is-pet-shake");
+  } else if (type === "victory") {
+    addClass(petCard, "is-pet-celebrate");
+    addClass(petImage, "is-pet-celebrate");
+    setBossBattleEffect("confetti", 900);
+  }
+
+  const comboValue = Math.max(0, Number(bossBattleState.combo) || 0);
+  if (comboValue >= 5) {
+    addClass(comboCard, "is-combo-strong");
+    setBossBattleEffect("xp", 500);
+  } else if (comboValue >= 3) {
+    addClass(comboCard, "is-combo-glow");
+    setBossBattleEffect("coin", 450);
+  }
+
+  bossBattleAnimationState.feedbackTimerId = window.setTimeout(() => {
+    clearClasses();
+  }, type === "wrong" ? 420 : 540);
+
+  if (type === "victory") {
+    bossBattleAnimationState.petTimerId = window.setTimeout(() => {
+      clearClasses();
+    }, 1200);
+  }
+}
+
+function syncBossBattleVisualLayer() {
+  if (!isBossBattleSceneMounted()) {
+    return;
+  }
+
+  syncBossBattleBossAnimation();
+  syncBossBattleHPVisuals();
+}
+
+function refreshBossBattleVisualLayer() {
+  if (!isBossBattleSceneMounted()) {
+    return;
+  }
+
+  ensureBossBattleAnimationLoop();
+  bossBattleAnimationState.frameRequestId = requestAnimationFrame(() => {
+    bossBattleAnimationState.frameRequestId = null;
+    syncBossBattleVisualLayer();
+  });
+}
+
+function getBossBattlePopupPanelPath(status) {
+  const normalizedStatus = normalizeBossBattleStatus(status);
+
+  if (normalizedStatus === "victory") {
+    return getBossBattleAssetPath("popup", "popup_panel_victory.png");
+  }
+
+  if (normalizedStatus === "defeat") {
+    return getBossBattleAssetPath("popup", "popup_panel_warning.png");
+  }
+
+  return getBossBattleAssetPath("popup", "popup_panel_default.png");
+}
+
+function getBossBattleIconPath(iconName) {
+  return getBossBattleAssetPath("icons", `icon_${iconName}.png`);
+}
+
+function getBossBattleBadgePath(badgeName) {
+  const normalized = normalizeQuizText(badgeName).toLowerCase();
+
+  if (normalized === "combo") {
+    return getBossBattleAssetPath("badges", "badge_combo.png");
+  }
+
+  if (normalized === "victory") {
+    return getBossBattleAssetPath("badges", "badge_boss_defeated.png");
+  }
+
+  if (normalized === "perfect") {
+    return getBossBattleAssetPath("badges", "badge_perfect.png");
+  }
+
+  return getBossBattleAssetPath("badges", "badge_achievement.png");
+}
+
+function getBossBattleAchievementBadgeMeta(badgeId) {
+  const normalized = normalizeQuizText(badgeId);
+
+  if (normalized === "badge_boss_defeated") {
+    return {
+      id: normalized,
+      title: "BOSS_DEFEATED",
+      name: "BOSS DEFEATED",
+      description: "Đánh bại Boss trong Boss Battle",
+      image: getBossBattleBadgePath("victory"),
+    };
+  }
+
+  if (normalized === "badge_combo") {
+    return {
+      id: normalized,
+      title: "COMBO_MASTER",
+      name: "COMBO MASTER",
+      description: "Đạt combo 5 trở lên trong một trận",
+      image: getBossBattleBadgePath("combo"),
+    };
+  }
+
+  if (normalized === "badge_perfect") {
+    return {
+      id: normalized,
+      title: "PERFECT_BATTLE",
+      name: "PERFECT BATTLE",
+      description: "Hoàn thành trận với độ chính xác 100%",
+      image: getBossBattleBadgePath("perfect"),
+    };
+  }
+
+  if (normalized === "badge_achievement") {
+    return {
+      id: normalized,
+      title: "FIRST_BATTLE",
+      name: "FIRST BATTLE",
+      description: "Hoàn thành Boss Battle đầu tiên",
+      image: getBossBattleBadgePath("achievement"),
+    };
+  }
+
+  return null;
+}
+
+function getBossBattleAchievementBadgeList(sourceBadges = []) {
+  return Array.isArray(sourceBadges)
+    ? sourceBadges
+        .map((badgeId) => getBossBattleAchievementBadgeMeta(badgeId))
+        .filter(Boolean)
+    : [];
+}
+
+function mergeBossBattleAchievementBadgesIntoProfile(profile, badges = []) {
+  const normalizedProfile =
+    profile && typeof profile === "object" ? { ...profile } : {};
+  const currentRewards =
+    normalizedProfile.rewards && typeof normalizedProfile.rewards === "object"
+      ? { ...normalizedProfile.rewards }
+      : {};
+  const currentBadges = Array.isArray(currentRewards.badges)
+    ? currentRewards.badges.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
+  const mergedBadges = Array.from(
+    new Set([
+      ...currentBadges,
+      ...badges.map((item) => String(item || "").trim()).filter(Boolean),
+    ]),
+  );
+
+  normalizedProfile.rewards = {
+    ...currentRewards,
+    badges: mergedBadges,
+  };
+
+  return normalizedProfile;
+}
+
+function getBossBattleRecoveryStorageKey() {
+  const currentUser = getCurrentAuthUser();
+  const userId = normalizeQuizText(
+    currentUser?.uid || currentUser?.userId || currentUser?.id || "",
+  );
+
+  return userId
+    ? `${BOSS_BATTLE_RECOVERY_STORAGE_KEY}:${userId}`
+    : BOSS_BATTLE_RECOVERY_STORAGE_KEY;
+}
+
+function getBossBattleRecoveryStorageState() {
+  try {
+    const raw = localStorage.getItem(getBossBattleRecoveryStorageKey());
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+
+    const sessionId = normalizeQuizText(parsed.sessionId);
+    const topicId = normalizeQuizText(parsed.topicId);
+    const quizId = normalizeQuizText(parsed.quizId);
+    const battleStatus = normalizeBossBattleStatus(parsed.battleStatus);
+
+    if (!sessionId || !topicId || !quizId) {
+      return null;
+    }
+
+    return {
+      sessionId,
+      topicId,
+      quizId,
+      battleStatus,
+      updatedAt: String(parsed.updatedAt || ""),
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveBossBattleRecoveryStorageState(session = {}) {
+  const sessionId = normalizeQuizText(session.sessionId || session.id || "");
+  const topicId = normalizeQuizText(session.topicId || "");
+  const quizId = normalizeQuizText(session.quizId || "");
+  const battleStatus = normalizeBossBattleStatus(session.battleStatus || session.status || "active");
+
+  if (!sessionId || !topicId || !quizId) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(
+      getBossBattleRecoveryStorageKey(),
+      JSON.stringify({
+        sessionId,
+        topicId,
+        quizId,
+        battleStatus,
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  } catch (error) {
+    /* noop */
+  }
+}
+
+function clearBossBattleRecoveryStorageState() {
+  try {
+    localStorage.removeItem(getBossBattleRecoveryStorageKey());
+  } catch (error) {
+    /* noop */
+  }
+}
+
+async function restoreBossBattleSessionFromStorage(quizData = null) {
+  const recoveryState = getBossBattleRecoveryStorageState();
+
+  if (!recoveryState) {
+    return false;
+  }
+
+  const currentTopicId = normalizeQuizText(studentQuizState.selectedTopicId || quizData?.topicId || "");
+  const currentQuizId = normalizeQuizText(quizData?.quizId || quizData?.id || "");
+
+  if (currentTopicId && recoveryState.topicId !== currentTopicId) {
+    return false;
+  }
+
+  if (currentQuizId && recoveryState.quizId !== currentQuizId) {
+    return false;
+  }
+
+  try {
+    const response = await apiRequestWithAuth(
+      `/api/battle-sessions/${encodeURIComponent(recoveryState.sessionId)}`,
+      { method: "GET" },
+    );
+
+    const session = response.data || response.session || null;
+
+    if (!session || normalizeQuizText(session.sessionId || session.id || "") !== recoveryState.sessionId) {
+      return false;
+    }
+
+    applyBossBattleSessionResponse({
+      ...session,
+      session,
+    });
+
+    if (normalizeBossBattleStatus(session.status) === "active") {
+      initializeBossBattleRewardPreview();
+    }
+
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function getBossBattleRewardRankPreview(accuracy, totalQuestions = 0) {
+  const normalizedAccuracy = Math.max(
+    0,
+    Math.min(100, Math.floor(Number(accuracy) || 0)),
+  );
+  const normalizedTotalQuestions = Math.max(0, Number(totalQuestions) || 0);
+
+  if (normalizedTotalQuestions <= 0) {
+    return {
+      stars: 0,
+      bonusCoin: 0,
+      label: "Chưa xếp hạng",
+    };
+  }
+
+  if (normalizedAccuracy >= 90) {
+    return {
+      stars: 3,
+      bonusCoin: 100,
+      label: "3 Sao",
+    };
+  }
+
+  if (normalizedAccuracy >= 70) {
+    return {
+      stars: 2,
+      bonusCoin: 50,
+      label: "2 Sao",
+    };
+  }
+
+  return {
+    stars: 1,
+    bonusCoin: 20,
+    label: "1 Sao",
+  };
+}
+
+function getBossBattleSessionSummary() {
+  const answers = Array.isArray(bossBattleState.session?.answers)
+    ? bossBattleState.session.answers
+    : [];
+  const answeredCount = answers.length;
+  const correctCount = answers.filter((item) => item && item.correct === true)
+    .length;
+  const wrongCount = Math.max(0, answeredCount - correctCount);
+  const maxCombo = answers.reduce((highest, item) => {
+    const value = Math.max(0, Number(item?.combo) || 0);
+    return Math.max(highest, value);
+  }, 0);
+  const totalQuestions = Math.max(
+    1,
+    Number(bossBattleState.totalQuestions) || 0,
+  );
+  const score = Math.max(
+    0,
+    Math.min(100, Math.round((correctCount / totalQuestions) * 100)),
+  );
+
+  return {
+    answeredCount,
+    correctCount,
+    wrongCount,
+    maxCombo,
+    score,
+  };
+}
+
+function getBossBattleRewardPreviewSummary() {
+  const sessionSummary = getBossBattleSessionSummary();
+  const totalQuestions = Math.max(0, Number(bossBattleState.totalQuestions) || 0);
+  const rankPreview = getBossBattleRewardRankPreview(
+    sessionSummary.score,
+    totalQuestions,
+  );
+  const isFinalBattle =
+    normalizeBossBattleStatus(bossBattleState.battleStatus) === "victory" ||
+    normalizeBossBattleStatus(bossBattleState.battleStatus) === "completed";
+  const previewXP =
+    Number(bossBattleRewardPreview.earnedXP || 0) +
+    Number(bossBattleRewardPreview.comboBonusXP || 0) +
+    Number(bossBattleRewardPreview.victoryBonusXP || 0);
+  const previewCoin =
+    Number(bossBattleRewardPreview.earnedCoin || 0) +
+    Number(bossBattleRewardPreview.comboBonusCoin || 0) +
+    Number(bossBattleRewardPreview.victoryBonusCoin || 0) +
+    (isFinalBattle ? Number(rankPreview.bonusCoin || 0) : 0);
+  const totalXP = Math.max(0, Number(bossBattleRewardPreview.baseXP || 0) + previewXP);
+  const totalCoin = Math.max(0, Number(bossBattleRewardPreview.baseCoin || 0) + previewCoin);
+
+  return {
+    ...sessionSummary,
+    score: sessionSummary.score,
+    accuracy: sessionSummary.score,
+    correctAnswers: sessionSummary.correctCount,
+    totalQuestions,
+    xpAwarded: previewXP,
+    coinAwarded: previewCoin,
+    rankStars: rankPreview.stars,
+    rank: rankPreview.label,
+    rankLabel: rankPreview.label,
+    rankBonusCoin: isFinalBattle ? rankPreview.bonusCoin : 0,
+    victory: normalizeBossBattleStatus(bossBattleState.battleStatus) === "victory",
+    totalXP,
+    totalCoin,
+    rewardXP: totalXP,
+    rewardCoin: totalCoin,
+    totalRewardXP: totalXP,
+    totalRewardCoin: totalCoin,
+  };
+}
+
+function normalizeBossBattleRewardSummary(summary = {}) {
+  const normalized = {
+    score: Math.max(0, Math.min(100, Math.floor(Number(summary?.score ?? summary?.accuracy) || 0))),
+    accuracy: Math.max(0, Math.min(100, Math.floor(Number(summary?.accuracy ?? summary?.score) || 0))),
+    correctAnswers: Math.max(0, Math.floor(Number(summary?.correctAnswers ?? summary?.correctCount) || 0)),
+    correctCount: Math.max(0, Math.floor(Number(summary?.correctCount ?? summary?.correctAnswers) || 0)),
+    totalQuestions: Math.max(0, Math.floor(Number(summary?.totalQuestions) || 0)),
+    xpAwarded: Math.max(0, Math.floor(Number(summary?.xpAwarded) || 0)),
+    coinAwarded: Math.max(0, Math.floor(Number(summary?.coinAwarded) || 0)),
+    rankStars: Math.max(0, Math.floor(Number(summary?.rankStars) || 0)),
+    rank: normalizeQuizText(summary?.rank || summary?.rankLabel || ""),
+    rankLabel: normalizeQuizText(summary?.rankLabel || summary?.rank || ""),
+    rankBonusCoin: Math.max(0, Math.floor(Number(summary?.rankBonusCoin) || 0)),
+    victory: Boolean(summary?.victory),
+    maxCombo: Math.max(0, Math.floor(Number(summary?.maxCombo) || 0)),
+    totalXP: Math.max(0, Math.floor(Number(summary?.totalXP ?? summary?.rewardXP) || 0)),
+    totalCoin: Math.max(0, Math.floor(Number(summary?.totalCoin ?? summary?.rewardCoin) || 0)),
+  };
+
+  normalized.rewardXP = normalized.totalXP;
+  normalized.rewardCoin = normalized.totalCoin;
+  normalized.totalRewardXP = normalized.totalXP;
+  normalized.totalRewardCoin = normalized.totalCoin;
+
+  if (!normalized.rank) {
+    normalized.rank = normalized.rankLabel || (normalized.rankStars >= 3 ? "3 Sao" : normalized.rankStars === 2 ? "2 Sao" : normalized.rankStars === 1 ? "1 Sao" : "");
+  }
+
+  if (!normalized.rankLabel) {
+    normalized.rankLabel = normalized.rank;
+  }
+
+  return normalized;
+}
+
+function getBossBattleRewardDisplaySummary() {
+  if (bossBattleRewardSyncState.summary) {
+    return normalizeBossBattleRewardSummary(bossBattleRewardSyncState.summary);
+  }
+
+  return normalizeBossBattleRewardSummary(getBossBattleRewardPreviewSummary());
+}
+
+async function syncBossBattleRewardWithBackend() {
+  const sessionId = normalizeQuizText(bossBattleState.sessionId);
+  const battleStatus = normalizeBossBattleStatus(bossBattleState.battleStatus);
+
+  if (!sessionId || (battleStatus !== "victory" && battleStatus !== "completed")) {
+    return null;
+  }
+
+  if (
+    bossBattleRewardSyncState.sessionId === sessionId &&
+    bossBattleRewardSyncState.status === "synced" &&
+    bossBattleRewardSyncState.summary
+  ) {
+    return bossBattleRewardSyncState.summary;
+  }
+
+  if (
+    bossBattleRewardSyncState.sessionId === sessionId &&
+    bossBattleRewardSyncState.status === "loading" &&
+    bossBattleRewardSyncState.promise
+  ) {
+    return bossBattleRewardSyncState.promise;
+  }
+
+  bossBattleRewardSyncState.sessionId = sessionId;
+  bossBattleRewardSyncState.status = "loading";
+  bossBattleRewardSyncState.promise = (async () => {
+    const response = await apiRequestWithAuth(
+      `/api/battle-sessions/${encodeURIComponent(sessionId)}/complete`,
+      {
+        method: "POST",
+      },
+    );
+
+    const backendSummary = normalizeBossBattleRewardSummary(response.data?.rewardSummary || {});
+    const unlockedAchievements = getBossBattleAchievementBadgeList(
+      Array.isArray(response.data?.achievements?.unlocked)
+        ? response.data.achievements.unlocked.map((item) => item?.badgeId || item?.id)
+        : [],
+    );
+    const session = response.data?.session || null;
+    const summary = {
+      ...backendSummary,
+      rewardXP: backendSummary.totalXP,
+      rewardCoin: backendSummary.totalCoin,
+      totalRewardXP: backendSummary.totalXP,
+      totalRewardCoin: backendSummary.totalCoin,
+    };
+
+    bossBattleRewardSyncState.summary = summary;
+    bossBattleRewardSyncState.status = "synced";
+    bossBattleRewardSyncState.promise = null;
+
+    if (session) {
+      bossBattleState.session = session;
+      bossBattleState.sessionId = normalizeQuizText(session.sessionId || session.id || sessionId);
+      bossBattleState.battleStatus = normalizeBossBattleStatus(session.status || bossBattleState.battleStatus);
+    }
+
+    if (unlockedAchievements.length > 0) {
+      const updatedProfile = mergeBossBattleAchievementBadgesIntoProfile(
+        getCurrentAuthUser(),
+        unlockedAchievements.map((item) => item.badgeId || item.id),
+      );
+      applyLatestCurrentUser(updatedProfile);
+      void syncStudentAchievementBadges(updatedProfile);
+    }
+
+    bossBattleRewardPreview.earnedXP = summary.xpAwarded;
+    bossBattleRewardPreview.earnedCoin = summary.coinAwarded;
+    bossBattleRewardPreview.comboBonusXP = 0;
+    bossBattleRewardPreview.comboBonusCoin = 0;
+    bossBattleRewardPreview.victoryBonusXP = 0;
+    bossBattleRewardPreview.victoryBonusCoin = 0;
+    bossBattleRewardPreview.rankStars = summary.rankStars;
+    bossBattleRewardPreview.rankBonusCoin = summary.rankBonusCoin;
+    bossBattleRewardPreview.accuracy = summary.accuracy;
+    bossBattleRewardPreview.rankLabel = summary.rankLabel || summary.rank;
+
+    const baseXP = bossBattleRewardPreview.baseXP || getBossBattleExp(getCurrentAuthUser());
+    const baseCoin = bossBattleRewardPreview.baseCoin || getBossBattleCoins(getCurrentAuthUser());
+    const totalXP = Math.max(0, baseXP + summary.xpAwarded);
+    const totalCoin = Math.max(0, baseCoin + summary.coinAwarded);
+
+    renderStudentQuizFlow();
+
+    queueMicrotask(() => {
+      requestAnimationFrame(() => {
+        animateBossBattleRewardCounters(totalXP, totalCoin, 380);
+        setBossBattleEffect("confetti", 900);
+        spawnBossBattleFloatingReward(`+${summary.xpAwarded} XP`, "xp");
+        spawnBossBattleFloatingReward(`+${summary.coinAwarded} Coin`, "coin");
+        spawnBossBattleRewardBadge(summary.victory ? "victory" : "combo");
+        playReward();
+        if (unlockedAchievements.length > 0) {
+          showBossBattleAchievementPopup(unlockedAchievements);
+        }
+      });
+    });
+
+    return summary;
+  })().catch((error) => {
+    bossBattleRewardSyncState.status = "error";
+    bossBattleRewardSyncState.promise = null;
+    throw error;
+  });
+
+  return bossBattleRewardSyncState.promise;
+}
+
+function clearBossBattleRewardCounterAnimation() {
+  if (bossBattleRewardCounterState.animationFrameId) {
+    cancelAnimationFrame(bossBattleRewardCounterState.animationFrameId);
+    bossBattleRewardCounterState.animationFrameId = null;
+  }
+}
+
+function syncBossBattleRewardCounterNodes() {
+  const screen = getStudentQuizScreen();
+
+  if (!screen) {
+    return;
+  }
+
+  const xpNodes = screen.querySelectorAll("[data-boss-reward-xp-counter]");
+  const coinNodes = screen.querySelectorAll("[data-boss-reward-coin-counter]");
+  const xpValue = Math.max(0, Math.round(Number(bossBattleRewardCounterState.displayXP) || 0));
+  const coinValue = Math.max(0, Math.round(Number(bossBattleRewardCounterState.displayCoin) || 0));
+
+  xpNodes.forEach((node) => {
+    node.textContent = String(xpValue);
+  });
+
+  coinNodes.forEach((node) => {
+    node.textContent = String(coinValue);
+  });
+}
+
+function animateBossBattleRewardCounters(targetXP, targetCoin, duration = 420) {
+  clearBossBattleRewardCounterAnimation();
+
+  const fromXP = Number.isFinite(Number(bossBattleRewardCounterState.displayXP))
+    ? Number(bossBattleRewardCounterState.displayXP)
+    : 0;
+  const fromCoin = Number.isFinite(Number(bossBattleRewardCounterState.displayCoin))
+    ? Number(bossBattleRewardCounterState.displayCoin)
+    : 0;
+  const toXP = Math.max(0, Math.round(Number(targetXP) || 0));
+  const toCoin = Math.max(0, Math.round(Number(targetCoin) || 0));
+
+  bossBattleRewardCounterState.fromXP = fromXP;
+  bossBattleRewardCounterState.fromCoin = fromCoin;
+  bossBattleRewardCounterState.toXP = toXP;
+  bossBattleRewardCounterState.toCoin = toCoin;
+  bossBattleRewardCounterState.startTime = performance.now();
+  bossBattleRewardCounterState.duration = Math.max(120, Number(duration) || 420);
+
+  const tick = (now) => {
+    const elapsed = Math.max(0, now - bossBattleRewardCounterState.startTime);
+    const progress = Math.max(
+      0,
+      Math.min(1, elapsed / bossBattleRewardCounterState.duration),
+    );
+    const eased = 1 - Math.pow(1 - progress, 3);
+
+    bossBattleRewardCounterState.displayXP =
+      bossBattleRewardCounterState.fromXP +
+      (bossBattleRewardCounterState.toXP - bossBattleRewardCounterState.fromXP) *
+        eased;
+    bossBattleRewardCounterState.displayCoin =
+      bossBattleRewardCounterState.fromCoin +
+      (bossBattleRewardCounterState.toCoin - bossBattleRewardCounterState.fromCoin) *
+        eased;
+    syncBossBattleRewardCounterNodes();
+
+    if (progress < 1) {
+      bossBattleRewardCounterState.animationFrameId = requestAnimationFrame(tick);
+      return;
+    }
+
+    bossBattleRewardCounterState.displayXP = bossBattleRewardCounterState.toXP;
+    bossBattleRewardCounterState.displayCoin = bossBattleRewardCounterState.toCoin;
+    bossBattleRewardCounterState.animationFrameId = null;
+    syncBossBattleRewardCounterNodes();
+  };
+
+  bossBattleRewardCounterState.animationFrameId = requestAnimationFrame(tick);
+}
+
+function playBossBattleRewardSound() {
+  playReward();
+}
+
+function spawnBossBattleFloatingReward(text, kind = "xp") {
+  const screen = getStudentQuizScreen();
+
+  if (!screen) {
+    return;
+  }
+
+  const effectLayer = screen.querySelector(".boss-battle-effects");
+
+  if (!effectLayer) {
+    return;
+  }
+
+  const node = document.createElement("span");
+  node.className = `boss-battle-float-reward boss-battle-float-reward--${kind}`;
+  node.textContent = text;
+  node.style.left = `${Math.max(12, Math.min(88, 18 + Math.random() * 58))}%`;
+  node.style.top = `${Math.max(12, Math.min(84, 18 + Math.random() * 46))}%`;
+  effectLayer.appendChild(node);
+
+  window.setTimeout(() => {
+    node.remove();
+  }, 900);
+}
+
+function spawnBossBattleRewardBadge(kind = "combo") {
+  const screen = getStudentQuizScreen();
+
+  if (!screen) {
+    return;
+  }
+
+  const effectLayer = screen.querySelector(".boss-battle-effects");
+
+  if (!effectLayer) {
+    return;
+  }
+
+  const badge = document.createElement("div");
+  badge.className = `boss-battle-badge-float boss-battle-badge-float--${normalizeQuizText(kind).toLowerCase()}`;
+  badge.innerHTML = `
+    <img src="${escapeHtml(getBossBattleBadgePath(kind))}" alt="" aria-hidden="true" />
+  `;
+  effectLayer.appendChild(badge);
+
+  window.setTimeout(() => {
+    badge.remove();
+  }, 1100);
+}
+
+function getBossBattleRewardFloatingXPText(value) {
+  const xpValue = Math.max(0, Math.round(Number(value) || 0));
+  return `+${xpValue} XP`;
+}
+
+function getBossBattleRewardFloatingCoinText(value) {
+  const coinValue = Math.max(0, Math.round(Number(value) || 0));
+  return `+${coinValue} Coin`;
+}
+
+function getBossBattlePopupMode(status, bossHP = bossBattleState.bossHP) {
+  const normalizedStatus = normalizeBossBattleStatus(status);
+  const normalizedBossHP = Math.max(0, Math.floor(Number(bossHP) || 0));
+
+  if (normalizedStatus === "victory") {
+    return "victory";
+  }
+
+  if (normalizedStatus === "defeat") {
+    return "defeat";
+  }
+
+  if (normalizedStatus === "completed" && normalizedBossHP > 0) {
+    return "completed";
+  }
+
+  return "none";
+}
+
+function getBossBattleHintCountLabel(value) {
+  const hintCount = Math.max(0, Math.floor(Number(value) || 0));
+  return `Hint x${hintCount}`;
+}
+
+function getBossBattleHiddenOptionSet() {
+  return new Set(
+    Array.isArray(bossBattleState.hiddenOptions)
+      ? bossBattleState.hiddenOptions.map((item) => normalizeQuizText(item).toUpperCase()).filter(Boolean)
+      : [],
+  );
+}
+
+function syncBossBattlePopupManager() {
+  bossBattlePopupManager.mode = getBossBattlePopupMode(
+    bossBattleState.battleStatus,
+    bossBattleState.bossHP,
+  );
+  bossBattlePopupManager.visible = bossBattlePopupManager.mode !== "none";
+  bossBattlePopupManager.lastStatus = normalizeBossBattleStatus(
+    bossBattleState.battleStatus,
+  );
+  return bossBattlePopupManager;
+}
+
+function canUseBossBattleHint() {
+  return (
+    bossBattlePopupManager.mode === "none" &&
+    !bossBattleReviewMode.active &&
+    normalizeBossBattleStatus(bossBattleState.battleStatus) === "active" &&
+    !bossBattleState.loadingSession &&
+    !bossBattleState.answering &&
+    !bossBattleState.hintLoading &&
+    Math.max(0, Number(bossBattleState.hintRemaining) || 0) > 0 &&
+    Boolean(bossBattleState.sessionId)
+  );
+}
+
+async function requestBossBattleHint() {
+  if (!canUseBossBattleHint()) {
+    return null;
+  }
+
+  const sessionId = normalizeQuizText(bossBattleState.sessionId);
+
+  if (!sessionId) {
+    return null;
+  }
+
+  bossBattleState.hintLoading = true;
+  renderStudentQuizFlow();
+
+  try {
+    const response = await apiRequestWithAuth(
+      `/api/battle-sessions/${encodeURIComponent(sessionId)}/hint`,
+      {
+        method: "POST",
+      },
+    );
+
+    const hiddenOptions = Array.isArray(response.data?.hiddenOptions)
+      ? response.data.hiddenOptions
+      : [];
+    const hintRemaining = Math.max(
+      0,
+      Number(response.data?.hintRemaining ?? response.data?.session?.hintRemaining ?? 0) || 0,
+    );
+
+    bossBattleState.hiddenOptions = hiddenOptions
+      .map((item) => normalizeQuizText(item).toUpperCase())
+      .filter(Boolean);
+    bossBattleState.hintRemaining = hintRemaining;
+    bossBattleState.session = response.data?.session || bossBattleState.session;
+    bossBattleState.sessionId = normalizeQuizText(
+      response.data?.session?.sessionId || bossBattleState.sessionId || "",
+    );
+    renderStudentQuizFlow();
+    return response.data || null;
+  } finally {
+    bossBattleState.hintLoading = false;
+    renderStudentQuizFlow();
+  }
+}
+
+function getBossBattlePopupPanelForMode(mode) {
+  if (mode === "victory") {
+    return getBossBattleAssetPath("popup", "popup_panel_victory.png");
+  }
+
+  if (mode === "defeat") {
+    return getBossBattleAssetPath("popup", "popup_panel_warning.png");
+  }
+
+  if (mode === "completed") {
+    return getBossBattleAssetPath("popup", "popup_panel_default.png");
+  }
+
+  return "";
+}
+
+function getBossBattleHeartMarkup(playerHP) {
+  const totalSlots = 5;
+  const activeCount = Math.max(
+    0,
+    Math.min(totalSlots, Math.floor(Number(playerHP) || 0)),
+  );
+
+  return Array.from({ length: totalSlots }, (_, index) => {
+    const isActive = index < activeCount;
+
+    return `
+      <span class="boss-battle-heart ${isActive ? "is-active" : "is-empty"}" aria-hidden="true">
+        <img src="${getBossBattleIconPath("heart")}" alt="" />
+      </span>
+    `;
+  }).join("");
+}
+
+function getBossBattleOutcomeCopy(status) {
+  const normalizedStatus = normalizeBossBattleStatus(status);
+
+  if (normalizedStatus === "victory") {
+    return {
+      title: "CHIẾN THẮNG!",
+      subtitle: "Boss đã bị đánh bại. Đây là kết quả tạm tính của trận chiến.",
+      badge: "Victory Popup",
+      bossImage: getBossBattleBossImagePath("die"),
+    };
+  }
+
+  if (normalizedStatus === "defeat") {
+    return {
+      title: "HẾT LƯỢT!",
+      subtitle: "Học sinh đã hết lượt trước khi hạ được Boss.",
+      badge: "Warning Popup",
+      bossImage: getBossBattleBossImagePath("angry"),
+    };
+  }
+
+  return {
+    title: "HOÀN THÀNH BÀI!",
+    subtitle: "Đã đi hết bộ câu hỏi của chủ đề hiện tại. Boss vẫn còn HP.",
+    badge: "Default Popup",
+    bossImage: getBossBattleBossImagePath(bossBattleState.bossState || "idle"),
+  };
+}
+
+function getBossBattlePopupButtonSet(mode) {
+  if (mode === "victory") {
+    return `
+      <button type="button" class="boss-battle-popup__action boss-battle-popup__action--primary" data-action="battle-popup-continue">
+        <img src="${getBossBattleIconPath("continue")}" alt="" aria-hidden="true" />
+        <span>Tiếp tục</span>
+      </button>
+      <button type="button" class="boss-battle-popup__action" data-action="battle-popup-retry">
+        <img src="${getBossBattleIconPath("restart")}" alt="" aria-hidden="true" />
+        <span>Làm lại</span>
+      </button>
+      <button type="button" class="boss-battle-popup__action" data-action="battle-popup-exit">
+        <img src="${getBossBattleIconPath("quit")}" alt="" aria-hidden="true" />
+        <span>Thoát</span>
+      </button>
+    `;
+  }
+
+  if (mode === "defeat") {
+    return `
+      <button type="button" class="boss-battle-popup__action boss-battle-popup__action--primary" data-action="battle-popup-retry">
+        <img src="${getBossBattleIconPath("restart")}" alt="" aria-hidden="true" />
+        <span>Làm lại</span>
+      </button>
+      <button type="button" class="boss-battle-popup__action" data-action="battle-popup-review-wrong">
+        <img src="${getBossBattleIconPath("review")}" alt="" aria-hidden="true" />
+        <span>Làm lại câu sai</span>
+      </button>
+      <button type="button" class="boss-battle-popup__action" data-action="battle-popup-exit">
+        <img src="${getBossBattleIconPath("quit")}" alt="" aria-hidden="true" />
+        <span>Thoát</span>
+      </button>
+    `;
+  }
+
+  if (mode === "completed") {
+    return `
+      <button type="button" class="boss-battle-popup__action boss-battle-popup__action--primary" data-action="battle-popup-retry">
+        <img src="${getBossBattleIconPath("restart")}" alt="" aria-hidden="true" />
+        <span>Làm lại</span>
+      </button>
+      <button type="button" class="boss-battle-popup__action" data-action="battle-popup-review-wrong">
+        <img src="${getBossBattleIconPath("review")}" alt="" aria-hidden="true" />
+        <span>Làm lại câu sai</span>
+      </button>
+      <button type="button" class="boss-battle-popup__action" data-action="battle-popup-exit">
+        <img src="${getBossBattleIconPath("quit")}" alt="" aria-hidden="true" />
+        <span>Thoát</span>
+      </button>
+    `;
+  }
+
+  return "";
+}
+
+function getBossBattleAchievementPopupHtml() {
+  if (!bossBattleAchievementPopupState.visible) {
+    return "";
+  }
+
+  const badgeCards = Array.isArray(bossBattleAchievementPopupState.badges)
+    ? bossBattleAchievementPopupState.badges
+        .map(
+          (badge) => `
+            <div class="boss-battle-popup__reward-badge">
+              <img src="${escapeHtml(badge.image || getBossBattleBadgePath("achievement"))}" alt="" aria-hidden="true" />
+              <span>${escapeHtml(badge.name || badge.title || "Achievement")}</span>
+            </div>
+          `,
+        )
+        .join("")
+    : "";
+
+  return `
+    <article class="boss-battle-popup boss-battle-popup--achievement">
+      <img class="boss-battle-popup__panel" src="${escapeHtml(getBossBattlePopupPanelForMode("victory"))}" alt="" aria-hidden="true" />
+      <div class="boss-battle-popup__content">
+        <span class="boss-battle-popup__badge">Achievement Unlocked</span>
+        <h2>${escapeHtml(bossBattleAchievementPopupState.title || "ACHIEVEMENT UNLOCKED")}</h2>
+        <p>${escapeHtml(bossBattleAchievementPopupState.description || "Bạn vừa mở khóa huy hiệu mới.")}</p>
+        <div class="boss-battle-popup__reward-badges">
+          ${badgeCards}
+        </div>
+        <div class="boss-battle-popup__actions">
+          <button type="button" class="boss-battle-popup__action boss-battle-popup__action--primary" data-action="boss-achievement-close">
+            <img src="${getBossBattleIconPath("continue")}" alt="" aria-hidden="true" />
+            <span>Tiếp tục</span>
+          </button>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function closeBossBattlePopup() {
+  bossBattlePopupManager.mode = "none";
+  bossBattlePopupManager.visible = false;
+}
+
+function clearBossBattleAchievementPopupTimer() {
+  if (bossBattleAchievementPopupState.timerId) {
+    clearTimeout(bossBattleAchievementPopupState.timerId);
+    bossBattleAchievementPopupState.timerId = null;
+  }
+}
+
+function closeBossBattleAchievementPopup() {
+  clearBossBattleAchievementPopupTimer();
+  bossBattleAchievementPopupState.visible = false;
+  bossBattleAchievementPopupState.badges = [];
+  bossBattleAchievementPopupState.title = "";
+  bossBattleAchievementPopupState.description = "";
+  renderStudentQuizFlow();
+}
+
+function showBossBattleAchievementPopup(achievements = []) {
+  const badgeList = Array.isArray(achievements)
+    ? achievements.map((item) => ({
+        ...item,
+        image: item?.image || getBossBattleBadgePath("achievement"),
+      }))
+    : [];
+
+  if (badgeList.length === 0) {
+    return;
+  }
+
+  clearBossBattleAchievementPopupTimer();
+  bossBattleAchievementPopupState.visible = true;
+  bossBattleAchievementPopupState.badges = badgeList;
+  bossBattleAchievementPopupState.title = badgeList.length === 1 ? badgeList[0].name : "ACHIEVEMENT UNLOCKED";
+  bossBattleAchievementPopupState.description =
+    badgeList.length === 1
+      ? badgeList[0].description || ""
+      : `${badgeList.length} huy hiệu mới đã được mở khóa`;
+
+  setBossBattleEffect("sparkle", 700);
+  renderStudentQuizFlow();
+
+  bossBattleAchievementPopupState.timerId = window.setTimeout(() => {
+    closeBossBattleAchievementPopup();
+  }, 2800);
+}
+
+function clearBossBattleReviewTimer() {
+  if (bossBattleReviewMode.advanceTimerId) {
+    clearTimeout(bossBattleReviewMode.advanceTimerId);
+    bossBattleReviewMode.advanceTimerId = null;
+  }
+}
+
+function resetBossBattleReviewMode() {
+  clearBossBattleReviewTimer();
+  bossBattleReviewMode.active = false;
+  bossBattleReviewMode.wrongQuestions = [];
+  bossBattleReviewMode.currentQuestionIndex = 0;
+  bossBattleReviewMode.selectedAnswer = "";
+  bossBattleReviewMode.locked = false;
+  bossBattleReviewMode.reviewedCount = 0;
+  bossBattleReviewMode.correctCount = 0;
+  bossBattleReviewMode.completedVisible = false;
+}
+
+function buildBossBattleWrongReviewQuestions() {
+  const quizQuestions = Array.isArray(studentQuizState.quiz?.questions)
+    ? studentQuizState.quiz.questions
+    : [];
+  const answers = Array.isArray(bossBattleState.session?.answers)
+    ? bossBattleState.session.answers
+    : [];
+
+  return answers
+    .filter((answer) => answer && answer.correct === false)
+    .map((answer) => {
+      const question = quizQuestions[Number(answer.questionIndex) || 0] || null;
+      const options = Array.isArray(question?.options)
+        ? question.options.map((option, optionIndex) => ({
+            index: optionIndex,
+            label: normalizeQuizText(option?.label).toUpperCase(),
+            text: normalizeQuizText(option?.text || option?.label),
+            correct: Boolean(option?.correct),
+          }))
+        : [];
+      const selectedAnswer = normalizeQuizText(answer.selected).toUpperCase();
+      const selectedOption = options.find(
+        (option) => option.label === selectedAnswer,
+      ) || null;
+      const correctOption = options.find((option) => option.correct === true) || null;
+      const correctAnswer = normalizeQuizText(
+        answer.correctAnswer || correctOption?.label,
+      ).toUpperCase();
+
+      return {
+        questionIndex: Number(answer.questionIndex) || 0,
+        question: normalizeQuizText(question?.question) || `Câu ${Number(answer.questionIndex) + 1}`,
+        options,
+        userAnswer: selectedAnswer,
+        userAnswerText: normalizeQuizText(selectedOption?.text || selectedOption?.label || answer.selected),
+        correctAnswer,
+        correctAnswerText: normalizeQuizText(correctOption?.text || correctOption?.label),
+      };
+    });
+}
+
+function showBossBattleWrongAnswerReview() {
+  const wrongQuestions = buildBossBattleWrongReviewQuestions();
+
+  closeBossBattlePopup();
+  clearBossBattleReviewTimer();
+  bossBattleReviewMode.active = true;
+  bossBattleReviewMode.wrongQuestions = wrongQuestions;
+  bossBattleReviewMode.currentQuestionIndex = 0;
+  bossBattleReviewMode.selectedAnswer = "";
+  bossBattleReviewMode.locked = false;
+  bossBattleReviewMode.reviewedCount = 0;
+  bossBattleReviewMode.correctCount = 0;
+  bossBattleReviewMode.completedVisible = wrongQuestions.length === 0;
+  renderStudentQuizFlow();
+  scrollToElement("student-quiz-screen");
+}
+
+function getBossBattleReviewCurrentQuestion() {
+  const questions = Array.isArray(bossBattleReviewMode.wrongQuestions)
+    ? bossBattleReviewMode.wrongQuestions
+    : [];
+  const currentIndex = Math.max(
+    0,
+    Math.min(
+      Number(bossBattleReviewMode.currentQuestionIndex) || 0,
+      questions.length,
+    ),
+  );
+
+  return {
+    currentIndex,
+    totalQuestions: questions.length,
+    question: questions[currentIndex] || null,
+  };
+}
+
+function finishBossBattleReviewMode() {
+  bossBattleReviewMode.completedVisible = true;
+  bossBattleReviewMode.locked = false;
+  bossBattleReviewMode.selectedAnswer = "";
+  bossBattleReviewMode.reviewedCount = Array.isArray(
+    bossBattleReviewMode.wrongQuestions,
+  )
+    ? bossBattleReviewMode.wrongQuestions.length
+    : 0;
+  renderStudentQuizFlow();
+  scrollToElement("student-quiz-screen");
+}
+
+function advanceBossBattleReviewQuestion() {
+  clearBossBattleReviewTimer();
+
+  const questions = Array.isArray(bossBattleReviewMode.wrongQuestions)
+    ? bossBattleReviewMode.wrongQuestions
+    : [];
+  const nextIndex = Number(bossBattleReviewMode.currentQuestionIndex) + 1;
+
+  if (nextIndex >= questions.length) {
+    finishBossBattleReviewMode();
+    return;
+  }
+
+  bossBattleReviewMode.currentQuestionIndex = nextIndex;
+  bossBattleReviewMode.selectedAnswer = "";
+  bossBattleReviewMode.locked = false;
+  bossBattleReviewMode.completedVisible = false;
+  renderStudentQuizFlow();
+}
+
+function submitBossBattleReviewAnswer(questionIndex, selected) {
+  if (!bossBattleReviewMode.active || bossBattleReviewMode.completedVisible) {
+    return;
+  }
+
+  const { currentIndex, question } = getBossBattleReviewCurrentQuestion();
+
+  if (!question || currentIndex !== Number(questionIndex)) {
+    return;
+  }
+
+  if (bossBattleReviewMode.locked) {
+    return;
+  }
+
+  const normalizedSelected = normalizeQuizText(selected).toUpperCase();
+  const normalizedCorrect = normalizeQuizText(question.correctAnswer).toUpperCase();
+  const isCorrect = normalizedSelected === normalizedCorrect;
+
+  bossBattleReviewMode.selectedAnswer = normalizedSelected;
+  bossBattleReviewMode.locked = true;
+  bossBattleReviewMode.reviewedCount = currentIndex + 1;
+  if (isCorrect) {
+    bossBattleReviewMode.correctCount += 1;
+  }
+
+  renderStudentQuizFlow();
+
+  bossBattleReviewMode.advanceTimerId = window.setTimeout(() => {
+    advanceBossBattleReviewQuestion();
+  }, 450);
+}
+
+function restartBossBattleReviewMode() {
+  const wrongQuestions = buildBossBattleWrongReviewQuestions();
+
+  clearBossBattleReviewTimer();
+  bossBattleReviewMode.active = true;
+  bossBattleReviewMode.wrongQuestions = wrongQuestions;
+  bossBattleReviewMode.currentQuestionIndex = 0;
+  bossBattleReviewMode.selectedAnswer = "";
+  bossBattleReviewMode.locked = false;
+  bossBattleReviewMode.reviewedCount = 0;
+  bossBattleReviewMode.correctCount = 0;
+  bossBattleReviewMode.completedVisible = wrongQuestions.length === 0;
+  renderStudentQuizFlow();
+  scrollToElement("student-quiz-screen");
+}
+
+function closeBossBattleReviewMode() {
+  resetBossBattleReviewMode();
+  renderStudentQuizFlow();
+}
+
+async function handleBossBattlePopupAction(action) {
+  const normalizedAction = normalizeQuizText(action);
+
+  if (!normalizedAction) {
+    return;
+  }
+
+  if (normalizedAction === "battle-popup-exit") {
+    closeBossBattlePopup();
+    clearBossBattleRecoveryStorageState();
+    goBackSubjects();
+    return;
+  }
+
+  if (normalizedAction === "battle-popup-continue") {
+    closeBossBattlePopup();
+    clearBossBattleRecoveryStorageState();
+    goBackSubjects();
+    return;
+  }
+
+  if (normalizedAction === "battle-popup-review-wrong") {
+    showBossBattleWrongAnswerReview();
+    return;
+  }
+
+  if (normalizedAction === "battle-popup-retry") {
+    const topicId = normalizeQuizText(
+      bossBattleState.topicId || studentQuizState.selectedTopicId || "",
+    );
+
+    closeBossBattlePopup();
+    clearBossBattleRecoveryStorageState();
+
+    if (topicId) {
+      await loadStudentQuizByTopic(topicId);
+    }
+  }
+
+  if (normalizedAction === "boss-review-back-topic") {
+    closeBossBattleReviewMode();
+    clearBossBattleRecoveryStorageState();
+    goBackSubjects();
+    return;
+  }
+
+  if (normalizedAction === "boss-review-retry") {
+    restartBossBattleReviewMode();
+    return;
+  }
+}
+
+function resetBossBattleState(totalQuestions = 0) {
+  const normalizedTotalQuestions = Math.max(0, Number(totalQuestions) || 0);
+  clearBossBattleAnimationTimers();
+  clearBossBattleRewardCounterAnimation();
+  clearBossBattleAchievementPopupTimer();
+  stopBossBattleAudio();
+  resetBossBattleReviewMode();
+  bossBattleState.sessionId = "";
+  bossBattleState.topicId = "";
+  bossBattleState.quizId = "";
+  bossBattleState.session = null;
+  bossBattleState.loadingSession = false;
+  bossBattleState.answering = false;
+  bossBattleState.currentQuestionIndex = 0;
+  bossBattleState.totalQuestions = normalizedTotalQuestions;
+  bossBattleState.bossHP = 100;
+  bossBattleState.playerHP = Math.max(1, Math.ceil(normalizedTotalQuestions / 2));
+  bossBattleState.combo = 0;
+  bossBattleState.bossState = "idle";
+  bossBattleState.battleStatus = "idle";
+  bossBattleState.visualBossHP = 100;
+  bossBattleState.visualPlayerHP = Math.max(1, Math.ceil(normalizedTotalQuestions / 2));
+  bossBattleState.hintRemaining = 3;
+  bossBattleState.hintLoading = false;
+  bossBattleState.hiddenOptions = [];
+  bossBattleState.assetPreloading = false;
+  bossBattleAnimationState.currentState = "idle";
+  bossBattleAnimationState.currentFrame = 1;
+  bossBattleAnimationState.playOnce = false;
+  bossBattleRewardPreview.earnedXP = 0;
+  bossBattleRewardPreview.earnedCoin = 0;
+  bossBattleRewardPreview.comboBonusXP = 0;
+  bossBattleRewardPreview.comboBonusCoin = 0;
+  bossBattleRewardPreview.victoryBonusXP = 0;
+  bossBattleRewardPreview.victoryBonusCoin = 0;
+  bossBattleRewardPreview.rankStars = 0;
+  bossBattleRewardPreview.rankBonusCoin = 0;
+  bossBattleRewardPreview.accuracy = 0;
+  bossBattleRewardPreview.rankLabel = "";
+  bossBattleRewardPreview.active = false;
+  bossBattleRewardPreview.lastBattleStatus = "idle";
+  bossBattleRewardPreview.lastRankKey = "";
+  bossBattleRewardPreview.lastRewardEventKey = "";
+  bossBattleRewardPreview.baseXP = 0;
+  bossBattleRewardPreview.baseCoin = 0;
+  bossBattleRewardCounterState.displayXP = 0;
+  bossBattleRewardCounterState.displayCoin = 0;
+  bossBattleRewardCounterState.fromXP = 0;
+  bossBattleRewardCounterState.fromCoin = 0;
+  bossBattleRewardCounterState.toXP = 0;
+  bossBattleRewardCounterState.toCoin = 0;
+  bossBattleRewardSyncState.sessionId = "";
+  bossBattleRewardSyncState.status = "idle";
+  bossBattleRewardSyncState.summary = null;
+  bossBattleRewardSyncState.promise = null;
+  bossBattleAchievementPopupState.visible = false;
+  bossBattleAchievementPopupState.badges = [];
+  bossBattleAchievementPopupState.title = "";
+  bossBattleAchievementPopupState.description = "";
+  syncBossBattleRewardCounterNodes();
+}
+
+function initializeBossBattleRewardPreview(profile = getCurrentAuthUser()) {
+  bossBattleRewardPreview.baseXP = getBossBattleExp(profile);
+  bossBattleRewardPreview.baseCoin = getBossBattleCoins(profile);
+  bossBattleRewardPreview.active = true;
+  bossBattleRewardPreview.lastBattleStatus = normalizeBossBattleStatus(
+    bossBattleState.battleStatus,
+  );
+  bossBattleRewardCounterState.displayXP = bossBattleRewardPreview.baseXP;
+  bossBattleRewardCounterState.displayCoin = bossBattleRewardPreview.baseCoin;
+  bossBattleRewardCounterState.fromXP = bossBattleRewardPreview.baseXP;
+  bossBattleRewardCounterState.fromCoin = bossBattleRewardPreview.baseCoin;
+  bossBattleRewardCounterState.toXP = bossBattleRewardPreview.baseXP;
+  bossBattleRewardCounterState.toCoin = bossBattleRewardPreview.baseCoin;
+  syncBossBattleRewardCounterNodes();
+}
+
+function applyBossBattleRewardPreviewEvent({
+  correct = false,
+  battleStatus = bossBattleState.battleStatus,
+  previousBattleStatus = bossBattleRewardPreview.lastBattleStatus,
+  combo = bossBattleState.combo,
+} = {}) {
+  if (!bossBattleRewardPreview.active) {
+    initializeBossBattleRewardPreview();
+  }
+
+  const normalizedStatus = normalizeBossBattleStatus(battleStatus);
+  const normalizedPreviousStatus = normalizeBossBattleStatus(
+    previousBattleStatus,
+  );
+  const normalizedCombo = Math.max(0, Math.floor(Number(combo) || 0));
+  const rewardKey = [
+    bossBattleState.sessionId || "",
+    bossBattleState.currentQuestionIndex || 0,
+    normalizedStatus,
+    String(correct ? 1 : 0),
+    String(normalizedCombo),
+  ].join(":");
+  const queuedVisuals = [];
+  let shouldPlayRewardSound = false;
+  const queueVisual = (callback) => {
+    if (typeof callback === "function") {
+      queuedVisuals.push(callback);
+    }
+  };
+
+  if (correct) {
+    bossBattleRewardPreview.earnedXP += 10;
+    const earnedCoin = 3 + Math.floor(Math.random() * 6);
+    bossBattleRewardPreview.earnedCoin += earnedCoin;
+
+    queueVisual(() => {
+      spawnBossBattleFloatingReward(
+        getBossBattleRewardFloatingXPText(10),
+        "xp",
+      );
+      spawnBossBattleFloatingReward(
+        getBossBattleRewardFloatingCoinText(earnedCoin),
+        "coin",
+      );
+      setBossBattleEffect("xp", 500);
+      setBossBattleEffect("coin", 450);
+    });
+
+    let comboBonusPlayed = false;
+    if (normalizedCombo >= 3) {
+      bossBattleRewardPreview.comboBonusXP += 10;
+      queueVisual(() => {
+        spawnBossBattleFloatingReward("+10 XP", "xp");
+        spawnBossBattleRewardBadge("combo");
+        setBossBattleEffect("sparkle", 450);
+      });
+      comboBonusPlayed = true;
+    }
+
+    if (normalizedCombo >= 5) {
+      bossBattleRewardPreview.comboBonusCoin += 20;
+      queueVisual(() => {
+        spawnBossBattleFloatingReward("+20 Coin", "coin");
+        setBossBattleEffect("coin", 450);
+      });
+      comboBonusPlayed = true;
+    }
+
+    if (comboBonusPlayed) {
+      shouldPlayRewardSound = true;
+    }
+  }
+
+    if (normalizedStatus === "victory" && normalizedPreviousStatus !== "victory") {
+    bossBattleRewardPreview.victoryBonusXP += 50;
+    bossBattleRewardPreview.victoryBonusCoin += 50;
+    queueVisual(() => {
+      spawnBossBattleFloatingReward("+50 XP", "xp");
+      spawnBossBattleFloatingReward("+50 Coin", "coin");
+      spawnBossBattleRewardBadge("victory");
+      setBossBattleEffect("confetti", 900);
+    });
+    shouldPlayRewardSound = true;
+  }
+
+  if (
+    normalizedStatus === "victory" ||
+    normalizedStatus === "completed"
+  ) {
+    const totalQuestions = Math.max(1, Number(bossBattleState.totalQuestions) || 0);
+    const sessionSummary = getBossBattleSessionSummary();
+    const rankPreview = getBossBattleRewardRankPreview(
+      sessionSummary.score,
+      totalQuestions,
+    );
+    const rankKey = `${normalizedStatus}:${sessionSummary.score}:${rankPreview.stars}`;
+
+    bossBattleRewardPreview.accuracy = sessionSummary.score;
+    bossBattleRewardPreview.rankStars = rankPreview.stars;
+    bossBattleRewardPreview.rankBonusCoin = rankPreview.bonusCoin;
+    bossBattleRewardPreview.rankLabel = rankPreview.label;
+
+    if (
+      rankPreview.bonusCoin > 0 &&
+      bossBattleRewardPreview.lastRankKey !== rankKey
+    ) {
+      queueVisual(() => {
+        spawnBossBattleFloatingReward(
+          `+${rankPreview.bonusCoin} Coin`,
+          "coin",
+        );
+      });
+      shouldPlayRewardSound = true;
+    }
+
+    bossBattleRewardPreview.lastRankKey = rankKey;
+  }
+
+  bossBattleRewardPreview.lastBattleStatus = normalizedStatus;
+  bossBattleRewardPreview.lastRewardEventKey = rewardKey;
+
+  const totalXP =
+    bossBattleRewardPreview.baseXP +
+    bossBattleRewardPreview.earnedXP +
+    bossBattleRewardPreview.comboBonusXP +
+    bossBattleRewardPreview.victoryBonusXP;
+  const totalCoin =
+    bossBattleRewardPreview.baseCoin +
+    bossBattleRewardPreview.earnedCoin +
+    bossBattleRewardPreview.comboBonusCoin +
+    bossBattleRewardPreview.victoryBonusCoin +
+    (normalizedStatus === "victory" || normalizedStatus === "completed"
+      ? bossBattleRewardPreview.rankBonusCoin
+      : 0);
+
+  animateBossBattleRewardCounters(totalXP, totalCoin, 380);
+
+  if (queuedVisuals.length > 0) {
+    queueMicrotask(() => {
+      requestAnimationFrame(() => {
+        queuedVisuals.forEach((callback) => callback());
+      });
+    });
+  }
+
+  if (shouldPlayRewardSound) {
+    playBossBattleRewardSound();
+  }
+}
+
+function getBossBattleCurrentQuestionIndex() {
+  const totalQuestions = Math.max(0, Number(bossBattleState.totalQuestions) || 0);
+  if (totalQuestions <= 0) {
+    return 0;
+  }
+
+  return Math.max(
+    0,
+    Math.min(
+      Number(bossBattleState.currentQuestionIndex) || 0,
+      totalQuestions - 1,
+    ),
+  );
+}
+
+function getBossBattleCurrentQuestion(quiz) {
+  const questions = Array.isArray(quiz?.questions) ? quiz.questions : [];
+  const questionIndex = getBossBattleCurrentQuestionIndex();
+  return {
+    questionIndex,
+    question: questions[questionIndex] || null,
+  };
+}
+
+function applyBossBattleSessionResponse(payload = {}) {
+  const session = payload.session || payload || {};
+  const totalQuestions = Array.isArray(studentQuizState.quiz?.questions)
+    ? studentQuizState.quiz.questions.length
+    : Math.max(0, Number(bossBattleState.totalQuestions) || 0);
+  const previousBattleStatus = normalizeBossBattleStatus(
+    bossBattleState.battleStatus,
+  );
+  const previousVisualBossHP =
+    Number.isFinite(Number(bossBattleState.visualBossHP))
+      ? Number(bossBattleState.visualBossHP)
+      : Math.max(0, Math.floor(Number(bossBattleState.bossHP) || 0));
+  const previousVisualPlayerHP =
+    Number.isFinite(Number(bossBattleState.visualPlayerHP))
+      ? Number(bossBattleState.visualPlayerHP)
+      : Math.max(0, Math.floor(Number(bossBattleState.playerHP) || 0));
+  const currentQuestionIndex = Number(
+    payload.currentQuestionIndex ??
+      session.currentQuestionIndex ??
+      session.questionIndex ??
+      0,
+  );
+  const bossHP = Math.max(
+    0,
+    Math.floor(Number(payload.bossHP ?? session.bossHP ?? 0) || 0),
+  );
+  const playerHP = Math.max(
+    0,
+    Math.floor(Number(payload.playerHP ?? session.playerHP ?? 0) || 0),
+  );
+  const combo = Math.max(
+    0,
+    Math.floor(Number(payload.combo ?? session.combo ?? 0) || 0),
+  );
+  const battleStatus = normalizeBossBattleStatus(
+    payload.battleStatus ?? session.status ?? session.battleStatus,
+  );
+  const bossState =
+    normalizeQuizText(payload.bossState ?? session.bossState) ||
+    getBossBattleStateFromHP(bossHP);
+
+  bossBattleState.session = session;
+  bossBattleState.sessionId = normalizeQuizText(
+    session.sessionId || session.id || bossBattleState.sessionId || "",
+  );
+  bossBattleState.topicId = normalizeQuizText(
+    session.topicId || bossBattleState.topicId || "",
+  );
+  bossBattleState.quizId = normalizeQuizText(
+    session.quizId || bossBattleState.quizId || "",
+  );
+  bossBattleState.totalQuestions = totalQuestions;
+  bossBattleState.currentQuestionIndex = Math.max(
+    0,
+    Math.min(
+      Number.isFinite(currentQuestionIndex)
+        ? Math.floor(currentQuestionIndex)
+        : 0,
+      totalQuestions,
+    ),
+  );
+  bossBattleState.bossHP = bossHP;
+  bossBattleState.playerHP = playerHP;
+  bossBattleState.combo = combo;
+  bossBattleState.bossState = bossState;
+  bossBattleState.battleStatus = battleStatus;
+  bossBattleState.loadingSession = false;
+  bossBattleState.answering = false;
+  bossBattleState.hintLoading = false;
+  bossBattleState.hintRemaining = Math.max(
+    0,
+    Number(payload.hintRemaining ?? session.hintRemaining ?? bossBattleState.hintRemaining ?? 3) || 0,
+  );
+  bossBattleState.hiddenOptions = Array.isArray(payload.hiddenOptions)
+    ? payload.hiddenOptions.map((item) => normalizeQuizText(item).toUpperCase()).filter(Boolean)
+    : [];
+  bossBattleState.visualBossHP = previousVisualBossHP;
+  bossBattleState.visualPlayerHP = previousVisualPlayerHP;
+  saveBossBattleRecoveryStorageState({
+    sessionId: bossBattleState.sessionId,
+    topicId: bossBattleState.topicId,
+    quizId: bossBattleState.quizId,
+    battleStatus: bossBattleState.battleStatus,
+  });
+
+  if (
+    payload.correct === true ||
+    normalizeBossBattleStatus(battleStatus) === "victory" ||
+    normalizeBossBattleStatus(battleStatus) === "completed"
+  ) {
+    applyBossBattleRewardPreviewEvent({
+      correct: payload.correct === true,
+      battleStatus,
+      previousBattleStatus,
+      combo,
+    });
+  }
+
+  if (payload.correct === true) {
+    queueMicrotask(() => {
+      requestAnimationFrame(() => {
+        triggerBossBattleFeedback(
+          battleStatus === "victory" ? "victory" : "correct",
+        );
+        playCorrect();
+        if (normalizeBossBattleStatus(battleStatus) === "victory") {
+          playBossDie();
+        }
+      });
+    });
+  } else if (payload.correct === false) {
+    queueMicrotask(() => {
+      requestAnimationFrame(() => {
+        triggerBossBattleFeedback("wrong");
+        playWrong();
+      });
+    });
+  }
+
+  return bossBattleState;
+}
+
+async function createBossBattleSessionForCurrentQuiz() {
+  const quiz = studentQuizState.quiz;
+
+  if (!quiz) {
+    throw new Error("Chưa có quiz để tạo battle session.");
+  }
+
+  const quizId = normalizeQuizText(quiz.quizId || quiz.id || "");
+  const topicId = normalizeQuizText(
+    studentQuizState.selectedTopicId || quiz.topicId || "",
+  );
+
+  if (!quizId || !topicId) {
+    throw new Error("Thiếu quizId hoặc topicId để tạo battle session.");
+  }
+
+  bossBattleState.loadingSession = true;
+  renderStudentQuizFlow();
+
+  try {
+    bossBattleState.assetPreloading = true;
+    renderStudentQuizFlow();
+    await ensureBossBattleAssetsPreloaded();
+    bossBattleState.assetPreloading = false;
+    renderStudentQuizFlow();
+
+    const response = await apiRequestWithAuth("/api/battle-sessions", {
+      method: "POST",
+      body: {
+        topicId,
+        quizId,
+      },
+    });
+
+    applyBossBattleSessionResponse(response.data || {});
+    initializeBossBattleRewardPreview();
+    return response.data || null;
+  } finally {
+    bossBattleState.loadingSession = false;
+    bossBattleState.assetPreloading = false;
+    renderStudentQuizFlow();
+  }
+}
+
+async function submitBossBattleAnswer(questionIndex, selected) {
+  const sessionId = normalizeQuizText(bossBattleState.sessionId);
+
+  if (!sessionId) {
+    throw new Error("Battle session chưa được khởi tạo.");
+  }
+
+  if (normalizeBossBattleStatus(bossBattleState.battleStatus) !== "active") {
+    return null;
+  }
+
+  bossBattleState.answering = true;
+  renderStudentQuizFlow();
+
+  try {
+    const response = await apiRequestWithAuth(
+      `/api/battle-sessions/${encodeURIComponent(sessionId)}/answer`,
+      {
+        method: "POST",
+        body: {
+          questionIndex,
+          selected,
+        },
+      },
+    );
+
+    applyBossBattleSessionResponse(response.data || {});
+    return response.data || null;
+  } finally {
+    bossBattleState.answering = false;
+    renderStudentQuizFlow();
+  }
+}
+
 function resetQuizSubmissionState() {
   studentQuizState.isSubmitted = false;
   studentQuizState.resultData = null;
@@ -9288,116 +11686,585 @@ function renderStudentQuizScreen() {
   const quiz = studentQuizState.quiz;
   const resultScreen = getStudentResultScreen();
   const reviewScreen = getStudentWrongReviewScreen();
+  const profile = getCurrentAuthUser();
+  const reviewModeActive = bossBattleReviewMode.active;
+  const reviewQuestionState = reviewModeActive
+    ? getBossBattleReviewCurrentQuestion()
+    : null;
+  const reviewQuestion = reviewQuestionState?.question || null;
+  const reviewQuestionIndex = Math.max(
+    0,
+    Number(reviewQuestionState?.currentIndex) || 0,
+  );
+  const reviewTotalQuestions = Math.max(
+    0,
+    Number(reviewQuestionState?.totalQuestions) || 0,
+  );
+  const totalQuestions = Array.isArray(quiz?.questions)
+    ? quiz.questions.length
+    : 0;
+  const currentQuestionIndex = Math.max(
+    0,
+    Math.min(Number(bossBattleState.currentQuestionIndex) || 0, totalQuestions),
+  );
+  const currentQuestion =
+    totalQuestions > 0 && currentQuestionIndex < totalQuestions
+      ? quiz.questions[currentQuestionIndex] || null
+      : null;
+  const currentPet = getBossBattleCurrentPetState();
+  const petDisplayName = currentPet?.petName || "Chưa có Pet";
+  const petDisplayLevel = currentPet?.petLevel || null;
+  const petDisplayImage = currentPet?.imagePath || "";
+  const petDisplayStateImage = petDisplayImage || "";
+  const battleStatus = normalizeBossBattleStatus(bossBattleState.battleStatus);
+  const battleStatusLabel = getBossBattleStatusLabel(battleStatus);
+  const bossStateLabel = normalizeQuizText(bossBattleState.bossState || "idle");
+  const playerHP = Math.max(0, Math.floor(Number(bossBattleState.playerHP) || 0));
+  const comboValue = Math.max(0, Math.floor(Number(bossBattleState.combo) || 0));
+  const bossHP = Math.max(0, Math.floor(Number(bossBattleState.bossHP) || 0));
+  const bossHpPercent = Math.max(0, Math.min(100, bossHP));
+  const profileCoins = getBossBattleCoins(profile);
+  const profileExp = getBossBattleExp(profile);
+  const rewardSummary = getBossBattleRewardDisplaySummary();
+  const displayedRewardXP = Math.max(
+    0,
+    Math.round(
+      Number.isFinite(Number(bossBattleRewardCounterState.displayXP))
+        ? Number(bossBattleRewardCounterState.displayXP)
+        : profileExp,
+    ),
+  );
+  const displayedRewardCoin = Math.max(
+    0,
+    Math.round(
+      Number.isFinite(Number(bossBattleRewardCounterState.displayCoin))
+        ? Number(bossBattleRewardCounterState.displayCoin)
+        : profileCoins,
+    ),
+  );
+  const topicName = normalizeQuizText(
+    quiz?.topicName || quiz?.topicDescription || quiz?.topicId || "MINI BOSS",
+  );
+  const bossAnimationState = getBossBattleCurrentAnimationState();
+  const bossImagePath = getBossBattleBossFramePath(
+    bossAnimationState,
+    bossBattleAnimationState.currentFrame,
+  );
+  const popupMode = syncBossBattlePopupManager().mode;
+  const popupPanelPath = getBossBattlePopupPanelForMode(popupMode);
+  if (
+    (popupMode === "victory" || popupMode === "completed") &&
+    bossBattleRewardSyncState.status === "idle"
+  ) {
+    void syncBossBattleRewardWithBackend().catch((error) => {
+      showToast(error.message || "Không thể đồng bộ phần thưởng Boss Battle.", "error");
+    });
+  }
+  const canAnswer =
+    battleStatus === "active" &&
+    popupMode === "none" &&
+    !bossBattleState.loadingSession &&
+    !bossBattleState.answering &&
+    !bossBattleState.hintLoading &&
+    Boolean(currentQuestion);
+  const hiddenOptionSet = getBossBattleHiddenOptionSet();
+  const questionPrompt =
+    currentQuestion?.question ||
+    (battleStatus === "victory"
+      ? "Victory đang chờ hiển thị."
+      : battleStatus === "defeat"
+        ? "Defeat đang chờ hiển thị."
+        : battleStatus === "completed"
+          ? "Completed đang chờ hiển thị."
+          : "Đang chuẩn bị câu hỏi...");
+  const outcomeCopy = getBossBattleOutcomeCopy(battleStatus);
+  const activeAnswerButtons =
+    currentQuestion && battleStatus === "active"
+      ? (Array.isArray(currentQuestion.options) ? currentQuestion.options : [])
+          .map((option, optionIndex) => {
+            const optionLabel = normalizeQuizText(option?.label).toUpperCase();
+            const optionText = normalizeQuizText(option?.text || option?.label);
+            const meta = getBossBattleOptionMeta(optionIndex);
+            const isHidden = hiddenOptionSet.has(optionLabel);
+
+            return `
+              <button
+                type="button"
+                class="boss-battle-answer-card boss-battle-answer-card--${meta.tone} quiz-option-btn ${isHidden ? "is-hidden" : ""}"
+                data-question-index="${currentQuestionIndex}"
+                data-option-label="${escapeHtml(optionLabel)}"
+                ${canAnswer && !isHidden ? "" : "disabled"}
+                ${isHidden ? 'aria-hidden="true"' : ""}
+              >
+                <span class="boss-battle-answer-card__badge" aria-hidden="true">${meta.icon}</span>
+                <span class="boss-battle-answer-card__body">
+                  <span class="boss-battle-answer-card__label">${escapeHtml(optionLabel || ["A", "B", "C", "D"][optionIndex] || "")}</span>
+                  <span class="boss-battle-answer-card__text">${escapeHtml(optionText || optionLabel || "")}</span>
+                </span>
+              </button>
+            `;
+          })
+          .join("")
+      : "";
+
+  const reviewAnswerButtons =
+    reviewModeActive && reviewQuestion
+      ? (Array.isArray(reviewQuestion.options) ? reviewQuestion.options : [])
+          .map((option, optionIndex) => {
+            const optionLabel = normalizeQuizText(option?.label).toUpperCase();
+            const optionText = normalizeQuizText(option?.text || option?.label);
+            const meta = getBossBattleOptionMeta(optionIndex);
+            const selectedAnswer = normalizeQuizText(
+              bossBattleReviewMode.selectedAnswer,
+            ).toUpperCase();
+            const correctAnswer = normalizeQuizText(
+              reviewQuestion.correctAnswer,
+            ).toUpperCase();
+            const isSelected = bossBattleReviewMode.locked && selectedAnswer === optionLabel;
+            const isCorrect = bossBattleReviewMode.locked && optionLabel === correctAnswer;
+            const isWrong =
+              bossBattleReviewMode.locked &&
+              selectedAnswer === optionLabel &&
+              selectedAnswer !== correctAnswer;
+
+            return `
+              <button
+                type="button"
+                class="boss-battle-answer-card boss-battle-answer-card--${meta.tone} quiz-option-btn ${isSelected ? "is-selected" : ""} ${isCorrect ? "is-correct" : ""} ${isWrong ? "is-wrong" : ""}"
+                data-question-index="${reviewQuestionIndex}"
+                data-option-label="${escapeHtml(optionLabel)}"
+                ${bossBattleReviewMode.locked ? "disabled" : ""}
+              >
+                <span class="boss-battle-answer-card__badge" aria-hidden="true">${meta.icon}</span>
+                <span class="boss-battle-answer-card__body">
+                  <span class="boss-battle-answer-card__label">${escapeHtml(optionLabel || ["A", "B", "C", "D"][optionIndex] || "")}</span>
+                  <span class="boss-battle-answer-card__text">${escapeHtml(optionText || optionLabel || "")}</span>
+                </span>
+              </button>
+            `;
+          })
+          .join("")
+      : "";
+
+  const activeQuestionPanel = `
+    <article class="boss-battle-question-card">
+      <div class="boss-battle-question-card__badge">Câu ${currentQuestionIndex + 1} / ${Math.max(totalQuestions, 1)}</div>
+      <h3 class="boss-battle-question-card__text">${escapeHtml(questionPrompt)}</h3>
+      <div class="boss-battle-question-card__divider" aria-hidden="true"></div>
+      <div class="boss-battle-answer-grid">
+        ${
+          activeAnswerButtons ||
+          `<div class="boss-battle-empty-state">Không có câu hỏi để hiển thị.</div>`
+        }
+      </div>
+    </article>
+  `;
+
+  const reviewQuestionPanel = reviewModeActive
+    ? `
+      <article class="boss-battle-question-card boss-battle-question-card--review">
+        <div class="boss-battle-question-card__badge">Câu ${reviewQuestionIndex + 1} / ${Math.max(reviewTotalQuestions, 1)}</div>
+        <h3 class="boss-battle-question-card__text">${escapeHtml(reviewQuestion?.question || "Đang tải câu sai cần ôn tập...")}</h3>
+        <div class="boss-battle-question-card__divider" aria-hidden="true"></div>
+        <div class="boss-battle-answer-grid">
+          ${
+            reviewAnswerButtons ||
+            `<div class="boss-battle-empty-state">Không có câu sai để ôn tập.</div>`
+          }
+        </div>
+      </article>
+    `
+    : "";
+
+  const activeSidebar = `
+    <aside class="boss-battle-sidebar">
+      <div class="boss-battle-sidebar__speech">
+        <strong>${reviewModeActive ? "Ôn lại!" : "Cố lên!"}</strong>
+        <span>${reviewModeActive ? "Chỉ luyện các câu sai." : "Bạn làm rất tốt!"}</span>
+      </div>
+      <div class="boss-battle-sidebar__card ${reviewModeActive ? "is-review-mode" : ""} ${comboValue >= 5 ? "is-combo-strong" : comboValue >= 3 ? "is-combo-glow" : ""} ${battleStatus === "victory" ? "is-pet-celebrate" : ""}">
+        <div class="boss-battle-sidebar__pet boss-battle-pet">
+          ${
+            currentPet
+              ? `<img class="boss-battle-sidebar__pet-image" src="${escapeHtml(petDisplayStateImage)}" alt="${escapeHtml(petDisplayName)}" />`
+              : `<span class="boss-battle-sidebar__pet-fallback" aria-hidden="true">🐾</span>`
+          }
+        </div>
+        <div class="boss-battle-sidebar__level">Lv ${escapeHtml(String(petDisplayLevel ?? "--"))}</div>
+        <h3>${escapeHtml(petDisplayName)}</h3>
+        <p>${escapeHtml(`${quiz.subject || studentQuizState.subject || "Quiz"} · ${quiz.grade || studentQuizState.grade || ""}`)}</p>
+        ${reviewModeActive ? '<div class="boss-battle-sidebar__review-chip">REVIEW MODE</div>' : ""}
+
+        <div class="boss-battle-sidebar__metric">
+          <div class="boss-battle-sidebar__metric-head">
+            <img src="${getBossBattleIconPath("heart")}" alt="" aria-hidden="true" />
+            <span>MÁU</span>
+          </div>
+          <div class="boss-battle-sidebar__hearts">${getBossBattleHeartMarkup(playerHP)}</div>
+        </div>
+
+        <div class="boss-battle-sidebar__metric boss-battle-sidebar__metric--combo ${comboValue >= 5 ? "is-combo-strong" : comboValue >= 3 ? "is-combo-glow" : ""}">
+          <div class="boss-battle-sidebar__metric-head">
+            <span class="boss-battle-sidebar__metric-flame" aria-hidden="true">🔥</span>
+            <span>COMBO</span>
+          </div>
+          <strong>x${escapeHtml(String(comboValue))}</strong>
+        </div>
+
+        <div class="boss-battle-sidebar__metric">
+          <div class="boss-battle-sidebar__metric-head">
+            <img src="${getBossBattleIconPath("xp")}" alt="" aria-hidden="true" />
+            <span>XP</span>
+          </div>
+          <div class="boss-battle-sidebar__progress">
+            <div class="boss-battle-sidebar__progress-fill" style="width: ${escapeHtml(String(Math.min(100, displayedRewardXP > 0 ? displayedRewardXP % 100 || 60 : 60)))}%"></div>
+          </div>
+          <strong><span data-boss-reward-xp-counter>${escapeHtml(String(displayedRewardXP))}</span> / 100</strong>
+        </div>
+
+        <div class="boss-battle-sidebar__metric">
+          <div class="boss-battle-sidebar__metric-head">
+            <img src="${getBossBattleIconPath("coin")}" alt="" aria-hidden="true" />
+            <span>COIN</span>
+          </div>
+          <strong data-boss-reward-coin-counter>${escapeHtml(String(displayedRewardCoin))}</strong>
+        </div>
+      </div>
+    </aside>
+  `;
+
+  const activeHeader = `
+    <section class="boss-battle-header-card">
+      <div class="boss-battle-header-card__boss ${bossBattleState.battleStatus === "victory" ? "is-pet-celebrate" : ""}">
+        <img class="boss-battle-header-card__boss-image" data-boss-anim="main" src="${escapeHtml(bossImagePath)}" alt="Mini Boss" />
+      </div>
+      <div class="boss-battle-header-card__copy">
+        <h2>MINI BOSS</h2>
+        <p>${escapeHtml(topicName)}</p>
+      </div>
+      <div class="boss-battle-header-card__hp">
+        <strong>${escapeHtml(`${bossHP} / 100 HP`)}</strong>
+      </div>
+      <div class="boss-battle-header-card__track" aria-hidden="true">
+        <div class="boss-battle-header-card__track-fill" style="width: ${escapeHtml(String(Math.max(0, Math.min(100, Number(bossBattleState.visualBossHP ?? bossHpPercent) || 0))))}%"></div>
+        <img class="boss-battle-header-card__track-frame" src="${getBossBattleAssetPath("hp", "boss_hp_frame.png")}" alt="" />
+        <img class="boss-battle-header-card__track-sheen" src="${getBossBattleAssetPath("hp", "boss_hp_fill.png")}" alt="" />
+      </div>
+    </section>
+  `;
+
+  const activeHint = `
+    <button type="button" class="boss-battle-hint-pill" data-action="battle-hint" aria-label="${escapeHtml(getBossBattleHintCountLabel(bossBattleState.hintRemaining))}" ${canUseBossBattleHint() ? "" : "disabled"}>
+      <img src="${getBossBattleIconPath("hint")}" alt="" aria-hidden="true" />
+      <span>Hint</span>
+      <strong>x${escapeHtml(String(Math.max(0, Number(bossBattleState.hintRemaining) || 0)))}</strong>
+    </button>
+  `;
+
+  const terminalStatsHtml =
+    popupMode === "victory"
+      ? `
+        <div class="boss-battle-popup__stats">
+          <div class="boss-battle-popup__stat">
+            <strong>${escapeHtml(String(rewardSummary.score))}%</strong>
+            <span>Accuracy</span>
+          </div>
+          <div class="boss-battle-popup__stat">
+            <strong>${escapeHtml(String(rewardSummary.correctCount))}</strong>
+            <span>Số câu đúng</span>
+          </div>
+          <div class="boss-battle-popup__stat">
+            <strong>${escapeHtml(rewardSummary.rankLabel || "1 Sao")}</strong>
+            <span>Rank</span>
+          </div>
+          <div class="boss-battle-popup__stat">
+            <strong>+${escapeHtml(String(rewardSummary.rewardXP))}</strong>
+            <span>XP nhận được</span>
+          </div>
+          <div class="boss-battle-popup__stat">
+            <strong>+${escapeHtml(String(rewardSummary.rewardCoin))}</strong>
+            <span>Coin nhận được</span>
+          </div>
+        </div>
+        <div class="boss-battle-popup__reward-strip">
+          <span>Boss đã bị đánh bại</span>
+          <strong>Preview chỉ hiển thị trên UI, chưa sync reward thật.</strong>
+        </div>
+        <div class="boss-battle-popup__reward-badges">
+          <div class="boss-battle-popup__reward-badge">
+            <img src="${getBossBattleBadgePath("victory")}" alt="" aria-hidden="true" />
+            <span>Victory Bonus</span>
+          </div>
+          <div class="boss-battle-popup__reward-badge">
+            <div class="boss-battle-popup__reward-stars" aria-hidden="true">${"★".repeat(Math.max(1, Number(rewardSummary.rankStars) || 1))}</div>
+            <span>${escapeHtml(rewardSummary.rankLabel || "1 Sao")}</span>
+          </div>
+        </div>
+      `
+      : popupMode === "defeat"
+        ? `
+          <div class="boss-battle-popup__stats">
+            <div class="boss-battle-popup__stat">
+              <strong>${escapeHtml(String(playerHP))}</strong>
+              <span>Hết tim</span>
+            </div>
+            <div class="boss-battle-popup__stat">
+              <strong>${escapeHtml(String(rewardSummary.correctCount))}</strong>
+              <span>Số câu đúng</span>
+            </div>
+            <div class="boss-battle-popup__stat">
+              <strong>${escapeHtml(String(rewardSummary.score))}%</strong>
+              <span>Accuracy hiện tại</span>
+            </div>
+          </div>
+          <div class="boss-battle-popup__reward-strip">
+            <span>Hết lượt</span>
+            <strong>Điểm tạm tính chỉ để xem trước.</strong>
+          </div>
+        `
+        : `
+          <div class="boss-battle-popup__stats">
+            <div class="boss-battle-popup__stat">
+              <strong>${escapeHtml(String(bossHP))}</strong>
+              <span>Boss còn HP</span>
+            </div>
+            <div class="boss-battle-popup__stat">
+              <strong>${escapeHtml(String(rewardSummary.score))}%</strong>
+              <span>Accuracy</span>
+            </div>
+            <div class="boss-battle-popup__stat">
+              <strong>${escapeHtml(String(rewardSummary.correctCount))}</strong>
+              <span>Số câu đúng</span>
+            </div>
+            <div class="boss-battle-popup__stat">
+              <strong>+${escapeHtml(String(rewardSummary.rewardXP))}</strong>
+              <span>XP nhận được</span>
+            </div>
+            <div class="boss-battle-popup__stat">
+              <strong>+${escapeHtml(String(rewardSummary.rewardCoin))}</strong>
+              <span>Coin nhận được</span>
+            </div>
+          </div>
+          <div class="boss-battle-popup__reward-strip">
+            <span>Boss vẫn còn HP</span>
+            <strong>Preview chỉ hiển thị trên UI, chưa sync reward thật.</strong>
+          </div>
+          <div class="boss-battle-popup__reward-badges">
+            <div class="boss-battle-popup__reward-badge">
+              <img src="${getBossBattleBadgePath("combo")}" alt="" aria-hidden="true" />
+              <span>Combo Bonus</span>
+            </div>
+            <div class="boss-battle-popup__reward-badge">
+              <div class="boss-battle-popup__reward-stars" aria-hidden="true">${"★".repeat(Math.max(1, Number(rewardSummary.rankStars) || 1))}</div>
+              <span>${escapeHtml(rewardSummary.rankLabel || "1 Sao")}</span>
+            </div>
+          </div>
+        `;
+
+  const terminalSceneHtml = `
+    <div class="boss-battle-popup__scene">
+      <div class="boss-battle-popup__pet">
+        ${
+            currentPet
+            ? `<img src="${escapeHtml(petDisplayStateImage)}" alt="${escapeHtml(petDisplayName)}" />`
+            : `<span aria-hidden="true">🐾</span>`
+        }
+        <div class="boss-battle-popup__pet-label">
+          <strong>${escapeHtml(petDisplayName)}</strong>
+          <span>Lv ${escapeHtml(String(petDisplayLevel ?? "--"))}</span>
+        </div>
+      </div>
+      <div class="boss-battle-popup__boss">
+        <img data-boss-anim="popup" src="${escapeHtml(outcomeCopy.bossImage)}" alt="Boss" />
+        <div class="boss-battle-popup__boss-label">
+          <strong>${escapeHtml(bossStateLabel.toUpperCase())}</strong>
+          <span>${escapeHtml(battleStatusLabel)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const reviewCompletePopupHtml =
+    reviewModeActive && bossBattleReviewMode.completedVisible
+      ? `
+        <article class="boss-battle-review-complete">
+          <div class="boss-battle-review-complete__panel">
+            <span class="boss-battle-popup__badge">Review Complete</span>
+            <h2>Đã ôn lại xong</h2>
+            <p>Chỉ hiển thị lại các câu sai từ battle session hiện tại.</p>
+            <div class="boss-battle-review-complete__stats">
+              <div class="boss-battle-review-complete__stat">
+                <strong>${escapeHtml(String(bossBattleReviewMode.reviewedCount))}</strong>
+                <span>Đã ôn lại</span>
+              </div>
+              <div class="boss-battle-review-complete__stat">
+                <strong>${escapeHtml(String(bossBattleReviewMode.correctCount))}</strong>
+                <span>Đúng</span>
+              </div>
+            </div>
+            <div class="boss-battle-review-complete__actions">
+              <button type="button" class="boss-battle-popup__action boss-battle-popup__action--primary" data-action="boss-review-back-topic">
+                <img src="${getBossBattleIconPath("continue")}" alt="" aria-hidden="true" />
+                <span>Quay lại chủ đề</span>
+              </button>
+              <button type="button" class="boss-battle-popup__action" data-action="boss-review-retry">
+                <img src="${getBossBattleIconPath("restart")}" alt="" aria-hidden="true" />
+                <span>Làm lại review</span>
+              </button>
+            </div>
+          </div>
+        </article>
+      `
+      : "";
+
+  if (bossBattleState.assetPreloading) {
+    screen.classList.remove("hidden");
+    screen.innerHTML = `
+      <div class="boss-battle-loading">
+        <div class="boss-battle-loading__orb" aria-hidden="true">✦</div>
+        <div>
+          <span class="boss-battle-eyebrow">Boss Battle Quiz</span>
+          <h2>Đang chuẩn bị trận đấu...</h2>
+          <p>Tài nguyên Boss Battle đang được nạp vào bộ nhớ.</p>
+        </div>
+      </div>
+    `;
+    clearBossBattleAnimationTimers();
+    resultScreen?.classList.add("hidden");
+    reviewScreen?.classList.add("hidden");
+    return;
+  }
 
   if (studentQuizState.loadingQuiz) {
     screen.classList.remove("hidden");
     screen.innerHTML = `
-      <div class="quiz-panel-header">
+      <div class="boss-battle-loading">
+        <div class="boss-battle-loading__orb" aria-hidden="true">✦</div>
         <div>
-          <span class="quiz-panel-kicker">Quiz</span>
-          <h2>Đang tải bài học...</h2>
+          <span class="boss-battle-eyebrow">Boss Battle Quiz</span>
+          <h2>Đang triệu hồi trận chiến...</h2>
+          <p>Bộ câu hỏi đang được chuẩn bị ngay trong Dashboard.</p>
         </div>
       </div>
-      <div class="quiz-loading-card">
-        <span class="quiz-loading-spinner"></span>
-        <p>Đang tải bài học...</p>
+    `;
+    clearBossBattleAnimationTimers();
+    resultScreen?.classList.add("hidden");
+    reviewScreen?.classList.add("hidden");
+    return;
+  }
+
+  if (bossBattleState.loadingSession) {
+    screen.classList.remove("hidden");
+    screen.innerHTML = `
+      <div class="boss-battle-loading">
+        <div class="boss-battle-loading__orb" aria-hidden="true">✦</div>
+        <div>
+          <span class="boss-battle-eyebrow">Boss Battle Quiz</span>
+          <h2>Đang tạo Battle Session...</h2>
+          <p>Dữ liệu battle đang được backend khởi tạo.</p>
+        </div>
+      </div>
+    `;
+    clearBossBattleAnimationTimers();
+    resultScreen?.classList.add("hidden");
+    reviewScreen?.classList.add("hidden");
+    return;
+  }
+
+  if (!quiz || !bossBattleState.sessionId) {
+    screen.classList.add("hidden");
+    screen.innerHTML = "";
+    clearBossBattleAnimationTimers();
+    resultScreen?.classList.add("hidden");
+    reviewScreen?.classList.add("hidden");
+    return;
+  }
+
+  screen.classList.remove("hidden");
+  if (reviewModeActive) {
+    screen.innerHTML = `
+      <div class="boss-battle-panel boss-battle-canvas boss-battle-canvas--review">
+        <div class="boss-battle-effects" aria-hidden="true"></div>
+        ${activeSidebar}
+        <section class="boss-battle-board">
+          ${activeHeader}
+          ${reviewQuestionPanel}
+          ${reviewCompletePopupHtml}
+        </section>
       </div>
     `;
     resultScreen?.classList.add("hidden");
     reviewScreen?.classList.add("hidden");
+    clearBossBattleAnimationTimers();
+    ensureBossBattleAnimationLoop();
+    refreshBossBattleVisualLayer();
     return;
   }
 
-  if (!quiz) {
-    screen.classList.add("hidden");
-    screen.innerHTML = "";
-    resultScreen?.classList.add("hidden");
-    reviewScreen?.classList.add("hidden");
-    return;
-  }
-
-  const answeredCount = getStudentQuizAnsweredCount();
-  const totalQuestions = Array.isArray(quiz.questions)
-    ? quiz.questions.length
-    : 0;
-  const submitDisabled =
-    studentQuizState.submissionLoading || studentQuizState.isSubmitted;
-
-  screen.classList.remove("hidden");
-  screen.innerHTML = `
-    <div class="quiz-panel-header">
-      <div>
-        <span class="quiz-panel-kicker">Quiz đã lưu</span>
-        <h2>${escapeHtml(quiz.topicName || quiz.topicId || "Bài quiz")}</h2>
-        <p>Lớp: ${escapeHtml(quiz.grade || studentQuizState.grade)} ⬢ ${escapeHtml(quiz.subject || studentQuizState.subject)} ⬢ ${escapeHtml(quiz.topicId || "")}</p>
+  if (battleStatus === "active" && popupMode === "none") {
+    screen.innerHTML = `
+      <div class="boss-battle-panel boss-battle-canvas boss-battle-canvas--active">
+        <div class="boss-battle-effects" aria-hidden="true"></div>
+        ${activeSidebar}
+        <section class="boss-battle-board">
+          ${activeHeader}
+          ${activeQuestionPanel}
+          ${activeHint}
+        </section>
       </div>
-      <div class="quiz-panel-progress">
-        <strong>${answeredCount}/${totalQuestions}</strong>
-        <span>đã chọn</span>
-      </div>
-    </div>
-    <div class="quiz-question-list ${studentQuizState.isSubmitted ? "is-submitted" : ""}">
-      ${(Array.isArray(quiz.questions) ? quiz.questions : [])
-        .map((question, questionIndex) => {
-          const selected = getSelectedQuizAnswer(questionIndex);
-          const correctLabel = getQuizCorrectAnswerLabel(question);
-          const isQuestionCorrect =
-            studentQuizState.isSubmitted && selected === correctLabel;
-          const isQuestionWrong =
-            studentQuizState.isSubmitted &&
-            selected &&
-            selected !== correctLabel;
-
-          return `
-            <article class="quiz-question-card ${isQuestionCorrect ? "is-correct" : ""} ${isQuestionWrong ? "is-wrong" : ""}">
-              <div class="quiz-question-meta">Câu ${questionIndex + 1}</div>
-              <h3 class="quiz-question-text">${escapeHtml(question.question)}</h3>
-              <div class="quiz-option-grid">
-                ${(Array.isArray(question.options) ? question.options : [])
-                  .map((option) => {
-                    const optionLabel = normalizeQuizText(
-                      option.label,
-                    ).toUpperCase();
-                    const isSelected = selected === optionLabel;
-                    const isCorrectAnswer =
-                      studentQuizState.isSubmitted &&
-                      optionLabel === correctLabel;
-                    const isWrongSelection =
-                      studentQuizState.isSubmitted &&
-                      isSelected &&
-                      optionLabel !== correctLabel;
-
-                    return `
-                      <button
-                        type="button"
-                        class="quiz-option-btn ${isSelected ? "is-selected" : ""} ${isCorrectAnswer ? "is-correct" : ""} ${isWrongSelection ? "is-wrong" : ""}"
-                        data-question-index="${questionIndex}"
-                        data-option-label="${escapeHtml(optionLabel)}"
-                        ${studentQuizState.isSubmitted ? "disabled" : ""}
-                      >
-                        <span class="quiz-option-label">${escapeHtml(optionLabel)}</span>
-                        <span class="quiz-option-text">${escapeHtml(option.text)}</span>
-                      </button>
-                    `;
-                  })
-                  .join("")}
+    `;
+  } else {
+    screen.innerHTML = `
+      <div class="boss-battle-panel boss-battle-canvas boss-battle-canvas--terminal boss-battle-canvas--${popupMode || battleStatus}">
+        <div class="boss-battle-effects" aria-hidden="true"></div>
+        ${activeSidebar}
+        <section class="boss-battle-board">
+          ${activeHeader}
+          <article class="boss-battle-popup boss-battle-popup--${popupMode || battleStatus}">
+            <img class="boss-battle-popup__panel" src="${escapeHtml(popupPanelPath)}" alt="" aria-hidden="true" />
+            <div class="boss-battle-popup__content">
+              <span class="boss-battle-popup__badge">${escapeHtml(
+                popupMode === "victory"
+                  ? "Victory Popup"
+                  : popupMode === "defeat"
+                    ? "Warning Popup"
+                    : popupMode === "completed"
+                      ? "Default Popup"
+                      : outcomeCopy.badge,
+              )}</span>
+              <h2>${escapeHtml(
+                popupMode === "victory"
+                  ? "CHIẾN THẮNG!"
+                  : popupMode === "defeat"
+                    ? "HẾT LƯỢT!"
+                    : popupMode === "completed"
+                      ? "HOÀN THÀNH BÀI!"
+                      : outcomeCopy.title,
+              )}</h2>
+              <p>${escapeHtml(
+                popupMode === "victory"
+                  ? "Boss đã bị đánh bại."
+                  : popupMode === "defeat"
+                    ? "Bạn đã hết tim."
+                    : popupMode === "completed"
+                      ? "Đã hoàn thành toàn bộ câu hỏi."
+                      : outcomeCopy.subtitle,
+              )}</p>
+              ${terminalSceneHtml}
+              ${terminalStatsHtml}
+              <div class="boss-battle-popup__actions">
+                ${getBossBattlePopupButtonSet(popupMode || battleStatus)}
               </div>
-            </article>
-          `;
-        })
-        .join("")}
-    </div>
-    <div class="quiz-actions">
-      <button
-        type="button"
-        class="quiz-submit-btn"
-        data-action="submit-quiz"
-        ${submitDisabled ? "disabled" : ""}
-      >
-        ${studentQuizState.submissionLoading ? "Đang nộp..." : studentQuizState.isSubmitted ? "Quiz đã nộp" : "Submit Quiz"}
-      </button>
-    </div>
-  `;
+            </div>
+          </article>
+          ${getBossBattleAchievementPopupHtml()}
+        </section>
+      </div>
+    `;
+  }
+
+  ensureBossBattleAnimationLoop();
+  refreshBossBattleVisualLayer();
 }
 
 function renderStudentResultScreen() {
@@ -9417,32 +12284,32 @@ function renderStudentResultScreen() {
 
   screen.classList.remove("hidden");
   screen.innerHTML = `
-    <div class="result-card">
-      <div class="result-card-header">
+    <div class="result-card boss-battle-result__card">
+      <div class="result-card-header boss-battle-result__header">
         <div>
           <span class="quiz-panel-kicker">Kết quả</span>
           <h2>Bạn đã hoàn thành bài quiz</h2>
         </div>
-        <div class="result-score-badge">${escapeHtml(result.score)}%</div>
+        <div class="result-score-badge boss-battle-result__score">${escapeHtml(result.score)}%</div>
       </div>
 
-      <div class="result-stats">
-        <div class="result-stat">
+      <div class="result-stats boss-battle-result__stats">
+        <div class="result-stat boss-battle-result__stat">
           <strong>${escapeHtml(result.correctAnswers)}</strong>
           <span>đúng</span>
         </div>
-        <div class="result-stat">
+        <div class="result-stat boss-battle-result__stat">
           <strong>${escapeHtml(result.totalQuestions)}</strong>
           <span>Tổng câu</span>
         </div>
       </div>
 
-      <div class="result-summary">
+      <div class="result-summary boss-battle-result__summary">
         <p><b>${escapeHtml(result.correctAnswers)}</b> / <b>${escapeHtml(result.totalQuestions)}</b> câu trả lời đúng.</p>
       </div>
 
-      <div class="result-actions">
-        <button type="button" class="quiz-link-btn" data-action="show-wrong-review">
+      <div class="result-actions boss-battle-result__actions">
+        <button type="button" class="quiz-link-btn boss-battle-result__review-btn" data-action="show-wrong-review">
           Xem câu sai
         </button>
       </div>
@@ -9469,20 +12336,20 @@ function renderStudentWrongAnswerScreen() {
 
   screen.classList.remove("hidden");
   screen.innerHTML = `
-    <div class="wrong-review-card">
-      <div class="wrong-review-header">
+    <div class="wrong-review-card boss-battle-review__card">
+      <div class="wrong-review-header boss-battle-review__header">
         <div>
           <span class="quiz-panel-kicker">Wrong Answer Review</span>
           <h2>Câu trả lời sai</h2>
         </div>
-        <div class="wrong-review-count">${escapeHtml(wrongQuestions.length)} câu</div>
+        <div class="wrong-review-count boss-battle-review__count">${escapeHtml(wrongQuestions.length)} câu</div>
       </div>
 
       ${
         wrongQuestions.length === 0
-          ? `<div class="quiz-empty">Không có câu sai. Bài làm của bạn rất tốt.</div>`
+          ? `<div class="quiz-empty boss-battle-review__empty">Không có câu sai. Bài làm của bạn rất tốt.</div>`
           : `
-            <div class="wrong-review-list">
+            <div class="wrong-review-list boss-battle-review__list">
               ${wrongQuestions
                 .map((item) => {
                   const userAnswerLabel = normalizeQuizText(item.userAnswer);
@@ -9495,7 +12362,7 @@ function renderStudentWrongAnswerScreen() {
                   );
 
                   return `
-                    <article class="wrong-review-item">
+                    <article class="wrong-review-item boss-battle-review__item">
                       <div class="wrong-review-meta">Câu ${Number(item.questionIndex) + 1}</div>
                       <h3>${escapeHtml(item.question)}</h3>
                       <div class="wrong-review-row">
@@ -9539,6 +12406,7 @@ async function loadStudentQuizTopics() {
   studentQuizState.quiz = null;
   studentQuizState.answers = [];
   resetQuizSubmissionState();
+  resetBossBattleState(0);
   studentQuizState.loadedTopicsKey = "";
   studentQuizState.topicsMessage = "";
   studentQuizState.loadingTopics = true;
@@ -9602,6 +12470,9 @@ async function loadStudentQuizByTopic(topicId) {
   studentQuizState.quiz = null;
   studentQuizState.answers = [];
   resetQuizSubmissionState();
+  resetBossBattleState(0);
+  void ensurePetModuleLoaded().catch(() => {});
+  bossBattleState.assetPreloading = false;
 
   renderStudentTopicCards();
   renderStudentQuizFlow();
@@ -9627,14 +12498,21 @@ async function loadStudentQuizByTopic(topicId) {
 
     if (questionCount === 0) {
       studentQuizState.quiz = null;
+      resetBossBattleState(0);
       showToast("Chủ đề này hiện chưa có bộ câu hỏi luyện tập.", "error");
       return;
     }
 
     studentQuizState.quiz = quizData;
     studentQuizState.answers = [];
+    resetBossBattleState(questionCount);
+    const restored = await restoreBossBattleSessionFromStorage(quizData);
+    if (!restored) {
+      await createBossBattleSessionForCurrentQuiz();
+    }
   } catch (error) {
     studentQuizState.quiz = null;
+    resetBossBattleState(0);
     const errorMessage = String(error?.message || "");
     if (
       errorMessage.includes("Quiz not found") ||
@@ -9648,6 +12526,7 @@ async function loadStudentQuizByTopic(topicId) {
     }
   } finally {
     studentQuizState.loadingQuiz = false;
+    bossBattleState.assetPreloading = false;
     renderStudentTopicCards();
     renderStudentQuizFlow();
   }
@@ -9759,10 +12638,6 @@ document.addEventListener("click", (event) => {
   );
 
   if (optionButton && getStudentQuizScreen()?.contains(optionButton)) {
-    if (studentQuizState.isSubmitted) {
-      return;
-    }
-
     const questionIndex = Number(optionButton.dataset.questionIndex);
     const selected = normalizeQuizText(
       optionButton.dataset.optionLabel,
@@ -9772,8 +12647,22 @@ document.addEventListener("click", (event) => {
       return;
     }
 
-    setStudentQuizAnswer(questionIndex, selected);
-    renderStudentQuizFlow();
+    if (bossBattleReviewMode.active) {
+      submitBossBattleReviewAnswer(questionIndex, selected);
+      return;
+    }
+
+    if (
+      bossBattleState.loadingSession ||
+      bossBattleState.answering ||
+      normalizeBossBattleStatus(bossBattleState.battleStatus) !== "active"
+    ) {
+      return;
+    }
+
+    void submitBossBattleAnswer(questionIndex, selected).catch((error) => {
+      showToast(error.message || "Không thể gửi đáp án.", "error");
+    });
     return;
   }
 
@@ -9782,12 +12671,67 @@ document.addEventListener("click", (event) => {
   if (actionButton && getStudentQuizRoot()?.contains(actionButton)) {
     const action = actionButton.dataset.action;
 
-    if (action === "submit-quiz") {
-      void submitStudentQuiz();
+    if (actionButton.closest(".boss-battle-popup")) {
+      playClick();
+    }
+
+    if (action === "battle-hint") {
+      void requestBossBattleHint().catch((error) => {
+        showToast(error.message || "Không thể dùng gợi ý.", "error");
+      });
+      return;
+    }
+
+    if (action === "battle-popup-exit") {
+      closeBossBattlePopup();
+      goBackSubjects();
+      return;
+    }
+
+    if (action === "battle-popup-continue") {
+      closeBossBattlePopup();
+      goBackSubjects();
+      return;
+    }
+
+    if (action === "battle-popup-review-wrong") {
+      closeBossBattlePopup();
+      showBossBattleWrongAnswerReview();
+      return;
+    }
+
+    if (action === "battle-popup-retry") {
+      const topicId = normalizeQuizText(
+        bossBattleState.topicId || studentQuizState.selectedTopicId || "",
+      );
+
+      closeBossBattlePopup();
+
+      if (topicId) {
+        void loadStudentQuizByTopic(topicId);
+      }
+      return;
+    }
+
+    if (action === "boss-review-back-topic") {
+      closeBossBattleReviewMode();
+      goBackSubjects();
+      return;
+    }
+
+    if (action === "boss-review-retry") {
+      restartBossBattleReviewMode();
+      return;
     }
 
     if (action === "show-wrong-review") {
       showStudentWrongAnswerReview();
+      return;
+    }
+
+    if (action === "boss-achievement-close") {
+      playClick();
+      closeBossBattleAchievementPopup();
     }
   }
 });
