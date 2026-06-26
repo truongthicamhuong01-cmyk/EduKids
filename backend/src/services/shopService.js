@@ -17,6 +17,20 @@ function normalizeText(value) {
   return String(value || "").trim();
 }
 
+function normalizeItemReference(value) {
+  if (!value || typeof value === "string" || typeof value === "number") {
+    return normalizeText(value);
+  }
+
+  if (typeof value === "object") {
+    return normalizeText(
+      value.itemId || value.id || value.key || value.code || value.item || "",
+    );
+  }
+
+  return "";
+}
+
 function ensureStudent(user) {
   if (!user) {
     throw new ApiError(401, "Thiếu xác thực", PET_ERROR_CODES.UNAUTHORIZED);
@@ -38,15 +52,24 @@ function resolvePetLevel(user, petState) {
 }
 
 function buildShopItemView(itemConfig, userLevel, inventoryState) {
-  const itemId = normalizeText(itemConfig.itemId);
+  const itemId = normalizeText(
+    itemConfig.itemId || itemConfig.id || itemConfig.key || itemConfig.code,
+  );
   const categoryKey = normalizeCategoryKey(itemConfig.category);
   const ownedQuantity = Number(inventoryState?.categories?.[categoryKey]?.[itemId]?.quantity || 0);
   const maxStack = Math.max(1, Math.floor(toNumber(itemConfig.maxStack, 99)));
   const unlockLevel = Math.max(1, Math.floor(toNumber(itemConfig.unlockLevel, 1)));
+  const name = normalizeText(itemConfig.name || itemConfig.title || itemId);
+  const key = normalizeText(itemConfig.key || itemId);
+  const code = normalizeText(itemConfig.code || itemId);
 
   return {
     ...itemConfig,
+    id: itemId,
+    key: key || itemId,
+    code: code || itemId,
     itemId,
+    name: name || itemId,
     category: categoryKey || itemConfig.category,
     unlockLevel,
     maxStack,
@@ -105,7 +128,9 @@ async function getShop({ uid, requestId = "" }) {
 
 async function buyItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
   const normalizedUid = normalizeText(uid);
-  const itemId = normalizeText(body.itemId);
+  const itemId = normalizeItemReference(
+    body.itemId || body.item || body.id || body.key || body.code || "",
+  );
   const quantity = Math.max(1, Math.floor(Number(body.quantity) || 1));
 
   if (!itemId) {

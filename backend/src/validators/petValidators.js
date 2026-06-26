@@ -5,6 +5,20 @@ function normalizeText(value) {
   return String(value || "").trim();
 }
 
+function normalizeItemReference(value) {
+  if (!value || typeof value === "string" || typeof value === "number") {
+    return normalizeText(value);
+  }
+
+  if (typeof value === "object") {
+    return normalizeText(
+      value.itemId || value.id || value.key || value.code || value.item || "",
+    );
+  }
+
+  return "";
+}
+
 function validateSelectPetBody(body = {}) {
   const petTypeId = normalizeText(body.petTypeId);
   const petName = normalizeText(body.petName || body.name);
@@ -68,6 +82,33 @@ function validatePetActionBody(body = {}, actionName = "") {
       itemId,
       quantity,
       targetPetId,
+      idempotencyKey,
+    };
+  }
+
+  if (actionName === "shop-buy") {
+    const itemId = normalizeItemReference(
+      body.itemId || body.item || body.id || body.key || body.code || "",
+    );
+    const quantity = Math.max(1, Math.floor(Number(body.quantity || 1)));
+
+    if (!itemId) {
+      throw new ApiError(400, "itemId is required", PET_ERROR_CODES.VALIDATION_ERROR, {
+        actionName,
+        fieldErrors: [{ field: "itemId", message: "itemId is required" }],
+      });
+    }
+
+    if (quantity <= 0 || !Number.isFinite(quantity)) {
+      throw new ApiError(400, "quantity must be greater than 0", PET_ERROR_CODES.VALIDATION_ERROR, {
+        actionName,
+        fieldErrors: [{ field: "quantity", message: "quantity must be greater than 0" }],
+      });
+    }
+
+    return {
+      itemId,
+      quantity,
       idempotencyKey,
     };
   }

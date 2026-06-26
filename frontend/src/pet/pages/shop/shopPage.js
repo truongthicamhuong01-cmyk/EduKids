@@ -75,6 +75,29 @@ function normalizeCategoryKey(category = "") {
   return "";
 }
 
+function normalizeShopItem(item = {}) {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+
+  const itemId = String(
+    item.itemId || item.id || item.key || item.code || "",
+  ).trim();
+
+  if (!itemId) {
+    return null;
+  }
+
+  return {
+    ...item,
+    id: String(item.id || itemId).trim() || itemId,
+    key: String(item.key || itemId).trim() || itemId,
+    code: String(item.code || itemId).trim() || itemId,
+    itemId,
+    name: String(item.name || item.title || itemId).trim() || itemId,
+  };
+}
+
 function normalizeCategoryLabel(category = "") {
   const normalized = normalizeCategoryKey(category);
   const labels = {
@@ -310,10 +333,12 @@ export function createShopPage({ store, shopApi } = {}) {
       const shouldDisable = Boolean(state.buyingItemId) && !isCurrent;
       const item =
         state.items.find(
-          (entry) => String(entry?.itemId || "") === currentItemId,
+          (entry) =>
+            String(entry?.itemId || entry?.id || entry?.key || entry?.code || "") === currentItemId,
         ) ||
         snapshot.shop?.items?.find?.(
-          (entry) => String(entry?.itemId || "") === currentItemId,
+          (entry) =>
+            String(entry?.itemId || entry?.id || entry?.key || entry?.code || "") === currentItemId,
         );
       const reason = item ? getItemReason(item, snapshot) : null;
       const actionText = card.querySelector("[data-shop-action-text]");
@@ -466,7 +491,8 @@ export function createShopPage({ store, shopApi } = {}) {
 
     if (Array.isArray(categoryItems)) {
       const found = categoryItems.find(
-        (entry) => String(entry?.itemId || "").trim() === normalizedItemId,
+        (entry) =>
+          String(entry?.itemId || entry?.id || entry?.key || entry?.code || "").trim() === normalizedItemId,
       );
       return Math.max(0, Number(found?.quantity ?? item.ownedQuantity ?? 0));
     }
@@ -750,28 +776,35 @@ export function createShopPage({ store, shopApi } = {}) {
   }
 
   function renderCard(item, index, snapshot = {}) {
-    const icon = resolveItemIconPath(item);
-    const itemId = String(item.itemId || "").trim();
-    const ownedQuantity = getInventoryOwnedQuantity(snapshot, item);
-    const reason = getItemReason(item, snapshot);
-    const price = Math.max(0, Number(item.price || 0));
-    const categoryLabel = normalizeCategoryLabel(item.category || "");
+    const normalizedItem = normalizeShopItem(item) || item;
+    const icon = resolveItemIconPath(normalizedItem);
+    const itemId = String(
+      normalizedItem?.itemId ||
+        normalizedItem?.id ||
+        normalizedItem?.key ||
+        normalizedItem?.code ||
+        "",
+    ).trim();
+    const ownedQuantity = getInventoryOwnedQuantity(snapshot, normalizedItem);
+    const reason = getItemReason(normalizedItem, snapshot);
+    const price = Math.max(0, Number(normalizedItem?.price || 0));
+    const categoryLabel = normalizeCategoryLabel(normalizedItem.category || "");
     const toneClass = `tone-${index % 5}`;
-    const categoryKey = normalizeCategoryKey(item.category || "");
+    const categoryKey = normalizeCategoryKey(normalizedItem.category || "");
     const quantityReached =
-      ownedQuantity >= Math.max(1, Number(item.maxStack || 99));
+      ownedQuantity >= Math.max(1, Number(normalizedItem.maxStack || 99));
     const isBuying = state.buyingItemId === itemId;
-    const actionText = getActionButtonText(item, reason, isBuying);
-    const actionStatus = getActionStatusText(item, reason, isBuying);
+    const actionText = getActionButtonText(normalizedItem, reason, isBuying);
+    const actionStatus = getActionStatusText(normalizedItem, reason, isBuying);
 
     return `
-      <article class="pet-shop-card ${toneClass} ${reason.disabled ? "is-disabled" : ""}" data-shop-item-id="${escapeHtml(itemId)}" data-shop-item-category="${escapeHtml(categoryKey)}">
+      <article class="pet-shop-card ${toneClass} ${reason.disabled ? "is-disabled" : ""}" data-shop-item-id="${escapeHtml(itemId)}" data-shop-item-key="${escapeHtml(normalizedItem.key || itemId)}" data-shop-item-code="${escapeHtml(normalizedItem.code || itemId)}" data-shop-item-category="${escapeHtml(categoryKey)}">
         <div class="pet-shop-card__inner">
-          <h3 class="pet-shop-card__title">${escapeHtml(item.name || itemId)}</h3>
+          <h3 class="pet-shop-card__title">${escapeHtml(normalizedItem.name || itemId)}</h3>
           <div class="pet-shop-card__visual">
-            <img src="${escapeHtml(icon)}" alt="${escapeHtml(item.name || itemId)}" loading="eager" decoding="async" />
+            <img src="${escapeHtml(icon)}" alt="${escapeHtml(normalizedItem.name || itemId)}" loading="eager" decoding="async" />
           </div>
-          <p class="pet-shop-card__description">${escapeHtml(item.description || "Món đồ hữu ích cho pet.")}</p>
+          <p class="pet-shop-card__description">${escapeHtml(normalizedItem.description || "Món đồ hữu ích cho pet.")}</p>
           <div class="pet-shop-card__meta">
             <span class="pet-shop-card__category">${escapeHtml(categoryLabel)}</span>
             <span class="pet-shop-card__quantity">Hiện có: <strong data-shop-owned="${escapeHtml(itemId)}">${formatNumber(ownedQuantity)}</strong></span>
@@ -783,7 +816,7 @@ export function createShopPage({ store, shopApi } = {}) {
               data-action="buy-item"
               data-shop-item-id="${escapeHtml(itemId)}"
               data-shop-price="${escapeHtml(price)}"
-              aria-label="${escapeHtml(actionStatus)} ${escapeHtml(item.name || itemId)}"
+              aria-label="${escapeHtml(actionStatus)} ${escapeHtml(normalizedItem.name || itemId)}"
               ${reason.disabled ? "disabled" : ""}
             >
               <span class="pet-shop-card__action-text" data-shop-action-text>${escapeHtml(actionText)}</span>
@@ -878,9 +911,12 @@ export function createShopPage({ store, shopApi } = {}) {
     const items = Array.isArray(response?.data?.items)
       ? response.data.items
       : [];
-    state.items = items.filter((item) =>
-      SHOP_CATEGORY_ORDER.includes(normalizeCategoryKey(item.category || "")),
-    );
+    state.items = items
+      .map((item) => normalizeShopItem(item))
+      .filter(Boolean)
+      .filter((item) =>
+        SHOP_CATEGORY_ORDER.includes(normalizeCategoryKey(item.category || "")),
+      );
     state.userLevel = Math.max(
       1,
       Number(response?.data?.userLevel || state.userLevel || 1),
@@ -980,8 +1016,11 @@ export function createShopPage({ store, shopApi } = {}) {
 
     const item =
       getSortedItems(store?.getState?.() || {}).find(
-        (entry) => entry.itemId === itemId,
-      ) || state.items.find((entry) => entry.itemId === itemId);
+        (entry) => String(entry?.itemId || entry?.id || entry?.key || entry?.code || "") === itemId,
+      ) ||
+      state.items.find(
+        (entry) => String(entry?.itemId || entry?.id || entry?.key || entry?.code || "") === itemId,
+      );
     if (!item) {
       return;
     }
@@ -996,10 +1035,12 @@ export function createShopPage({ store, shopApi } = {}) {
     spawnBuyFx(card);
 
     try {
-      const response = await shopApi.buyItem({
+      const body = {
         itemId,
+        item: itemId,
         idempotencyKey: `shop-buy-${itemId}-${Date.now().toString(36)}`,
-      });
+      };
+      const response = await shopApi.buyItem(body);
 
       if (store?.applyBackendResponse) {
         store.applyBackendResponse(response, "shop-buy");

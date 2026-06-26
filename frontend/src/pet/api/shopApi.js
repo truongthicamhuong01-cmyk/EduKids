@@ -5,7 +5,9 @@ export function createShopApi() {
 
   return {
     getShop: (options = {}) => client.request("/api/shop", { method: "GET", ...options }),
-    buyItem: (body, options = {}) => client.request("/api/shop/buy", { method: "POST", body, ...options }),
+    buyItem: (body, options = {}) => {
+      console.log("SHOP BUY BODY:", body);
+      return client.request("/api/shop/buy", { method: "POST", body, ...options });
+    },
   };
 }
-
