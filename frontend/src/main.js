@@ -5802,10 +5802,7 @@ function syncRouteForPageChange(nextPageId, previousPageId, role) {
     return;
   }
 
-  if (
-    previousPageId === "learning-path" &&
-    currentPath === learningPath
-  ) {
+  if (previousPageId === "learning-path" && currentPath === learningPath) {
     window.history.replaceState({}, "", "/");
     return;
   }
@@ -5885,18 +5882,6 @@ function changePage(pageId) {
     typeof initializeStudentQuizPage === "function"
   ) {
     void initializeStudentQuizPage();
-    const recoveryState = getBossBattleRecoveryStorageState();
-    if (recoveryState?.topicId && recoveryState?.sessionId) {
-      queueMicrotask(() => {
-        if (
-          currentPage === "subjects" &&
-          !studentQuizState.loadingQuiz &&
-          !bossBattleState.loadingSession
-        ) {
-          void loadStudentQuizByTopic(recoveryState.topicId);
-        }
-      });
-    }
   }
 
   if (
@@ -6480,6 +6465,36 @@ function getProfileActivityLogs(profile) {
   return Array.isArray(candidateLogs) ? candidateLogs : [];
 }
 
+function getStudentStreakValue(profile, activityLogs = []) {
+  const stats = profile?.stats || {};
+  const numericStreak = Number(stats.streak);
+
+  if (Number.isFinite(numericStreak) && numericStreak > 0) {
+    return numericStreak;
+  }
+
+  const logs = Array.isArray(activityLogs) ? activityLogs : [];
+  return logs.length > 0 ? calculateStreak(logs) : 0;
+}
+
+function getStudentStudyMinutesValue(profile, activityLogs = []) {
+  const logs = Array.isArray(activityLogs) ? activityLogs : [];
+  const stats = profile?.stats || {};
+  const numericStudyMinutes =
+    Number(stats.studyMinutes) ||
+    Number(stats.studyTimeMinutes) ||
+    Number(stats.timeStudied);
+
+  if (Number.isFinite(numericStudyMinutes) && numericStudyMinutes > 0) {
+    return numericStudyMinutes;
+  }
+
+  return logs.reduce(
+    (total, entry) => total + Math.max(0, Number(entry?.studyMinutes) || 0),
+    0,
+  );
+}
+
 function getStudentProgressStats(profile) {
   const stats = profile?.stats || {};
   const rawExp = Number(stats.exp);
@@ -6703,14 +6718,7 @@ function getStudentProgressOverview(profile, activityLogs = []) {
       : null;
 
   return {
-    studyTime:
-      Number(stats.studyMinutes) ||
-      Number(stats.studyTimeMinutes) ||
-      Number(stats.timeStudied) ||
-      logs.reduce(
-        (total, entry) => total + Math.max(0, Number(entry?.studyMinutes) || 0),
-        0,
-      ),
+    studyTime: getStudentStudyMinutesValue(profile, logs),
     completedAssignments:
       Number(stats.completedQuestions) ||
       Number(stats.completedAssignments) ||
@@ -6719,7 +6727,7 @@ function getStudentProgressOverview(profile, activityLogs = []) {
     averageScore: Number.isFinite(Number(stats.averageScore))
       ? Number(stats.averageScore)
       : averageScore,
-    streak: Number(stats.streak) || 0,
+    streak: getStudentStreakValue(profile, logs),
   };
 }
 
@@ -7158,7 +7166,10 @@ function renderStudentRecentWrongAnswers(progress) {
   if (button) {
     button.setAttribute("type", "button");
     button.setAttribute("data-retry-later", "true");
-    button.setAttribute("title", "Chức năng luyện lại sẽ được hoàn thiện ở giai đoạn sau");
+    button.setAttribute(
+      "title",
+      "Chức năng luyện lại sẽ được hoàn thiện ở giai đoạn sau",
+    );
   }
 }
 
@@ -7784,7 +7795,9 @@ function buildStudentLearningPathBadges(learningPathState) {
   );
   const rewardedBadges = new Set(
     Array.isArray(state?.rewards?.badges)
-      ? state.rewards.badges.map((id) => String(id || "").trim()).filter(Boolean)
+      ? state.rewards.badges
+          .map((id) => String(id || "").trim())
+          .filter(Boolean)
       : [],
   );
   const seasonId = String(state.seasonId || season?.id || "").trim();
@@ -7815,7 +7828,9 @@ function buildStudentLearningPathBadges(learningPathState) {
       return {
         id: badgeId,
         name: String(
-          badge.name || mountain?.badgeName || `Huy hiệu ${mountain?.name || ""}`,
+          badge.name ||
+            mountain?.badgeName ||
+            `Huy hiệu ${mountain?.name || ""}`,
         ).trim(),
         image: String(
           badge.image || mountain?.badgeImage || mountain?.image || "",
@@ -7923,7 +7938,9 @@ async function syncStudentAchievementBadges(profile) {
     return;
   }
 
-  const userId = String(profile?.uid || profile?.userId || profile?.id || "").trim();
+  const userId = String(
+    profile?.uid || profile?.userId || profile?.id || "",
+  ).trim();
 
   if (!userId) {
     renderStudentAchievementBadgeState("Chưa có huy hiệu nào");
@@ -7963,10 +7980,7 @@ function renderStudentHomeOverview(profile, activityLogs = null) {
   const logs = Array.isArray(activityLogs)
     ? activityLogs
     : getProfileActivityLogs(profile);
-  const streak =
-    logs.length > 0
-      ? calculateStreak(logs)
-      : Number(profile?.stats?.streak) || 0;
+  const streak = getStudentStreakValue(profile, logs);
   const currentExp = progressStats.currentExp;
   const requiredExp = Math.max(progressStats.requiredExp, 1);
   const expPercent = Math.max(
@@ -8018,6 +8032,24 @@ function applyLatestCurrentUser(profile) {
   }
 }
 
+function syncPetWalletFromProfile(profile) {
+  const pet = getPetModuleApi();
+  const coinValue = Math.max(0, Math.floor(Number(profile?.stats?.eduCoin || 0)));
+
+  if (!pet?.store?.setState) {
+    return;
+  }
+
+  pet.store.setState(
+    {
+      wallet: {
+        eduCoin: coinValue,
+      },
+    },
+    "STATE_UPDATED",
+  );
+}
+
 async function syncStudentHomeRecommendations(profile) {
   if (normalizeRole(profile?.role) !== "student") {
     return;
@@ -8049,10 +8081,7 @@ function renderStudentProfile(profile) {
   const progressStats = getStudentProgressStats(profile);
   const activityLogs = getProfileActivityLogs(profile);
   const completedCount = getStudentProgressCount(profile, activityLogs);
-  const streakValue =
-    activityLogs.length > 0
-      ? calculateStreak(activityLogs)
-      : Number(profile?.stats?.streak) || 0;
+  const streakValue = getStudentStreakValue(profile, activityLogs);
 
   if (avatar) {
     avatar.src = getProfileAvatar(profile);
@@ -8074,15 +8103,11 @@ function renderStudentProfile(profile) {
   }
 
   if (studyMinutes) {
-    const fallbackStudyMinutes =
-      Number(profile?.stats?.studyMinutes) ||
-      Number(profile?.stats?.studyTimeMinutes) ||
-      Number(profile?.stats?.timeStudied) ||
-      activityLogs.reduce(
-        (total, entry) => total + Math.max(0, Number(entry?.studyMinutes) || 0),
-        0,
-      );
-    studyMinutes.innerHTML = `${formatStatValue(fallbackStudyMinutes)} <span>phút</span>`;
+    const resolvedStudyMinutes = getStudentStudyMinutesValue(
+      profile,
+      activityLogs,
+    );
+    studyMinutes.innerHTML = `${formatStatValue(resolvedStudyMinutes)} <span>phút</span>`;
   }
 
   if (fullName) {
@@ -9051,6 +9076,7 @@ const bossBattleState = {
   revealedQuestion: null,
   revealedCorrectAnswer: "",
   revealedCorrect: null,
+  terminalLocked: false,
 };
 
 const bossBattleReviewMode = {
@@ -9070,8 +9096,8 @@ const bossBattleReviewMode = {
 };
 
 const BOSS_BATTLE_BOSS_FRAME_COUNTS = {
-  idle: 7,
-  angry: 7,
+  idle: 8,
+  angry: 8,
   rage: 8,
   die: 8,
 };
@@ -9198,7 +9224,8 @@ function getStudentQuizLoadButton() {
 }
 
 function setStudentQuizScreen(screen) {
-  studentQuizScreenState.screen = screen === "bossBattle" ? "bossBattle" : "subjects";
+  studentQuizScreenState.screen =
+    screen === "bossBattle" ? "bossBattle" : "subjects";
 }
 
 function isStudentBossBattleScreenActive() {
@@ -9318,10 +9345,10 @@ function getSubmittedAnswerOption(question, selectedLabel) {
 }
 
 const BOSS_BATTLE_OPTION_META = [
-  { icon: "⚔️", tone: "blue" },
-  { icon: "✨", tone: "gold" },
-  { icon: "🛡️", tone: "green" },
-  { icon: "🚀", tone: "violet" },
+  { iconPath: getBossBattleAssetPath("icons", "icon_A.png"), tone: "blue" },
+  { iconPath: getBossBattleAssetPath("icons", "icon_B.png"), tone: "gold" },
+  { iconPath: getBossBattleAssetPath("icons", "icon_C.png"), tone: "green" },
+  { iconPath: getBossBattleAssetPath("icons", "icon_D.png"), tone: "violet" },
 ];
 
 function getBossBattleOptionMeta(index) {
@@ -9353,6 +9380,15 @@ function normalizeBossBattleStatus(value) {
   return ["active", "victory", "defeat", "completed"].includes(normalized)
     ? normalized
     : "idle";
+}
+
+function isBossBattleTerminalStatus(value) {
+  const normalized = normalizeBossBattleStatus(value);
+  return (
+    normalized === "victory" ||
+    normalized === "defeat" ||
+    normalized === "completed"
+  );
 }
 
 function getBossBattleStateFromHP(hp) {
@@ -9395,19 +9431,23 @@ function getBossBattleCurrentPetState() {
     return null;
   }
 
-  const petType = normalizeQuizText(petState.petTypeId || petState.petType).toLowerCase();
+  const petType = normalizeQuizText(
+    petState.petTypeId || petState.petType,
+  ).toLowerCase();
   const petLevelValue = Number.parseInt(
-    String(petState.level || petState.petLevel || "")
-      .replace(/[^\d]/g, ""),
+    String(petState.level || petState.petLevel || "").replace(/[^\d]/g, ""),
     10,
   );
-  const petLevel = Number.isFinite(petLevelValue) && petLevelValue > 0 ? petLevelValue : 0;
+  const petLevel =
+    Number.isFinite(petLevelValue) && petLevelValue > 0 ? petLevelValue : 0;
 
   if (!petType || !petLevel) {
     return null;
   }
 
-  const petName = normalizeQuizText(petState.petName || petState.name || petType);
+  const petName = normalizeQuizText(
+    petState.petName || petState.name || petType,
+  );
 
   return {
     petType,
@@ -9441,7 +9481,7 @@ function getBossBattleSoundPath(soundName) {
   }
 
   if (normalized === "click") {
-    return BOSS_BATTLE_SOUND_PATHS.correct;
+    return BOSS_BATTLE_SOUND_PATHS.click;
   }
 
   return BOSS_BATTLE_SOUND_PATHS.correct;
@@ -9479,7 +9519,9 @@ function getBossBattleImageAssetManifest() {
 
   ["elephant", "horse"].forEach((petType) => {
     [1, 10, 20, 30, 50].forEach((level) => {
-      manifest.push(getBossBattleAssetPath("pets", petType, `level_${level}.png`));
+      manifest.push(
+        getBossBattleAssetPath("pets", petType, `level_${level}.png`),
+      );
     });
   });
 
@@ -9492,6 +9534,7 @@ function getBossBattleAudioAssetManifest() {
     BOSS_BATTLE_SOUND_PATHS.wrong,
     BOSS_BATTLE_SOUND_PATHS.reward,
     BOSS_BATTLE_SOUND_PATHS.bossDie,
+    BOSS_BATTLE_SOUND_PATHS.click,
   ].filter(Boolean);
 }
 
@@ -9663,8 +9706,15 @@ function getBossBattleBossFrameCount(state) {
 function getBossBattleBossFramePath(state, frameIndex) {
   const normalizedState = normalizeQuizText(state).toLowerCase();
   const frameCount = getBossBattleBossFrameCount(normalizedState);
-  const frame = Math.max(1, Math.min(frameCount, Math.floor(Number(frameIndex) || 1)));
-  return getBossBattleAssetPath("boss", normalizedState || "idle", `${frame}.png`);
+  const frame = Math.max(
+    1,
+    Math.min(frameCount, Math.floor(Number(frameIndex) || 1)),
+  );
+  return getBossBattleAssetPath(
+    "boss",
+    normalizedState || "idle",
+    `${frame}.png`,
+  );
 }
 
 function getBossBattleStateFromBossHP(hp) {
@@ -9774,7 +9824,10 @@ function syncBossBattleHPVisuals() {
   }
 
   const bossFill = screen.querySelector(".boss-battle-header-card__track-fill");
-  const bossHP = Math.max(0, Math.min(100, Number(bossBattleState.bossHP) || 0));
+  const bossHP = Math.max(
+    0,
+    Math.min(100, Number(bossBattleState.bossHP) || 0),
+  );
 
   if (bossFill) {
     bossFill.style.width = `${bossHP}%`;
@@ -9818,12 +9871,12 @@ function triggerBossBattleFeedback(type) {
   }
 
   const bossCard = screen.querySelector(".boss-battle-header-card__boss");
-  const bossImage = screen.querySelector(".boss-battle-header-card__boss-image");
+  const bossImage = screen.querySelector(
+    ".boss-battle-header-card__boss-image",
+  );
   const petCard = screen.querySelector(".boss-battle-sidebar__pet");
   const petImage = screen.querySelector(".boss-battle-sidebar__pet-image");
-  const comboCard = screen.querySelector(
-    ".boss-battle-sidebar__metric--combo",
-  );
+  const comboCard = screen.querySelector(".boss-battle-sidebar__metric--combo");
 
   const addClass = (node, className) => {
     if (!node) {
@@ -9886,9 +9939,12 @@ function triggerBossBattleFeedback(type) {
     setBossBattleEffect("coin", 450);
   }
 
-  bossBattleAnimationState.feedbackTimerId = window.setTimeout(() => {
-    clearClasses();
-  }, type === "wrong" ? 420 : 540);
+  bossBattleAnimationState.feedbackTimerId = window.setTimeout(
+    () => {
+      clearClasses();
+    },
+    type === "wrong" ? 420 : 540,
+  );
 
   if (type === "victory") {
     bossBattleAnimationState.petTimerId = window.setTimeout(() => {
@@ -10002,7 +10058,9 @@ function mergeBossBattleAchievementBadgesIntoProfile(profile, badges = []) {
       ? { ...normalizedProfile.rewards }
       : {};
   const currentBadges = Array.isArray(currentRewards.badges)
-    ? currentRewards.badges.map((item) => String(item || "").trim()).filter(Boolean)
+    ? currentRewards.badges
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
     : [];
   const mergedBadges = Array.from(
     new Set([
@@ -10067,7 +10125,9 @@ function saveBossBattleRecoveryStorageState(session = {}) {
   const sessionId = normalizeQuizText(session.sessionId || session.id || "");
   const topicId = normalizeQuizText(session.topicId || "");
   const quizId = normalizeQuizText(session.quizId || "");
-  const battleStatus = normalizeBossBattleStatus(session.battleStatus || session.status || "active");
+  const battleStatus = normalizeBossBattleStatus(
+    session.battleStatus || session.status || "active",
+  );
 
   if (!sessionId || !topicId || !quizId) {
     return;
@@ -10104,8 +10164,12 @@ async function restoreBossBattleSessionFromStorage(quizData = null) {
     return false;
   }
 
-  const currentTopicId = normalizeQuizText(studentQuizState.selectedTopicId || quizData?.topicId || "");
-  const currentQuizId = normalizeQuizText(quizData?.quizId || quizData?.id || "");
+  const currentTopicId = normalizeQuizText(
+    studentQuizState.selectedTopicId || quizData?.topicId || "",
+  );
+  const currentQuizId = normalizeQuizText(
+    quizData?.quizId || quizData?.id || "",
+  );
 
   if (currentTopicId && recoveryState.topicId !== currentTopicId) {
     return false;
@@ -10123,7 +10187,11 @@ async function restoreBossBattleSessionFromStorage(quizData = null) {
 
     const session = response.data || response.session || null;
 
-    if (!session || normalizeQuizText(session.sessionId || session.id || "") !== recoveryState.sessionId) {
+    if (
+      !session ||
+      normalizeQuizText(session.sessionId || session.id || "") !==
+        recoveryState.sessionId
+    ) {
       return false;
     }
 
@@ -10185,8 +10253,9 @@ function getBossBattleSessionSummary() {
     ? bossBattleState.session.answers
     : [];
   const answeredCount = answers.length;
-  const correctCount = answers.filter((item) => item && item.correct === true)
-    .length;
+  const correctCount = answers.filter(
+    (item) => item && item.correct === true,
+  ).length;
   const wrongCount = Math.max(0, answeredCount - correctCount);
   const maxCombo = answers.reduce((highest, item) => {
     const value = Math.max(0, Number(item?.combo) || 0);
@@ -10212,7 +10281,10 @@ function getBossBattleSessionSummary() {
 
 function getBossBattleRewardPreviewSummary() {
   const sessionSummary = getBossBattleSessionSummary();
-  const totalQuestions = Math.max(0, Number(bossBattleState.totalQuestions) || 0);
+  const totalQuestions = Math.max(
+    0,
+    Number(bossBattleState.totalQuestions) || 0,
+  );
   const rankPreview = getBossBattleRewardRankPreview(
     sessionSummary.score,
     totalQuestions,
@@ -10229,8 +10301,14 @@ function getBossBattleRewardPreviewSummary() {
     Number(bossBattleRewardPreview.comboBonusCoin || 0) +
     Number(bossBattleRewardPreview.victoryBonusCoin || 0) +
     (isFinalBattle ? Number(rankPreview.bonusCoin || 0) : 0);
-  const totalXP = Math.max(0, Number(bossBattleRewardPreview.baseXP || 0) + previewXP);
-  const totalCoin = Math.max(0, Number(bossBattleRewardPreview.baseCoin || 0) + previewCoin);
+  const totalXP = Math.max(
+    0,
+    Number(bossBattleRewardPreview.baseXP || 0) + previewXP,
+  );
+  const totalCoin = Math.max(
+    0,
+    Number(bossBattleRewardPreview.baseCoin || 0) + previewCoin,
+  );
 
   return {
     ...sessionSummary,
@@ -10244,7 +10322,8 @@ function getBossBattleRewardPreviewSummary() {
     rank: rankPreview.label,
     rankLabel: rankPreview.label,
     rankBonusCoin: isFinalBattle ? rankPreview.bonusCoin : 0,
-    victory: normalizeBossBattleStatus(bossBattleState.battleStatus) === "victory",
+    victory:
+      normalizeBossBattleStatus(bossBattleState.battleStatus) === "victory",
     totalXP,
     totalCoin,
     rewardXP: totalXP,
@@ -10256,11 +10335,32 @@ function getBossBattleRewardPreviewSummary() {
 
 function normalizeBossBattleRewardSummary(summary = {}) {
   const normalized = {
-    score: Math.max(0, Math.min(100, Math.floor(Number(summary?.score ?? summary?.accuracy) || 0))),
-    accuracy: Math.max(0, Math.min(100, Math.floor(Number(summary?.accuracy ?? summary?.score) || 0))),
-    correctAnswers: Math.max(0, Math.floor(Number(summary?.correctAnswers ?? summary?.correctCount) || 0)),
-    correctCount: Math.max(0, Math.floor(Number(summary?.correctCount ?? summary?.correctAnswers) || 0)),
-    totalQuestions: Math.max(0, Math.floor(Number(summary?.totalQuestions) || 0)),
+    score: Math.max(
+      0,
+      Math.min(
+        100,
+        Math.floor(Number(summary?.score ?? summary?.accuracy) || 0),
+      ),
+    ),
+    accuracy: Math.max(
+      0,
+      Math.min(
+        100,
+        Math.floor(Number(summary?.accuracy ?? summary?.score) || 0),
+      ),
+    ),
+    correctAnswers: Math.max(
+      0,
+      Math.floor(Number(summary?.correctAnswers ?? summary?.correctCount) || 0),
+    ),
+    correctCount: Math.max(
+      0,
+      Math.floor(Number(summary?.correctCount ?? summary?.correctAnswers) || 0),
+    ),
+    totalQuestions: Math.max(
+      0,
+      Math.floor(Number(summary?.totalQuestions) || 0),
+    ),
     xpAwarded: Math.max(0, Math.floor(Number(summary?.xpAwarded) || 0)),
     coinAwarded: Math.max(0, Math.floor(Number(summary?.coinAwarded) || 0)),
     rankStars: Math.max(0, Math.floor(Number(summary?.rankStars) || 0)),
@@ -10269,8 +10369,14 @@ function normalizeBossBattleRewardSummary(summary = {}) {
     rankBonusCoin: Math.max(0, Math.floor(Number(summary?.rankBonusCoin) || 0)),
     victory: Boolean(summary?.victory),
     maxCombo: Math.max(0, Math.floor(Number(summary?.maxCombo) || 0)),
-    totalXP: Math.max(0, Math.floor(Number(summary?.totalXP ?? summary?.rewardXP) || 0)),
-    totalCoin: Math.max(0, Math.floor(Number(summary?.totalCoin ?? summary?.rewardCoin) || 0)),
+    totalXP: Math.max(
+      0,
+      Math.floor(Number(summary?.totalXP ?? summary?.rewardXP) || 0),
+    ),
+    totalCoin: Math.max(
+      0,
+      Math.floor(Number(summary?.totalCoin ?? summary?.rewardCoin) || 0),
+    ),
   };
 
   normalized.rewardXP = normalized.totalXP;
@@ -10279,7 +10385,15 @@ function normalizeBossBattleRewardSummary(summary = {}) {
   normalized.totalRewardCoin = normalized.totalCoin;
 
   if (!normalized.rank) {
-    normalized.rank = normalized.rankLabel || (normalized.rankStars >= 3 ? "3 Sao" : normalized.rankStars === 2 ? "2 Sao" : normalized.rankStars === 1 ? "1 Sao" : "");
+    normalized.rank =
+      normalized.rankLabel ||
+      (normalized.rankStars >= 3
+        ? "3 Sao"
+        : normalized.rankStars === 2
+          ? "2 Sao"
+          : normalized.rankStars === 1
+            ? "1 Sao"
+            : "");
   }
 
   if (!normalized.rankLabel) {
@@ -10301,7 +10415,10 @@ async function syncBossBattleRewardWithBackend() {
   const sessionId = normalizeQuizText(bossBattleState.sessionId);
   const battleStatus = normalizeBossBattleStatus(bossBattleState.battleStatus);
 
-  if (!sessionId || (battleStatus !== "victory" && battleStatus !== "completed")) {
+  if (
+    !sessionId ||
+    (battleStatus !== "victory" && battleStatus !== "completed")
+  ) {
     return null;
   }
 
@@ -10331,10 +10448,14 @@ async function syncBossBattleRewardWithBackend() {
       },
     );
 
-    const backendSummary = normalizeBossBattleRewardSummary(response.data?.rewardSummary || {});
+    const backendSummary = normalizeBossBattleRewardSummary(
+      response.data?.rewardSummary || {},
+    );
     const unlockedAchievements = getBossBattleAchievementBadgeList(
       Array.isArray(response.data?.achievements?.unlocked)
-        ? response.data.achievements.unlocked.map((item) => item?.badgeId || item?.id)
+        ? response.data.achievements.unlocked.map(
+            (item) => item?.badgeId || item?.id,
+          )
         : [],
     );
     const session = response.data?.session || null;
@@ -10352,8 +10473,12 @@ async function syncBossBattleRewardWithBackend() {
 
     if (session) {
       bossBattleState.session = session;
-      bossBattleState.sessionId = normalizeQuizText(session.sessionId || session.id || sessionId);
-      bossBattleState.battleStatus = normalizeBossBattleStatus(session.status || bossBattleState.battleStatus);
+      bossBattleState.sessionId = normalizeQuizText(
+        session.sessionId || session.id || sessionId,
+      );
+      bossBattleState.battleStatus = normalizeBossBattleStatus(
+        session.status || bossBattleState.battleStatus,
+      );
     }
 
     if (unlockedAchievements.length > 0) {
@@ -10363,6 +10488,25 @@ async function syncBossBattleRewardWithBackend() {
       );
       applyLatestCurrentUser(updatedProfile);
       void syncStudentAchievementBadges(updatedProfile);
+    }
+
+    try {
+      const refreshedProfile = window.EduKidsProfileService?.fetchCurrentProfile
+        ? await window.EduKidsProfileService.fetchCurrentProfile()
+        : null;
+
+      if (refreshedProfile) {
+        applyLatestCurrentUser(refreshedProfile);
+        syncPetWalletFromProfile(refreshedProfile);
+      } else {
+        syncPetWalletFromProfile(getCurrentAuthUser());
+      }
+    } catch (error) {
+      console.warn(
+        "Không thể refresh profile sau khi nhận reward Boss Battle:",
+        error,
+      );
+      syncPetWalletFromProfile(getCurrentAuthUser());
     }
 
     bossBattleRewardPreview.earnedXP = summary.xpAwarded;
@@ -10376,8 +10520,11 @@ async function syncBossBattleRewardWithBackend() {
     bossBattleRewardPreview.accuracy = summary.accuracy;
     bossBattleRewardPreview.rankLabel = summary.rankLabel || summary.rank;
 
-    const baseXP = bossBattleRewardPreview.baseXP || getBossBattleExp(getCurrentAuthUser());
-    const baseCoin = bossBattleRewardPreview.baseCoin || getBossBattleCoins(getCurrentAuthUser());
+    const baseXP =
+      bossBattleRewardPreview.baseXP || getBossBattleExp(getCurrentAuthUser());
+    const baseCoin =
+      bossBattleRewardPreview.baseCoin ||
+      getBossBattleCoins(getCurrentAuthUser());
     const totalXP = Math.max(0, baseXP + summary.xpAwarded);
     const totalCoin = Math.max(0, baseCoin + summary.coinAwarded);
 
@@ -10425,8 +10572,14 @@ function syncBossBattleRewardCounterNodes() {
 
   const xpNodes = screen.querySelectorAll("[data-boss-reward-xp-counter]");
   const coinNodes = screen.querySelectorAll("[data-boss-reward-coin-counter]");
-  const xpValue = Math.max(0, Math.round(Number(bossBattleRewardCounterState.displayXP) || 0));
-  const coinValue = Math.max(0, Math.round(Number(bossBattleRewardCounterState.displayCoin) || 0));
+  const xpValue = Math.max(
+    0,
+    Math.round(Number(bossBattleRewardCounterState.displayXP) || 0),
+  );
+  const coinValue = Math.max(
+    0,
+    Math.round(Number(bossBattleRewardCounterState.displayCoin) || 0),
+  );
 
   xpNodes.forEach((node) => {
     node.textContent = String(xpValue);
@@ -10443,7 +10596,9 @@ function animateBossBattleRewardCounters(targetXP, targetCoin, duration = 420) {
   const fromXP = Number.isFinite(Number(bossBattleRewardCounterState.displayXP))
     ? Number(bossBattleRewardCounterState.displayXP)
     : 0;
-  const fromCoin = Number.isFinite(Number(bossBattleRewardCounterState.displayCoin))
+  const fromCoin = Number.isFinite(
+    Number(bossBattleRewardCounterState.displayCoin),
+  )
     ? Number(bossBattleRewardCounterState.displayCoin)
     : 0;
   const toXP = Math.max(0, Math.round(Number(targetXP) || 0));
@@ -10454,7 +10609,10 @@ function animateBossBattleRewardCounters(targetXP, targetCoin, duration = 420) {
   bossBattleRewardCounterState.toXP = toXP;
   bossBattleRewardCounterState.toCoin = toCoin;
   bossBattleRewardCounterState.startTime = performance.now();
-  bossBattleRewardCounterState.duration = Math.max(120, Number(duration) || 420);
+  bossBattleRewardCounterState.duration = Math.max(
+    120,
+    Number(duration) || 420,
+  );
 
   const tick = (now) => {
     const elapsed = Math.max(0, now - bossBattleRewardCounterState.startTime);
@@ -10466,21 +10624,25 @@ function animateBossBattleRewardCounters(targetXP, targetCoin, duration = 420) {
 
     bossBattleRewardCounterState.displayXP =
       bossBattleRewardCounterState.fromXP +
-      (bossBattleRewardCounterState.toXP - bossBattleRewardCounterState.fromXP) *
+      (bossBattleRewardCounterState.toXP -
+        bossBattleRewardCounterState.fromXP) *
         eased;
     bossBattleRewardCounterState.displayCoin =
       bossBattleRewardCounterState.fromCoin +
-      (bossBattleRewardCounterState.toCoin - bossBattleRewardCounterState.fromCoin) *
+      (bossBattleRewardCounterState.toCoin -
+        bossBattleRewardCounterState.fromCoin) *
         eased;
     syncBossBattleRewardCounterNodes();
 
     if (progress < 1) {
-      bossBattleRewardCounterState.animationFrameId = requestAnimationFrame(tick);
+      bossBattleRewardCounterState.animationFrameId =
+        requestAnimationFrame(tick);
       return;
     }
 
     bossBattleRewardCounterState.displayXP = bossBattleRewardCounterState.toXP;
-    bossBattleRewardCounterState.displayCoin = bossBattleRewardCounterState.toCoin;
+    bossBattleRewardCounterState.displayCoin =
+      bossBattleRewardCounterState.toCoin;
     bossBattleRewardCounterState.animationFrameId = null;
     syncBossBattleRewardCounterNodes();
   };
@@ -10595,7 +10757,9 @@ function getBossBattleHintCountLabel(value) {
 function getBossBattleHiddenOptionSet() {
   return new Set(
     Array.isArray(bossBattleState.hiddenOptions)
-      ? bossBattleState.hiddenOptions.map((item) => normalizeQuizText(item).toUpperCase()).filter(Boolean)
+      ? bossBattleState.hiddenOptions
+          .map((item) => normalizeQuizText(item).toUpperCase())
+          .filter(Boolean)
       : [],
   );
 }
@@ -10614,7 +10778,9 @@ function syncBossBattlePopupManager() {
 
 function canUseBossBattleHint() {
   const answerPhase = normalizeQuizText(
-    bossBattleReviewMode.active ? bossBattleReviewMode.answerPhase : bossBattleState.answerPhase,
+    bossBattleReviewMode.active
+      ? bossBattleReviewMode.answerPhase
+      : bossBattleState.answerPhase,
   ).toLowerCase();
 
   return (
@@ -10631,7 +10797,7 @@ function canUseBossBattleHint() {
 }
 
 async function requestBossBattleHint() {
-  if (!canUseBossBattleHint()) {
+  if (bossBattleState.terminalLocked || !canUseBossBattleHint()) {
     return null;
   }
 
@@ -10657,7 +10823,11 @@ async function requestBossBattleHint() {
       : [];
     const hintRemaining = Math.max(
       0,
-      Number(response.data?.hintRemaining ?? response.data?.session?.hintRemaining ?? 0) || 0,
+      Number(
+        response.data?.hintRemaining ??
+          response.data?.session?.hintRemaining ??
+          0,
+      ) || 0,
     );
 
     bossBattleState.hiddenOptions = hiddenOptions
@@ -10701,7 +10871,6 @@ function getBossBattleOutcomeCopy(status) {
     return {
       title: "CHIẾN THẮNG!",
       subtitle: "Boss đã bị đánh bại. Đây là kết quả tạm tính của trận chiến.",
-      badge: "Victory Popup",
       bossImage: getBossBattleBossImagePath("die"),
     };
   }
@@ -10710,7 +10879,6 @@ function getBossBattleOutcomeCopy(status) {
     return {
       title: "HẾT LƯỢT!",
       subtitle: "Học sinh đã hết lượt trước khi hạ được Boss.",
-      badge: "Warning Popup",
       bossImage: getBossBattleBossImagePath("angry"),
     };
   }
@@ -10718,7 +10886,6 @@ function getBossBattleOutcomeCopy(status) {
   return {
     title: "HOÀN THÀNH BÀI!",
     subtitle: "Đã đi hết bộ câu hỏi của chủ đề hiện tại. Boss vẫn còn HP.",
-    badge: "Default Popup",
     bossImage: getBossBattleBossImagePath(bossBattleState.bossState || "idle"),
   };
 }
@@ -10852,7 +11019,8 @@ function showBossBattleAchievementPopup(achievements = []) {
   clearBossBattleAchievementPopupTimer();
   bossBattleAchievementPopupState.visible = true;
   bossBattleAchievementPopupState.badges = badgeList;
-  bossBattleAchievementPopupState.title = badgeList.length === 1 ? badgeList[0].name : "ACHIEVEMENT UNLOCKED";
+  bossBattleAchievementPopupState.title =
+    badgeList.length === 1 ? badgeList[0].name : "ACHIEVEMENT UNLOCKED";
   bossBattleAchievementPopupState.description =
     badgeList.length === 1
       ? badgeList[0].description || ""
@@ -10910,22 +11078,28 @@ function buildBossBattleWrongReviewQuestions() {
           }))
         : [];
       const selectedAnswer = normalizeQuizText(answer.selected).toUpperCase();
-      const selectedOption = options.find(
-        (option) => option.label === selectedAnswer,
-      ) || null;
-      const correctOption = options.find((option) => option.correct === true) || null;
+      const selectedOption =
+        options.find((option) => option.label === selectedAnswer) || null;
+      const correctOption =
+        options.find((option) => option.correct === true) || null;
       const correctAnswer = normalizeQuizText(
         answer.correctAnswer || correctOption?.label,
       ).toUpperCase();
 
       return {
         questionIndex: Number(answer.questionIndex) || 0,
-        question: normalizeQuizText(question?.question) || `Câu ${Number(answer.questionIndex) + 1}`,
+        question:
+          normalizeQuizText(question?.question) ||
+          `Câu ${Number(answer.questionIndex) + 1}`,
         options,
         userAnswer: selectedAnswer,
-        userAnswerText: normalizeQuizText(selectedOption?.text || selectedOption?.label || answer.selected),
+        userAnswerText: normalizeQuizText(
+          selectedOption?.text || selectedOption?.label || answer.selected,
+        ),
         correctAnswer,
-        correctAnswerText: normalizeQuizText(correctOption?.text || correctOption?.label),
+        correctAnswerText: normalizeQuizText(
+          correctOption?.text || correctOption?.label,
+        ),
       };
     });
 }
@@ -11019,7 +11193,9 @@ function submitBossBattleReviewAnswer(questionIndex, selected) {
   }
 
   const normalizedSelected = normalizeQuizText(selected).toUpperCase();
-  const normalizedCorrect = normalizeQuizText(question.correctAnswer).toUpperCase();
+  const normalizedCorrect = normalizeQuizText(
+    question.correctAnswer,
+  ).toUpperCase();
   const isCorrect = normalizedSelected === normalizedCorrect;
 
   bossBattleReviewMode.selectedAnswer = normalizedSelected;
@@ -11135,12 +11311,18 @@ function resetBossBattleState(totalQuestions = 0) {
   bossBattleState.currentQuestionIndex = 0;
   bossBattleState.totalQuestions = normalizedTotalQuestions;
   bossBattleState.bossHP = 100;
-  bossBattleState.playerHP = Math.max(1, Math.ceil(normalizedTotalQuestions / 2));
+  bossBattleState.playerHP = Math.max(
+    1,
+    Math.ceil(normalizedTotalQuestions / 2),
+  );
   bossBattleState.combo = 0;
   bossBattleState.bossState = "idle";
   bossBattleState.battleStatus = "idle";
   bossBattleState.visualBossHP = 100;
-  bossBattleState.visualPlayerHP = Math.max(1, Math.ceil(normalizedTotalQuestions / 2));
+  bossBattleState.visualPlayerHP = Math.max(
+    1,
+    Math.ceil(normalizedTotalQuestions / 2),
+  );
   bossBattleState.hintRemaining = 3;
   bossBattleState.hintLoading = false;
   bossBattleState.hiddenOptions = [];
@@ -11151,6 +11333,7 @@ function resetBossBattleState(totalQuestions = 0) {
   bossBattleState.revealedQuestion = null;
   bossBattleState.revealedCorrectAnswer = "";
   bossBattleState.revealedCorrect = null;
+  bossBattleState.terminalLocked = false;
   bossBattleAnimationState.currentState = "idle";
   bossBattleAnimationState.currentFrame = 1;
   bossBattleAnimationState.playOnce = false;
@@ -11214,9 +11397,8 @@ function applyBossBattleRewardPreviewEvent({
   }
 
   const normalizedStatus = normalizeBossBattleStatus(battleStatus);
-  const normalizedPreviousStatus = normalizeBossBattleStatus(
-    previousBattleStatus,
-  );
+  const normalizedPreviousStatus =
+    normalizeBossBattleStatus(previousBattleStatus);
   const normalizedCombo = Math.max(0, Math.floor(Number(combo) || 0));
   const rewardKey = [
     bossBattleState.sessionId || "",
@@ -11276,7 +11458,10 @@ function applyBossBattleRewardPreviewEvent({
     }
   }
 
-    if (normalizedStatus === "victory" && normalizedPreviousStatus !== "victory") {
+  if (
+    normalizedStatus === "victory" &&
+    normalizedPreviousStatus !== "victory"
+  ) {
     bossBattleRewardPreview.victoryBonusXP += 50;
     bossBattleRewardPreview.victoryBonusCoin += 50;
     queueVisual(() => {
@@ -11288,11 +11473,11 @@ function applyBossBattleRewardPreviewEvent({
     shouldPlayRewardSound = true;
   }
 
-  if (
-    normalizedStatus === "victory" ||
-    normalizedStatus === "completed"
-  ) {
-    const totalQuestions = Math.max(1, Number(bossBattleState.totalQuestions) || 0);
+  if (normalizedStatus === "victory" || normalizedStatus === "completed") {
+    const totalQuestions = Math.max(
+      1,
+      Number(bossBattleState.totalQuestions) || 0,
+    );
     const sessionSummary = getBossBattleSessionSummary();
     const rankPreview = getBossBattleRewardRankPreview(
       sessionSummary.score,
@@ -11310,10 +11495,7 @@ function applyBossBattleRewardPreviewEvent({
       bossBattleRewardPreview.lastRankKey !== rankKey
     ) {
       queueVisual(() => {
-        spawnBossBattleFloatingReward(
-          `+${rankPreview.bonusCoin} Coin`,
-          "coin",
-        );
+        spawnBossBattleFloatingReward(`+${rankPreview.bonusCoin} Coin`, "coin");
       });
       shouldPlayRewardSound = true;
     }
@@ -11354,7 +11536,10 @@ function applyBossBattleRewardPreviewEvent({
 }
 
 function getBossBattleCurrentQuestionIndex() {
-  const totalQuestions = Math.max(0, Number(bossBattleState.totalQuestions) || 0);
+  const totalQuestions = Math.max(
+    0,
+    Number(bossBattleState.totalQuestions) || 0,
+  );
   if (totalQuestions <= 0) {
     return 0;
   }
@@ -11382,20 +11567,26 @@ function getBossBattleQuestionCorrectAnswer(question) {
     return "";
   }
 
-  const explicitAnswer = normalizeQuizText(question.correctAnswer).toUpperCase();
+  const explicitAnswer = normalizeQuizText(
+    question.correctAnswer,
+  ).toUpperCase();
   if (explicitAnswer) {
     return explicitAnswer;
   }
 
   const options = Array.isArray(question.options) ? question.options : [];
-  const correctOption = options.find((option) => option && option.correct === true);
+  const correctOption = options.find(
+    (option) => option && option.correct === true,
+  );
 
   return normalizeQuizText(correctOption?.label || "").toUpperCase();
 }
 
 function getBossBattleDisplayedQuestion(quiz) {
   const questions = Array.isArray(quiz?.questions) ? quiz.questions : [];
-  const answerPhase = normalizeQuizText(bossBattleState.answerPhase).toLowerCase();
+  const answerPhase = normalizeQuizText(
+    bossBattleState.answerPhase,
+  ).toLowerCase();
 
   if (
     answerPhase === "reveal" &&
@@ -11403,7 +11594,10 @@ function getBossBattleDisplayedQuestion(quiz) {
     typeof bossBattleState.revealedQuestion === "object"
   ) {
     return {
-      questionIndex: Math.max(0, Number(bossBattleState.selectedQuestionIndex) || 0),
+      questionIndex: Math.max(
+        0,
+        Number(bossBattleState.selectedQuestionIndex) || 0,
+      ),
       question: bossBattleState.revealedQuestion,
       phase: "reveal",
     };
@@ -11417,7 +11611,11 @@ function getBossBattleDisplayedQuestion(quiz) {
   };
 }
 
-function getBossBattleQuestionViewMeta(question, selectedAnswer = "", revealMode = false) {
+function getBossBattleQuestionViewMeta(
+  question,
+  selectedAnswer = "",
+  revealMode = false,
+) {
   const normalizedSelected = normalizeQuizText(selectedAnswer).toUpperCase();
   const correctAnswer = getBossBattleQuestionCorrectAnswer(question);
   const isCorrect = Boolean(
@@ -11428,7 +11626,9 @@ function getBossBattleQuestionViewMeta(question, selectedAnswer = "", revealMode
     selectedAnswer: normalizedSelected,
     correctAnswer,
     isCorrect,
-    isWrong: Boolean(revealMode && normalizedSelected && normalizedSelected !== correctAnswer),
+    isWrong: Boolean(
+      revealMode && normalizedSelected && normalizedSelected !== correctAnswer,
+    ),
   };
 }
 
@@ -11437,17 +11637,19 @@ function applyBossBattleSessionResponse(payload = {}) {
   const totalQuestions = Array.isArray(studentQuizState.quiz?.questions)
     ? studentQuizState.quiz.questions.length
     : Math.max(0, Number(bossBattleState.totalQuestions) || 0);
-  const previousBattleStatus = normalizeBossBattleStatus(
+  const currentBattleStatus = normalizeBossBattleStatus(
     bossBattleState.battleStatus,
   );
-  const previousVisualBossHP =
-    Number.isFinite(Number(bossBattleState.visualBossHP))
-      ? Number(bossBattleState.visualBossHP)
-      : Math.max(0, Math.floor(Number(bossBattleState.bossHP) || 0));
-  const previousVisualPlayerHP =
-    Number.isFinite(Number(bossBattleState.visualPlayerHP))
-      ? Number(bossBattleState.visualPlayerHP)
-      : Math.max(0, Math.floor(Number(bossBattleState.playerHP) || 0));
+  const previousVisualBossHP = Number.isFinite(
+    Number(bossBattleState.visualBossHP),
+  )
+    ? Number(bossBattleState.visualBossHP)
+    : Math.max(0, Math.floor(Number(bossBattleState.bossHP) || 0));
+  const previousVisualPlayerHP = Number.isFinite(
+    Number(bossBattleState.visualPlayerHP),
+  )
+    ? Number(bossBattleState.visualPlayerHP)
+    : Math.max(0, Math.floor(Number(bossBattleState.playerHP) || 0));
   const currentQuestionIndex = Number(
     payload.currentQuestionIndex ??
       session.currentQuestionIndex ??
@@ -11468,6 +11670,9 @@ function applyBossBattleSessionResponse(payload = {}) {
   );
   const battleStatus = normalizeBossBattleStatus(
     payload.battleStatus ?? session.status ?? session.battleStatus,
+  );
+  const previousBattleStatus = normalizeBossBattleStatus(
+    bossBattleState.battleStatus,
   );
   const bossState =
     normalizeQuizText(payload.bossState ?? session.bossState) ||
@@ -11497,19 +11702,34 @@ function applyBossBattleSessionResponse(payload = {}) {
   bossBattleState.playerHP = playerHP;
   bossBattleState.combo = combo;
   bossBattleState.bossState = bossState;
-  bossBattleState.battleStatus = battleStatus;
+  bossBattleState.battleStatus =
+    bossBattleState.terminalLocked &&
+    battleStatus === "active" &&
+    isBossBattleTerminalStatus(currentBattleStatus)
+      ? currentBattleStatus
+      : battleStatus;
   bossBattleState.loadingSession = false;
   bossBattleState.answering = false;
   bossBattleState.hintLoading = false;
   bossBattleState.hintRemaining = Math.max(
     0,
-    Number(payload.hintRemaining ?? session.hintRemaining ?? bossBattleState.hintRemaining ?? 3) || 0,
+    Number(
+      payload.hintRemaining ??
+        session.hintRemaining ??
+        bossBattleState.hintRemaining ??
+        3,
+    ) || 0,
   );
   bossBattleState.hiddenOptions = Array.isArray(payload.hiddenOptions)
-    ? payload.hiddenOptions.map((item) => normalizeQuizText(item).toUpperCase()).filter(Boolean)
+    ? payload.hiddenOptions
+        .map((item) => normalizeQuizText(item).toUpperCase())
+        .filter(Boolean)
     : [];
-  bossBattleState.visualBossHP = previousVisualBossHP;
+  bossBattleState.visualBossHP = bossHP;
   bossBattleState.visualPlayerHP = previousVisualPlayerHP;
+  if (isBossBattleTerminalStatus(bossBattleState.battleStatus)) {
+    bossBattleState.terminalLocked = true;
+  }
   saveBossBattleRecoveryStorageState({
     sessionId: bossBattleState.sessionId,
     topicId: bossBattleState.topicId,
@@ -11606,7 +11826,10 @@ async function submitBossBattleAnswer(questionIndex, selected) {
     throw new Error("Battle session chưa được khởi tạo.");
   }
 
-  if (normalizeBossBattleStatus(bossBattleState.battleStatus) !== "active") {
+  if (
+    bossBattleState.terminalLocked ||
+    normalizeBossBattleStatus(bossBattleState.battleStatus) !== "active"
+  ) {
     return null;
   }
 
@@ -11614,7 +11837,9 @@ async function submitBossBattleAnswer(questionIndex, selected) {
     return null;
   }
 
-  if (normalizeQuizText(bossBattleState.answerPhase).toLowerCase() === "reveal") {
+  if (
+    normalizeQuizText(bossBattleState.answerPhase).toLowerCase() === "reveal"
+  ) {
     return null;
   }
 
@@ -11622,7 +11847,9 @@ async function submitBossBattleAnswer(questionIndex, selected) {
   renderStudentQuizFlow();
 
   try {
-    const questionSnapshot = getBossBattleDisplayedQuestion(studentQuizState.quiz);
+    const questionSnapshot = getBossBattleDisplayedQuestion(
+      studentQuizState.quiz,
+    );
     const response = await apiRequestWithAuth(
       `/api/battle-sessions/${encodeURIComponent(sessionId)}/answer`,
       {
@@ -11949,11 +12176,16 @@ function renderStudentQuizScreen() {
     : getBossBattleDisplayedQuestion(quiz);
   const currentQuestionIndex = Math.max(
     0,
-    Math.min(Number(displayedQuestionState?.questionIndex) || 0, totalQuestions),
+    Math.min(
+      Number(displayedQuestionState?.questionIndex) || 0,
+      totalQuestions,
+    ),
   );
   const currentQuestion = displayedQuestionState?.question || null;
   const answerPhase = normalizeQuizText(
-    reviewModeActive ? bossBattleReviewMode.answerPhase : bossBattleState.answerPhase,
+    reviewModeActive
+      ? bossBattleReviewMode.answerPhase
+      : bossBattleState.answerPhase,
   ).toLowerCase();
   const answerRevealMode = answerPhase === "reveal";
   const selectedAnswer = normalizeQuizText(
@@ -11973,10 +12205,20 @@ function renderStudentQuizScreen() {
   const petDisplayImage = currentPet?.imagePath || "";
   const petDisplayStateImage = petDisplayImage || "";
   const battleStatus = normalizeBossBattleStatus(bossBattleState.battleStatus);
+  const terminalLocked =
+    bossBattleState.terminalLocked || isBossBattleTerminalStatus(battleStatus);
+  const renderBattleStatus =
+    terminalLocked && battleStatus === "active" ? "completed" : battleStatus;
   const battleStatusLabel = getBossBattleStatusLabel(battleStatus);
   const bossStateLabel = normalizeQuizText(bossBattleState.bossState || "idle");
-  const playerHP = Math.max(0, Math.floor(Number(bossBattleState.playerHP) || 0));
-  const comboValue = Math.max(0, Math.floor(Number(bossBattleState.combo) || 0));
+  const playerHP = Math.max(
+    0,
+    Math.floor(Number(bossBattleState.playerHP) || 0),
+  );
+  const comboValue = Math.max(
+    0,
+    Math.floor(Number(bossBattleState.combo) || 0),
+  );
   const bossHP = Math.max(0, Math.floor(Number(bossBattleState.bossHP) || 0));
   const bossHpPercent = Math.max(0, Math.min(100, bossHP));
   const profileCoins = getBossBattleCoins(profile);
@@ -12013,10 +12255,14 @@ function renderStudentQuizScreen() {
     bossBattleRewardSyncState.status === "idle"
   ) {
     void syncBossBattleRewardWithBackend().catch((error) => {
-      showToast(error.message || "Không thể đồng bộ phần thưởng Boss Battle.", "error");
+      showToast(
+        error.message || "Không thể đồng bộ phần thưởng Boss Battle.",
+        "error",
+      );
     });
   }
   const canAnswer =
+    !terminalLocked &&
     battleStatus === "active" &&
     popupMode === "none" &&
     !bossBattleState.loadingSession &&
@@ -12025,20 +12271,23 @@ function renderStudentQuizScreen() {
     !answerRevealMode &&
     Boolean(currentQuestion);
   const canReviewAnswer =
-    reviewModeActive && !bossBattleReviewMode.completedVisible && !answerRevealMode && Boolean(currentQuestion);
+    reviewModeActive &&
+    !bossBattleReviewMode.completedVisible &&
+    !answerRevealMode &&
+    Boolean(currentQuestion);
   const hiddenOptionSet = getBossBattleHiddenOptionSet();
   const questionPrompt =
     currentQuestion?.question ||
-    (battleStatus === "victory"
+    (renderBattleStatus === "victory"
       ? "Victory đang chờ hiển thị."
-      : battleStatus === "defeat"
+      : renderBattleStatus === "defeat"
         ? "Defeat đang chờ hiển thị."
-        : battleStatus === "completed"
+        : renderBattleStatus === "completed"
           ? "Completed đang chờ hiển thị."
           : "Đang chuẩn bị câu hỏi...");
-  const outcomeCopy = getBossBattleOutcomeCopy(battleStatus);
+  const outcomeCopy = getBossBattleOutcomeCopy(renderBattleStatus);
   const activeAnswerButtons =
-    currentQuestion && battleStatus === "active"
+    currentQuestion && !terminalLocked && renderBattleStatus === "active"
       ? (Array.isArray(currentQuestion.options) ? currentQuestion.options : [])
           .map((option, optionIndex) => {
             const optionLabel = normalizeQuizText(option?.label).toUpperCase();
@@ -12047,7 +12296,10 @@ function renderStudentQuizScreen() {
             const isHidden = hiddenOptionSet.has(optionLabel);
             const isSelected = selectedAnswer === optionLabel;
             const isCorrect = answerRevealMode && optionLabel === correctAnswer;
-            const isWrong = answerRevealMode && isSelected && selectedAnswer !== correctAnswer;
+            const isWrong =
+              answerRevealMode &&
+              isSelected &&
+              selectedAnswer !== correctAnswer;
             const buttonDisabled = !canAnswer || isHidden || answerRevealMode;
 
             return `
@@ -12060,7 +12312,9 @@ function renderStudentQuizScreen() {
                 aria-pressed="${isSelected ? "true" : "false"}"
                 ${isHidden ? 'aria-hidden="true"' : ""}
               >
-                <span class="boss-battle-answer-card__badge" aria-hidden="true">${meta.icon}</span>
+                <span class="boss-battle-answer-card__badge" aria-hidden="true">
+                  <img src="${escapeHtml(meta.iconPath)}" alt="" />
+                </span>
                 <span class="boss-battle-answer-card__body">
                   <span class="boss-battle-answer-card__label">${escapeHtml(optionLabel || ["A", "B", "C", "D"][optionIndex] || "")}</span>
                   <span class="boss-battle-answer-card__text">${escapeHtml(optionText || optionLabel || "")}</span>
@@ -12079,8 +12333,12 @@ function renderStudentQuizScreen() {
             const optionText = normalizeQuizText(option?.text || option?.label);
             const meta = getBossBattleOptionMeta(optionIndex);
             const isSelected = selectedAnswer === optionLabel;
-            const isCorrect = answerRevealMode && optionLabel === revealedCorrectAnswer;
-            const isWrong = answerRevealMode && isSelected && selectedAnswer !== revealedCorrectAnswer;
+            const isCorrect =
+              answerRevealMode && optionLabel === revealedCorrectAnswer;
+            const isWrong =
+              answerRevealMode &&
+              isSelected &&
+              selectedAnswer !== revealedCorrectAnswer;
             const buttonDisabled = !canReviewAnswer || answerRevealMode;
 
             return `
@@ -12092,7 +12350,9 @@ function renderStudentQuizScreen() {
                 ${buttonDisabled ? "disabled" : ""}
                 aria-pressed="${isSelected ? "true" : "false"}"
               >
-                <span class="boss-battle-answer-card__badge" aria-hidden="true">${meta.icon}</span>
+                <span class="boss-battle-answer-card__badge" aria-hidden="true">
+                  <img src="${escapeHtml(meta.iconPath)}" alt="" />
+                </span>
                 <span class="boss-battle-answer-card__body">
                   <span class="boss-battle-answer-card__label">${escapeHtml(optionLabel || ["A", "B", "C", "D"][optionIndex] || "")}</span>
                   <span class="boss-battle-answer-card__text">${escapeHtml(optionText || optionLabel || "")}</span>
@@ -12171,7 +12431,7 @@ function renderStudentQuizScreen() {
         <strong>${reviewModeActive ? "Ôn lại!" : "Cố lên!"}</strong>
         <span>${reviewModeActive ? "Chỉ luyện các câu sai." : "Bạn làm rất tốt!"}</span>
       </div>
-      <div class="boss-battle-sidebar__card ${reviewModeActive ? "is-review-mode" : ""} ${comboValue >= 5 ? "is-combo-strong" : comboValue >= 3 ? "is-combo-glow" : ""} ${battleStatus === "victory" ? "is-pet-celebrate" : ""}">
+      <div class="boss-battle-sidebar__card ${reviewModeActive ? "is-review-mode" : ""} ${comboValue >= 5 ? "is-combo-strong" : comboValue >= 3 ? "is-combo-glow" : ""} ${renderBattleStatus === "victory" ? "is-pet-celebrate" : ""}">
         <div class="boss-battle-sidebar__pet boss-battle-pet">
           ${
             currentPet
@@ -12181,7 +12441,6 @@ function renderStudentQuizScreen() {
         </div>
         <div class="boss-battle-sidebar__level">Lv ${escapeHtml(String(petDisplayLevel ?? "--"))}</div>
         <h3>${escapeHtml(petDisplayName)}</h3>
-        <p>${escapeHtml(`${quizMeta.subject || studentQuizState.subject || "Quiz"} · ${quizMeta.grade || studentQuizState.grade || ""}`)}</p>
         ${reviewModeActive ? '<div class="boss-battle-sidebar__review-chip">REVIEW MODE</div>' : ""}
 
         <div class="boss-battle-sidebar__metric">
@@ -12214,7 +12473,7 @@ function renderStudentQuizScreen() {
         <div class="boss-battle-sidebar__metric">
           <div class="boss-battle-sidebar__metric-head">
             <img src="${getBossBattleIconPath("coin")}" alt="" aria-hidden="true" />
-            <span>COIN</span>
+            <span>Xu Edu</span>
           </div>
           <strong data-boss-reward-coin-counter>${escapeHtml(String(displayedRewardCoin))}</strong>
         </div>
@@ -12224,7 +12483,7 @@ function renderStudentQuizScreen() {
 
   const activeHeader = `
     <section class="boss-battle-header-card">
-      <div class="boss-battle-header-card__boss ${bossBattleState.battleStatus === "victory" ? "is-pet-celebrate" : ""}">
+      <div class="boss-battle-header-card__boss ${renderBattleStatus === "victory" ? "is-pet-celebrate" : ""}">
         <img class="boss-battle-header-card__boss-image" data-boss-anim="main" src="${escapeHtml(bossImagePath)}" alt="Mini Boss" />
       </div>
       <div class="boss-battle-header-card__copy">
@@ -12235,8 +12494,9 @@ function renderStudentQuizScreen() {
         <strong>${escapeHtml(`${bossHP} / 100 HP`)}</strong>
       </div>
       <div class="boss-battle-header-card__track" aria-hidden="true">
-        <img class="boss-battle-header-card__track-asset" src="${getBossBattleAssetPath("hp", "boss_hp_fill.png")}" alt="" />
-        <div class="boss-battle-header-card__track-fill" style="width: ${escapeHtml(String(Math.max(0, Math.min(100, Number(bossBattleState.visualBossHP ?? bossHpPercent) || 0))))}%"></div>
+        <div class="boss-battle-header-card__track-fill" style="width: ${escapeHtml(String(bossHpPercent))}%">
+          <img class="boss-battle-header-card__track-asset" src="${getBossBattleAssetPath("hp", "boss_hp_fill.png")}" alt="" />
+        </div>
       </div>
     </section>
   `;
@@ -12246,6 +12506,22 @@ function renderStudentQuizScreen() {
       <img src="${getBossBattleIconPath("hint")}" alt="" aria-hidden="true" />
       <span>Hint</span>
       <strong>x${escapeHtml(String(Math.max(0, Number(bossBattleState.hintRemaining) || 0)))}</strong>
+    </button>
+  `;
+
+  const activeBattleControlsHtml = reviewModeActive
+    ? ""
+    : `
+      <div class="boss-battle-action-row">
+        ${activeHint}
+        ${activeBattleActionHtml}
+      </div>
+    `;
+
+  const bossBattleExitButtonHtml = `
+    <button type="button" class="boss-battle-exit-btn" data-action="boss-battle-exit" aria-label="Thoát khỏi Boss Battle">
+      <img src="${getBossBattleIconPath("quit")}" alt="" aria-hidden="true" />
+      <span>Thoát</span>
     </button>
   `;
 
@@ -12353,7 +12629,7 @@ function renderStudentQuizScreen() {
     <div class="boss-battle-popup__scene">
       <div class="boss-battle-popup__pet">
         ${
-            currentPet
+          currentPet
             ? `<img src="${escapeHtml(petDisplayStateImage)}" alt="${escapeHtml(petDisplayName)}" />`
             : `<span aria-hidden="true">🐾</span>`
         }
@@ -12473,6 +12749,7 @@ function renderStudentQuizScreen() {
     screen.innerHTML = `
       <div class="boss-battle-canvas boss-battle-canvas--review">
         <div class="boss-battle-effects" aria-hidden="true"></div>
+        ${bossBattleExitButtonHtml}
         ${activeSidebar}
         <section class="boss-battle-board">
           ${activeHeader}
@@ -12490,37 +12767,33 @@ function renderStudentQuizScreen() {
     return;
   }
 
-  if (battleStatus === "active" && popupMode === "none") {
+  if (
+    !terminalLocked &&
+    renderBattleStatus === "active" &&
+    popupMode === "none"
+  ) {
     screen.innerHTML = `
       <div class="boss-battle-canvas boss-battle-canvas--active">
         <div class="boss-battle-effects" aria-hidden="true"></div>
+        ${bossBattleExitButtonHtml}
         ${activeSidebar}
         <section class="boss-battle-board">
           ${activeHeader}
           ${activeQuestionPanel}
-          ${activeHint}
-          ${activeBattleActionHtml}
+          ${activeBattleControlsHtml}
         </section>
       </div>
     `;
   } else {
     screen.innerHTML = `
-      <div class="boss-battle-canvas boss-battle-canvas--terminal boss-battle-canvas--${popupMode || battleStatus}">
+      <div class="boss-battle-canvas boss-battle-canvas--terminal boss-battle-canvas--${popupMode || renderBattleStatus}">
         <div class="boss-battle-effects" aria-hidden="true"></div>
+        ${bossBattleExitButtonHtml}
         ${activeSidebar}
         <section class="boss-battle-board">
           ${activeHeader}
-          <article class="boss-battle-popup boss-battle-popup--${popupMode || battleStatus}">
+          <article class="boss-battle-popup boss-battle-popup--${popupMode || renderBattleStatus}">
             <div class="boss-battle-popup__content">
-              <span class="boss-battle-popup__badge">${escapeHtml(
-                popupMode === "victory"
-                  ? "Victory Popup"
-                  : popupMode === "defeat"
-                    ? "Warning Popup"
-                    : popupMode === "completed"
-                      ? "Default Popup"
-                      : outcomeCopy.badge,
-              )}</span>
               <h2>${escapeHtml(
                 popupMode === "victory"
                   ? "CHIẾN THẮNG!"
@@ -12542,7 +12815,7 @@ function renderStudentQuizScreen() {
               ${terminalSceneHtml}
               ${terminalStatsHtml}
               <div class="boss-battle-popup__actions">
-                ${getBossBattlePopupButtonSet(popupMode || battleStatus)}
+                ${getBossBattlePopupButtonSet(popupMode || renderBattleStatus)}
               </div>
             </div>
           </article>
@@ -12550,6 +12823,10 @@ function renderStudentQuizScreen() {
         </section>
       </div>
     `;
+  }
+
+  if (terminalLocked && popupMode === "none" && !reviewModeActive) {
+    syncBossBattlePopupManager();
   }
 
   ensureBossBattleAnimationLoop();
@@ -12932,6 +13209,10 @@ function showSubject(subject, button) {
 }
 
 function goBackSubjects() {
+  exitBossBattleToTopicSelection();
+}
+
+function exitBossBattleToTopicSelection() {
   closeBossBattlePopup();
   closeBossBattleAchievementPopup();
   resetBossBattleReviewMode();
@@ -12939,8 +13220,11 @@ function goBackSubjects() {
   clearBossBattleAnimationTimers();
   resetBossBattleState(0);
   setStudentQuizScreen("subjects");
+  studentQuizState.selectedTopicId = "";
   studentQuizState.quiz = null;
   studentQuizState.answers = [];
+  studentQuizState.pendingTopicId = "";
+  resetQuizSubmissionState();
   studentQuizState.loadingQuiz = false;
   renderStudentQuizFlow();
   changePage("subjects");
@@ -12980,7 +13264,10 @@ document.addEventListener("click", (event) => {
     playClick();
 
     if (bossBattleReviewMode.active) {
-      if (normalizeQuizText(bossBattleReviewMode.answerPhase).toLowerCase() === "reveal") {
+      if (
+        normalizeQuizText(bossBattleReviewMode.answerPhase).toLowerCase() ===
+        "reveal"
+      ) {
         return;
       }
 
@@ -13002,7 +13289,9 @@ document.addEventListener("click", (event) => {
       return;
     }
 
-    if (normalizeQuizText(bossBattleState.answerPhase).toLowerCase() === "reveal") {
+    if (
+      normalizeQuizText(bossBattleState.answerPhase).toLowerCase() === "reveal"
+    ) {
       return;
     }
 
@@ -13027,6 +13316,7 @@ document.addEventListener("click", (event) => {
       action === "boss-review-commit" ||
       action === "boss-review-continue" ||
       action === "battle-hint" ||
+      action === "boss-battle-exit" ||
       action === "boss-review-back-topic" ||
       action === "boss-review-retry" ||
       action === "show-wrong-review" ||
@@ -13037,10 +13327,19 @@ document.addEventListener("click", (event) => {
     }
 
     if (action === "battle-answer-commit") {
+      if (bossBattleState.terminalLocked) {
+        return;
+      }
       const questionIndex = Number(bossBattleState.selectedQuestionIndex) || 0;
-      const selected = normalizeQuizText(bossBattleState.selectedAnswer).toUpperCase();
+      const selected = normalizeQuizText(
+        bossBattleState.selectedAnswer,
+      ).toUpperCase();
 
-      if (!selected || normalizeQuizText(bossBattleState.answerPhase).toLowerCase() === "reveal") {
+      if (
+        !selected ||
+        normalizeQuizText(bossBattleState.answerPhase).toLowerCase() ===
+          "reveal"
+      ) {
         return;
       }
 
@@ -13056,10 +13355,17 @@ document.addEventListener("click", (event) => {
     }
 
     if (action === "boss-review-commit") {
-      const questionIndex = Number(bossBattleReviewMode.currentQuestionIndex) || 0;
-      const selected = normalizeQuizText(bossBattleReviewMode.selectedAnswer).toUpperCase();
+      const questionIndex =
+        Number(bossBattleReviewMode.currentQuestionIndex) || 0;
+      const selected = normalizeQuizText(
+        bossBattleReviewMode.selectedAnswer,
+      ).toUpperCase();
 
-      if (!selected || normalizeQuizText(bossBattleReviewMode.answerPhase).toLowerCase() === "reveal") {
+      if (
+        !selected ||
+        normalizeQuizText(bossBattleReviewMode.answerPhase).toLowerCase() ===
+          "reveal"
+      ) {
         return;
       }
 
@@ -13073,6 +13379,9 @@ document.addEventListener("click", (event) => {
     }
 
     if (action === "battle-hint") {
+      if (bossBattleState.terminalLocked) {
+        return;
+      }
       void requestBossBattleHint().catch((error) => {
         showToast(error.message || "Không thể dùng gợi ý.", "error");
       });
@@ -13082,6 +13391,11 @@ document.addEventListener("click", (event) => {
     if (action === "battle-popup-exit") {
       closeBossBattlePopup();
       goBackSubjects();
+      return;
+    }
+
+    if (action === "boss-battle-exit") {
+      exitBossBattleToTopicSelection();
       return;
     }
 
@@ -13155,7 +13469,8 @@ function bindStudentQuizControlsOnce() {
 
       if (subjectSelect) {
         studentQuizState.subject =
-          normalizeQuizText(subjectSelect.value) || STUDENT_QUIZ_DEFAULTS.subject;
+          normalizeQuizText(subjectSelect.value) ||
+          STUDENT_QUIZ_DEFAULTS.subject;
       }
 
       void loadStudentQuizTopics();
@@ -13176,9 +13491,7 @@ async function initializeStudentQuizPage() {
     studentQuizState.subject = STUDENT_QUIZ_DEFAULTS.subject;
   }
 
-  if (!isStudentBossBattleScreenActive()) {
-    setStudentQuizScreen("subjects");
-  }
+  setStudentQuizScreen("subjects");
 
   updateStudentQuizControls();
 
@@ -19913,6 +20226,58 @@ async function loadTeacherStatsStudentTopics(studentIds = []) {
   return new Map(entries);
 }
 
+async function loadTeacherStatsTopicCatalog(
+  topicProgressByStudentId = new Map(),
+) {
+  const apiRequest = window.EduKidsApi?.requestWithAuth || apiRequestWithAuth;
+  if (typeof apiRequest !== "function") {
+    return [];
+  }
+
+  const combos = new Map();
+
+  Array.from(topicProgressByStudentId.values()).forEach((topics) => {
+    (Array.isArray(topics) ? topics : []).forEach((topic) => {
+      const grade = String(topic?.grade || "").trim();
+      const subject = String(topic?.subject || "").trim();
+      const topicId = String(topic?.topicId || "").trim();
+
+      if (!grade || !subject || !topicId) {
+        return;
+      }
+
+      const key = `${grade}:${subject}`;
+      if (!combos.has(key)) {
+        combos.set(key, { grade, subject });
+      }
+    });
+  });
+
+  if (combos.size === 0) {
+    return [];
+  }
+
+  const results = await Promise.all(
+    Array.from(combos.values()).map(async ({ grade, subject }) => {
+      try {
+        const response = await apiRequest(
+          `/api/topics?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`,
+          { method: "GET" },
+        );
+        return Array.isArray(response?.data) ? response.data : [];
+      } catch (error) {
+        console.warn(
+          "Không thể tải danh mục chủ đề cho thống kê giáo viên:",
+          error,
+        );
+        return [];
+      }
+    }),
+  );
+
+  return results.flat();
+}
+
 function getTeacherStatsRankedRows(rows, limit = 5) {
   const safeRows = Array.isArray(rows) ? rows : [];
   const paddedRows = [];
@@ -19952,6 +20317,9 @@ function buildTeacherStatsViewModel(rawData, rangeKey = "7d") {
     rawData.topicProgressByStudentId instanceof Map
       ? rawData.topicProgressByStudentId
       : new Map();
+  const topicCatalog = Array.isArray(rawData.topicCatalog)
+    ? rawData.topicCatalog
+    : [];
   const allSubmissions = assignments.flatMap((assignment) =>
     Array.isArray(
       submissionsByAssignmentId.get(String(assignment.id || "").trim()),
@@ -20166,6 +20534,7 @@ function buildTeacherStatsViewModel(rawData, rangeKey = "7d") {
     assignmentRows,
     studentAverages,
     classStudents: studentRows,
+    topicCatalog,
   };
 }
 
@@ -20392,7 +20761,10 @@ function renderTeacherStatsAi(viewModel) {
   const averageScore = Number.isFinite(Number(viewModel.overallAverageScore))
     ? Number(viewModel.overallAverageScore).toFixed(1)
     : "--";
-  const weakestTopicName = viewModel.weakestTopic?.topicName || "--";
+  const weakestTopicName = resolveTeacherStatsTopicLabel(
+    viewModel.weakestTopic,
+    viewModel.topicCatalog,
+  );
   const weakestTopicAccuracy = Number.isFinite(
     Number(viewModel.weakestTopic?.percentage),
   )
@@ -20447,8 +20819,41 @@ function renderTeacherStatsAi(viewModel) {
           <circle cx="164" cy="144" r="7" fill="#8fb2ff" />
         </svg>
       </div>
-    </div>
-  `;
+  </div>
+`;
+}
+
+function resolveTeacherStatsTopicLabel(topic, topicCatalog = []) {
+  if (!topic || typeof topic !== "object") {
+    return "--";
+  }
+
+  const explicitLabel = String(
+    topic.topicName || topic.title || topic.name || topic.displayName || "",
+  ).trim();
+
+  if (explicitLabel) {
+    return explicitLabel;
+  }
+
+  const topicId = String(topic.topicId || topic.id || "").trim();
+  if (!topicId) {
+    return "--";
+  }
+
+  const catalogItem = (Array.isArray(topicCatalog) ? topicCatalog : []).find(
+    (item) => String(item?.topicId || "").trim() === topicId,
+  );
+
+  const catalogLabel = String(
+    catalogItem?.title ||
+      catalogItem?.name ||
+      catalogItem?.topicName ||
+      catalogItem?.displayName ||
+      "",
+  ).trim();
+
+  return catalogLabel || topicId;
 }
 
 function renderTeacherStatsSummary(viewModel) {
@@ -20809,6 +21214,9 @@ async function loadTeacherStatsData({
 
       const topicProgressByStudentId =
         await loadTeacherStatsStudentTopics(studentIds);
+      const topicCatalog = await loadTeacherStatsTopicCatalog(
+        topicProgressByStudentId,
+      );
 
       const nextData = {
         classes,
@@ -20817,6 +21225,7 @@ async function loadTeacherStatsData({
         assignments: classAssignments,
         submissionsByAssignmentId: new Map(submissionsEntries),
         topicProgressByStudentId,
+        topicCatalog,
       };
 
       if (teacherStatsState.renderToken !== requestToken) {
@@ -23643,7 +24052,10 @@ function initApp(user) {
     user.uid || user.userId || user.id || user.username || user.email || "",
   ).trim();
 
-  if (bootstrapState.initializedUid && bootstrapState.initializedUid !== identityKey) {
+  if (
+    bootstrapState.initializedUid &&
+    bootstrapState.initializedUid !== identityKey
+  ) {
     resetPetModuleState();
   }
 

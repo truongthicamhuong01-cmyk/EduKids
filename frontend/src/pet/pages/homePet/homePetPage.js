@@ -10,20 +10,13 @@ const HOME_PAGE_ID = "edukids-pet-home-page";
 
 function iconCart() {
   return `
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M3.5 5.5h2l1.15 8.2A2 2 0 0 0 8.62 15h7.5a2 2 0 0 0 1.94-1.55L19.9 8H6.1" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"></path>
-      <circle cx="8.2" cy="19.2" r="1.15" fill="currentColor"></circle>
-      <circle cx="17.5" cy="19.2" r="1.15" fill="currentColor"></circle>
-      <path d="M10.2 6.2h.01M14.6 6.2h.01" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
-    </svg>
+    <img src="/assets/pet/icons/icon_shop.png" alt="" aria-hidden="true" loading="eager" decoding="async" />
   `;
 }
 
 function iconHand() {
   return `
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M6.9 11.1V7.6a1.8 1.8 0 0 1 3.6 0v4.8m3.2-3.6V5.8a1.8 1.8 0 0 1 3.6 0v5m2.8-.9V8.5a1.8 1.8 0 0 1 3.6 0v4.7c0 4.4-2.8 7.8-7.9 7.8-3.8 0-6.7-2.2-7.6-6.2V10a1.8 1.8 0 0 1 3.6 0v3.3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
-    </svg>
+    <img src="/assets/pet/icons/icon_touch.png" alt="" aria-hidden="true" loading="eager" decoding="async" />
   `;
 }
 
@@ -48,11 +41,7 @@ function iconLevel() {
 
 function iconFeed() {
   return `
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M6.5 16.6c1.4-2.1 2.6-4.1 3.5-5.8 1.2-2.4 2.3-4.5 4.4-4.5 2.1 0 3.7 1.6 3.7 3.7 0 2.7-2.1 4-4.7 5.3-.8.4-1.8.9-2.7 1.8H6.5Z" fill="currentColor"></path>
-      <path d="M10.1 15.7c-.7.8-1.2 1.7-1.4 2.9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-      <path d="M16.8 7.8c.7.8 1.2 1.7 1.4 2.9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-    </svg>
+    <img src="/assets/pet/icons/icon_feed.png" alt="" aria-hidden="true" loading="eager" decoding="async" />
   `;
 }
 
@@ -75,11 +64,7 @@ function iconSleep() {
 
 function iconInventory() {
   return `
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M7.5 6h9a2 2 0 0 1 2 2v8.5a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" fill="currentColor" opacity="0.16"></path>
-      <path d="M8 8.2h8M8 11.9h8M8 15.6h5.1" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"></path>
-      <path d="M8.5 6.2c.5-1.2 1.4-1.9 2.8-1.9h2.4c1.4 0 2.3.7 2.8 1.9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path>
-    </svg>
+    <img src="/assets/pet/icons/icon_inventory.png" alt="" aria-hidden="true" loading="eager" decoding="async" />
   `;
 }
 
@@ -320,6 +305,15 @@ function ensureHomePageRoot() {
 
 function setBodyActive(isActive) {
   void isActive;
+}
+
+function scrollPageToTop(root) {
+  if (!root) {
+    return;
+  }
+
+  root.scrollIntoView({ block: "start" });
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
 }
 
 function formatNumber(value) {
@@ -904,6 +898,9 @@ export function createHomePetPage({ store, petApi } = {}) {
     const snapshot = store?.getState?.() || {};
     syncFromStore(snapshot);
     state.initialized = true;
+    if (!root.hidden) {
+      scrollPageToTop(root);
+    }
   }
 
   function destroy() {
@@ -928,6 +925,7 @@ export function createHomePetPage({ store, petApi } = {}) {
       state.visible = true;
       setBodyActive(Boolean(store?.getState?.()?.pet));
       render(store?.getState?.() || {});
+      scrollPageToTop(root);
     },
     hide: () => {
       root.hidden = true;

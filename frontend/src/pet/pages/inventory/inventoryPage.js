@@ -268,6 +268,15 @@ function setBodyActive(isActive) {
   void isActive;
 }
 
+function scrollPageToTop(root) {
+  if (!root) {
+    return;
+  }
+
+  root.scrollIntoView({ block: "start" });
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+}
+
 export function createInventoryPage({ store, petApi, inventoryApi } = {}) {
   const root = ensureInventoryRoot();
   const state = createDefaultState();
@@ -854,6 +863,7 @@ export function createInventoryPage({ store, petApi, inventoryApi } = {}) {
     if (hasPet) {
       root.hidden = false;
       render(snapshot);
+      scrollPageToTop(root);
     } else {
       root.hidden = true;
       setBodyActive(false);
@@ -867,6 +877,7 @@ export function createInventoryPage({ store, petApi, inventoryApi } = {}) {
     setBodyActive(true);
     state.items = getToyItems(store?.getState?.() || {});
     render(store?.getState?.() || {});
+    scrollPageToTop(root);
   }
 
   function hide() {

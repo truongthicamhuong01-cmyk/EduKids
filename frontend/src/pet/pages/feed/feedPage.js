@@ -258,6 +258,15 @@ function setBodyActive(isActive) {
   void isActive;
 }
 
+function scrollPageToTop(root) {
+  if (!root) {
+    return;
+  }
+
+  root.scrollIntoView({ block: "start" });
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+}
+
 export function createFeedPage({ store, petApi, shopApi, inventoryApi } = {}) {
   const root = ensureFeedRoot();
   const state = createDefaultState();
@@ -860,6 +869,7 @@ export function createFeedPage({ store, petApi, shopApi, inventoryApi } = {}) {
     if (hasPet) {
       root.hidden = false;
       render(snapshot);
+      scrollPageToTop(root);
     } else {
       root.hidden = true;
       setBodyActive(false);
@@ -872,6 +882,7 @@ export function createFeedPage({ store, petApi, shopApi, inventoryApi } = {}) {
     root.hidden = false;
     setBodyActive(true);
     render(store?.getState?.() || {});
+    scrollPageToTop(root);
   }
 
   function hide() {

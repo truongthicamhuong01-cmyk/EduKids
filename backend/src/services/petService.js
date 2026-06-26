@@ -206,6 +206,9 @@ function buildPetResponse(petState, configs, extra = {}) {
       isSleeping: Boolean(normalizedPet.isSleeping),
     },
     hasPet: true,
+    wallet: {
+      eduCoin: Math.max(0, Number(extra?.wallet?.eduCoin ?? extra?.wallet?.coin ?? extra?.eduCoin ?? 0)),
+    },
     derivedState: {
       mood: normalizedPet.mood,
       stage: normalizedPet.stage,
@@ -415,6 +418,9 @@ async function getPet({ uid, requestId = "" }) {
       statusCode: 200,
       message: "Lấy thông tin Pet thành công",
       data: buildPetResponse(petToSave, configs, {
+        wallet: {
+          eduCoin: Math.max(0, Number(user?.stats?.eduCoin || 0)),
+        },
         sync: {
           offlineApplied: synced.offlineApplied,
           offlineMinutes: synced.offlineMinutes,
@@ -659,6 +665,9 @@ async function mutatePetAction({ uid, actionName, body = {}, requestId = "", ide
             ? "Chơi với Pet thành công"
             : "Cho Pet ngủ thành công",
       data: buildPetResponse(nextState, configs, {
+        wallet: {
+          eduCoin: Math.max(0, Number(user?.stats?.eduCoin || 0)),
+        },
         sync: {
           offlineApplied: synced.offlineApplied,
           offlineMinutes: synced.offlineMinutes,

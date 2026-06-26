@@ -513,6 +513,8 @@ body.auth-mode .app {
 }
 
 .admin-content {
+  margin-left: 280px;
+  width: calc(100% - 280px);
   min-height: 100vh;
 }
 
@@ -4067,6 +4069,35 @@ textarea {
   min-height: inherit;
 }
 
+.boss-battle-exit-btn {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 6px 10px 6px 9px;
+  border: 1px solid rgba(255, 205, 97, 0.95);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 248, 228, 0.98), rgba(255, 239, 198, 0.96));
+  color: #6f4300;
+  box-shadow: 0 8px 14px rgba(109, 79, 0, 0.14);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.boss-battle-exit-btn img {
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
+  flex: none;
+}
+
 .boss-battle-sidebar {
   display: flex;
   flex-direction: column;
@@ -4111,6 +4142,7 @@ textarea {
 
 .boss-battle-sidebar__card {
   position: relative;
+  margin-top: 18px;
   padding: 18px 18px 16px;
   border-radius: 34px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 244, 236, 0.96));
@@ -4288,6 +4320,25 @@ textarea {
   display: grid;
   gap: 20px;
   min-width: 0;
+  padding-top: 32px;
+}
+
+.boss-battle-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: 100%;
+  min-width: 0;
+}
+
+.boss-battle-action-row .boss-battle-hint-pill {
+  margin: 0;
+  justify-self: auto;
+}
+
+.boss-battle-action-row .boss-battle-next-btn {
+  margin: 0;
 }
 
 .boss-battle-header-card {
@@ -4392,11 +4443,10 @@ textarea {
 }
 
 .boss-battle-header-card__track-asset {
-  position: absolute;
-  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
   pointer-events: none;
   opacity: 0.38;
   mix-blend-mode: screen;
@@ -4404,14 +4454,16 @@ textarea {
 
 .boss-battle-header-card__track-fill {
   position: absolute;
-  inset: 4px;
+  inset: 4px auto 4px 4px;
   display: block;
   height: calc(100% - 8px);
   border-radius: inherit;
+  overflow: hidden;
   background: linear-gradient(90deg, #ff6a5f, #ff322f 50%, #ff9841);
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.36);
   transition: width 0.42s cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 1;
+  min-width: 0;
 }
 
 .boss-battle-header-card__track-fill::after {
@@ -4446,7 +4498,7 @@ textarea {
 .boss-battle-question-card__text {
   margin: 0;
   padding: 0 20px;
-  font-size: clamp(calc(1.6rem - 6px), calc(3.7vw - 6px), calc(3.3rem - 6px));
+  font-size: clamp(calc(1.6rem - 9px), calc(3.7vw - 9px), calc(3.3rem - 9px));
   line-height: 1.06;
   text-align: center;
   color: #232f6c;
@@ -4499,9 +4551,15 @@ textarea {
   border-radius: 999px;
   display: grid;
   place-items: center;
-  font-size: 2.1rem;
   flex: none;
   box-shadow: inset 0 -10px 18px rgba(255, 255, 255, 0.12);
+}
+
+.boss-battle-answer-card__badge img {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  display: block;
 }
 
 .boss-battle-answer-card__body {
@@ -4519,7 +4577,7 @@ textarea {
 }
 
 .boss-battle-answer-card__text {
-  font-size: clamp(calc(1.45rem - 6px), calc(2.7vw - 6px), calc(2.8rem - 6px));
+  font-size: clamp(calc(1.45rem - 8px), calc(2.7vw - 8px), calc(2.8rem - 8px));
   line-height: 1.02;
   font-weight: 900;
   letter-spacing: -0.03em;
@@ -16267,6 +16325,11 @@ body.admin-content-drawer-open {
     padding: 0;
   }
 
+  .admin-content {
+    margin-left: 240px;
+    width: calc(100% - 240px);
+  }
+
   .home-content-inner {
     margin-top: -34px;
     padding: 0 24px 24px;
@@ -16286,8 +16349,8 @@ body.admin-content-drawer-open {
   }
 
   .admin-content {
-    margin-left: 240px;
-    width: calc(100% - 240px);
+    margin-left: 280px;
+    width: calc(100% - 280px);
   }
 
   .sidebar-backdrop {
@@ -16562,7 +16625,7 @@ body.admin-content-drawer-open {
 
   .boss-battle-question-card__text {
     padding: 0;
-    font-size: clamp(calc(1.35rem - 6px), calc(7.2vw - 6px), calc(2.2rem - 6px));
+    font-size: clamp(calc(1.35rem - 9px), calc(7.2vw - 9px), calc(2.2rem - 9px));
   }
 
   .boss-battle-answer-grid {
@@ -16577,7 +16640,11 @@ body.admin-content-drawer-open {
   .boss-battle-answer-card__badge {
     width: 74px;
     height: 74px;
-    font-size: 1.9rem;
+  }
+
+  .boss-battle-answer-card__badge img {
+    width: 46px;
+    height: 46px;
   }
 
   .boss-battle-hint-pill {
