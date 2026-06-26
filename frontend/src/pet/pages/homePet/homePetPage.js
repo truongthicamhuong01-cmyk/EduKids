@@ -843,6 +843,12 @@ export function createHomePetPage({ store, petApi } = {}) {
   }
 
   function syncFromStore(snapshot = {}) {
+    // Khi Home đã được khởi tạo xong và đang ẩn, bỏ qua mọi update từ store.
+    // Điều này ngăn Home tự render lại trong lúc các màn khác đang load dữ liệu.
+    if (state.initialized && !state.visible) {
+      return;
+    }
+
     const hasPet = Boolean(snapshot.pet) || snapshot.hasPet === true;
     const noPetKnown = snapshot.hasPet === false && !snapshot.pet;
     const feedPageOpen =

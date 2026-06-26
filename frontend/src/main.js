@@ -8034,7 +8034,10 @@ function applyLatestCurrentUser(profile) {
 
 function syncPetWalletFromProfile(profile) {
   const pet = getPetModuleApi();
-  const coinValue = Math.max(0, Math.floor(Number(profile?.stats?.eduCoin || 0)));
+  const coinValue = Math.max(
+    0,
+    Math.floor(Number(profile?.stats?.eduCoin || 0)),
+  );
 
   if (!pet?.store?.setState) {
     return;
@@ -10491,13 +10494,21 @@ async function syncBossBattleRewardWithBackend() {
     }
 
     try {
-      const refreshedProfile = window.EduKidsProfileService?.fetchCurrentProfile
-        ? await window.EduKidsProfileService.fetchCurrentProfile()
+      const responseProfile = response.data?.profile
+        ? window.EduKidsProfileService?.normalizeProfile?.(response.data.profile) ||
+          response.data.profile
         : null;
+      const refreshedProfile = responseProfile ||
+        (window.EduKidsProfileService?.fetchCurrentProfile
+          ? await window.EduKidsProfileService.fetchCurrentProfile()
+          : null);
 
       if (refreshedProfile) {
         applyLatestCurrentUser(refreshedProfile);
         syncPetWalletFromProfile(refreshedProfile);
+        renderStudentHomeOverview(refreshedProfile);
+        renderStudentProgressPage(refreshedProfile);
+        renderStudentProfile(refreshedProfile);
       } else {
         syncPetWalletFromProfile(getCurrentAuthUser());
       }
@@ -16928,16 +16939,16 @@ function renderStudentAssignmentDetail(assignment) {
         </div>
 
         <div class="assignment-detail-meta">
-          <div class="assignment-detail-row"><span>Tiêu đề</span><strong>${escapeHtml(assignment.title || "--")}</strong></div>
-          <div class="assignment-detail-row"><span>Mô tả</span><strong>${escapeHtml(assignment.description || "--")}</strong></div>
-          <div class="assignment-detail-row"><span>Hạn nộp</span><strong>${escapeHtml(dueDateText)}</strong></div>
-          <div class="assignment-detail-row"><span>Lớp</span><strong>${escapeHtml(classLabel)}</strong></div>
+          <div class="assignment-detail-row"><span>: </span><strong>${escapeHtml(assignment.title || "--")}</strong></div>
+          <div class="assignment-detail-row"><span>Mô tả: </span><strong>${escapeHtml(assignment.description || "--")}</strong></div>
+          <div class="assignment-detail-row"><span>Hạn nộp: </span><strong>${escapeHtml(dueDateText)}</strong></div>
+          <div class="assignment-detail-row"><span>Lớp: </span><strong>${escapeHtml(classLabel)}</strong></div>
           ${
             isReadOnly || Number.isFinite(Number(assignment.score))
               ? `
-              <div class="assignment-detail-row"><span>Điểm</span><strong>${escapeHtml(scoreText)}</strong></div>
-              <div class="assignment-detail-row"><span>Đúng</span><strong>${escapeHtml(correctCountText)}</strong></div>
-              <div class="assignment-detail-row"><span>Sai</span><strong>${escapeHtml(wrongCountText)}</strong></div>
+              <div class="assignment-detail-row"><span>Điểm: </span><strong>${escapeHtml(scoreText)}</strong></div>
+              <div class="assignment-detail-row"><span>Đúng: </span><strong>${escapeHtml(correctCountText)}</strong></div>
+              <div class="assignment-detail-row"><span>Sai: </span><strong>${escapeHtml(wrongCountText)}</strong></div>
             `
               : ""
           }
@@ -20829,7 +20840,7 @@ function resolveTeacherStatsTopicLabel(topic, topicCatalog = []) {
   }
 
   const explicitLabel = String(
-    topic.topicName || topic.title || topic.name || topic.displayName || "",
+    topic.title || topic.displayName || topic.name || topic.topicName || "",
   ).trim();
 
   if (explicitLabel) {
@@ -20847,9 +20858,9 @@ function resolveTeacherStatsTopicLabel(topic, topicCatalog = []) {
 
   const catalogLabel = String(
     catalogItem?.title ||
+      catalogItem?.displayName ||
       catalogItem?.name ||
       catalogItem?.topicName ||
-      catalogItem?.displayName ||
       "",
   ).trim();
 

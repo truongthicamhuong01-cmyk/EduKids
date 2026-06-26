@@ -513,8 +513,8 @@ body.auth-mode .app {
 }
 
 .admin-content {
-  margin-left: 280px;
-  width: calc(100% - 280px);
+  margin-left: 0;
+  width: 100%;
   min-height: 100vh;
 }
 

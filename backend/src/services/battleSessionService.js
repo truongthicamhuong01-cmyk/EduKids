@@ -1,8 +1,9 @@
 const crypto = require("crypto");
 const ApiError = require("../utils/apiError");
 const { getQuizById } = require("./quizGradeService");
-const { awardExp } = require("./progressService");
+const { awardExp, recordLearningActivity } = require("./progressService");
 const { grantReward } = require("./rewardService");
+const { recordUserTopicAccuracy } = require("./quizSelectionService");
 const { getUserById, getUserRef } = require("../repositories/userRepository");
 const {
   createBattleSession,
@@ -258,6 +259,8 @@ function buildBattleSessionResponse(session) {
     hintRemaining: Number(session.hintRemaining ?? 3),
     answers: Array.isArray(session.answers) ? session.answers : [],
     status: normalizeStatus(session.status),
+    startedAt: session.startedAt || session.createdAt || "",
+    completedAt: session.completedAt || "",
     createdAt: session.createdAt || "",
     updatedAt: session.updatedAt || session.createdAt || "",
   };
@@ -346,11 +349,13 @@ async function createBattleSessionFromQuiz({ userId, topicId, quizId }) {
       answers: [],
       status: "active",
       rewardStatus: "pending",
-      rewardSummary: null,
-      rewardedAt: "",
-      createdAt: now,
-      updatedAt: now,
-    };
+    rewardSummary: null,
+    rewardedAt: "",
+    startedAt: now,
+    completedAt: "",
+    createdAt: now,
+    updatedAt: now,
+  };
 
     transaction.set(getBattleSessionRef(sessionId), session, { merge: true });
     transaction.set(
@@ -581,6 +586,52 @@ function normalizeBossBattleRewardSummary(summary = {}) {
   };
 }
 
+function buildBossBattleTopicResults(session = {}, quiz = {}) {
+  const questions = Array.isArray(quiz?.questions) ? quiz.questions : [];
+  const answers = Array.isArray(session?.answers) ? session.answers : [];
+  const answerMap = getBattleSessionAnswerMap(answers);
+  const topicResults = [];
+
+  questions.forEach((question, questionIndex) => {
+    const answer = answerMap.get(questionIndex);
+    const correctOption = getCorrectOption(question);
+    const correctAnswer = normalizeAnswerLabel(correctOption?.label);
+    const selectedAnswer = normalizeAnswerLabel(answer?.selected);
+    const isCorrect = Boolean(selectedAnswer) && selectedAnswer === correctAnswer;
+
+    if (selectedAnswer) {
+      topicResults.push({
+        isCorrect,
+      });
+    }
+  });
+
+  return topicResults;
+}
+
+function getBattleSessionStudyMinutes(session = {}) {
+  const startedAt = String(session?.startedAt || session?.createdAt || "").trim();
+  const completedAt = String(session?.completedAt || session?.rewardedAt || new Date().toISOString()).trim();
+
+  if (!startedAt || !completedAt) {
+    return 0;
+  }
+
+  const startDate = new Date(startedAt);
+  const endDate = new Date(completedAt);
+
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return 0;
+  }
+
+  const diffMs = endDate.getTime() - startDate.getTime();
+  if (diffMs <= 0) {
+    return 0;
+  }
+
+  return Number((diffMs / 60000).toFixed(1));
+}
+
 async function completeBattleSession({ sessionId, userId }) {
   const normalizedSessionId = normalizeText(sessionId);
   const normalizedUserId = normalizeText(userId);
@@ -628,6 +679,7 @@ async function completeBattleSession({ sessionId, userId }) {
   const currentRewardStatus = normalizeRewardStatus(currentSession.rewardStatus);
 
   if (currentRewardStatus === "rewarded") {
+    const currentProfile = await getUserById(normalizedUserId).catch(() => null);
     return {
       session: buildBattleSessionResponse({
         ...currentSession,
@@ -638,6 +690,7 @@ async function completeBattleSession({ sessionId, userId }) {
       achievements: {
         unlocked: [],
       },
+      profile: currentProfile,
     };
   }
 
@@ -700,6 +753,24 @@ async function completeBattleSession({ sessionId, userId }) {
     };
   });
 
+  if (normalizeRewardStatus(preparedSession.rewardStatus) === "rewarded") {
+    const currentProfile = await getUserById(normalizedUserId).catch(() => null);
+
+    return {
+      session: buildBattleSessionResponse({
+        ...preparedSession,
+        rewardStatus: "rewarded",
+      }),
+      rewardSummary: normalizeBossBattleRewardSummary(
+        preparedSession.rewardSummary || computedRewardSummary,
+      ),
+      achievements: {
+        unlocked: [],
+      },
+      profile: currentProfile,
+    };
+  }
+
   const rewardSummary = normalizeBossBattleRewardSummary(
     preparedSession.rewardSummary || computedRewardSummary,
   );
@@ -751,6 +822,34 @@ async function completeBattleSession({ sessionId, userId }) {
   });
 
   const rewardedAt = new Date().toISOString();
+  const completedAt = rewardedAt;
+  const studyMinutes = getBattleSessionStudyMinutes({
+    ...preparedSession,
+    startedAt: preparedSession.startedAt || currentSession.startedAt || currentSession.createdAt || "",
+    completedAt,
+  });
+  const topicResults = buildBossBattleTopicResults(currentSession, quiz);
+  const topicId = String(currentSession.topicId || preparedSession.topicId || "").trim();
+
+  if (topicId) {
+    await recordUserTopicAccuracy(normalizedUserId, topicId, topicResults);
+  }
+
+  const progressReceipt = await recordLearningActivity(normalizedUserId, {
+    sourceType: "bossBattle",
+    sourceId: battleSourceId,
+    idempotencyKey: `${battleSourceId}:progress`,
+    topicId,
+    quizId: String(currentSession.quizId || preparedSession.quizId || "").trim(),
+    startedAt: preparedSession.startedAt || currentSession.startedAt || currentSession.createdAt || "",
+    completedAt,
+    studyMinutes,
+    totalQuestions: rewardSummary.totalQuestions,
+    correctAnswers: rewardSummary.correctAnswers,
+    wrongAnswers: Math.max(0, rewardSummary.totalQuestions - rewardSummary.correctAnswers),
+    accuracy: rewardSummary.accuracy,
+    score: Number((rewardSummary.accuracy / 10).toFixed(1)),
+  });
   const finalRewardSummary = {
     ...rewardSummary,
     userExpAfter: Math.max(
@@ -769,6 +868,7 @@ async function completeBattleSession({ sessionId, userId }) {
     rewardStatus: "rewarded",
     rewardSummary: finalRewardSummary,
     rewardedAt,
+    completedAt,
     updatedAt: rewardedAt,
   });
 
@@ -778,6 +878,7 @@ async function completeBattleSession({ sessionId, userId }) {
     achievements: {
       unlocked: unlockedAchievements,
     },
+    profile: progressReceipt?.user || rewardUserBeforeGrant || null,
   };
 }
 

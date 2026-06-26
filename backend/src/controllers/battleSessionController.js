@@ -101,6 +101,7 @@ const completeSession = asyncHandler(async (req, res) => {
     rewardSummary: result.rewardSummary,
     achievements: result.achievements || { unlocked: [] },
     session: result.session,
+    profile: result.profile || null,
   });
 });
 

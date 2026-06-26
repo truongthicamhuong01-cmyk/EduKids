@@ -48,6 +48,8 @@ async function getBattleSessionById(sessionId, transaction = null) {
     rewardStatus: String(data.rewardStatus || "pending").trim() || "pending",
     rewardSummary: data.rewardSummary && typeof data.rewardSummary === "object" ? data.rewardSummary : null,
     rewardedAt: String(data.rewardedAt || ""),
+    startedAt: String(data.startedAt || data.createdAt || ""),
+    completedAt: String(data.completedAt || ""),
     createdAt: String(data.createdAt || ""),
     updatedAt: String(data.updatedAt || data.createdAt || ""),
   };
@@ -72,6 +74,8 @@ async function createBattleSession(session, transaction = null) {
         ? session.rewardSummary
         : null,
     rewardedAt: String(session?.rewardedAt || ""),
+    startedAt: String(session?.startedAt || session?.createdAt || ""),
+    completedAt: String(session?.completedAt || ""),
     createdAt: String(session?.createdAt || ""),
     updatedAt: String(session?.updatedAt || session?.createdAt || ""),
   };
@@ -150,6 +154,14 @@ async function updateBattleSessionById(sessionId, updates = {}, transaction = nu
 
   if (Object.prototype.hasOwnProperty.call(patch, "rewardedAt")) {
     patch.rewardedAt = String(patch.rewardedAt || "");
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "startedAt")) {
+    patch.startedAt = String(patch.startedAt || "");
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "completedAt")) {
+    patch.completedAt = String(patch.completedAt || "");
   }
 
   if (Object.prototype.hasOwnProperty.call(patch, "sessionId")) {
