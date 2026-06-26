@@ -34,14 +34,12 @@ function resolveBossStateByHP(hp) {
 export class BossHpComponent {
   constructor(options = {}) {
     this.assetBasePath = String(options.assetBasePath || "assets/game/boss").replace(/\/+$/, "");
-    this.frameSrc = String(options.frameSrc || `${this.assetBasePath}/boss_hp_frame.png`);
     this.fillSrc = String(options.fillSrc || `${this.assetBasePath}/boss_hp_fill.png`);
     this.maxHP = Math.max(1, Number(options.maxHP) || DEFAULT_HP);
     this.currentHP = clampHP(options.initialHP ?? this.maxHP);
     this.onStateChange = typeof options.onStateChange === "function" ? options.onStateChange : null;
     this.linkedBoss = options.linkedBoss || null;
     this.root = this.createRoot();
-    this.frameImage = this.root.querySelector("[data-boss-hp-frame]");
     this.fillTrack = this.root.querySelector("[data-boss-hp-fill-track]");
     this.fillImage = this.root.querySelector("[data-boss-hp-fill-image]");
     this.valueText = this.root.querySelector("[data-boss-hp-value]");
@@ -67,7 +65,7 @@ export class BossHpComponent {
     ].join(";");
 
     root.innerHTML = `
-      <div class="boss-hp__visual" style="position: relative; width: 100%; min-height: 34px;">
+      <div class="boss-hp__visual" style="position: relative; width: 100%; min-height: 34px; border-radius: 999px; overflow: hidden;">
         <div data-boss-hp-fill-track class="boss-hp__fill-track" aria-hidden="true">
           <img
             data-boss-hp-fill-image-layer
@@ -78,13 +76,6 @@ export class BossHpComponent {
             draggable="false"
           />
         </div>
-        <img
-          data-boss-hp-frame
-          class="boss-hp__frame"
-          src="${this.frameSrc}"
-          alt="Boss HP frame"
-          draggable="false"
-        />
       </div>
       <div class="boss-hp__meta" style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
         <strong data-boss-hp-state class="boss-hp__state">idle</strong>
@@ -95,16 +86,19 @@ export class BossHpComponent {
     const styleText = `
       .boss-hp__visual {
         isolation: isolate;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(229, 236, 247, 0.94));
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.8),
+          0 10px 20px rgba(31, 42, 90, 0.12);
       }
       .boss-hp__fill-track {
         position: absolute;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 100%;
+        inset: 4px;
+        width: auto;
         overflow: hidden;
         border-radius: 999px;
         transition: width 280ms ease;
+        background: linear-gradient(90deg, #ff6a5f, #ff322f 50%, #ff9841);
       }
       .boss-hp__fill-image-layer {
         width: 100%;
@@ -114,14 +108,8 @@ export class BossHpComponent {
         display: block;
         pointer-events: none;
         user-select: none;
-      }
-      .boss-hp__frame {
-        position: relative;
-        width: 100%;
-        height: auto;
-        display: block;
-        pointer-events: none;
-        user-select: none;
+        opacity: 0.32;
+        mix-blend-mode: screen;
       }
       .boss-hp__state {
         text-transform: uppercase;

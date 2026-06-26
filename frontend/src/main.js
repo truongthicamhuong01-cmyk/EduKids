@@ -9021,6 +9021,10 @@ const studentQuizState = {
   pendingTopicId: "",
 };
 
+const studentQuizScreenState = {
+  screen: "subjects",
+};
+
 const bossBattleState = {
   sessionId: "",
   topicId: "",
@@ -9041,6 +9045,12 @@ const bossBattleState = {
   hintLoading: false,
   hiddenOptions: [],
   assetPreloading: false,
+  answerPhase: "idle",
+  selectedAnswer: "",
+  selectedQuestionIndex: 0,
+  revealedQuestion: null,
+  revealedCorrectAnswer: "",
+  revealedCorrect: null,
 };
 
 const bossBattleReviewMode = {
@@ -9048,10 +9058,14 @@ const bossBattleReviewMode = {
   wrongQuestions: [],
   currentQuestionIndex: 0,
   selectedAnswer: "",
+  answerPhase: "idle",
   locked: false,
   reviewedCount: 0,
   correctCount: 0,
   completedVisible: false,
+  revealedQuestion: null,
+  revealedCorrectAnswer: "",
+  revealedCorrect: null,
   advanceTimerId: null,
 };
 
@@ -9156,7 +9170,7 @@ function getStudentQuizTopicGrid() {
 }
 
 function getStudentQuizScreen() {
-  return document.getElementById("student-quiz-screen");
+  return document.getElementById("student-boss-battle-screen");
 }
 
 function getStudentResultScreen() {
@@ -9181,6 +9195,14 @@ function getStudentQuizSubjectSelect() {
 
 function getStudentQuizLoadButton() {
   return document.getElementById("quiz-load-topics-btn");
+}
+
+function setStudentQuizScreen(screen) {
+  studentQuizScreenState.screen = screen === "bossBattle" ? "bossBattle" : "subjects";
+}
+
+function isStudentBossBattleScreenActive() {
+  return studentQuizScreenState.screen === "bossBattle";
 }
 
 function normalizeQuizText(value) {
@@ -9429,9 +9451,6 @@ function getBossBattleImageAssetManifest() {
   const bossStates = ["idle", "angry", "rage", "die"];
   const manifest = [
     "/assets/game/background.png",
-    getBossBattleAssetPath("popup", "popup_panel_default.png"),
-    getBossBattleAssetPath("popup", "popup_panel_victory.png"),
-    getBossBattleAssetPath("popup", "popup_panel_warning.png"),
     getBossBattleAssetPath("icons", "icon_coin.png"),
     getBossBattleAssetPath("icons", "icon_continue.png"),
     getBossBattleAssetPath("icons", "icon_heart.png"),
@@ -9448,7 +9467,6 @@ function getBossBattleImageAssetManifest() {
     getBossBattleAssetPath("effects", "effect_confetti.png"),
     getBossBattleAssetPath("effects", "effect_xp_burst.png"),
     getBossBattleAssetPath("effects", "effect_coin_burst.png"),
-    getBossBattleAssetPath("hp", "boss_hp_frame.png"),
     getBossBattleAssetPath("hp", "boss_hp_fill.png"),
   ];
 
@@ -9898,20 +9916,6 @@ function refreshBossBattleVisualLayer() {
     bossBattleAnimationState.frameRequestId = null;
     syncBossBattleVisualLayer();
   });
-}
-
-function getBossBattlePopupPanelPath(status) {
-  const normalizedStatus = normalizeBossBattleStatus(status);
-
-  if (normalizedStatus === "victory") {
-    return getBossBattleAssetPath("popup", "popup_panel_victory.png");
-  }
-
-  if (normalizedStatus === "defeat") {
-    return getBossBattleAssetPath("popup", "popup_panel_warning.png");
-  }
-
-  return getBossBattleAssetPath("popup", "popup_panel_default.png");
 }
 
 function getBossBattleIconPath(iconName) {
@@ -10386,7 +10390,9 @@ async function syncBossBattleRewardWithBackend() {
         spawnBossBattleFloatingReward(`+${summary.xpAwarded} XP`, "xp");
         spawnBossBattleFloatingReward(`+${summary.coinAwarded} Coin`, "coin");
         spawnBossBattleRewardBadge(summary.victory ? "victory" : "combo");
-        playReward();
+        playBossBattleRewardSoundOnce(
+          `${sessionId}:${bossBattleState.currentQuestionIndex}:${summary.victory ? "victory" : "completed"}:${summary.rankStars}:${summary.rankBonusCoin}`,
+        );
         if (unlockedAchievements.length > 0) {
           showBossBattleAchievementPopup(unlockedAchievements);
         }
@@ -10484,6 +10490,22 @@ function animateBossBattleRewardCounters(targetXP, targetCoin, duration = 420) {
 
 function playBossBattleRewardSound() {
   playReward();
+}
+
+function playBossBattleRewardSoundOnce(rewardKey = "") {
+  const normalizedRewardKey = normalizeQuizText(rewardKey);
+
+  if (!normalizedRewardKey) {
+    playBossBattleRewardSound();
+    return;
+  }
+
+  if (bossBattleRewardPreview.lastRewardEventKey === normalizedRewardKey) {
+    return;
+  }
+
+  bossBattleRewardPreview.lastRewardEventKey = normalizedRewardKey;
+  playBossBattleRewardSound();
 }
 
 function spawnBossBattleFloatingReward(text, kind = "xp") {
@@ -10591,10 +10613,15 @@ function syncBossBattlePopupManager() {
 }
 
 function canUseBossBattleHint() {
+  const answerPhase = normalizeQuizText(
+    bossBattleReviewMode.active ? bossBattleReviewMode.answerPhase : bossBattleState.answerPhase,
+  ).toLowerCase();
+
   return (
     bossBattlePopupManager.mode === "none" &&
     !bossBattleReviewMode.active &&
     normalizeBossBattleStatus(bossBattleState.battleStatus) === "active" &&
+    answerPhase !== "reveal" &&
     !bossBattleState.loadingSession &&
     !bossBattleState.answering &&
     !bossBattleState.hintLoading &&
@@ -10647,22 +10674,6 @@ async function requestBossBattleHint() {
     bossBattleState.hintLoading = false;
     renderStudentQuizFlow();
   }
-}
-
-function getBossBattlePopupPanelForMode(mode) {
-  if (mode === "victory") {
-    return getBossBattleAssetPath("popup", "popup_panel_victory.png");
-  }
-
-  if (mode === "defeat") {
-    return getBossBattleAssetPath("popup", "popup_panel_warning.png");
-  }
-
-  if (mode === "completed") {
-    return getBossBattleAssetPath("popup", "popup_panel_default.png");
-  }
-
-  return "";
 }
 
 function getBossBattleHeartMarkup(playerHP) {
@@ -10787,7 +10798,6 @@ function getBossBattleAchievementPopupHtml() {
 
   return `
     <article class="boss-battle-popup boss-battle-popup--achievement">
-      <img class="boss-battle-popup__panel" src="${escapeHtml(getBossBattlePopupPanelForMode("victory"))}" alt="" aria-hidden="true" />
       <div class="boss-battle-popup__content">
         <span class="boss-battle-popup__badge">Achievement Unlocked</span>
         <h2>${escapeHtml(bossBattleAchievementPopupState.title || "ACHIEVEMENT UNLOCKED")}</h2>
@@ -10869,10 +10879,14 @@ function resetBossBattleReviewMode() {
   bossBattleReviewMode.wrongQuestions = [];
   bossBattleReviewMode.currentQuestionIndex = 0;
   bossBattleReviewMode.selectedAnswer = "";
+  bossBattleReviewMode.answerPhase = "idle";
   bossBattleReviewMode.locked = false;
   bossBattleReviewMode.reviewedCount = 0;
   bossBattleReviewMode.correctCount = 0;
   bossBattleReviewMode.completedVisible = false;
+  bossBattleReviewMode.revealedQuestion = null;
+  bossBattleReviewMode.revealedCorrectAnswer = "";
+  bossBattleReviewMode.revealedCorrect = null;
 }
 
 function buildBossBattleWrongReviewQuestions() {
@@ -10930,7 +10944,7 @@ function showBossBattleWrongAnswerReview() {
   bossBattleReviewMode.correctCount = 0;
   bossBattleReviewMode.completedVisible = wrongQuestions.length === 0;
   renderStudentQuizFlow();
-  scrollToElement("student-quiz-screen");
+  scrollToElement("student-boss-battle-screen");
 }
 
 function getBossBattleReviewCurrentQuestion() {
@@ -10962,7 +10976,7 @@ function finishBossBattleReviewMode() {
     ? bossBattleReviewMode.wrongQuestions.length
     : 0;
   renderStudentQuizFlow();
-  scrollToElement("student-quiz-screen");
+  scrollToElement("student-boss-battle-screen");
 }
 
 function advanceBossBattleReviewQuestion() {
@@ -10980,8 +10994,12 @@ function advanceBossBattleReviewQuestion() {
 
   bossBattleReviewMode.currentQuestionIndex = nextIndex;
   bossBattleReviewMode.selectedAnswer = "";
+  bossBattleReviewMode.answerPhase = "idle";
   bossBattleReviewMode.locked = false;
   bossBattleReviewMode.completedVisible = false;
+  bossBattleReviewMode.revealedQuestion = null;
+  bossBattleReviewMode.revealedCorrectAnswer = "";
+  bossBattleReviewMode.revealedCorrect = null;
   renderStudentQuizFlow();
 }
 
@@ -11005,7 +11023,11 @@ function submitBossBattleReviewAnswer(questionIndex, selected) {
   const isCorrect = normalizedSelected === normalizedCorrect;
 
   bossBattleReviewMode.selectedAnswer = normalizedSelected;
+  bossBattleReviewMode.answerPhase = "reveal";
   bossBattleReviewMode.locked = true;
+  bossBattleReviewMode.revealedQuestion = question;
+  bossBattleReviewMode.revealedCorrectAnswer = normalizedCorrect;
+  bossBattleReviewMode.revealedCorrect = isCorrect;
   bossBattleReviewMode.reviewedCount = currentIndex + 1;
   if (isCorrect) {
     bossBattleReviewMode.correctCount += 1;
@@ -11013,9 +11035,11 @@ function submitBossBattleReviewAnswer(questionIndex, selected) {
 
   renderStudentQuizFlow();
 
-  bossBattleReviewMode.advanceTimerId = window.setTimeout(() => {
-    advanceBossBattleReviewQuestion();
-  }, 450);
+  queueMicrotask(() => {
+    requestAnimationFrame(() => {
+      triggerBossBattleFeedback(isCorrect ? "correct" : "wrong");
+    });
+  });
 }
 
 function restartBossBattleReviewMode() {
@@ -11026,12 +11050,16 @@ function restartBossBattleReviewMode() {
   bossBattleReviewMode.wrongQuestions = wrongQuestions;
   bossBattleReviewMode.currentQuestionIndex = 0;
   bossBattleReviewMode.selectedAnswer = "";
+  bossBattleReviewMode.answerPhase = "idle";
   bossBattleReviewMode.locked = false;
   bossBattleReviewMode.reviewedCount = 0;
   bossBattleReviewMode.correctCount = 0;
   bossBattleReviewMode.completedVisible = wrongQuestions.length === 0;
+  bossBattleReviewMode.revealedQuestion = null;
+  bossBattleReviewMode.revealedCorrectAnswer = "";
+  bossBattleReviewMode.revealedCorrect = null;
   renderStudentQuizFlow();
-  scrollToElement("student-quiz-screen");
+  scrollToElement("student-boss-battle-screen");
 }
 
 function closeBossBattleReviewMode() {
@@ -11117,6 +11145,12 @@ function resetBossBattleState(totalQuestions = 0) {
   bossBattleState.hintLoading = false;
   bossBattleState.hiddenOptions = [];
   bossBattleState.assetPreloading = false;
+  bossBattleState.answerPhase = "idle";
+  bossBattleState.selectedAnswer = "";
+  bossBattleState.selectedQuestionIndex = 0;
+  bossBattleState.revealedQuestion = null;
+  bossBattleState.revealedCorrectAnswer = "";
+  bossBattleState.revealedCorrect = null;
   bossBattleAnimationState.currentState = "idle";
   bossBattleAnimationState.currentFrame = 1;
   bossBattleAnimationState.playOnce = false;
@@ -11315,7 +11349,7 @@ function applyBossBattleRewardPreviewEvent({
   }
 
   if (shouldPlayRewardSound) {
-    playBossBattleRewardSound();
+    playBossBattleRewardSoundOnce(rewardKey);
   }
 }
 
@@ -11340,6 +11374,61 @@ function getBossBattleCurrentQuestion(quiz) {
   return {
     questionIndex,
     question: questions[questionIndex] || null,
+  };
+}
+
+function getBossBattleQuestionCorrectAnswer(question) {
+  if (!question || typeof question !== "object") {
+    return "";
+  }
+
+  const explicitAnswer = normalizeQuizText(question.correctAnswer).toUpperCase();
+  if (explicitAnswer) {
+    return explicitAnswer;
+  }
+
+  const options = Array.isArray(question.options) ? question.options : [];
+  const correctOption = options.find((option) => option && option.correct === true);
+
+  return normalizeQuizText(correctOption?.label || "").toUpperCase();
+}
+
+function getBossBattleDisplayedQuestion(quiz) {
+  const questions = Array.isArray(quiz?.questions) ? quiz.questions : [];
+  const answerPhase = normalizeQuizText(bossBattleState.answerPhase).toLowerCase();
+
+  if (
+    answerPhase === "reveal" &&
+    bossBattleState.revealedQuestion &&
+    typeof bossBattleState.revealedQuestion === "object"
+  ) {
+    return {
+      questionIndex: Math.max(0, Number(bossBattleState.selectedQuestionIndex) || 0),
+      question: bossBattleState.revealedQuestion,
+      phase: "reveal",
+    };
+  }
+
+  const questionIndex = getBossBattleCurrentQuestionIndex();
+  return {
+    questionIndex,
+    question: questions[questionIndex] || null,
+    phase: answerPhase === "selected" ? "selected" : "idle",
+  };
+}
+
+function getBossBattleQuestionViewMeta(question, selectedAnswer = "", revealMode = false) {
+  const normalizedSelected = normalizeQuizText(selectedAnswer).toUpperCase();
+  const correctAnswer = getBossBattleQuestionCorrectAnswer(question);
+  const isCorrect = Boolean(
+    revealMode && normalizedSelected && normalizedSelected === correctAnswer,
+  );
+
+  return {
+    selectedAnswer: normalizedSelected,
+    correctAnswer,
+    isCorrect,
+    isWrong: Boolean(revealMode && normalizedSelected && normalizedSelected !== correctAnswer),
   };
 }
 
@@ -11511,6 +11600,7 @@ async function createBossBattleSessionForCurrentQuiz() {
 
 async function submitBossBattleAnswer(questionIndex, selected) {
   const sessionId = normalizeQuizText(bossBattleState.sessionId);
+  const normalizedSelected = normalizeQuizText(selected).toUpperCase();
 
   if (!sessionId) {
     throw new Error("Battle session chưa được khởi tạo.");
@@ -11520,27 +11610,58 @@ async function submitBossBattleAnswer(questionIndex, selected) {
     return null;
   }
 
+  if (!normalizedSelected) {
+    return null;
+  }
+
+  if (normalizeQuizText(bossBattleState.answerPhase).toLowerCase() === "reveal") {
+    return null;
+  }
+
   bossBattleState.answering = true;
   renderStudentQuizFlow();
 
   try {
+    const questionSnapshot = getBossBattleDisplayedQuestion(studentQuizState.quiz);
     const response = await apiRequestWithAuth(
       `/api/battle-sessions/${encodeURIComponent(sessionId)}/answer`,
       {
         method: "POST",
         body: {
           questionIndex,
-          selected,
+          selected: normalizedSelected,
         },
       },
     );
 
     applyBossBattleSessionResponse(response.data || {});
+    bossBattleState.answerPhase = "reveal";
+    bossBattleState.selectedAnswer = normalizedSelected;
+    bossBattleState.selectedQuestionIndex = Number(questionIndex) || 0;
+    bossBattleState.revealedQuestion = questionSnapshot.question || null;
+    bossBattleState.revealedCorrectAnswer = getBossBattleQuestionCorrectAnswer(
+      questionSnapshot.question,
+    );
+    bossBattleState.revealedCorrect = Boolean(response.data?.correct === true);
     return response.data || null;
   } finally {
     bossBattleState.answering = false;
     renderStudentQuizFlow();
   }
+}
+
+function clearBossBattleAnswerRevealState() {
+  bossBattleState.answerPhase = "idle";
+  bossBattleState.selectedAnswer = "";
+  bossBattleState.selectedQuestionIndex = 0;
+  bossBattleState.revealedQuestion = null;
+  bossBattleState.revealedCorrectAnswer = "";
+  bossBattleState.revealedCorrect = null;
+}
+
+function continueBossBattleQuestion() {
+  clearBossBattleAnswerRevealState();
+  renderStudentQuizFlow();
 }
 
 function resetQuizSubmissionState() {
@@ -11676,6 +11797,117 @@ async function fetchStudentQuizTopics() {
   return Array.isArray(response.data) ? response.data : [];
 }
 
+function getStudentSubjectsScreenHtml() {
+  return `
+    <div class="student-subjects-screen">
+      <div class="quiz-page-hero">
+        <div>
+          <h1>Học theo chủ đề - Boss Battle Quiz</h1>
+          <p class="subtitle">
+            Chọn khối lớp, môn học và chủ đề để bước vào trận đấu ngay trong Dashboard.
+          </p>
+        </div>
+      </div>
+
+      <div class="quiz-toolbar">
+        <label class="quiz-filter">
+          <span>Khối lớp</span>
+          <select id="quiz-grade-select">
+            <option value="1">Lớp 1</option>
+            <option value="2">Lớp 2</option>
+            <option value="3">Lớp 3</option>
+            <option value="4">Lớp 4</option>
+            <option value="5">Lớp 5</option>
+          </select>
+        </label>
+
+        <label class="quiz-filter">
+          <span>Môn học</span>
+          <select id="quiz-subject-select">
+            <option value="math">Toán</option>
+            <option value="english">Tiếng Anh</option>
+          </select>
+        </label>
+
+        <button type="button" class="quiz-load-btn" id="quiz-load-topics-btn">
+          Tải chủ đề
+        </button>
+      </div>
+
+      <div class="topic-grid" id="student-topic-grid"></div>
+      <div id="student-topic-empty" class="quiz-empty hidden"></div>
+
+      <section id="student-result-screen" class="quiz-result boss-battle-result hidden"></section>
+      <section id="student-wrong-review-screen" class="quiz-review boss-battle-review hidden"></section>
+    </div>
+  `;
+}
+
+function getStudentBossBattleScreenHtml() {
+  return `
+    <section id="student-boss-battle-screen" class="boss-battle-panel"></section>
+  `;
+}
+
+function ensureStudentSubjectsScreenMounted() {
+  const root = getStudentQuizRoot();
+
+  if (!root) {
+    return null;
+  }
+
+  const hasSubjectScreen =
+    getStudentQuizGradeSelect() &&
+    getStudentQuizSubjectSelect() &&
+    getStudentQuizTopicGrid() &&
+    getStudentQuizEmptyState() &&
+    getStudentResultScreen() &&
+    getStudentWrongReviewScreen();
+
+  if (hasSubjectScreen && !getStudentQuizScreen()) {
+    return root;
+  }
+
+  root.innerHTML = getStudentSubjectsScreenHtml();
+  updateStudentQuizControls();
+  return root;
+}
+
+function ensureStudentBossBattleScreenMounted() {
+  const root = getStudentQuizRoot();
+
+  if (!root) {
+    return null;
+  }
+
+  const hasBattleScreen = getStudentQuizScreen();
+  const hasSubjectScreen =
+    getStudentQuizGradeSelect() ||
+    getStudentQuizTopicGrid() ||
+    getStudentQuizEmptyState() ||
+    getStudentResultScreen() ||
+    getStudentWrongReviewScreen();
+
+  if (hasBattleScreen && !hasSubjectScreen) {
+    return root;
+  }
+
+  root.innerHTML = getStudentBossBattleScreenHtml();
+  return root;
+}
+
+function renderStudentSubjectsScreen() {
+  const root = ensureStudentSubjectsScreenMounted();
+
+  if (!root) {
+    return;
+  }
+
+  renderStudentTopicCards();
+  renderStudentResultScreen();
+  renderStudentWrongAnswerScreen();
+}
+
 function renderStudentQuizScreen() {
   const screen = getStudentQuizScreen();
 
@@ -11683,7 +11915,12 @@ function renderStudentQuizScreen() {
     return;
   }
 
+  if (!isStudentBossBattleScreenActive()) {
+    return;
+  }
+
   const quiz = studentQuizState.quiz;
+  const quizMeta = quiz && typeof quiz === "object" ? quiz : {};
   const resultScreen = getStudentResultScreen();
   const reviewScreen = getStudentWrongReviewScreen();
   const profile = getCurrentAuthUser();
@@ -11703,14 +11940,33 @@ function renderStudentQuizScreen() {
   const totalQuestions = Array.isArray(quiz?.questions)
     ? quiz.questions.length
     : 0;
+  const displayedQuestionState = reviewModeActive
+    ? {
+        questionIndex: reviewQuestionIndex,
+        question: reviewQuestion,
+        phase: bossBattleReviewMode.answerPhase || "idle",
+      }
+    : getBossBattleDisplayedQuestion(quiz);
   const currentQuestionIndex = Math.max(
     0,
-    Math.min(Number(bossBattleState.currentQuestionIndex) || 0, totalQuestions),
+    Math.min(Number(displayedQuestionState?.questionIndex) || 0, totalQuestions),
   );
-  const currentQuestion =
-    totalQuestions > 0 && currentQuestionIndex < totalQuestions
-      ? quiz.questions[currentQuestionIndex] || null
-      : null;
+  const currentQuestion = displayedQuestionState?.question || null;
+  const answerPhase = normalizeQuizText(
+    reviewModeActive ? bossBattleReviewMode.answerPhase : bossBattleState.answerPhase,
+  ).toLowerCase();
+  const answerRevealMode = answerPhase === "reveal";
+  const selectedAnswer = normalizeQuizText(
+    reviewModeActive
+      ? bossBattleReviewMode.selectedAnswer
+      : bossBattleState.selectedAnswer,
+  ).toUpperCase();
+  const revealedCorrectAnswer = normalizeQuizText(
+    reviewModeActive
+      ? bossBattleReviewMode.revealedCorrectAnswer
+      : bossBattleState.revealedCorrectAnswer,
+  ).toUpperCase();
+  const correctAnswer = getBossBattleQuestionCorrectAnswer(currentQuestion);
   const currentPet = getBossBattleCurrentPetState();
   const petDisplayName = currentPet?.petName || "Chưa có Pet";
   const petDisplayLevel = currentPet?.petLevel || null;
@@ -11751,7 +12007,7 @@ function renderStudentQuizScreen() {
     bossBattleAnimationState.currentFrame,
   );
   const popupMode = syncBossBattlePopupManager().mode;
-  const popupPanelPath = getBossBattlePopupPanelForMode(popupMode);
+
   if (
     (popupMode === "victory" || popupMode === "completed") &&
     bossBattleRewardSyncState.status === "idle"
@@ -11766,7 +12022,10 @@ function renderStudentQuizScreen() {
     !bossBattleState.loadingSession &&
     !bossBattleState.answering &&
     !bossBattleState.hintLoading &&
+    !answerRevealMode &&
     Boolean(currentQuestion);
+  const canReviewAnswer =
+    reviewModeActive && !bossBattleReviewMode.completedVisible && !answerRevealMode && Boolean(currentQuestion);
   const hiddenOptionSet = getBossBattleHiddenOptionSet();
   const questionPrompt =
     currentQuestion?.question ||
@@ -11786,14 +12045,19 @@ function renderStudentQuizScreen() {
             const optionText = normalizeQuizText(option?.text || option?.label);
             const meta = getBossBattleOptionMeta(optionIndex);
             const isHidden = hiddenOptionSet.has(optionLabel);
+            const isSelected = selectedAnswer === optionLabel;
+            const isCorrect = answerRevealMode && optionLabel === correctAnswer;
+            const isWrong = answerRevealMode && isSelected && selectedAnswer !== correctAnswer;
+            const buttonDisabled = !canAnswer || isHidden || answerRevealMode;
 
             return `
               <button
                 type="button"
-                class="boss-battle-answer-card boss-battle-answer-card--${meta.tone} quiz-option-btn ${isHidden ? "is-hidden" : ""}"
+                class="boss-battle-answer-card boss-battle-answer-card--${meta.tone} quiz-option-btn ${isHidden ? "is-hidden" : ""} ${isSelected ? "is-selected" : ""} ${isCorrect ? "is-correct" : ""} ${isWrong ? "is-wrong" : ""}"
                 data-question-index="${currentQuestionIndex}"
                 data-option-label="${escapeHtml(optionLabel)}"
-                ${canAnswer && !isHidden ? "" : "disabled"}
+                ${buttonDisabled ? "disabled" : ""}
+                aria-pressed="${isSelected ? "true" : "false"}"
                 ${isHidden ? 'aria-hidden="true"' : ""}
               >
                 <span class="boss-battle-answer-card__badge" aria-hidden="true">${meta.icon}</span>
@@ -11814,18 +12078,10 @@ function renderStudentQuizScreen() {
             const optionLabel = normalizeQuizText(option?.label).toUpperCase();
             const optionText = normalizeQuizText(option?.text || option?.label);
             const meta = getBossBattleOptionMeta(optionIndex);
-            const selectedAnswer = normalizeQuizText(
-              bossBattleReviewMode.selectedAnswer,
-            ).toUpperCase();
-            const correctAnswer = normalizeQuizText(
-              reviewQuestion.correctAnswer,
-            ).toUpperCase();
-            const isSelected = bossBattleReviewMode.locked && selectedAnswer === optionLabel;
-            const isCorrect = bossBattleReviewMode.locked && optionLabel === correctAnswer;
-            const isWrong =
-              bossBattleReviewMode.locked &&
-              selectedAnswer === optionLabel &&
-              selectedAnswer !== correctAnswer;
+            const isSelected = selectedAnswer === optionLabel;
+            const isCorrect = answerRevealMode && optionLabel === revealedCorrectAnswer;
+            const isWrong = answerRevealMode && isSelected && selectedAnswer !== revealedCorrectAnswer;
+            const buttonDisabled = !canReviewAnswer || answerRevealMode;
 
             return `
               <button
@@ -11833,7 +12089,8 @@ function renderStudentQuizScreen() {
                 class="boss-battle-answer-card boss-battle-answer-card--${meta.tone} quiz-option-btn ${isSelected ? "is-selected" : ""} ${isCorrect ? "is-correct" : ""} ${isWrong ? "is-wrong" : ""}"
                 data-question-index="${reviewQuestionIndex}"
                 data-option-label="${escapeHtml(optionLabel)}"
-                ${bossBattleReviewMode.locked ? "disabled" : ""}
+                ${buttonDisabled ? "disabled" : ""}
+                aria-pressed="${isSelected ? "true" : "false"}"
               >
                 <span class="boss-battle-answer-card__badge" aria-hidden="true">${meta.icon}</span>
                 <span class="boss-battle-answer-card__body">
@@ -11876,6 +12133,38 @@ function renderStudentQuizScreen() {
     `
     : "";
 
+  const activeBattleActionHtml = reviewModeActive
+    ? ""
+    : answerRevealMode
+      ? `
+        <button type="button" class="boss-battle-next-btn boss-battle-next-btn--continue" data-action="battle-answer-continue">
+          <img src="${getBossBattleIconPath("continue")}" alt="" aria-hidden="true" />
+          <span>TIẾP TỤC</span>
+        </button>
+      `
+      : `
+        <button type="button" class="boss-battle-next-btn boss-battle-next-btn--fight" data-action="battle-answer-commit" ${selectedAnswer && !bossBattleState.answering ? "" : "disabled"}>
+          <img src="${escapeHtml(getBossBattleAssetPath("icons", "icon_fight.png"))}" alt="" aria-hidden="true" onerror="this.onerror=null;this.src='${escapeHtml(getBossBattleIconPath("review"))}'" />
+          <span>KHIÊU CHIẾN</span>
+        </button>
+      `;
+
+  const reviewBattleActionHtml = reviewModeActive
+    ? answerRevealMode
+      ? `
+        <button type="button" class="boss-battle-next-btn boss-battle-next-btn--continue" data-action="boss-review-continue">
+          <img src="${getBossBattleIconPath("continue")}" alt="" aria-hidden="true" />
+          <span>TIẾP TỤC</span>
+        </button>
+      `
+      : `
+        <button type="button" class="boss-battle-next-btn boss-battle-next-btn--fight" data-action="boss-review-commit" ${selectedAnswer && !bossBattleReviewMode.locked ? "" : "disabled"}>
+          <img src="${escapeHtml(getBossBattleAssetPath("icons", "icon_fight.png"))}" alt="" aria-hidden="true" onerror="this.onerror=null;this.src='${escapeHtml(getBossBattleIconPath("review"))}'" />
+          <span>KHIÊU CHIẾN</span>
+        </button>
+      `
+    : "";
+
   const activeSidebar = `
     <aside class="boss-battle-sidebar">
       <div class="boss-battle-sidebar__speech">
@@ -11892,7 +12181,7 @@ function renderStudentQuizScreen() {
         </div>
         <div class="boss-battle-sidebar__level">Lv ${escapeHtml(String(petDisplayLevel ?? "--"))}</div>
         <h3>${escapeHtml(petDisplayName)}</h3>
-        <p>${escapeHtml(`${quiz.subject || studentQuizState.subject || "Quiz"} · ${quiz.grade || studentQuizState.grade || ""}`)}</p>
+        <p>${escapeHtml(`${quizMeta.subject || studentQuizState.subject || "Quiz"} · ${quizMeta.grade || studentQuizState.grade || ""}`)}</p>
         ${reviewModeActive ? '<div class="boss-battle-sidebar__review-chip">REVIEW MODE</div>' : ""}
 
         <div class="boss-battle-sidebar__metric">
@@ -11946,9 +12235,8 @@ function renderStudentQuizScreen() {
         <strong>${escapeHtml(`${bossHP} / 100 HP`)}</strong>
       </div>
       <div class="boss-battle-header-card__track" aria-hidden="true">
+        <img class="boss-battle-header-card__track-asset" src="${getBossBattleAssetPath("hp", "boss_hp_fill.png")}" alt="" />
         <div class="boss-battle-header-card__track-fill" style="width: ${escapeHtml(String(Math.max(0, Math.min(100, Number(bossBattleState.visualBossHP ?? bossHpPercent) || 0))))}%"></div>
-        <img class="boss-battle-header-card__track-frame" src="${getBossBattleAssetPath("hp", "boss_hp_frame.png")}" alt="" />
-        <img class="boss-battle-header-card__track-sheen" src="${getBossBattleAssetPath("hp", "boss_hp_fill.png")}" alt="" />
       </div>
     </section>
   `;
@@ -12183,12 +12471,13 @@ function renderStudentQuizScreen() {
   screen.classList.remove("hidden");
   if (reviewModeActive) {
     screen.innerHTML = `
-      <div class="boss-battle-panel boss-battle-canvas boss-battle-canvas--review">
+      <div class="boss-battle-canvas boss-battle-canvas--review">
         <div class="boss-battle-effects" aria-hidden="true"></div>
         ${activeSidebar}
         <section class="boss-battle-board">
           ${activeHeader}
           ${reviewQuestionPanel}
+          ${reviewBattleActionHtml}
           ${reviewCompletePopupHtml}
         </section>
       </div>
@@ -12203,25 +12492,25 @@ function renderStudentQuizScreen() {
 
   if (battleStatus === "active" && popupMode === "none") {
     screen.innerHTML = `
-      <div class="boss-battle-panel boss-battle-canvas boss-battle-canvas--active">
+      <div class="boss-battle-canvas boss-battle-canvas--active">
         <div class="boss-battle-effects" aria-hidden="true"></div>
         ${activeSidebar}
         <section class="boss-battle-board">
           ${activeHeader}
           ${activeQuestionPanel}
           ${activeHint}
+          ${activeBattleActionHtml}
         </section>
       </div>
     `;
   } else {
     screen.innerHTML = `
-      <div class="boss-battle-panel boss-battle-canvas boss-battle-canvas--terminal boss-battle-canvas--${popupMode || battleStatus}">
+      <div class="boss-battle-canvas boss-battle-canvas--terminal boss-battle-canvas--${popupMode || battleStatus}">
         <div class="boss-battle-effects" aria-hidden="true"></div>
         ${activeSidebar}
         <section class="boss-battle-board">
           ${activeHeader}
           <article class="boss-battle-popup boss-battle-popup--${popupMode || battleStatus}">
-            <img class="boss-battle-popup__panel" src="${escapeHtml(popupPanelPath)}" alt="" aria-hidden="true" />
             <div class="boss-battle-popup__content">
               <span class="boss-battle-popup__badge">${escapeHtml(
                 popupMode === "victory"
@@ -12274,6 +12563,12 @@ function renderStudentResultScreen() {
     return;
   }
 
+  if (isStudentBossBattleScreenActive()) {
+    screen.classList.add("hidden");
+    screen.innerHTML = "";
+    return;
+  }
+
   if (!studentQuizState.isSubmitted || !studentQuizState.resultData) {
     screen.classList.add("hidden");
     screen.innerHTML = "";
@@ -12321,6 +12616,12 @@ function renderStudentWrongAnswerScreen() {
   const screen = getStudentWrongReviewScreen();
 
   if (!screen) {
+    return;
+  }
+
+  if (isStudentBossBattleScreenActive()) {
+    screen.classList.add("hidden");
+    screen.innerHTML = "";
     return;
   }
 
@@ -12387,7 +12688,14 @@ function renderStudentWrongAnswerScreen() {
 }
 
 function renderStudentQuizFlow() {
-  renderStudentQuizScreen();
+  if (isStudentBossBattleScreenActive()) {
+    ensureStudentBossBattleScreenMounted();
+    renderStudentQuizScreen();
+    return;
+  }
+
+  ensureStudentSubjectsScreenMounted();
+  renderStudentTopicCards();
   renderStudentResultScreen();
   renderStudentWrongAnswerScreen();
 }
@@ -12400,6 +12708,7 @@ async function loadStudentQuizTopics() {
     subjectSelect?.value || studentQuizState.subject,
   );
 
+  setStudentQuizScreen("subjects");
   studentQuizState.grade = grade || STUDENT_QUIZ_DEFAULTS.grade;
   studentQuizState.subject = subject || STUDENT_QUIZ_DEFAULTS.subject;
   studentQuizState.selectedTopicId = "";
@@ -12413,7 +12722,6 @@ async function loadStudentQuizTopics() {
   studentQuizState.loadingQuiz = false;
 
   updateStudentQuizControls();
-  renderStudentTopicCards();
   renderStudentQuizFlow();
 
   try {
@@ -12465,6 +12773,7 @@ async function loadStudentQuizByTopic(topicId) {
     return;
   }
 
+  setStudentQuizScreen("bossBattle");
   studentQuizState.selectedTopicId = normalizedTopicId;
   studentQuizState.loadingQuiz = true;
   studentQuizState.quiz = null;
@@ -12474,7 +12783,6 @@ async function loadStudentQuizByTopic(topicId) {
   void ensurePetModuleLoaded().catch(() => {});
   bossBattleState.assetPreloading = false;
 
-  renderStudentTopicCards();
   renderStudentQuizFlow();
 
   try {
@@ -12499,6 +12807,8 @@ async function loadStudentQuizByTopic(topicId) {
     if (questionCount === 0) {
       studentQuizState.quiz = null;
       resetBossBattleState(0);
+      setStudentQuizScreen("subjects");
+      renderStudentQuizFlow();
       showToast("Chủ đề này hiện chưa có bộ câu hỏi luyện tập.", "error");
       return;
     }
@@ -12513,6 +12823,7 @@ async function loadStudentQuizByTopic(topicId) {
   } catch (error) {
     studentQuizState.quiz = null;
     resetBossBattleState(0);
+    setStudentQuizScreen("subjects");
     const errorMessage = String(error?.message || "");
     if (
       errorMessage.includes("Quiz not found") ||
@@ -12527,7 +12838,6 @@ async function loadStudentQuizByTopic(topicId) {
   } finally {
     studentQuizState.loadingQuiz = false;
     bossBattleState.assetPreloading = false;
-    renderStudentTopicCards();
     renderStudentQuizFlow();
   }
 }
@@ -12622,13 +12932,33 @@ function showSubject(subject, button) {
 }
 
 function goBackSubjects() {
-  changePage(previousPage === "subjects" ? "student-home" : previousPage);
+  closeBossBattlePopup();
+  closeBossBattleAchievementPopup();
+  resetBossBattleReviewMode();
+  clearBossBattleRecoveryStorageState();
+  clearBossBattleAnimationTimers();
+  resetBossBattleState(0);
+  setStudentQuizScreen("subjects");
+  studentQuizState.quiz = null;
+  studentQuizState.answers = [];
+  studentQuizState.loadingQuiz = false;
+  renderStudentQuizFlow();
+  changePage("subjects");
 }
 
 document.addEventListener("click", (event) => {
+  const loadTopicsButton = event.target.closest("#quiz-load-topics-btn");
+
+  if (loadTopicsButton && getStudentQuizRoot()?.contains(loadTopicsButton)) {
+    playClick();
+    void loadStudentQuizTopics();
+    return;
+  }
+
   const topicCard = event.target.closest("[data-topic-id]");
 
   if (topicCard && getStudentQuizRoot()?.contains(topicCard)) {
+    playClick();
     void loadStudentQuizByTopic(topicCard.dataset.topicId);
     return;
   }
@@ -12647,8 +12977,20 @@ document.addEventListener("click", (event) => {
       return;
     }
 
+    playClick();
+
     if (bossBattleReviewMode.active) {
-      submitBossBattleReviewAnswer(questionIndex, selected);
+      if (normalizeQuizText(bossBattleReviewMode.answerPhase).toLowerCase() === "reveal") {
+        return;
+      }
+
+      bossBattleReviewMode.selectedAnswer = selected;
+      bossBattleReviewMode.answerPhase = "selected";
+      bossBattleReviewMode.locked = false;
+      bossBattleReviewMode.revealedQuestion = null;
+      bossBattleReviewMode.revealedCorrectAnswer = "";
+      bossBattleReviewMode.revealedCorrect = null;
+      renderStudentQuizFlow();
       return;
     }
 
@@ -12660,9 +13002,17 @@ document.addEventListener("click", (event) => {
       return;
     }
 
-    void submitBossBattleAnswer(questionIndex, selected).catch((error) => {
-      showToast(error.message || "Không thể gửi đáp án.", "error");
-    });
+    if (normalizeQuizText(bossBattleState.answerPhase).toLowerCase() === "reveal") {
+      return;
+    }
+
+    bossBattleState.selectedAnswer = selected;
+    bossBattleState.selectedQuestionIndex = questionIndex;
+    bossBattleState.answerPhase = "selected";
+    bossBattleState.revealedQuestion = null;
+    bossBattleState.revealedCorrectAnswer = "";
+    bossBattleState.revealedCorrect = null;
+    renderStudentQuizFlow();
     return;
   }
 
@@ -12670,9 +13020,56 @@ document.addEventListener("click", (event) => {
 
   if (actionButton && getStudentQuizRoot()?.contains(actionButton)) {
     const action = actionButton.dataset.action;
+    const shouldPlayClick =
+      actionButton.closest(".boss-battle-popup") ||
+      action === "battle-answer-commit" ||
+      action === "battle-answer-continue" ||
+      action === "boss-review-commit" ||
+      action === "boss-review-continue" ||
+      action === "battle-hint" ||
+      action === "boss-review-back-topic" ||
+      action === "boss-review-retry" ||
+      action === "show-wrong-review" ||
+      action === "boss-achievement-close";
 
-    if (actionButton.closest(".boss-battle-popup")) {
+    if (shouldPlayClick) {
       playClick();
+    }
+
+    if (action === "battle-answer-commit") {
+      const questionIndex = Number(bossBattleState.selectedQuestionIndex) || 0;
+      const selected = normalizeQuizText(bossBattleState.selectedAnswer).toUpperCase();
+
+      if (!selected || normalizeQuizText(bossBattleState.answerPhase).toLowerCase() === "reveal") {
+        return;
+      }
+
+      void submitBossBattleAnswer(questionIndex, selected).catch((error) => {
+        showToast(error.message || "Không thể gửi đáp án.", "error");
+      });
+      return;
+    }
+
+    if (action === "battle-answer-continue") {
+      continueBossBattleQuestion();
+      return;
+    }
+
+    if (action === "boss-review-commit") {
+      const questionIndex = Number(bossBattleReviewMode.currentQuestionIndex) || 0;
+      const selected = normalizeQuizText(bossBattleReviewMode.selectedAnswer).toUpperCase();
+
+      if (!selected || normalizeQuizText(bossBattleReviewMode.answerPhase).toLowerCase() === "reveal") {
+        return;
+      }
+
+      submitBossBattleReviewAnswer(questionIndex, selected);
+      return;
+    }
+
+    if (action === "boss-review-continue") {
+      advanceBossBattleReviewQuestion();
+      return;
     }
 
     if (action === "battle-hint") {
@@ -12730,7 +13127,6 @@ document.addEventListener("click", (event) => {
     }
 
     if (action === "boss-achievement-close") {
-      playClick();
       closeBossBattleAchievementPopup();
     }
   }
@@ -12741,30 +13137,27 @@ function bindStudentQuizControlsOnce() {
     return;
   }
 
-  const gradeSelect = getStudentQuizGradeSelect();
-  const subjectSelect = getStudentQuizSubjectSelect();
-  const loadButton = getStudentQuizLoadButton();
+  const appShell = getAppShell();
 
-  if (gradeSelect) {
-    gradeSelect.value = studentQuizState.grade;
-    gradeSelect.addEventListener("change", () => {
-      studentQuizState.grade =
-        normalizeQuizText(gradeSelect.value) || STUDENT_QUIZ_DEFAULTS.grade;
-      void loadStudentQuizTopics();
-    });
-  }
+  if (appShell) {
+    appShell.addEventListener("change", (event) => {
+      const gradeSelect = event.target.closest("#quiz-grade-select");
+      const subjectSelect = event.target.closest("#quiz-subject-select");
 
-  if (subjectSelect) {
-    subjectSelect.value = studentQuizState.subject;
-    subjectSelect.addEventListener("change", () => {
-      studentQuizState.subject =
-        normalizeQuizText(subjectSelect.value) || STUDENT_QUIZ_DEFAULTS.subject;
-      void loadStudentQuizTopics();
-    });
-  }
+      if (!gradeSelect && !subjectSelect) {
+        return;
+      }
 
-  if (loadButton) {
-    loadButton.addEventListener("click", () => {
+      if (gradeSelect) {
+        studentQuizState.grade =
+          normalizeQuizText(gradeSelect.value) || STUDENT_QUIZ_DEFAULTS.grade;
+      }
+
+      if (subjectSelect) {
+        studentQuizState.subject =
+          normalizeQuizText(subjectSelect.value) || STUDENT_QUIZ_DEFAULTS.subject;
+      }
+
       void loadStudentQuizTopics();
     });
   }
@@ -12783,6 +13176,10 @@ async function initializeStudentQuizPage() {
     studentQuizState.subject = STUDENT_QUIZ_DEFAULTS.subject;
   }
 
+  if (!isStudentBossBattleScreenActive()) {
+    setStudentQuizScreen("subjects");
+  }
+
   updateStudentQuizControls();
 
   const currentTopicsKey = `${studentQuizState.grade}:${studentQuizState.subject}`;
@@ -12793,7 +13190,6 @@ async function initializeStudentQuizPage() {
   ) {
     await loadStudentQuizTopics();
   } else {
-    renderStudentTopicCards();
     renderStudentQuizFlow();
   }
 
