@@ -10495,10 +10495,12 @@ async function syncBossBattleRewardWithBackend() {
 
     try {
       const responseProfile = response.data?.profile
-        ? window.EduKidsProfileService?.normalizeProfile?.(response.data.profile) ||
-          response.data.profile
+        ? window.EduKidsProfileService?.normalizeProfile?.(
+            response.data.profile,
+          ) || response.data.profile
         : null;
-      const refreshedProfile = responseProfile ||
+      const refreshedProfile =
+        responseProfile ||
         (window.EduKidsProfileService?.fetchCurrentProfile
           ? await window.EduKidsProfileService.fetchCurrentProfile()
           : null);
@@ -12542,7 +12544,7 @@ function renderStudentQuizScreen() {
         <div class="boss-battle-popup__stats">
           <div class="boss-battle-popup__stat">
             <strong>${escapeHtml(String(rewardSummary.score))}%</strong>
-            <span>Accuracy</span>
+            <span>Độ chính xác</span>
           </div>
           <div class="boss-battle-popup__stat">
             <strong>${escapeHtml(String(rewardSummary.correctCount))}</strong>
@@ -12558,12 +12560,11 @@ function renderStudentQuizScreen() {
           </div>
           <div class="boss-battle-popup__stat">
             <strong>+${escapeHtml(String(rewardSummary.rewardCoin))}</strong>
-            <span>Coin nhận được</span>
+            <span>Xu Edu nhận được</span>
           </div>
         </div>
         <div class="boss-battle-popup__reward-strip">
           <span>Boss đã bị đánh bại</span>
-          <strong>Preview chỉ hiển thị trên UI, chưa sync reward thật.</strong>
         </div>
         <div class="boss-battle-popup__reward-badges">
           <div class="boss-battle-popup__reward-badge">
@@ -12589,12 +12590,12 @@ function renderStudentQuizScreen() {
             </div>
             <div class="boss-battle-popup__stat">
               <strong>${escapeHtml(String(rewardSummary.score))}%</strong>
-              <span>Accuracy hiện tại</span>
+              <span>Độ chính xác hiện tại</span>
             </div>
           </div>
           <div class="boss-battle-popup__reward-strip">
-            <span>Hết lượt</span>
-            <strong>Điểm tạm tính chỉ để xem trước.</strong>
+            <span>Hết lượt :<<</span>
+            
           </div>
         `
         : `
@@ -12605,7 +12606,7 @@ function renderStudentQuizScreen() {
             </div>
             <div class="boss-battle-popup__stat">
               <strong>${escapeHtml(String(rewardSummary.score))}%</strong>
-              <span>Accuracy</span>
+              <span>Độ chính xác</span>
             </div>
             <div class="boss-battle-popup__stat">
               <strong>${escapeHtml(String(rewardSummary.correctCount))}</strong>
@@ -12617,7 +12618,7 @@ function renderStudentQuizScreen() {
             </div>
             <div class="boss-battle-popup__stat">
               <strong>+${escapeHtml(String(rewardSummary.rewardCoin))}</strong>
-              <span>Coin nhận được</span>
+              <span>Xu Edu nhận được</span>
             </div>
           </div>
           <div class="boss-battle-popup__reward-strip">
@@ -16939,7 +16940,7 @@ function renderStudentAssignmentDetail(assignment) {
         </div>
 
         <div class="assignment-detail-meta">
-          <div class="assignment-detail-row"><span>: </span><strong>${escapeHtml(assignment.title || "--")}</strong></div>
+          <div class="assignment-detail-row"><span>Tiêu đề: </span><strong>${escapeHtml(assignment.title || "--")}</strong></div>
           <div class="assignment-detail-row"><span>Mô tả: </span><strong>${escapeHtml(assignment.description || "--")}</strong></div>
           <div class="assignment-detail-row"><span>Hạn nộp: </span><strong>${escapeHtml(dueDateText)}</strong></div>
           <div class="assignment-detail-row"><span>Lớp: </span><strong>${escapeHtml(classLabel)}</strong></div>
