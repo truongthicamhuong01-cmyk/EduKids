@@ -10,11 +10,12 @@ const {
 } = require("../repositories/petRepository");
 const { getGameConfigBundle } = require("../repositories/gameConfigRepository");
 const { useItem: useInventoryItem } = require("./inventoryService");
-const { toNumber } = require("./petMathService");
+const { calculateMood, toNumber } = require("./petMathService");
 const {
   applyPetDecay,
   applyPetMutation,
   buildPetRuntimeState,
+  SLEEP_GRACE_DURATION_MS,
   stripDerivedPetFields,
 } = require("./petDecayService");
 
@@ -188,6 +189,48 @@ function buildRuntimePetState(rawPetState, configs, now = new Date()) {
   });
 }
 
+function getSleepingBlockMessage() {
+  return "Pet đang ngủ. Bạn có thể đánh thức Pet bằng cách chạm nhẹ vào người Pet nhé.";
+}
+
+function getWakeMessage() {
+  return "Pet đã thức dậy rồi.";
+}
+
+function buildNoopPetResponse({
+  petState,
+  configs,
+  extra = {},
+  message = "",
+  popupType = "WARNING",
+  popupTitle = "Pet đang ngủ",
+  requestId = "",
+  actionName = "",
+  blockedReason = "pet_sleeping",
+}) {
+  return {
+    statusCode: 200,
+    message,
+    data: buildPetResponse(petState, configs, extra),
+    popupEvents: [
+      {
+        type: popupType,
+        title: popupTitle,
+        message,
+        icon: "sleep",
+        priority: "normal",
+        duration: 2500,
+      },
+    ],
+    animationEvents: [],
+    meta: {
+      requestId,
+      actionName,
+      blockedReason,
+    },
+  };
+}
+
 function buildPetResponse(petState, configs, extra = {}) {
   const petBalance = requireObject(configs.petBalance, "petBalance");
   const maxStatValue = toNumber(petBalance.statLimits?.maxValue, 100);
@@ -196,7 +239,9 @@ function buildPetResponse(petState, configs, extra = {}) {
 
   const canFeed = normalizedPet.hunger < maxStatValue;
   const canPlay = normalizedPet.energy > toNumber(petBalance.actions?.play?.minEnergyToAllow, 0);
-  const canSleep = normalizedPet.energy < toNumber(petBalance.actions?.sleep?.maxEnergyToAllow, maxStatValue);
+  const canSleep =
+    !normalizedPet.isSleeping &&
+    normalizedPet.energy < toNumber(petBalance.actions?.sleep?.maxEnergyToAllow, maxStatValue);
 
   return {
     pet: {
@@ -216,6 +261,7 @@ function buildPetResponse(petState, configs, extra = {}) {
       canPlay,
       canSleep,
       isSleeping: Boolean(normalizedPet.isSleeping),
+      sleepGraceUntil: normalizedPet.sleepGraceUntil || null,
       maxStatValue,
       minStatValue,
     },
@@ -603,6 +649,46 @@ async function mutatePetAction({ uid, actionName, body = {}, requestId = "", ide
 
     const synced = await syncPetRuntime(normalizedUid, petState, configs, now);
     const syncedState = synced.state;
+
+    if (
+      syncedState.isSleeping &&
+      (actionName === PET_ACTIONS.FEED || actionName === PET_ACTIONS.PLAY)
+    ) {
+      const response = buildNoopPetResponse({
+        petState: syncedState,
+        configs,
+        extra: {
+          wallet: {
+            eduCoin: Math.max(0, Number(user?.stats?.eduCoin || 0)),
+          },
+          sync: {
+            offlineApplied: synced.offlineApplied,
+            offlineMinutes: synced.offlineMinutes,
+          },
+        },
+        message: getSleepingBlockMessage(),
+        popupType: "WARNING",
+        popupTitle: "Pet đang ngủ",
+        requestId,
+        actionName,
+      });
+
+      if (idempotencyKey) {
+        await savePetRequest(
+          normalizedUid,
+          idempotencyKey,
+          {
+            action: actionName,
+            response: recordPetRequestResponse(response),
+            processedAt: now.toISOString(),
+          },
+          transaction,
+        );
+      }
+
+      return response;
+    }
+
     const actionConfig = validateActionGate(syncedState, actionName, petBalance, now);
     const nextState = applyActionDelta(
       syncedState,
@@ -761,13 +847,325 @@ async function play({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
 }
 
 async function sleep({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
-  return mutatePetAction({
-    uid,
-    actionName: PET_ACTIONS.SLEEP,
-    body,
-    requestId,
-    idempotencyKey,
+  const normalizedUid = normalizeText(uid);
+  ensureStudentUser(await getUserById(normalizedUid));
+  const now = new Date();
+
+  const result = await runTransaction(async (transaction) => {
+    const user = await getUserById(normalizedUid, transaction);
+    ensureStudentUser(user);
+
+    const petState = await getPetState(normalizedUid, transaction);
+    if (!petState) {
+      throw new ApiError(404, "Khong tim thay Pet cua ban", PET_ERROR_CODES.PET_NOT_FOUND);
+    }
+
+    const configs = assertConfigShape(await getGameConfigBundle());
+    const petBalance = requireObject(configs.petBalance, "petBalance");
+    const levelConfig = requireObject(configs.levelConfig, "levelConfig");
+    const evolutionConfig = requireObject(configs.evolutionConfig, "evolutionConfig");
+
+    if (idempotencyKey) {
+      const cached = await getPetRequest(normalizedUid, idempotencyKey, transaction);
+      const cachedResponse = ensureCachedResponse(cached, idempotencyKey);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+    }
+
+    const synced = await syncPetRuntime(normalizedUid, petState, configs, now);
+    const syncedState = synced.state;
+
+    if (syncedState.isSleeping) {
+      const response = buildNoopPetResponse({
+        petState: syncedState,
+        configs,
+        extra: {
+          wallet: {
+            eduCoin: Math.max(0, Number(user?.stats?.eduCoin || 0)),
+          },
+          sync: {
+            offlineApplied: synced.offlineApplied,
+            offlineMinutes: synced.offlineMinutes,
+          },
+        },
+        message: getSleepingBlockMessage(),
+        popupType: "WARNING",
+        popupTitle: "Pet đang ngủ",
+        requestId,
+        actionName: PET_ACTIONS.SLEEP,
+        blockedReason: "already_sleeping",
+      });
+
+      if (idempotencyKey) {
+        await savePetRequest(
+          normalizedUid,
+          idempotencyKey,
+          {
+            action: PET_ACTIONS.SLEEP,
+            response: recordPetRequestResponse(response),
+            processedAt: now.toISOString(),
+          },
+          transaction,
+        );
+      }
+
+      return response;
+    }
+
+    const actionConfig = validateActionGate(syncedState, PET_ACTIONS.SLEEP, petBalance, now);
+    const nextState = applyActionDelta(
+      syncedState,
+      PET_ACTIONS.SLEEP,
+      actionConfig,
+      petBalance,
+      levelConfig,
+      evolutionConfig,
+      now,
+    );
+
+    await savePetState(normalizedUid, stripDerivedPetFields(nextState), transaction);
+    await updateUserById(
+      normalizedUid,
+      {
+        lastActiveAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+      },
+      transaction,
+    );
+
+    const response = {
+      statusCode: 200,
+      message: "Cho Pet ngu thanh cong",
+      data: buildPetResponse(nextState, configs, {
+        wallet: {
+          eduCoin: Math.max(0, Number(user?.stats?.eduCoin || 0)),
+        },
+        sync: {
+          offlineApplied: synced.offlineApplied,
+          offlineMinutes: synced.offlineMinutes,
+        },
+        delta: {
+          action: PET_ACTIONS.SLEEP,
+          hunger: nextState.hunger - syncedState.hunger,
+          happiness: nextState.happiness - syncedState.happiness,
+          energy: nextState.energy - syncedState.energy,
+          health: nextState.health - syncedState.health,
+          exp: nextState.exp - syncedState.exp,
+        },
+      }),
+      popupEvents: [
+        {
+          type: "SLEEP_SUCCESS",
+          title: "Pet đã nghỉ ngơi",
+          message: "Pet đang khỏe hơn rồi.",
+          icon: "sleep",
+          priority: "normal",
+          duration: 2500,
+        },
+      ],
+      animationEvents: [
+        {
+          type: "SLEEP",
+          target: "pet",
+          intensity: "normal",
+          duration: 1000,
+          delay: 0,
+          queueBehavior: "append",
+          payload: {
+            mood: nextState.mood,
+            stage: nextState.stage,
+          },
+        },
+      ],
+      meta: {
+        requestId,
+        actionName: PET_ACTIONS.SLEEP,
+        offlineApplied: synced.offlineApplied,
+        offlineMinutes: synced.offlineMinutes,
+      },
+    };
+
+    if (idempotencyKey) {
+      await savePetRequest(
+        normalizedUid,
+        idempotencyKey,
+        {
+          action: PET_ACTIONS.SLEEP,
+          response: recordPetRequestResponse(response),
+          processedAt: now.toISOString(),
+        },
+        transaction,
+      );
+    }
+
+    return response;
   });
+
+  console.info("[PET][INFO] petAction", {
+    requestId,
+    actionName: PET_ACTIONS.SLEEP,
+    offlineApplied: Boolean(result.meta?.offlineApplied),
+  });
+
+  return result;
+}
+
+async function wake({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
+  const normalizedUid = normalizeText(uid);
+  ensureStudentUser(await getUserById(normalizedUid));
+  const now = new Date();
+
+  const result = await runTransaction(async (transaction) => {
+    const user = await getUserById(normalizedUid, transaction);
+    ensureStudentUser(user);
+
+    const petState = await getPetState(normalizedUid, transaction);
+    if (!petState) {
+      throw new ApiError(404, "Khong tim thay Pet cua ban", PET_ERROR_CODES.PET_NOT_FOUND);
+    }
+
+    const configs = assertConfigShape(await getGameConfigBundle());
+
+    if (idempotencyKey) {
+      const cached = await getPetRequest(normalizedUid, idempotencyKey, transaction);
+      const cachedResponse = ensureCachedResponse(cached, idempotencyKey);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+    }
+
+    const synced = await syncPetRuntime(normalizedUid, petState, configs, now);
+    const syncedState = synced.state;
+
+    if (!syncedState.isSleeping) {
+      const response = buildNoopPetResponse({
+        petState: syncedState,
+        configs,
+        extra: {
+          wallet: {
+            eduCoin: Math.max(0, Number(user?.stats?.eduCoin || 0)),
+          },
+          sync: {
+            offlineApplied: synced.offlineApplied,
+            offlineMinutes: synced.offlineMinutes,
+          },
+        },
+        message: "Pet đang thức rồi.",
+        popupType: "INFO",
+        popupTitle: "Pet đang thức",
+        requestId,
+        actionName: "wake",
+        blockedReason: "already_awake",
+      });
+
+      if (idempotencyKey) {
+        await savePetRequest(
+          normalizedUid,
+          idempotencyKey,
+          {
+            action: "wake",
+            response: recordPetRequestResponse(response),
+            processedAt: now.toISOString(),
+          },
+          transaction,
+        );
+      }
+
+      return response;
+    }
+
+    const wakeGraceUntil = new Date(now.getTime() + SLEEP_GRACE_DURATION_MS).toISOString();
+    const wakeState = {
+      ...syncedState,
+      isSleeping: false,
+      sleepGraceUntil: wakeGraceUntil,
+      updatedAt: now.toISOString(),
+      lastUpdateAt: now.toISOString(),
+      lastActionAt: now.toISOString(),
+      version: Math.max(0, Math.floor(toNumber(syncedState.version, 0))) + 1,
+    };
+    wakeState.mood = calculateMood(wakeState, configs.petBalance || {});
+    wakeState.stage = buildPetRuntimeState(wakeState, configs, now, {
+      useConfigInitialState: false,
+    }).stage;
+
+    const nextState = {
+      ...stripDerivedPetFields(wakeState),
+    };
+
+    await savePetState(normalizedUid, nextState, transaction);
+    await updateUserById(
+      normalizedUid,
+      {
+        lastActiveAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+      },
+      transaction,
+    );
+
+    const response = {
+      statusCode: 200,
+      message: "Pet đã thức dậy",
+      data: buildPetResponse(nextState, configs, {
+        wallet: {
+          eduCoin: Math.max(0, Number(user?.stats?.eduCoin || 0)),
+        },
+        sync: {
+          offlineApplied: synced.offlineApplied,
+          offlineMinutes: synced.offlineMinutes,
+        },
+        delta: {
+          action: "wake",
+          hunger: 0,
+          happiness: 0,
+          energy: 0,
+          health: 0,
+          exp: 0,
+        },
+      }),
+      popupEvents: [
+        {
+          type: "SLEEP_SUCCESS",
+          title: "Pet đã thức dậy",
+          message: getWakeMessage(),
+          icon: "sleep",
+          priority: "normal",
+          duration: 2500,
+        },
+      ],
+      animationEvents: [],
+      meta: {
+        requestId,
+        actionName: "wake",
+        offlineApplied: synced.offlineApplied,
+        offlineMinutes: synced.offlineMinutes,
+        wake: true,
+      },
+    };
+
+    if (idempotencyKey) {
+      await savePetRequest(
+        normalizedUid,
+        idempotencyKey,
+        {
+          action: "wake",
+          response: recordPetRequestResponse(response),
+          processedAt: now.toISOString(),
+        },
+        transaction,
+      );
+    }
+
+    return response;
+  });
+
+  console.info("[PET][INFO] petWake", {
+    requestId,
+    offlineApplied: Boolean(result.meta?.offlineApplied),
+  });
+
+  return result;
 }
 
 module.exports = {
@@ -775,6 +1173,7 @@ module.exports = {
   getPet,
   selectPet,
   sleep,
+  wake,
   play,
   buildPetResponse,
   buildRuntimePetState,

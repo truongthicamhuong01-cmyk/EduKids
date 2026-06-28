@@ -78,14 +78,16 @@ async function loginUser({ username, password }) {
   const userDoc = await findUserDocByUsername(username);
 
   if (!user) {
-    throw new ApiError(401, "Invalid username or password");
+    throw new ApiError(401, "Tài khoản hoặc mật khẩu không hợp lệ.");
   }
 
   const hashedPassword = userDoc?.password || null;
-  const isPasswordValid = hashedPassword ? await bcrypt.compare(password, hashedPassword) : false;
+  const isPasswordValid = hashedPassword
+    ? await bcrypt.compare(password, hashedPassword)
+    : false;
 
   if (!isPasswordValid) {
-    throw new ApiError(401, "Invalid username or password");
+    throw new ApiError(401, "Tài khoản hoặc mật khẩu không hợp lệ.");
   }
 
   if (String(user.status || "active").toLowerCase() === "locked") {
@@ -93,7 +95,9 @@ async function loginUser({ username, password }) {
   }
 
   const normalizedUser = await ensureUserCode(user.uid, user);
-  const streakUpdatedUser = await updateUserStreak(normalizedUser.uid).catch(() => normalizedUser);
+  const streakUpdatedUser = await updateUserStreak(normalizedUser.uid).catch(
+    () => normalizedUser,
+  );
   await rewardDailyLogin({
     userId: normalizedUser.uid,
     sourceId: getLocalDateKey(),
@@ -110,11 +114,14 @@ async function loginUser({ username, password }) {
     process.env.JWT_SECRET,
     {
       expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-    }
+    },
   );
 
   return {
-    user: buildAuthUserPayload({ ...streakUpdatedUser, password: hashedPassword }),
+    user: buildAuthUserPayload({
+      ...streakUpdatedUser,
+      password: hashedPassword,
+    }),
     token,
   };
 }

@@ -11,7 +11,7 @@ const { getUserById, updateUserById } = require("../repositories/userRepository"
 const { readConfigDoc } = require("../repositories/gameConfigRepository");
 const { getPetState, savePetState, runTransaction } = require("../repositories/petRepository");
 const { applyItemEffectsToPet } = require("./petItemEffectService");
-const { stripDerivedPetFields } = require("./petDecayService");
+const { buildPetRuntimeState, stripDerivedPetFields } = require("./petDecayService");
 const { clampStats, toNumber } = require("./petMathService");
 
 function normalizeText(value) {
@@ -396,7 +396,82 @@ async function useItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
 
     const inventory = await getInventoryState(normalizedUid, transaction);
     const hydratedInventory = hydrateInventoryDurability(inventory, catalog);
+    const petState = await getPetState(normalizedUid, transaction);
     const normalizedQuantity = isToyItem(itemConfig) ? 1 : quantity;
+    const blockedBySleep =
+      petState &&
+      Boolean(petState.isSleeping) &&
+      ["food", "foods", "toy", "toys"].includes(normalizeCategoryKey(itemConfig.category));
+
+    if (blockedBySleep) {
+      const bundle = {
+        petBalance: await readConfigDoc("petBalance", transaction),
+        levelConfig: await readConfigDoc("levelConfig", transaction),
+        evolutionConfig: await readConfigDoc("evolutionConfig", transaction),
+      };
+      const runtimePet = buildPetRuntimeState(petState, bundle, new Date(), {
+        useConfigInitialState: false,
+      });
+      if (hydratedInventory.changed) {
+        await saveInventoryState(normalizedUid, hydratedInventory.state, transaction);
+      }
+      const response = {
+        statusCode: 200,
+        message: "Pet đang ngủ. Bạn có thể đánh thức Pet bằng cách chạm nhẹ vào người Pet nhé.",
+        data: {
+          inventory: {
+            categories: flattenInventoryState(hydratedInventory.state),
+            summary: buildInventorySummary(hydratedInventory.state),
+            version: hydratedInventory.state.version || 0,
+            updatedAt: hydratedInventory.state.updatedAt || "",
+          },
+          pet: runtimePet
+            ? {
+                ...runtimePet,
+                petType: runtimePet.petTypeId,
+                name: runtimePet.petName,
+                isSleeping: Boolean(runtimePet.isSleeping),
+                sleepGraceUntil: runtimePet.sleepGraceUntil || null,
+              }
+            : null,
+        },
+        popupEvents: [
+          {
+            type: "WARNING",
+            title: "Pet đang ngủ",
+            message: "Pet đang ngủ. Bạn có thể đánh thức Pet bằng cách chạm nhẹ vào người Pet nhé.",
+            icon: "sleep",
+            priority: "normal",
+            duration: 2500,
+          },
+        ],
+        animationEvents: [],
+        meta: {
+          requestId,
+          itemId,
+          quantity: normalizedQuantity,
+          targetPetId,
+          blockedReason: "pet_sleeping",
+        },
+      };
+
+      if (idempotencyKey) {
+        await saveInventoryTransaction(
+          normalizedUid,
+          idempotencyKey,
+          {
+            action: "use",
+            requestId,
+            response,
+            createdAt: new Date().toISOString(),
+          },
+          transaction,
+        );
+      }
+
+      return response;
+    }
+
     const nextInventory = useItemFromInventory(hydratedInventory.state, itemConfig, normalizedQuantity);
     let nextPetState = null;
 

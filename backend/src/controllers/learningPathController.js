@@ -26,15 +26,34 @@ async function action(req, res, next) {
     const state = result?.state || {};
     const events = Array.isArray(result?.events) ? result.events : [];
     const userId = String(req.body?.userId || "").trim();
-    const rewardEvents = events.filter((event) => String(event?.type || "").trim() === "REWARD_GRANTED");
+    const rewardEvents = events.filter((event) => {
+      const type = String(event?.type || "").trim();
+      return type === "REWARD_GRANTED" || type === "MOUNTAIN_COMPLETED";
+    });
 
     await Promise.all(
       rewardEvents.map((event, index) =>
         rewardLearningPath({
           userId,
-          sourceId: `${state.currentCheckpointId || state.checkpointId || "learning-path"}:${index}`,
+          sourceId: [
+            String(event?.type || "reward").trim(),
+            String(event?.checkpointId || state.currentCheckpointId || state.checkpointId || "learning-path").trim(),
+            String(event?.mountainId || "").trim(),
+            String(index),
+          ]
+            .filter(Boolean)
+            .join(":"),
           rewardOverride: event.reward || null,
-          idempotencyKey: `learning-path:${userId}:${state.currentCheckpointId || state.checkpointId || "learning-path"}:${index}`,
+          idempotencyKey: [
+            "learning-path",
+            userId,
+            String(event?.type || "reward").trim(),
+            String(event?.checkpointId || state.currentCheckpointId || state.checkpointId || "learning-path").trim(),
+            String(event?.mountainId || "").trim(),
+            String(index),
+          ]
+            .filter(Boolean)
+            .join(":"),
         }).catch(() => null),
       ),
     );

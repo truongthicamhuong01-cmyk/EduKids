@@ -163,9 +163,10 @@ export function resolvePetAvatarPath({ petType = "", stage = "", level = "" } = 
   return resolvePetAssetPath({ petType, stage, level });
 }
 
-export function resolvePetAssetPath({ petType = "", stage = "", mood = "", level = "" } = {}) {
+export function resolvePetAssetPath({ petType = "", stage = "", mood = "", level = "", isSleeping = false } = {}) {
   const petEntry = getPetEntry(petType);
   const normalizedMood = normalizeSlug(mood);
+  const visualMood = Boolean(isSleeping) ? "sleepy" : normalizedMood === "sleepy" ? "normal" : normalizedMood;
   const normalizedStage = normalizeLevelKey(stage || level);
   const fallbackLevelKey = normalizedStage || "level1";
 
@@ -177,8 +178,8 @@ export function resolvePetAssetPath({ petType = "", stage = "", mood = "", level
   }
 
   const stageAssets = getLevelAssets(petType, fallbackLevelKey);
-  if (stageAssets?.[normalizedMood]) {
-    return stageAssets[normalizedMood];
+  if (stageAssets?.[visualMood]) {
+    return stageAssets[visualMood];
   }
 
   if (stageAssets) {
@@ -194,8 +195,8 @@ export function resolvePetAssetPath({ petType = "", stage = "", mood = "", level
 
   for (const key of availableLevels) {
     const assets = petEntry.levels[key];
-    if (assets?.[normalizedMood]) {
-      return assets[normalizedMood];
+    if (assets?.[visualMood]) {
+      return assets[visualMood];
     }
     const firstAsset = getFirstManifestPath(assets);
     if (firstAsset) {

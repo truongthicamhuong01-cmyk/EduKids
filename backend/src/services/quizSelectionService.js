@@ -2,8 +2,49 @@ const { db } = require("../firebase");
 const ApiError = require("../utils/apiError");
 const { buildVersionQuizId } = require("./quizVersionService");
 const { calculateTopicAccuracy } = require("./topicAccuracyService");
+const { readTopicsFile } = require("./aiService");
 
 const USER_PROGRESS_COLLECTION = db.collection("user_progress");
+let topicMetadataCache = null;
+
+function normalizeText(value) {
+  return String(value || "").trim();
+}
+
+function getTopicMetadataMap() {
+  if (topicMetadataCache) {
+    return topicMetadataCache;
+  }
+
+  const topicMap = new Map();
+
+  readTopicsFile().forEach((topic) => {
+    const topicId = normalizeText(topic?.topicId);
+
+    if (!topicId) {
+      return;
+    }
+
+    topicMap.set(topicId, {
+      topicId,
+      grade: normalizeText(topic?.grade),
+      subject: normalizeText(topic?.subject).toLowerCase(),
+    });
+  });
+
+  topicMetadataCache = topicMap;
+  return topicMap;
+}
+
+function getTopicMetadata(topicId) {
+  const normalizedTopicId = normalizeText(topicId);
+
+  if (!normalizedTopicId) {
+    return null;
+  }
+
+  return getTopicMetadataMap().get(normalizedTopicId) || null;
+}
 
 function normalizeVersionList(versions) {
   return (Array.isArray(versions) ? versions : [])
@@ -71,11 +112,14 @@ async function recordUserTopicAccuracy(userId, topicId, topicResults = []) {
   const totalAnswered = Math.max(0, Number(currentProgress.totalAnswered) || 0) + accuracy.totalAnswered;
   const totalCorrect = Math.max(0, Number(currentProgress.totalCorrect) || 0) + accuracy.totalCorrect;
   const percentage = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
+  const topicMeta = getTopicMetadata(topicId);
 
   await progressRef.set(
     {
       userId: String(userId || "").trim(),
       topicId: String(topicId || "").trim(),
+      grade: topicMeta?.grade || "",
+      subject: topicMeta?.subject || "",
       totalAnswered,
       totalCorrect,
       percentage,
@@ -156,6 +200,8 @@ async function selectQuizVersion({
     {
       userId: String(userId || "").trim(),
       topicId: String(topicId || "").trim(),
+      grade: String(grade || "").trim(),
+      subject: String(subject || "").trim(),
       lastVersionUsed: selectedVersion.versionId,
       history: nextHistory,
       updatedAt: now,

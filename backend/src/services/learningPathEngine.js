@@ -71,6 +71,14 @@ function normalizeCount(value) {
   return Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0;
 }
 
+function normalizeTaskProgressKey(value) {
+  return String(value || "")
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+}
+
 function normalizeLearningFacts(candidate = {}) {
   const source = candidate && typeof candidate === "object" ? candidate : {};
   const facts = source.learningFacts && typeof source.learningFacts === "object" ? source.learningFacts : source;
@@ -126,19 +134,29 @@ function isTaskSatisfiedByFacts(task, facts) {
 }
 
 const TASK_PROGRESS_UNIT_BY_TYPE = {
-  assignment: "bài tập",
+  assignment: "bài",
+  battle: "trận",
+  boss_battle: "trận",
+  check_in: "ngày",
+  challenge: "trận",
   coach: "lần",
+  daily_login: "ngày",
+  exercise: "bài",
+  homework: "bài",
   lesson: "bài học",
-  login: "lần",
-  quiz: "quiz",
-  quiz_score: "lần",
-  score: "lần",
-  study_minutes: "phút",
+  login: "ngày",
+  milestone: "trận",
+  peak: "trận",
+  quiz: "bài",
+  quiz_score: "bài",
+  summit: "trận",
   topic: "bài học",
+  score: "bài",
+  study_minutes: "phút",
 };
 
 function getTaskProgressUnit(task) {
-  const type = String(task?.type || "").trim().toLowerCase();
+  const type = normalizeTaskProgressKey(task?.type);
   return TASK_PROGRESS_UNIT_BY_TYPE[type] || "lần";
 }
 
@@ -483,7 +501,7 @@ function calculateRewards(event, context = {}) {
 
   if (event === "checkpoint") {
     return {
-      xu: Number(context.checkpointReward?.xu) || 50,
+      xu: Number(context.checkpointReward?.xu) || 35,
       exp: Number(context.checkpointReward?.exp) || 100,
       badges: context.checkpointReward?.badgeId ? [context.checkpointReward.badgeId] : [],
     };
@@ -491,7 +509,7 @@ function calculateRewards(event, context = {}) {
 
   if (event === "mountain") {
     return {
-      xu: 200,
+      xu: 120,
       exp: 250,
       badges: context.badgeId ? [context.badgeId] : [],
     };

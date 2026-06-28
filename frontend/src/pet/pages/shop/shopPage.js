@@ -94,7 +94,8 @@ function normalizeShopItem(item = {}) {
     key: String(item.key || itemId).trim() || itemId,
     code: String(item.code || itemId).trim() || itemId,
     itemId,
-    name: String(item.name || item.title || itemId).trim() || itemId,
+    name: String(item.name || item.title || item.displayName || itemId).trim() || itemId,
+    displayName: String(item.displayName || item.name || item.title || itemId).trim() || itemId,
   };
 }
 
@@ -697,6 +698,7 @@ export function createShopPage({ store, shopApi } = {}) {
       stage: pet.stage,
       mood: pet.mood,
       level: `level${pet.level || 1}`,
+      isSleeping: pet.isSleeping,
     });
     const nextSrc = new URL(petImage || "", window.location.href).href;
 
@@ -709,7 +711,7 @@ export function createShopPage({ store, shopApi } = {}) {
     }
 
     const moodKey = String(pet.mood || "normal").toLowerCase();
-    root.dataset.mood = moodKey;
+    root.dataset.mood = pet.isSleeping ? "sleepy" : moodKey === "sleepy" ? "normal" : moodKey;
   }
 
   function renderCoin(snapshot = {}) {
@@ -788,6 +790,7 @@ export function createShopPage({ store, shopApi } = {}) {
     const ownedQuantity = getInventoryOwnedQuantity(snapshot, normalizedItem);
     const reason = getItemReason(normalizedItem, snapshot);
     const price = Math.max(0, Number(normalizedItem?.price || 0));
+    const displayName = normalizedItem.displayName || normalizedItem.name || itemId;
     const categoryLabel = normalizeCategoryLabel(normalizedItem.category || "");
     const toneClass = `tone-${index % 5}`;
     const categoryKey = normalizeCategoryKey(normalizedItem.category || "");
@@ -800,9 +803,9 @@ export function createShopPage({ store, shopApi } = {}) {
     return `
       <article class="pet-shop-card ${toneClass} ${reason.disabled ? "is-disabled" : ""}" data-shop-item-id="${escapeHtml(itemId)}" data-shop-item-key="${escapeHtml(normalizedItem.key || itemId)}" data-shop-item-code="${escapeHtml(normalizedItem.code || itemId)}" data-shop-item-category="${escapeHtml(categoryKey)}">
         <div class="pet-shop-card__inner">
-          <h3 class="pet-shop-card__title">${escapeHtml(normalizedItem.name || itemId)}</h3>
+          <h3 class="pet-shop-card__title">${escapeHtml(displayName)}</h3>
           <div class="pet-shop-card__visual">
-            <img src="${escapeHtml(icon)}" alt="${escapeHtml(normalizedItem.name || itemId)}" loading="eager" decoding="async" />
+            <img src="${escapeHtml(icon)}" alt="${escapeHtml(displayName)}" loading="eager" decoding="async" />
           </div>
           <p class="pet-shop-card__description">${escapeHtml(normalizedItem.description || "Món đồ hữu ích cho pet.")}</p>
           <div class="pet-shop-card__meta">
@@ -816,7 +819,7 @@ export function createShopPage({ store, shopApi } = {}) {
               data-action="buy-item"
               data-shop-item-id="${escapeHtml(itemId)}"
               data-shop-price="${escapeHtml(price)}"
-              aria-label="${escapeHtml(actionStatus)} ${escapeHtml(normalizedItem.name || itemId)}"
+              aria-label="${escapeHtml(actionStatus)} ${escapeHtml(displayName)}"
               ${reason.disabled ? "disabled" : ""}
             >
               <span class="pet-shop-card__action-text" data-shop-action-text>${escapeHtml(actionText)}</span>
@@ -1120,6 +1123,14 @@ export function createShopPage({ store, shopApi } = {}) {
     }
 
     if (action === "pet") {
+      window.dispatchEvent(
+        new CustomEvent("edukids:pet:interact", {
+          detail: {
+            source: "shop",
+            petTypeId: store?.getState?.()?.pet?.petTypeId || "",
+          },
+        }),
+      );
       pulsePet();
       return;
     }

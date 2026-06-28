@@ -26,6 +26,7 @@ export function createPetClient({ store, petApi, shopApi, inventoryApi, rewardAp
     feedPet: wrapAction(store, "pet", (body) => petApi.feedPet(body)),
     playPet: wrapAction(store, "pet", (body) => petApi.playPet(body)),
     sleepPet: wrapAction(store, "pet", (body) => petApi.sleepPet(body)),
+    wakePet: wrapAction(store, "pet", (body) => petApi.wakePet(body)),
     loadInventory: wrapAction(store, "inventory", () => inventoryApi.getInventory()),
     useInventoryItem: wrapAction(store, "inventory", (body) => inventoryApi.useItem(body)),
     loadShop: wrapAction(store, "shop", () => shopApi.getShop()),

@@ -10,6 +10,14 @@ const {
 } = require("./assignmentAiPrompt");
 const { readSystemSettings } = require("./systemSettingsService");
 
+function normalizeSubjectToken(subject) {
+  return String(subject || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function normalizeOptionText(option) {
   if (option && typeof option === "object") {
     return String(option.text || option.value || option.label || "").trim();
@@ -159,7 +167,7 @@ async function generateAssignmentQuestions({
   if (
     topic &&
     topic.subject &&
-    String(topic.subject).trim().toLowerCase() !== normalizedSubject.toLowerCase()
+    normalizeSubjectToken(topic.subject) !== normalizeSubjectToken(normalizedSubject)
   ) {
     throw new ApiError(400, "topicId does not belong to the requested subject");
   }

@@ -6,6 +6,14 @@ const ApiError = require("../utils/apiError");
 const { buildQuizPrompt } = require("./aiPrompt");
 const { readSystemSettings } = require("./systemSettingsService");
 
+function normalizeSubjectToken(subject) {
+  return String(subject || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 const TOPICS_PATH = path.join(__dirname, "..", "topics.json");
 const QUIZZES_COLLECTION = db.collection("quizzes");
 
@@ -234,7 +242,10 @@ async function generateQuiz({ grade, subject, topicId }) {
     throw new ApiError(400, "topicId does not belong to the requested grade");
   }
 
-  if (topic.subject && String(topic.subject).trim().toLowerCase() !== normalizedSubject.toLowerCase()) {
+  if (
+    topic.subject &&
+    normalizeSubjectToken(topic.subject) !== normalizeSubjectToken(normalizedSubject)
+  ) {
     throw new ApiError(400, "topicId does not belong to the requested subject");
   }
 

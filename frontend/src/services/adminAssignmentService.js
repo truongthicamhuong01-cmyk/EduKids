@@ -256,6 +256,73 @@
     }
   }
 
+  function normalizeSubjectToken(subject) {
+    return normalizeText(subject)
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function normalizeSubjectLabel(subject) {
+    const normalized = normalizeSubjectToken(subject);
+
+    if (normalized === "math" || normalized === "toan") {
+      return "Toán";
+    }
+
+    if (normalized === "english" || normalized === "tieng anh") {
+      return "Tiếng Anh";
+    }
+
+    if (normalized === "vietnamese" || normalized === "tieng viet") {
+      return "Tiếng Việt";
+    }
+
+    if (normalized === "science" || normalized === "khoa hoc") {
+      return "Khoa học";
+    }
+
+    if (normalized === "history" || normalized === "lich su") {
+      return "Lịch sử";
+    }
+
+    if (normalized === "geography" || normalized === "dia ly") {
+      return "Địa lý";
+    }
+
+    return normalizeText(subject);
+  }
+
+  function getSubjectKey(subject) {
+    const normalized = normalizeSubjectToken(subject);
+
+    if (normalized === "math" || normalized === "toan") {
+      return "math";
+    }
+
+    if (normalized === "english" || normalized === "tieng anh") {
+      return "english";
+    }
+
+    if (normalized === "vietnamese" || normalized === "tieng viet") {
+      return "vietnamese";
+    }
+
+    if (normalized === "science" || normalized === "khoa hoc") {
+      return "science";
+    }
+
+    if (normalized === "history" || normalized === "lich su") {
+      return "history";
+    }
+
+    if (normalized === "geography" || normalized === "dia ly") {
+      return "geography";
+    }
+
+    return normalized;
+  }
+
   window.EduKidsAdminAssignmentService = {
     fetchAssignments,
     getAssignmentStatusClass,

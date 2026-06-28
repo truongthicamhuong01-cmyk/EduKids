@@ -454,7 +454,7 @@ function getBossBattleRankReward(accuracy) {
     return {
       rank: "3 Sao",
       rankStars: 3,
-      coinBonus: 100,
+      coinBonus: 10,
     };
   }
 
@@ -462,14 +462,14 @@ function getBossBattleRankReward(accuracy) {
     return {
       rank: "2 Sao",
       rankStars: 2,
-      coinBonus: 50,
+      coinBonus: 5,
     };
   }
 
   return {
     rank: "1 Sao",
     rankStars: 1,
-    coinBonus: 20,
+    coinBonus: 0,
   };
 }
 
@@ -524,14 +524,10 @@ function buildBossBattleRewardSummary({
     maxCombo = Math.max(maxCombo, currentCombo);
 
     xpAwarded += 10;
-    coinAwarded += 3 + crypto.randomInt(6);
-
-    if (currentCombo >= 3) {
-      xpAwarded += 10;
-    }
+    coinAwarded += 8 + crypto.randomInt(3);
 
     if (currentCombo >= 5) {
-      coinAwarded += 20;
+      coinAwarded += 1;
     }
   });
 
@@ -540,16 +536,29 @@ function buildBossBattleRewardSummary({
     : 0;
   const rankReward = getBossBattleRankReward(accuracy);
   const victory = battleStatus === "victory";
+  const completionBonus = 20;
+  const participationBonus = 25;
 
   if (isRewardEligible) {
     coinAwarded += rankReward.coinBonus;
-    if (victory) {
+    if (correctAnswers >= questions.length && questions.length > 0) {
+      coinAwarded += completionBonus;
       xpAwarded += 50;
-      coinAwarded += 50;
+    } else {
+      coinAwarded += participationBonus;
+    }
+
+    if (victory) {
+      coinAwarded += 10;
+      xpAwarded += 50;
     }
   } else {
     xpAwarded = 0;
     coinAwarded = 0;
+  }
+
+  if (isRewardEligible) {
+    coinAwarded = Math.max(70, Math.min(160, coinAwarded));
   }
 
   return {

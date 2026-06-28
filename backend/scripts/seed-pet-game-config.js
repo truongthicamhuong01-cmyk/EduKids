@@ -465,7 +465,7 @@ const shopCatalog = {
       itemId: "ball",
       name: "Bóng",
       category: "toy",
-      price: 12,
+      price: 30,
       effects: {
         happinessDelta: 10,
         healthDelta: 1,
@@ -485,7 +485,7 @@ const shopCatalog = {
       itemId: "teddy",
       name: "Gấu bông",
       category: "toy",
-      price: 15,
+      price: 38,
       effects: {
         happinessDelta: 12,
         healthDelta: 2,
@@ -505,7 +505,7 @@ const shopCatalog = {
       itemId: "kite",
       name: "Diều Giấy",
       category: "toy",
-      price: 25,
+      price: 63,
       effects: {
         happinessDelta: 16,
         healthDelta: 2,
@@ -525,7 +525,7 @@ const shopCatalog = {
       itemId: "pinwheel",
       name: "Chong Chóng",
       category: "toy",
-      price: 20,
+      price: 50,
       effects: {
         happinessDelta: 14,
         healthDelta: 1,
@@ -545,7 +545,7 @@ const shopCatalog = {
       itemId: "drum",
       name: "Trống Nhỏ",
       category: "toy",
-      price: 28,
+      price: 70,
       effects: {
         happinessDelta: 18,
         healthDelta: 1,
@@ -565,7 +565,7 @@ const shopCatalog = {
       itemId: "lantern",
       name: "Đèn Lồng",
       category: "toy",
-      price: 30,
+      price: 75,
       effects: {
         happinessDelta: 20,
         healthDelta: 2,
@@ -585,7 +585,7 @@ const shopCatalog = {
       itemId: "toHe",
       name: "Tò He",
       category: "toy",
-      price: 22,
+      price: 55,
       effects: {
         happinessDelta: 15,
         healthDelta: 1,
@@ -605,7 +605,7 @@ const shopCatalog = {
       itemId: "paperMask",
       name: "Mặt Nạ Giấy Bồi",
       category: "toy",
-      price: 24,
+      price: 60,
       effects: {
         happinessDelta: 16,
         healthDelta: 1,
@@ -728,21 +728,21 @@ const rewardConfig = {
     lessonComplete: {
       title: "Hoàn thành bài học",
       icon: "lesson",
-      coin: 5,
+      coin: 12,
       petExp: 3,
       petHappiness: 1,
     },
     learningPath: {
       title: "Hoàn thành Learning Path",
       icon: "path",
-      coin: 20,
+      coin: 35,
       petExp: 10,
       petHappiness: 5,
     },
     assignment: {
       title: "Hoàn thành bài tập",
       icon: "assignment",
-      coin: 10,
+      coin: 20,
       petExp: 5,
       petHappiness: 3,
     },
@@ -750,7 +750,7 @@ const rewardConfig = {
       title: "Điểm số cao",
       icon: "score",
       minScore: 9,
-      coin: 10,
+      coin: 6,
       petExp: 5,
       petHappiness: 4,
     },

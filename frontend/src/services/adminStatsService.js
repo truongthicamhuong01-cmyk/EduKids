@@ -1,5 +1,5 @@
 (() => {
-  const SUBJECTS = ["math", "english"];
+  const SUBJECTS = ["math", "english", "vietnamese", "science", "history", "geography"];
   const GRADES = ["1", "2", "3", "4", "5"];
 
   function getFirestore() {
@@ -78,6 +78,30 @@
       normalized === "tiếng anh"
     ) {
       return "english";
+    }
+
+    if (
+      normalized === "vietnamese" ||
+      normalized === "tieng viet" ||
+      normalized === "tiếng việt"
+    ) {
+      return "vietnamese";
+    }
+
+    if (normalized === "science" || normalized === "khoa học" || normalized === "khoa hoc") {
+      return "science";
+    }
+
+    if (normalized === "history" || normalized === "lịch sử" || normalized === "lich su") {
+      return "history";
+    }
+
+    if (
+      normalized === "geography" ||
+      normalized === "địa lý" ||
+      normalized === "dia ly"
+    ) {
+      return "geography";
     }
 
     return "";
@@ -544,10 +568,7 @@
         charts: {
           monthlyAverageScores: [],
         },
-        topTopics: {
-          math: null,
-          english: null,
-        },
+        topTopics: Object.fromEntries(SUBJECTS.map((subject) => [subject, null])),
         topClasses: [],
         hasData: false,
       };
@@ -579,10 +600,9 @@
       normalizeTopicProgress(doc, topicMetaMap),
     );
 
-    const topTopics = {
-      math: buildTopTopic(normalizedTopicDocs, "math"),
-      english: buildTopTopic(normalizedTopicDocs, "english"),
-    };
+    const topTopics = Object.fromEntries(
+      SUBJECTS.map((subject) => [subject, buildTopTopic(normalizedTopicDocs, subject)]),
+    );
 
     const topClasses = buildTopClasses(classDocs, teacherNameById, submissionDocs);
 
@@ -601,7 +621,7 @@
       topClasses,
       hasData:
         monthlyAverageScores.some((item) => Number(item.value) > 0) ||
-        Boolean(topTopics.math || topTopics.english || topClasses.length > 0),
+        Boolean(SUBJECTS.some((subject) => topTopics[subject]) || topClasses.length > 0),
     };
   }
 

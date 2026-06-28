@@ -15,6 +15,14 @@ const {
 } = require("./quizVersionService");
 const { readSystemSettings } = require("./systemSettingsService");
 
+function normalizeSubjectToken(subject) {
+  return String(subject || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 async function generateQuizPayload({ grade, subject, topic, versionId, versionNumber }) {
   const prompt = buildQuizPrompt({
     grade,
@@ -53,7 +61,10 @@ async function ensureNextQuizVersion({ grade, subject, topicId, minVersions = 3 
     throw new ApiError(400, "topicId does not belong to the requested grade");
   }
 
-  if (topic.subject && String(topic.subject).trim().toLowerCase() !== normalizedSubject.toLowerCase()) {
+  if (
+    topic.subject &&
+    normalizeSubjectToken(topic.subject) !== normalizeSubjectToken(normalizedSubject)
+  ) {
     throw new ApiError(400, "topicId does not belong to the requested subject");
   }
 

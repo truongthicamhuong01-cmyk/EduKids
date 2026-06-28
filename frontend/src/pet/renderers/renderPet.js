@@ -13,6 +13,7 @@ export function renderPet(target, state = {}) {
     petType: pet.petType || pet.petTypeId,
     stage: pet.stage,
     mood: pet.mood,
+    isSleeping: pet.isSleeping,
   });
 
   root.innerHTML = `
@@ -29,4 +30,3 @@ export function renderPet(target, state = {}) {
 
   return root;
 }
-

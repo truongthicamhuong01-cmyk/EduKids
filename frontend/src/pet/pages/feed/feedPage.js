@@ -556,6 +556,7 @@ export function createFeedPage({ store, petApi, shopApi, inventoryApi } = {}) {
       stage: pet.stage,
       mood: pet.mood,
       level: `level${pet.level || 1}`,
+      isSleeping: pet.isSleeping,
     });
 
     const nextSrc = new URL(petImage || "", window.location.href).href;
@@ -568,7 +569,7 @@ export function createFeedPage({ store, petApi, shopApi, inventoryApi } = {}) {
     }
 
     const moodKey = String(pet.mood || "normal").toLowerCase();
-    root.dataset.mood = moodKey;
+    root.dataset.mood = pet.isSleeping ? "sleepy" : moodKey === "sleepy" ? "normal" : moodKey;
   }
 
   function renderCoin(snapshot = {}) {
@@ -715,6 +716,11 @@ export function createFeedPage({ store, petApi, shopApi, inventoryApi } = {}) {
       return;
     }
 
+    if (getPet()?.isSleeping) {
+      showBubble("Pet đang ngủ. Bạn có thể đánh thức Pet bằng cách chạm nhẹ vào người Pet nhé.");
+      return;
+    }
+
     const item = state.catalog.find((entry) => entry.itemId === itemId);
     if (!item || Number(item.quantity || 0) <= 0) {
       return;
@@ -737,7 +743,9 @@ export function createFeedPage({ store, petApi, shopApi, inventoryApi } = {}) {
       if (state.visible) {
         const bubbleMessage = response?.popupEvents?.[0]?.message || response?.message || "";
         showBubble(bubbleMessage);
-        pulsePet();
+        if (response?.meta?.blockedReason !== "pet_sleeping") {
+          pulsePet();
+        }
       }
       if (response?.data?.inventory?.categories?.foods) {
         state.catalog = state.catalog.map((entry) => {
@@ -776,6 +784,14 @@ export function createFeedPage({ store, petApi, shopApi, inventoryApi } = {}) {
     }
 
     if (action === "pet") {
+      window.dispatchEvent(
+        new CustomEvent("edukids:pet:interact", {
+          detail: {
+            source: "feed",
+            petTypeId: store?.getState?.()?.pet?.petTypeId || "",
+          },
+        }),
+      );
       pulsePet();
       return;
     }

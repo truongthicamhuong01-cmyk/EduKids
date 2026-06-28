@@ -39,6 +39,18 @@ function normalizeTopicRecord(topic) {
   };
 }
 
+function buildTopicMetaMap() {
+  const topicMetaMap = new Map();
+
+  readTopicsFile().map(normalizeTopicRecord).forEach((topic) => {
+    if (topic.topicId) {
+      topicMetaMap.set(topic.topicId, topic);
+    }
+  });
+
+  return topicMetaMap;
+}
+
 async function listTopics({ grade, subject, userId } = {}) {
   const topics = readTopicsFile().map(normalizeTopicRecord);
   const normalizedGrade = normalizeFilter(grade);
@@ -120,12 +132,14 @@ async function loadAggregateTopicProgressMap() {
   try {
     const snapshot = await db.collectionGroup("topics").get();
     const progressBuckets = new Map();
+    const topicMetaMap = buildTopicMetaMap();
 
     snapshot.docs.forEach((doc) => {
       const data = doc.data() || {};
       const topicId = normalizeFilter(data.topicId || doc.id);
-      const grade = normalizeFilter(data.grade);
-      const subject = normalizeFilter(data.subject).toLowerCase();
+      const topicMeta = topicMetaMap.get(topicId) || {};
+      const grade = normalizeFilter(data.grade || topicMeta.grade);
+      const subject = normalizeFilter(data.subject || topicMeta.subject).toLowerCase();
       const key = buildTopicProgressKey({ grade, subject, topicId });
       const totalAnswered = Math.max(0, Number(data.totalAnswered) || 0);
       const totalCorrect = Math.max(0, Number(data.totalCorrect) || 0);

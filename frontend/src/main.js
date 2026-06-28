@@ -120,6 +120,10 @@ const adminContentState = {
   data: {
     math: [],
     english: [],
+    vietnamese: [],
+    science: [],
+    history: [],
+    geography: [],
   },
   pendingPromise: null,
   hasData: false,
@@ -169,6 +173,57 @@ const adminStatsState = {
   pendingPromise: null,
   selectedRange: "week",
 };
+
+const SUBJECT_DEFINITIONS = [
+  { key: "math", label: "Toán", shortLabel: "Toán", iconClass: "math", iconLabel: "➗" },
+  { key: "english", label: "Tiếng Anh", shortLabel: "English", iconClass: "english", iconLabel: "ABC" },
+  { key: "vietnamese", label: "Tiếng Việt", shortLabel: "Tiếng Việt", iconClass: "subject-vietnamese", iconLabel: "TV" },
+  { key: "science", label: "Khoa học", shortLabel: "Khoa học", iconClass: "subject-science", iconLabel: "🔬" },
+  { key: "history", label: "Lịch sử", shortLabel: "Lịch sử", iconClass: "subject-history", iconLabel: "🏛" },
+  { key: "geography", label: "Địa lý", shortLabel: "Địa lý", iconClass: "subject-geography", iconLabel: "🗺" },
+];
+
+function getSubjectDefinition(subject) {
+  const normalized = String(subject || "")
+    .trim()
+    .toLowerCase();
+
+  return (
+    SUBJECT_DEFINITIONS.find(
+      (item) =>
+        item.key === normalized ||
+        item.label.toLowerCase() === normalized ||
+        item.shortLabel.toLowerCase() === normalized,
+    ) || null
+  );
+}
+
+function getSubjectKey(subject) {
+  const definition = getSubjectDefinition(subject);
+  if (definition) {
+    return definition.key;
+  }
+
+  return String(subject || "").trim().toLowerCase();
+}
+
+function getSubjectLabel(subject) {
+  const definition = getSubjectDefinition(subject);
+  return definition?.label || String(subject || "").trim() || "--";
+}
+
+function getSubjectShortLabel(subject) {
+  const definition = getSubjectDefinition(subject);
+  return definition?.shortLabel || getSubjectLabel(subject);
+}
+
+function getSubjectIcon(subject) {
+  const definition = getSubjectDefinition(subject);
+  return {
+    className: definition?.iconClass || "math",
+    label: definition?.iconLabel || "📘",
+  };
+}
 
 function apiRequest(path, payload) {
   return fetch(`${API_BASE_URL}${path}`, {
@@ -780,7 +835,7 @@ function showAdminPage(pageId) {
 }
 
 function showAdminContentTab(tabKey) {
-  const normalizedTab = tabKey === "english" ? "english" : "math";
+  const normalizedTab = getSubjectKey(tabKey) || "math";
   currentAdminContentTab = normalizedTab;
 
   document.querySelectorAll("[data-admin-content-tab]").forEach((item) => {
@@ -803,7 +858,7 @@ function getAdminContentRoot() {
 }
 
 function getAdminContentPanel(tabKey) {
-  const normalizedTab = tabKey === "english" ? "english" : "math";
+  const normalizedTab = getSubjectKey(tabKey) || "math";
 
   return (
     getAdminContentRoot()?.querySelector(
@@ -813,7 +868,7 @@ function getAdminContentPanel(tabKey) {
 }
 
 function getAdminContentTopicBody(tabKey) {
-  const normalizedTab = tabKey === "english" ? "english" : "math";
+  const normalizedTab = getSubjectKey(tabKey) || "math";
 
   return (
     getAdminContentRoot()?.querySelector(
@@ -866,12 +921,12 @@ function getAdminContentDrawerListNode() {
 }
 
 function getAdminContentRowLabel(subject, grade) {
-  const subjectLabel = subject === "english" ? "Tiếng Anh" : "Toán";
+  const subjectLabel = getSubjectLabel(subject);
   return `${subjectLabel} lớp ${grade}`;
 }
 
 function getAdminContentSubjectLabel(subject) {
-  return subject === "english" ? "Tiếng Anh" : "Toán";
+  return getSubjectLabel(subject);
 }
 
 function getAdminContentStatusLabel(versionCount) {
@@ -962,13 +1017,14 @@ function renderAdminContentPanel(tabKey) {
 }
 
 function renderAdminContentPage() {
-  renderAdminContentPanel("math");
-  renderAdminContentPanel("english");
+  SUBJECT_DEFINITIONS.forEach((subject) => {
+    renderAdminContentPanel(subject.key);
+  });
   renderAdminContentDrawer();
 }
 
 function getAdminContentBucket(tabKey, grade) {
-  const normalizedTab = tabKey === "english" ? "english" : "math";
+  const normalizedTab = getSubjectKey(tabKey) || "math";
   const normalizedGrade = String(grade || "").trim();
 
   return (
@@ -1236,12 +1292,34 @@ async function syncAdminContent({ forceRefresh = false } = {}) {
       const content =
         typeof service?.fetchAdminContentData === "function"
           ? await service.fetchAdminContentData()
-          : { grouped: { math: [], english: [] }, hasData: false };
+          : {
+              grouped: {
+                math: [],
+                english: [],
+                vietnamese: [],
+                science: [],
+                history: [],
+                geography: [],
+              },
+              hasData: false,
+            };
 
       adminContentState.data = {
         math: Array.isArray(content?.grouped?.math) ? content.grouped.math : [],
         english: Array.isArray(content?.grouped?.english)
           ? content.grouped.english
+          : [],
+        vietnamese: Array.isArray(content?.grouped?.vietnamese)
+          ? content.grouped.vietnamese
+          : [],
+        science: Array.isArray(content?.grouped?.science)
+          ? content.grouped.science
+          : [],
+        history: Array.isArray(content?.grouped?.history)
+          ? content.grouped.history
+          : [],
+        geography: Array.isArray(content?.grouped?.geography)
+          ? content.grouped.geography
           : [],
       };
       adminContentState.hasData = Boolean(content?.hasData);
@@ -1253,6 +1331,10 @@ async function syncAdminContent({ forceRefresh = false } = {}) {
       adminContentState.data = {
         math: [],
         english: [],
+        vietnamese: [],
+        science: [],
+        history: [],
+        geography: [],
       };
       adminContentState.hasData = false;
       adminContentState.loaded = true;
@@ -1672,7 +1754,7 @@ function getAdminStatsChartCard() {
 }
 
 function getAdminStatsTopicCard(topicKey) {
-  const normalizedKey = topicKey === "english" ? "english" : "math";
+  const normalizedKey = getSubjectKey(topicKey) || "math";
   return (
     getAdminStatsRoot()?.querySelector(
       `[data-admin-stats-topic-card="${normalizedKey}"]`,
@@ -1681,7 +1763,7 @@ function getAdminStatsTopicCard(topicKey) {
 }
 
 function getAdminStatsTopicNode(topicKey, key) {
-  const normalizedTopicKey = topicKey === "english" ? "english" : "math";
+  const normalizedTopicKey = getSubjectKey(topicKey) || "math";
   return (
     getAdminStatsRoot()?.querySelector(
       `[data-admin-stats-${key}="${normalizedTopicKey}"]`,
@@ -2165,6 +2247,10 @@ function buildAdminStatsViewModel(source, rangeKey = "week") {
       topTopics: {
         math: null,
         english: null,
+        vietnamese: null,
+        science: null,
+        history: null,
+        geography: null,
       },
       topClasses: [],
       hasData: false,
@@ -2210,6 +2296,30 @@ function buildAdminStatsViewModel(source, rangeKey = "week") {
       "english",
       normalizedRange,
     ),
+    vietnamese: buildAdminStatsTopic(
+      topicDocs,
+      topicCatalog,
+      "vietnamese",
+      normalizedRange,
+    ),
+    science: buildAdminStatsTopic(
+      topicDocs,
+      topicCatalog,
+      "science",
+      normalizedRange,
+    ),
+    history: buildAdminStatsTopic(
+      topicDocs,
+      topicCatalog,
+      "history",
+      normalizedRange,
+    ),
+    geography: buildAdminStatsTopic(
+      topicDocs,
+      topicCatalog,
+      "geography",
+      normalizedRange,
+    ),
   };
   const topClasses = buildAdminStatsTopClasses(
     source.classDocs || [],
@@ -2233,7 +2343,10 @@ function buildAdminStatsViewModel(source, rangeKey = "week") {
     topClasses,
     hasData:
       chartSeries.some((item) => Number(item.value) > 0) ||
-      Boolean(topTopics.math || topTopics.english || topClasses.length > 0),
+      Boolean(
+        SUBJECT_DEFINITIONS.some((subject) => topTopics[subject.key]) ||
+          topClasses.length > 0,
+      ),
   };
 }
 
@@ -2417,9 +2530,10 @@ function renderAdminStatsPage() {
     emptyTitle: viewModel.chartEmptyTitle,
     emptyDescription: viewModel.chartEmptyDescription,
   });
-  renderAdminStatsTopic("math", viewModel.topTopics?.math || null, { loading });
-  renderAdminStatsTopic("english", viewModel.topTopics?.english || null, {
-    loading,
+  SUBJECT_DEFINITIONS.forEach((subject) => {
+    renderAdminStatsTopic(subject.key, viewModel.topTopics?.[subject.key] || null, {
+      loading,
+    });
   });
   renderAdminStatsTable(viewModel.topClasses || [], { loading });
 }
@@ -2466,6 +2580,10 @@ async function syncAdminStats({ forceRefresh = false } = {}) {
         topTopics: {
           math: null,
           english: null,
+          vietnamese: null,
+          science: null,
+          history: null,
+          geography: null,
         },
         topClasses: [],
         hasData: false,
@@ -2489,6 +2607,10 @@ async function syncAdminStats({ forceRefresh = false } = {}) {
         topTopics: {
           math: null,
           english: null,
+          vietnamese: null,
+          science: null,
+          history: null,
+          geography: null,
         },
         topClasses: [],
         hasData: false,
@@ -3035,43 +3157,11 @@ function getAdminAssignmentById(assignmentId) {
 }
 
 function getAdminAssignmentSubjectLabel(subject) {
-  const normalized = String(subject || "")
-    .trim()
-    .toLowerCase();
-
-  if (normalized === "math" || normalized === "toán" || normalized === "toan") {
-    return "Toán";
-  }
-
-  if (
-    normalized === "english" ||
-    normalized === "tiếng anh" ||
-    normalized === "tieng anh"
-  ) {
-    return "Tiếng Anh";
-  }
-
-  return String(subject || "").trim() || "--";
+  return getSubjectLabel(subject);
 }
 
 function getAdminAssignmentSubjectKey(subject) {
-  const normalized = String(subject || "")
-    .trim()
-    .toLowerCase();
-
-  if (normalized === "math" || normalized === "toán" || normalized === "toan") {
-    return "math";
-  }
-
-  if (
-    normalized === "english" ||
-    normalized === "tiếng anh" ||
-    normalized === "tieng anh"
-  ) {
-    return "english";
-  }
-
-  return normalized;
+  return getSubjectKey(subject);
 }
 
 function getAdminAssignmentStatusLabel(status) {
@@ -6938,7 +7028,7 @@ async function fetchStudentRecommendationTopics(profile) {
     return cached;
   }
 
-  const subjects = ["math", "english"];
+  const subjects = SUBJECT_DEFINITIONS.map((subject) => subject.key);
 
   try {
     const responses = await Promise.all(
@@ -7522,7 +7612,7 @@ async function handleAICoachAnalyze() {
 async function openAICoachPracticeTopic(topicId, grade, subject) {
   const normalizedTopicId = normalizeQuizText(topicId);
   const normalizedGrade = normalizeQuizText(grade);
-  const normalizedSubject = normalizeQuizText(subject);
+  const normalizedSubject = getSubjectKey(subject) || STUDENT_QUIZ_DEFAULTS.subject;
 
   if (!isAiTopicLearningEnabled()) {
     showToast("AI Học theo chủ đề hiện đang tắt trong hệ thống.", "error");
@@ -9264,7 +9354,7 @@ function getStudentTopicImage(topic) {
     return image;
   }
 
-  if (topic?.subject === "english") {
+  if (getSubjectKey(topic?.subject) === "english") {
     return "assets/englishTopic/vocabulary.png";
   }
 
@@ -10684,6 +10774,10 @@ function playBossBattleRewardSoundOnce(rewardKey = "") {
 }
 
 function spawnBossBattleFloatingReward(text, kind = "xp") {
+  if (kind === "xp") {
+    return;
+  }
+
   const screen = getStudentQuizScreen();
 
   if (!screen) {
@@ -12064,8 +12158,9 @@ function getStudentSubjectsScreenHtml() {
         <label class="quiz-filter">
           <span>Môn học</span>
           <select id="quiz-subject-select">
-            <option value="math">Toán</option>
-            <option value="english">Tiếng Anh</option>
+            ${SUBJECT_DEFINITIONS.map(
+              (subject) => `<option value="${subject.key}">${subject.label}</option>`,
+            ).join("")}
           </select>
         </label>
 
@@ -13193,7 +13288,7 @@ function showStudentWrongAnswerReview() {
 function openSubject(subject) {
   if (subject) {
     studentQuizState.subject =
-      normalizeQuizText(subject) || STUDENT_QUIZ_DEFAULTS.subject;
+      getSubjectKey(subject) || STUDENT_QUIZ_DEFAULTS.subject;
     updateStudentQuizControls();
   }
 
@@ -13212,7 +13307,7 @@ function showSubject(subject, button) {
 
   if (subject) {
     studentQuizState.subject =
-      normalizeQuizText(subject) || STUDENT_QUIZ_DEFAULTS.subject;
+      getSubjectKey(subject) || STUDENT_QUIZ_DEFAULTS.subject;
     updateStudentQuizControls();
     studentQuizState.topics = [];
     studentQuizState.loadedTopicsKey = "";
@@ -13531,7 +13626,7 @@ const manualAssignmentState = {
   className: "",
   title: "",
   description: "",
-  subject: "Math",
+  subject: "math",
   dueDate: "",
   questions: [],
 };
@@ -16129,30 +16224,7 @@ function getStudentAssignmentScoreBadgeText(assignment) {
 }
 
 function getStudentAssignmentIcon(assignment) {
-  const subject = String(assignment?.subject || "").toLowerCase();
-
-  if (subject.includes("english") || subject.includes("anh")) {
-    return {
-      className: "english",
-      label: "ABC",
-    };
-  }
-
-  if (
-    subject.includes("math") ||
-    subject.includes("toán") ||
-    subject.includes("toan")
-  ) {
-    return {
-      className: "math",
-      label: "➗",
-    };
-  }
-
-  return {
-    className: "math",
-    label: "📘",
-  };
+  return getSubjectIcon(assignment?.subject);
 }
 
 function getAssignmentsPageLists() {
@@ -18395,7 +18467,7 @@ function resetManualAssignmentState() {
   manualAssignmentState.className = "";
   manualAssignmentState.title = "";
   manualAssignmentState.description = "";
-  manualAssignmentState.subject = "Math";
+  manualAssignmentState.subject = "math";
   manualAssignmentState.dueDate = "";
   manualAssignmentState.questions = [createManualQuestion(1)];
 }
@@ -18481,23 +18553,7 @@ function getAssignmentAiAddButton() {
 }
 
 function getAssignmentSubjectDisplayLabel(subject) {
-  const normalized = String(subject || "")
-    .trim()
-    .toLowerCase();
-
-  if (normalized === "math" || normalized === "toán" || normalized === "toan") {
-    return "Toán";
-  }
-
-  if (
-    normalized === "english" ||
-    normalized === "tiếng anh" ||
-    normalized === "tieng anh"
-  ) {
-    return "Tiếng Anh";
-  }
-
-  return String(subject || "").trim() || "--";
+  return getSubjectLabel(subject);
 }
 
 function getAssignmentGradeLabel(value) {
@@ -18739,7 +18795,7 @@ function syncManualAssignmentFormFields() {
   }
 
   if (subjectSelect) {
-    subjectSelect.value = manualAssignmentState.subject || "Math";
+    subjectSelect.value = manualAssignmentState.subject || "math";
   }
 
   if (classSelect) {
@@ -18801,7 +18857,7 @@ function getAssignmentAiTopicsKey() {
 }
 
 async function loadAssignmentAiTopics({ force = false } = {}) {
-  const subject = normalizeSubjectLabel(manualAssignmentState.subject || "");
+  const subject = normalizeSubjectLabel(manualAssignmentState.subject || "") || "math";
   const grade = String(assignmentAiState.grade || "4").trim() || "4";
   const topicsKey = `${grade}:${subject}`;
 
@@ -19118,7 +19174,7 @@ function updateManualAssignmentStateFromElement(target) {
   }
 
   if (target.matches("[data-manual-subject]")) {
-    manualAssignmentState.subject = target.value || "Math";
+    manualAssignmentState.subject = target.value || "math";
     return;
   }
 
@@ -19203,23 +19259,7 @@ function updateManualAssignmentStateFromElement(target) {
 }
 
 function normalizeSubjectLabel(value) {
-  const normalized = String(value || "")
-    .trim()
-    .toLowerCase();
-
-  if (normalized === "math" || normalized === "toán" || normalized === "toan") {
-    return "Math";
-  }
-
-  if (
-    normalized === "english" ||
-    normalized === "tiếng anh" ||
-    normalized === "tieng anh"
-  ) {
-    return "English";
-  }
-
-  return "";
+  return getSubjectKey(value);
 }
 
 function formatAssignmentDate(value) {
@@ -21815,8 +21855,10 @@ function renderManualAssignmentShell() {
                 <div class="auth-field">
                   <label class="auth-field-label" for="manual-assignment-subject">Môn</label>
                   <select id="manual-assignment-subject" class="auth-input" data-manual-subject>
-                    <option value="Math">Toán</option>
-                    <option value="English">Tiếng Anh</option>
+                    ${SUBJECT_DEFINITIONS.map(
+                      (subject) =>
+                        `<option value="${subject.key}">${subject.label}</option>`,
+                    ).join("")}
                   </select>
                 </div>
 
@@ -22011,12 +22053,7 @@ function createManualAssignmentPreviewHtml(draft) {
     `;
   });
 
-  const subjectLabel =
-    draft.subject === "Math"
-      ? "Toán"
-      : draft.subject === "English"
-        ? "Tiếng Anh"
-        : "--";
+  const subjectLabel = getAssignmentSubjectDisplayLabel(draft.subject);
 
   const meta = `
     <div class="manual-preview-summary">

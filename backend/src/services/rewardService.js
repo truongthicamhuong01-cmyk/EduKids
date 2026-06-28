@@ -56,6 +56,25 @@ function normalizeRewardRule(rule = {}) {
   };
 }
 
+function tuneEconomyRewardRule(ruleKey, rule) {
+  const normalizedRuleKey = normalizeText(ruleKey);
+  const nextRule = { ...rule };
+
+  if (normalizedRuleKey === "lessonComplete") {
+    nextRule.coin = 12;
+  } else if (normalizedRuleKey === "assignment") {
+    nextRule.coin = 20;
+  } else if (normalizedRuleKey === "highScore") {
+    nextRule.coin = 6;
+  } else if (normalizedRuleKey === "dailyLogin") {
+    nextRule.coin = 3;
+  } else if (normalizedRuleKey === "learningPath") {
+    nextRule.coin = Number(nextRule.coin) >= 100 ? 120 : 35;
+  }
+
+  return nextRule;
+}
+
 function isQuizHighScore(score = 0) {
   return Math.max(0, Number(score) || 0) >= 90;
 }
@@ -209,7 +228,10 @@ async function grantReward({
     });
   }
 
-  const rule = normalizeRewardRule(rewardRule || getRewardRule(rewardConfig, normalizedRuleKey));
+  const rule = tuneEconomyRewardRule(
+    normalizedRuleKey,
+    normalizeRewardRule(rewardRule || getRewardRule(rewardConfig, normalizedRuleKey)),
+  );
   if (!rule) {
     throw new ApiError(422, "Reward rule không tồn tại", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
       ruleKey: normalizedRuleKey,

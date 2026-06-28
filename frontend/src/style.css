@@ -32,6 +32,8 @@ body {
 
 body.admin-mode {
   background: #f5f7fb;
+  overflow: hidden;
+  height: 100vh;
 }
 
 button,
@@ -216,6 +218,13 @@ body.auth-mode .app {
   background: linear-gradient(180deg, #0f172a 0%, #111c35 100%);
   border-right: 1px solid rgba(148, 163, 184, 0.16);
   padding: 24px 18px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 1040;
 }
 
 .admin-dashboard-theme .admin-sidebar .sidebar-brand-icon {
@@ -508,14 +517,18 @@ body.auth-mode .app {
 }
 
 .admin-layout {
-  display: flex;
-  min-height: 100vh;
+  display: block;
+  height: 100vh;
+  overflow: hidden;
+  width: 100%;
 }
 
 .admin-content {
-  margin-left: 0;
-  width: 100%;
-  min-height: 100vh;
+  width: auto;
+  margin-left: 304px;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .page {
@@ -2568,7 +2581,7 @@ body.auth-mode .app {
   color: #17243a;
 }
 
-.admin-ai-toggle-row span {
+.admin-ai-toggle-copy > span {
   display: block;
   margin-top: 4px;
   font-size: 12px;
@@ -2615,16 +2628,19 @@ body.auth-mode .app {
     box-shadow 0.22s ease;
 }
 
-.admin-switch span {
+.admin-switch-thumb {
   position: absolute;
   left: 2px;
-  top: 50%;
+  top: 2px;
   width: 28px;
   height: 28px;
   border-radius: 50%;
   background: #ffffff;
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.14);
-  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   transition:
     transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.22s ease;
@@ -2638,8 +2654,8 @@ body.auth-mode .app {
     0 0 0 1px rgba(53, 95, 224, 0.08);
 }
 
-.admin-switch.is-on span {
-  transform: translate(24px, -50%);
+.admin-switch.is-on .admin-switch-thumb {
+  transform: translateX(24px);
 }
 
 .admin-ai-actions {
@@ -2682,13 +2698,16 @@ body.auth-mode .app {
   height: 48px;
   border-radius: 16px;
   flex: none;
-  display: flex;
+  display: grid;
+  place-items: center;
   align-items: center;
   justify-content: center;
   background: #eef2ff;
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
   font-size: 20px;
   line-height: 1;
   box-sizing: border-box;
+  align-self: center;
 }
 
 .admin-ai-action-btn strong {
@@ -2699,7 +2718,7 @@ body.auth-mode .app {
   color: #17243a;
 }
 
-.admin-ai-action-btn span {
+.admin-ai-action-btn > div > span {
   display: block;
   margin-top: 4px;
   font-size: 12px;
@@ -2939,7 +2958,7 @@ body.auth-mode .app {
   color: #17243a;
 }
 
-.admin-settings-row span {
+.admin-settings-row > div > span {
   display: block;
   margin-top: 4px;
   font-size: 12px;
@@ -3009,13 +3028,16 @@ body.auth-mode .app {
   height: 48px;
   border-radius: 16px;
   flex: none;
-  display: flex;
+  display: grid;
+  place-items: center;
   align-items: center;
   justify-content: center;
   background: #eef2ff;
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", sans-serif;
   font-size: 20px;
   line-height: 1;
   box-sizing: border-box;
+  align-self: center;
 }
 
 .admin-settings-action-btn strong {
@@ -3026,7 +3048,7 @@ body.auth-mode .app {
   color: #17243a;
 }
 
-.admin-settings-action-btn span {
+.admin-settings-action-btn > div > span {
   display: block;
   margin-top: 4px;
   font-size: 12px;
@@ -5523,6 +5545,22 @@ textarea {
 
 .subject-icon.english {
   background: #3b82f6;
+}
+
+.subject-icon.subject-vietnamese {
+  background: #ef4444;
+}
+
+.subject-icon.subject-science {
+  background: #10b981;
+}
+
+.subject-icon.subject-history {
+  background: #f59e0b;
+}
+
+.subject-icon.subject-geography {
+  background: #8b5cf6;
 }
 
 .assignment-left h3 {
@@ -16325,11 +16363,6 @@ body.admin-content-drawer-open {
     padding: 0;
   }
 
-  .admin-content {
-    margin-left: 240px;
-    width: calc(100% - 240px);
-  }
-
   .home-content-inner {
     margin-top: -34px;
     padding: 0 24px 24px;
@@ -16344,13 +16377,17 @@ body.admin-content-drawer-open {
   }
 
   .admin-layout {
-    display: flex;
-    min-height: 100vh;
+    display: block;
+    height: 100vh;
+    overflow: hidden;
   }
 
   .admin-content {
-    margin-left: 280px;
-    width: calc(100% - 280px);
+    width: auto;
+    margin-left: 264px;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .sidebar-backdrop {

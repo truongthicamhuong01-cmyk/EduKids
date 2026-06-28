@@ -266,18 +266,42 @@ function applySubmissionResultToAssignment(assignment, submission = null) {
   };
 }
 
-function normalizeSubjectLabel(subject) {
-  const normalized = String(subject || "").trim().toLowerCase();
+function normalizeSubjectToken(subject) {
+  return String(subject || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
 
-  if (normalized === "math" || normalized === "toán" || normalized === "toan") {
+function normalizeSubjectLabel(subject) {
+  const normalized = normalizeSubjectToken(subject);
+
+  if (normalized === "math" || normalized === "toan") {
     return "Math";
   }
 
-  if (normalized === "english" || normalized === "tiếng anh" || normalized === "tieng anh") {
+  if (normalized === "english" || normalized === "tieng anh") {
     return "English";
   }
 
-  return "";
+  if (normalized === "vietnamese" || normalized === "tieng viet") {
+    return "Vietnamese";
+  }
+
+  if (normalized === "science" || normalized === "khoa hoc") {
+    return "Science";
+  }
+
+  if (normalized === "history" || normalized === "lich su") {
+    return "History";
+  }
+
+  if (normalized === "geography" || normalized === "dia ly") {
+    return "Geography";
+  }
+
+  return String(subject || "").trim();
 }
 
 function normalizeAssignmentDoc(doc, fallbackClassId = "") {

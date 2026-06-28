@@ -1,16 +1,36 @@
-function getSubjectLabel(subject) {
-  const normalized = String(subject || "").trim().toLowerCase();
+function normalizeSubjectToken(subject) {
+  return String(subject || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
 
-  if (normalized === "math" || normalized === "toán" || normalized === "toan") {
+function getSubjectLabel(subject) {
+  const normalized = normalizeSubjectToken(subject);
+
+  if (normalized === "math" || normalized === "toan") {
     return "Toán";
   }
 
-  if (
-    normalized === "english" ||
-    normalized === "tiếng anh" ||
-    normalized === "tieng anh"
-  ) {
+  if (normalized === "english" || normalized === "tieng anh") {
     return "Tiếng Anh";
+  }
+
+  if (normalized === "vietnamese" || normalized === "tieng viet") {
+    return "Tiếng Việt";
+  }
+
+  if (normalized === "science" || normalized === "khoa hoc") {
+    return "Khoa học";
+  }
+
+  if (normalized === "history" || normalized === "lich su") {
+    return "Lịch sử";
+  }
+
+  if (normalized === "geography" || normalized === "dia ly") {
+    return "Địa lý";
   }
 
   return String(subject || "").trim();

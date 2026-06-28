@@ -61,6 +61,7 @@ const shopPage = createShopPage({
 });
 let petNavigationBound = false;
 let petUiBootstrapped = false;
+let petInteractBound = false;
 
 if (assetAudit?.issues?.length > 0 && import.meta.env.DEV) {
   console.debug("[EduKids][Pet][Assets] audit issues", assetAudit.issues);
@@ -155,6 +156,31 @@ function bindPetNavigationEvents() {
   petNavigationBound = true;
 }
 
+function bindPetInteractEvents() {
+  if (petInteractBound) {
+    return;
+  }
+
+  window.addEventListener("edukids:pet:interact", async () => {
+    const snapshot = petStore.getState();
+    const pet = snapshot?.pet;
+
+    if (!pet?.isSleeping || snapshot?.loading) {
+      return;
+    }
+
+    try {
+      await petClient.wakePet({
+        idempotencyKey: `pet-wake-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      });
+    } catch {
+      // Ignore wake failures here; UI state stays in sync via store updates.
+    }
+  });
+
+  petInteractBound = true;
+}
+
 function bootstrapPetModule() {
   if (petUiBootstrapped) {
     bootstrapPetUi();
@@ -162,6 +188,7 @@ function bootstrapPetModule() {
   }
 
   bindPetNavigationEvents();
+  bindPetInteractEvents();
   bootstrapPetUi();
   homePetPage.initialize().catch(() => {});
   choosePetPage.initialize().catch(() => {});

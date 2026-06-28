@@ -9,6 +9,6 @@ export function createPetApi() {
     feedPet: (body, options = {}) => client.request("/api/pet/feed", { method: "POST", body, ...options }),
     playPet: (body, options = {}) => client.request("/api/pet/play", { method: "POST", body, ...options }),
     sleepPet: (body, options = {}) => client.request("/api/pet/sleep", { method: "POST", body, ...options }),
+    wakePet: (body, options = {}) => client.request("/api/pet/wake", { method: "POST", body, ...options }),
   };
 }
-

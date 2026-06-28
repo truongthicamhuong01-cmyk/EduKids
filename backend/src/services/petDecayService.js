@@ -7,14 +7,15 @@ const {
 } = require("./petMathService");
 
 const DEFAULT_STAT_VALUE = 100;
-const DEFAULT_SLEEP_THRESHOLD = 15;
+const DEFAULT_SLEEP_THRESHOLD = 20;
 const AUTO_WAKE_THRESHOLD = 70;
+const SLEEP_GRACE_DURATION_MS = 15 * 60 * 1000;
 const DECAY_PER_HOUR = {
   hunger: 1,
   energy: 1,
   happiness: 0.25,
   health: 0.5,
-  sleepingEnergyRecovery: 3,
+  sleepingEnergyRecovery: 8,
 };
 
 function normalizeText(value) {
@@ -27,6 +28,19 @@ function cloneState(state = {}) {
 
 function hasOwn(source, key) {
   return Boolean(source && Object.prototype.hasOwnProperty.call(source, key));
+}
+
+function resolveDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date;
 }
 
 function getPetBalance(configs = {}) {
@@ -79,11 +93,17 @@ function getInitialExp(petBalance = {}, options = {}) {
   return 0;
 }
 
-function resolveSleepingState(state = {}) {
+function resolveSleepingState(state = {}, now = new Date()) {
   const energy = toNumber(state.energy, DEFAULT_STAT_VALUE);
   const wasSleeping = Boolean(state.isSleeping);
+  const graceUntil = resolveDate(state.sleepGraceUntil);
+  const currentTime = resolveDate(now) || new Date();
 
   if (energy >= AUTO_WAKE_THRESHOLD) {
+    return false;
+  }
+
+  if (graceUntil && currentTime.getTime() < graceUntil.getTime()) {
     return false;
   }
 
@@ -138,7 +158,7 @@ function normalizePetShape(rawPetState = {}, configs = {}, now = new Date(), opt
     happiness: hasOwn(source, "happiness") ? source.happiness : defaultStats.happiness,
     health: hasOwn(source, "health") ? source.health : defaultStats.health,
     status: normalizeText(source.status) || "active",
-    isSleeping: resolveSleepingState(source),
+    isSleeping: resolveSleepingState(source, now),
     ...baseTimestamps,
   };
 
@@ -156,6 +176,7 @@ function normalizePetShape(rawPetState = {}, configs = {}, now = new Date(), opt
   nextState.petBalanceVersion = normalizeText(source.petBalanceVersion) || normalizeText(petBalance.version) || "";
   nextState.version = Math.max(0, Math.floor(toNumber(source.version, 0)));
   nextState.lastSleepAt = normalizeText(source.lastSleepAt) || null;
+  nextState.sleepGraceUntil = normalizeText(source.sleepGraceUntil) || null;
   nextState.lastFeedAt = normalizeText(source.lastFeedAt) || null;
   nextState.lastPlayAt = normalizeText(source.lastPlayAt) || null;
   nextState.lastActionAt = normalizeText(source.lastActionAt) || null;
@@ -172,7 +193,7 @@ function applyDecayStep(state, stepHours) {
   const nextState = { ...state };
   const sleeping = Boolean(nextState.isSleeping);
   const hungerDelta = -DECAY_PER_HOUR.hunger * stepHours;
-  const happinessDelta = -DECAY_PER_HOUR.happiness * stepHours;
+  const happinessDelta = sleeping ? 0 : -DECAY_PER_HOUR.happiness * stepHours;
   const energyDelta = sleeping
     ? DECAY_PER_HOUR.sleepingEnergyRecovery * stepHours
     : -DECAY_PER_HOUR.energy * stepHours;
@@ -210,7 +231,7 @@ function applyPetDecay(rawPetState = {}, configs = {}, now = new Date()) {
   if (elapsedHours <= 0) {
     const settledState = {
       ...normalized,
-      isSleeping: resolveSleepingState(normalized),
+      isSleeping: resolveSleepingState(normalized, currentTime),
     };
 
     settledState.mood = calculateMood(settledState, petBalance);
@@ -238,7 +259,7 @@ function applyPetDecay(rawPetState = {}, configs = {}, now = new Date()) {
   nextState.energy = clampStats(nextState, getStatLimits(petBalance)).energy;
   nextState.health = clampStats(nextState, getStatLimits(petBalance)).health;
   nextState.health = Math.max(0, nextState.health);
-  nextState.isSleeping = resolveSleepingState(nextState);
+  nextState.isSleeping = resolveSleepingState(nextState, currentTime);
   nextState.mood = calculateMood(nextState, petBalance);
   nextState.stage = calculateEvolutionStage(nextState.petTypeId, nextState.level, evolutionConfig, nextState);
   nextState.updatedAt = currentTime.toISOString();
@@ -302,11 +323,13 @@ function applyPetMutation(rawPetState = {}, configs = {}, deltas = {}, now = new
   const shouldWake = toNumber(nextState.energy, DEFAULT_STAT_VALUE) >= AUTO_WAKE_THRESHOLD;
   if (shouldWake) {
     nextState.isSleeping = false;
+    nextState.sleepGraceUntil = normalizeText(nextState.sleepGraceUntil) || null;
   }
 
   if (!shouldWake && shouldSleep(nextState)) {
     nextState.isSleeping = true;
     nextState.lastSleepAt = nextState.lastSleepAt || currentTime.toISOString();
+    nextState.sleepGraceUntil = null;
   }
 
   return {
@@ -325,6 +348,7 @@ module.exports = {
   AUTO_WAKE_THRESHOLD,
   DEFAULT_SLEEP_THRESHOLD,
   DECAY_PER_HOUR,
+  SLEEP_GRACE_DURATION_MS,
   applyPetDecay,
   applyPetMutation,
   buildPetRuntimeState: normalizePetShape,

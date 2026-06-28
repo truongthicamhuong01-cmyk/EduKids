@@ -199,18 +199,20 @@ function ensureHomePageRoot() {
           </div>
 
           <button type="button" class="pet-home-pet" data-action="pet" aria-label="Tương tác với Pet">
-            <span class="pet-home-pet__halo" aria-hidden="true"></span>
-            <span class="pet-home-pet__shadow" aria-hidden="true"></span>
-            <span class="pet-home-pet__sparkle pet-home-pet__sparkle--one" aria-hidden="true">${iconSparkle()}</span>
-            <span class="pet-home-pet__sparkle pet-home-pet__sparkle--two" aria-hidden="true">${iconSparkle()}</span>
-            <span class="pet-home-pet__hunger-bubble" aria-hidden="true">${iconCookie()}</span>
-            <img
-              data-home-pet-image
-              src=""
-              alt="Pet"
-              loading="eager"
-              decoding="async"
-            />
+            <span class="pet-home-pet__figure" aria-hidden="true">
+              <span class="pet-home-pet__halo" aria-hidden="true"></span>
+              <span class="pet-home-pet__shadow" aria-hidden="true"></span>
+              <span class="pet-home-pet__sparkle pet-home-pet__sparkle--one" aria-hidden="true">${iconSparkle()}</span>
+              <span class="pet-home-pet__sparkle pet-home-pet__sparkle--two" aria-hidden="true">${iconSparkle()}</span>
+              <span class="pet-home-pet__hunger-bubble" aria-hidden="true">${iconCookie()}</span>
+              <img
+                data-home-pet-image
+                src=""
+                alt="Pet"
+                loading="eager"
+                decoding="async"
+              />
+            </span>
           </button>
 
           <div class="pet-home-skeleton" data-home-skeleton hidden aria-hidden="true">
@@ -492,7 +494,13 @@ export function createHomePetPage({ store, petApi } = {}) {
 
   function getPetKey(snapshot = {}) {
     const pet = snapshot.pet || {};
-    return [pet.petTypeId || pet.petType || "", pet.level || "", pet.stage || "", pet.mood || ""].join("|");
+    return [
+      pet.petTypeId || pet.petType || "",
+      pet.level || "",
+      pet.stage || "",
+      pet.isSleeping ? "sleeping" : "awake",
+      pet.mood || "",
+    ].join("|");
   }
 
   function renderStatsList(snapshot = {}) {
@@ -603,6 +611,7 @@ export function createHomePetPage({ store, petApi } = {}) {
       stage: pet.stage,
       mood: pet.mood,
       level: `level${pet.level || 1}`,
+      isSleeping: pet.isSleeping,
     });
     const avatarImage = resolvePetAvatarPath({
       petType: pet.petTypeId || pet.petType,
@@ -643,8 +652,9 @@ export function createHomePetPage({ store, petApi } = {}) {
     }
 
     const moodKey = String(pet.mood || "normal").toLowerCase();
-    const moodMeta = MOOD_META[moodKey] || MOOD_META.normal;
-    root.dataset.mood = moodKey;
+    const visualMoodKey = pet.isSleeping ? "sleepy" : moodKey === "sleepy" ? "normal" : moodKey;
+    const moodMeta = MOOD_META[visualMoodKey] || MOOD_META.normal;
+    root.dataset.mood = visualMoodKey;
     root.dataset.petType = String(pet.petTypeId || pet.petType || "");
     if (refs.mood) {
       refs.mood.className = `pet-home-mood pet-home-mood--${moodMeta.tone}`;
@@ -726,6 +736,11 @@ export function createHomePetPage({ store, petApi } = {}) {
 
     const currentPet = store?.getState?.()?.pet;
     if (!currentPet) {
+      return;
+    }
+
+    if ((actionName === "feed" || actionName === "play") && currentPet.isSleeping) {
+      showBubble("Pet đang ngủ. Bạn có thể đánh thức Pet bằng cách chạm nhẹ vào người Pet nhé.");
       return;
     }
 

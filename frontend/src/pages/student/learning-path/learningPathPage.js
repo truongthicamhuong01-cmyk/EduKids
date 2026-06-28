@@ -1403,16 +1403,93 @@ function renderTaskActionButton(task) {
       class="learning-path-task-action-btn"
       data-page="${escapeHtml(pageId)}"
     >
-      Th?c hi?n
+      Thực hiện
     </button>
   `;
 }
 
+function normalizeTaskProgressKey(value) {
+  return String(value || "")
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+}
+
+const TASK_PROGRESS_UNIT_BY_KEY = {
+  assignment: "bài",
+  battle: "trận",
+  boss_battle: "trận",
+  check_in: "ngày",
+  challenge: "trận",
+  coach: "lần",
+  daily_login: "ngày",
+  exercise: "bài",
+  homework: "bài",
+  lesson: "bài học",
+  login: "ngày",
+  milestone: "trận",
+  peak: "trận",
+  quiz: "bài",
+  quiz_score: "bài",
+  summit: "trận",
+  topic: "bài học",
+  study_minutes: "phút",
+};
+
+const TASK_PROGRESS_METRIC_TO_UNIT = {
+  assignmentCountToday: "bài",
+  coachCountToday: "lần",
+  highScoreQuizCountToday: "bài",
+  lessonCountToday: "bài học",
+  loginCountToday: "ngày",
+  quizCountToday: "bài",
+  studyMinutesToday: "phút",
+};
+
+function getTaskProgressKey(task = {}) {
+  const candidates = [
+    task?.type,
+    task?.goalType,
+    task?.taskType,
+    task?.progress?.type,
+    task?.progress?.goalType,
+    task?.progress?.taskType,
+    task?.metric,
+  ];
+
+  for (const candidate of candidates) {
+    const normalized = normalizeTaskProgressKey(candidate);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return "";
+}
+
+function getTaskProgressUnit(task = {}) {
+  const progress = task?.progress || {};
+  const explicitUnit = String(progress.unit || "").trim();
+  if (explicitUnit) {
+    return explicitUnit;
+  }
+
+  const key = getTaskProgressKey(task);
+  if (key && TASK_PROGRESS_UNIT_BY_KEY[key]) {
+    return TASK_PROGRESS_UNIT_BY_KEY[key];
+  }
+
+  const metric = String(task?.metric || progress.metric || "").trim();
+  if (metric && TASK_PROGRESS_METRIC_TO_UNIT[metric]) {
+    return TASK_PROGRESS_METRIC_TO_UNIT[metric];
+  }
+
+  return "lần";
+}
+
 function formatTaskProgressText(task) {
   const progress = task?.progress || {};
-  if (String(progress.label || "").trim()) {
-    return String(progress.label).trim();
-  }
 
   const threshold = Math.max(
     1,
@@ -1438,9 +1515,9 @@ function formatTaskProgressText(task) {
       ? threshold
       : 0;
   const displayCurrent = Math.min(currentValue, threshold);
-  const unit = String(progress.unit || "").trim() || "lần";
+  const unit = getTaskProgressUnit(task);
 
-  return `${displayCurrent} / ${threshold} ${unit}`;
+  return `${displayCurrent}/${threshold} ${unit}`;
 }
 
 function renderTaskCard(task) {

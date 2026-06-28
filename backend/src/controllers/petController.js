@@ -100,10 +100,26 @@ const sleep = asyncHandler(async (req, res) => {
   return sendPetSuccess(res, result, requestId);
 });
 
+const wake = asyncHandler(async (req, res) => {
+  const uid = validateUid(req.user?.uid || req.user?.userId);
+  const requestId = getRequestId(req);
+  const body = validatePetActionBody(req.body || {}, "wake");
+  const idempotencyKey = getIdempotencyKey(req, req.body || {});
+  const result = await petService.wake({
+    uid,
+    body,
+    requestId,
+    idempotencyKey,
+  });
+
+  return sendPetSuccess(res, result, requestId);
+});
+
 module.exports = {
   feed,
   getPet,
   play,
   selectPet,
   sleep,
+  wake,
 };

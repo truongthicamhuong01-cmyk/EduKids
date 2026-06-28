@@ -466,13 +466,17 @@
               </select>
             </label>
 
-            <label class="quiz-filter">
-              <span>Môn học</span>
-              <select id="quiz-subject-select">
-                <option value="math">Toán</option>
-                <option value="english">Tiếng Anh</option>
-              </select>
-            </label>
+              <label class="quiz-filter">
+                <span>Môn học</span>
+                <select id="quiz-subject-select">
+                  <option value="math">Toán</option>
+                  <option value="english">Tiếng Anh</option>
+                  <option value="vietnamese">Tiếng Việt</option>
+                  <option value="science">Khoa học</option>
+                  <option value="history">Lịch sử</option>
+                  <option value="geography">Địa lý</option>
+                </select>
+              </label>
 
             <button
               type="button"
@@ -2252,10 +2256,7 @@
           </div>
 
           <div class="sidebar-brand-copy">
-            <strong class="sidebar-brand-title">
-              <span class="sidebar-brand-edu">Edu</span>
-              <span class="sidebar-brand-kids">Kids</span>
-            </strong>
+            <strong class="sidebar-brand-title"><span class="sidebar-brand-edu">Edu</span><span class="sidebar-brand-kids">Kids</span></strong>
             <span class="sidebar-brand-tagline">Admin Dashboard</span>
           </div>
         </div>
@@ -2893,7 +2894,7 @@
             <div>
               <span class="admin-eyebrow">Kho nội dung</span>
               <h1>Nội dung học tập</h1>
-              <p>Quản lý topic theo môn học với tab Toán và Tiếng Anh.</p>
+              <p>Quản lý topic theo môn học cho 6 môn học.</p>
             </div>
           </div>
 
@@ -2921,6 +2922,42 @@
                   aria-selected="false"
                 >
                   Tiếng Anh
+                </button>
+                <button
+                  type="button"
+                  class="admin-content-tab"
+                  data-admin-content-tab="vietnamese"
+                  role="tab"
+                  aria-selected="false"
+                >
+                  Tiếng Việt
+                </button>
+                <button
+                  type="button"
+                  class="admin-content-tab"
+                  data-admin-content-tab="science"
+                  role="tab"
+                  aria-selected="false"
+                >
+                  Khoa học
+                </button>
+                <button
+                  type="button"
+                  class="admin-content-tab"
+                  data-admin-content-tab="history"
+                  role="tab"
+                  aria-selected="false"
+                >
+                  Lịch sử
+                </button>
+                <button
+                  type="button"
+                  class="admin-content-tab"
+                  data-admin-content-tab="geography"
+                  role="tab"
+                  aria-selected="false"
+                >
+                  Địa lý
                 </button>
               </div>
 
@@ -2999,6 +3036,146 @@
                               >Hệ thống đang đồng bộ dữ liệu thật từ Firestore
                               và dịch vụ topic.</span
                             >
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="admin-content-panel" data-admin-content-panel="vietnamese">
+              <div class="admin-content-subtitle">
+                <span>Danh sách topic</span>
+                <p>Tiếng Việt lớp 1 đến lớp 5</p>
+              </div>
+
+              <div class="admin-topic-table-wrap">
+                <table
+                  class="admin-topic-table"
+                  aria-label="Danh sách topic Tiếng Việt"
+                >
+                  <thead>
+                    <tr>
+                      <th>Tên topic</th>
+                      <th>Số lượng version</th>
+                      <th>Trạng thái</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody data-admin-content-topic-body="vietnamese">
+                    <tr>
+                      <td colspan="4">
+                        <div class="admin-empty-state is-large">
+                          <div>
+                            <p>Đang tải topic...</p>
+                            <span>Hệ thống đang đồng bộ dữ liệu thật từ Firestore và dịch vụ topic.</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="admin-content-panel" data-admin-content-panel="science">
+              <div class="admin-content-subtitle">
+                <span>Danh sách topic</span>
+                <p>Khoa học lớp 1 đến lớp 5</p>
+              </div>
+
+              <div class="admin-topic-table-wrap">
+                <table
+                  class="admin-topic-table"
+                  aria-label="Danh sách topic Khoa học"
+                >
+                  <thead>
+                    <tr>
+                      <th>Tên topic</th>
+                      <th>Số lượng version</th>
+                      <th>Trạng thái</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody data-admin-content-topic-body="science">
+                    <tr>
+                      <td colspan="4">
+                        <div class="admin-empty-state is-large">
+                          <div>
+                            <p>Đang tải topic...</p>
+                            <span>Hệ thống đang đồng bộ dữ liệu thật từ Firestore và dịch vụ topic.</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="admin-content-panel" data-admin-content-panel="history">
+              <div class="admin-content-subtitle">
+                <span>Danh sách topic</span>
+                <p>Lịch sử lớp 1 đến lớp 5</p>
+              </div>
+
+              <div class="admin-topic-table-wrap">
+                <table
+                  class="admin-topic-table"
+                  aria-label="Danh sách topic Lịch sử"
+                >
+                  <thead>
+                    <tr>
+                      <th>Tên topic</th>
+                      <th>Số lượng version</th>
+                      <th>Trạng thái</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody data-admin-content-topic-body="history">
+                    <tr>
+                      <td colspan="4">
+                        <div class="admin-empty-state is-large">
+                          <div>
+                            <p>Đang tải topic...</p>
+                            <span>Hệ thống đang đồng bộ dữ liệu thật từ Firestore và dịch vụ topic.</span>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="admin-content-panel" data-admin-content-panel="geography">
+              <div class="admin-content-subtitle">
+                <span>Danh sách topic</span>
+                <p>Địa lý lớp 1 đến lớp 5</p>
+              </div>
+
+              <div class="admin-topic-table-wrap">
+                <table
+                  class="admin-topic-table"
+                  aria-label="Danh sách topic Địa lý"
+                >
+                  <thead>
+                    <tr>
+                      <th>Tên topic</th>
+                      <th>Số lượng version</th>
+                      <th>Trạng thái</th>
+                      <th>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody data-admin-content-topic-body="geography">
+                    <tr>
+                      <td colspan="4">
+                        <div class="admin-empty-state is-large">
+                          <div>
+                            <p>Đang tải topic...</p>
+                            <span>Hệ thống đang đồng bộ dữ liệu thật từ Firestore và dịch vụ topic.</span>
                           </div>
                         </div>
                       </td>
@@ -3165,6 +3342,10 @@
                   <option value="">Tất cả môn</option>
                   <option value="math">Toán</option>
                   <option value="english">Tiếng Anh</option>
+                  <option value="vietnamese">Tiếng Việt</option>
+                  <option value="science">Khoa học</option>
+                  <option value="history">Lịch sử</option>
+                  <option value="geography">Địa lý</option>
                 </select>
               </label>
             </header>
@@ -3289,7 +3470,7 @@
                     data-admin-ai-toggle="coach"
                     aria-pressed="true"
                   >
-                    <span></span>
+                    <span class="admin-switch-thumb"></span>
                   </button>
                 </div>
 
@@ -3307,7 +3488,7 @@
                     data-admin-ai-toggle="topic-learning"
                     aria-pressed="true"
                   >
-                    <span></span>
+                    <span class="admin-switch-thumb"></span>
                   </button>
                 </div>
 
@@ -3325,7 +3506,7 @@
                     data-admin-ai-toggle="assignment"
                     aria-pressed="true"
                   >
-                    <span></span>
+                    <span class="admin-switch-thumb"></span>
                   </button>
                 </div>
               </div>
@@ -3495,6 +3676,98 @@
                         >Chờ dữ liệu</span
                       >
                       <strong data-admin-stats-topic-value="english">--</strong>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="admin-panel admin-stats-topic-panel">
+                  <div class="admin-panel-head">
+                    <div>
+                      <h2>Top chủ đề Tiếng Việt</h2>
+                      <p>Dữ liệu thật từ tiến trình học của học sinh</p>
+                    </div>
+                    <span class="admin-panel-chip is-red">Tiếng Việt</span>
+                  </div>
+                  <div class="admin-stats-topic-card" data-admin-stats-topic-card="vietnamese">
+                    <div class="admin-stats-topic-hero">
+                      <div class="admin-stats-topic-icon is-red">TV</div>
+                      <div>
+                        <strong data-admin-stats-topic-title="vietnamese">Đang tải...</strong>
+                        <span data-admin-stats-topic-subtitle="vietnamese">Đang đồng bộ dữ liệu...</span>
+                      </div>
+                    </div>
+                    <div class="admin-stats-topic-meta">
+                      <span data-admin-stats-topic-note="vietnamese">Chờ dữ liệu</span>
+                      <strong data-admin-stats-topic-value="vietnamese">--</strong>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="admin-panel admin-stats-topic-panel">
+                  <div class="admin-panel-head">
+                    <div>
+                      <h2>Top chủ đề Khoa học</h2>
+                      <p>Dữ liệu thật từ tiến trình học của học sinh</p>
+                    </div>
+                    <span class="admin-panel-chip is-green">Khoa học</span>
+                  </div>
+                  <div class="admin-stats-topic-card" data-admin-stats-topic-card="science">
+                    <div class="admin-stats-topic-hero">
+                      <div class="admin-stats-topic-icon is-green">🔬</div>
+                      <div>
+                        <strong data-admin-stats-topic-title="science">Đang tải...</strong>
+                        <span data-admin-stats-topic-subtitle="science">Đang đồng bộ dữ liệu...</span>
+                      </div>
+                    </div>
+                    <div class="admin-stats-topic-meta">
+                      <span data-admin-stats-topic-note="science">Chờ dữ liệu</span>
+                      <strong data-admin-stats-topic-value="science">--</strong>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="admin-panel admin-stats-topic-panel">
+                  <div class="admin-panel-head">
+                    <div>
+                      <h2>Top chủ đề Lịch sử</h2>
+                      <p>Dữ liệu thật từ tiến trình học của học sinh</p>
+                    </div>
+                    <span class="admin-panel-chip is-orange">Lịch sử</span>
+                  </div>
+                  <div class="admin-stats-topic-card" data-admin-stats-topic-card="history">
+                    <div class="admin-stats-topic-hero">
+                      <div class="admin-stats-topic-icon is-orange">🏛</div>
+                      <div>
+                        <strong data-admin-stats-topic-title="history">Đang tải...</strong>
+                        <span data-admin-stats-topic-subtitle="history">Đang đồng bộ dữ liệu...</span>
+                      </div>
+                    </div>
+                    <div class="admin-stats-topic-meta">
+                      <span data-admin-stats-topic-note="history">Chờ dữ liệu</span>
+                      <strong data-admin-stats-topic-value="history">--</strong>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="admin-panel admin-stats-topic-panel">
+                  <div class="admin-panel-head">
+                    <div>
+                      <h2>Top chủ đề Địa lý</h2>
+                      <p>Dữ liệu thật từ tiến trình học của học sinh</p>
+                    </div>
+                    <span class="admin-panel-chip is-purple">Địa lý</span>
+                  </div>
+                  <div class="admin-stats-topic-card" data-admin-stats-topic-card="geography">
+                    <div class="admin-stats-topic-hero">
+                      <div class="admin-stats-topic-icon is-purple">🗺</div>
+                      <div>
+                        <strong data-admin-stats-topic-title="geography">Đang tải...</strong>
+                        <span data-admin-stats-topic-subtitle="geography">Đang đồng bộ dữ liệu...</span>
+                      </div>
+                    </div>
+                    <div class="admin-stats-topic-meta">
+                      <span data-admin-stats-topic-note="geography">Chờ dữ liệu</span>
+                      <strong data-admin-stats-topic-value="geography">--</strong>
                     </div>
                   </div>
                 </article>
@@ -3691,7 +3964,7 @@
                     data-admin-settings-toggle="registration.student"
                     aria-pressed="true"
                   >
-                    <span></span>
+                    <span class="admin-switch-thumb"></span>
                   </button>
                 </div>
 
@@ -3708,7 +3981,7 @@
                     data-admin-settings-toggle="registration.teacher"
                     aria-pressed="true"
                   >
-                    <span></span>
+                    <span class="admin-switch-thumb"></span>
                   </button>
                 </div>
 
@@ -3726,7 +3999,7 @@
                     data-admin-settings-toggle="maintenance.enabled"
                     aria-pressed="false"
                   >
-                    <span></span>
+                    <span class="admin-switch-thumb"></span>
                   </button>
                 </div>
               </div>

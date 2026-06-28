@@ -2,6 +2,10 @@
   const SUBJECTS = [
     { key: "math", label: "Toán" },
     { key: "english", label: "Tiếng Anh" },
+    { key: "vietnamese", label: "Tiếng Việt" },
+    { key: "science", label: "Khoa học" },
+    { key: "history", label: "Lịch sử" },
+    { key: "geography", label: "Địa lý" },
   ];
 
   const GRADES = ["1", "2", "3", "4", "5"];
@@ -110,16 +114,20 @@
       ),
     );
 
-    const grouped = {
-      math: subjectGradeResults.filter((item) => item.subject === "math"),
-      english: subjectGradeResults.filter((item) => item.subject === "english"),
-    };
+    const grouped = Object.fromEntries(
+      SUBJECTS.map((subject) => [
+        subject.key,
+        subjectGradeResults.filter((item) => item.subject === subject.key),
+      ]),
+    );
 
     return {
       grouped,
-      hasData:
-        grouped.math.some((item) => item.topicCount > 0 || item.versionCount > 0) ||
-        grouped.english.some((item) => item.topicCount > 0 || item.versionCount > 0),
+      hasData: SUBJECTS.some((subject) =>
+        grouped[subject.key].some(
+          (item) => item.topicCount > 0 || item.versionCount > 0,
+        ),
+      ),
     };
   }
 

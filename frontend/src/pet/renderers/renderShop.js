@@ -20,7 +20,8 @@ function normalizeShopItem(item = {}) {
     key: String(item.key || itemId).trim() || itemId,
     code: String(item.code || itemId).trim() || itemId,
     itemId,
-    name: String(item.name || item.title || itemId).trim() || itemId,
+    name: String(item.name || item.title || item.displayName || itemId).trim() || itemId,
+    displayName: String(item.displayName || item.name || item.title || itemId).trim() || itemId,
   };
 }
 
@@ -50,7 +51,7 @@ export function renderShop(target, state = {}) {
               <li class="pet-shop__item" data-shop-item-id="${escapeHtml(item.itemId)}" data-shop-item-key="${escapeHtml(item.key)}" data-shop-item-code="${escapeHtml(item.code)}">
                 <img src="${resolveItemIconPath(item)}" alt="" aria-hidden="true" />
                 <div>
-                  <strong>${escapeHtml(item.name || item.itemId)}</strong>
+                  <strong>${escapeHtml(item.displayName || item.name || item.itemId)}</strong>
                   <span>Giá: ${escapeHtml(item.price ?? 0)}</span>
                 </div>
               </li>

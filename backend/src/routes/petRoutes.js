@@ -7,6 +7,7 @@ const {
   play,
   selectPet,
   sleep,
+  wake,
 } = require("../controllers/petController");
 
 const router = express.Router();
@@ -16,6 +17,7 @@ router.post("/select", verifyToken, selectPet);
 router.post("/feed", verifyToken, feed);
 router.post("/play", verifyToken, play);
 router.post("/sleep", verifyToken, sleep);
+router.post("/wake", verifyToken, wake);
 router.get("/inventory", verifyToken, getInventory);
 router.post("/inventory/use", verifyToken, useItem);
 

@@ -356,12 +356,6 @@ function deriveEvents(snapshot = {}, previousSnapshot = null) {
   const currentLevel = Number(currentPet.level ?? 0);
   const previousStage = normalizeText(previousPet.stage || "");
   const currentStage = normalizeText(currentPet.stage || "");
-  const previousMood = normalizeText(previousPet.mood || "");
-  const currentMood = normalizeText(currentPet.mood || "");
-  const previousCoin = Number(previousSnapshot?.wallet?.eduCoin ?? 0);
-  const currentCoin = Number(snapshot.wallet?.eduCoin ?? response?.data?.wallet?.eduCoin ?? previousCoin);
-  const previousExp = Number(previousPet.exp ?? 0);
-  const currentExp = Number(currentPet.exp ?? previousExp);
   const hasLevelUpEvent = popupQueue.some((event) => normalizeType(event?.type) === "LEVEL_UP");
   const hasEvolutionEvent = popupQueue.some((event) => normalizeType(event?.type) === "EVOLUTION");
   const hasAchievementEvent = popupQueue.some((event) => normalizeType(event?.type) === "ACHIEVEMENT");
@@ -402,36 +396,6 @@ function deriveEvents(snapshot = {}, previousSnapshot = null) {
     });
   }
 
-  const coinDelta = currentCoin - previousCoin;
-  if (coinDelta > 0) {
-    events.push({
-      type: "REWARD",
-      channel: "float",
-      priority: getPriority("REWARD"),
-      label: `+${formatNumber(coinDelta)} Xu Edu`,
-    });
-  }
-
-  const expDelta = currentExp - previousExp;
-  if (expDelta > 0) {
-    events.push({
-      type: "REWARD",
-      channel: "float",
-      priority: getPriority("REWARD"),
-      label: `+${formatNumber(expDelta)} EXP`,
-    });
-  }
-
-  if (currentMood !== previousMood) {
-    events.push({
-      type: "MOOD",
-      channel: "float",
-      priority: getPriority("MOOD"),
-      label: currentMood,
-      mood: currentMood,
-    });
-  }
-
   ["hunger", "happiness", "energy", "health"].forEach((stat) => {
     if (Number(previousPet?.[stat] ?? 0) === Number(currentPet?.[stat] ?? 0)) {
       return;
@@ -461,22 +425,6 @@ function deriveEvents(snapshot = {}, previousSnapshot = null) {
       },
     });
   }
-
-  const animationEvents = Array.isArray(response.animationEvents) ? response.animationEvents.filter(Boolean) : [];
-  animationEvents.forEach((animation) => {
-    const type = normalizeType(animation.type);
-    if (!type) {
-      return;
-    }
-
-    events.push({
-      type,
-      channel: "float",
-      priority: getPriority(type),
-      label: normalizeText(animation.label || animation.message || animation.type || "Pet"),
-      animation,
-    });
-  });
 
   return events.sort((left, right) => left.priority - right.priority);
 }
@@ -628,7 +576,6 @@ export function createFeedbackManager({ store } = {}) {
     }
 
     if (next.channel === "float") {
-      pushFloat(renderFloatingItem(next.label || next.type || "Pet", next.type));
       state.activeTimerId = window.setTimeout(() => {
         clearActive();
         advanceQueue();
@@ -675,9 +622,6 @@ export function createFeedbackManager({ store } = {}) {
     if (next.type === "REWARD_GRANTED" || next.type === "REWARD") {
       const reward = next.reward || {};
       renderCenter(renderRewardCard(next.event || next, reward));
-      buildRewardSummary(reward).forEach((label) => {
-        pushFloat(renderFloatingItem(label, "REWARD"));
-      });
       state.activeTimerId = window.setTimeout(() => {
         clearActive();
         advanceQueue();
