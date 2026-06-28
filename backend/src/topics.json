@@ -1,10 +1,10 @@
-[
+﻿[
   {
     "topicId": "p1-numbers-0-to-20",
     "grade": "1",
     "subject": "math",
     "title": "Các số từ 0 - 20",
-    "image": "assets/mathTopic/toan1/cacsotu0den20.png",
+    "image": "assets/topic/mathTopic/toan1/cacsotu0den20.png",
     "description": "Nhận biết, đọc, viết và đếm các số từ 0 đến 20."
   },
   {
@@ -12,7 +12,7 @@
     "grade": "1",
     "subject": "math",
     "title": "Các số từ 0 - 100",
-    "image": "assets/mathTopic/toan1/cacsotu0den100.png",
+    "image": "assets/topic/mathTopic/toan1/cacsotu0den100.png",
     "description": "Đọc, viết, so sánh và sắp xếp các số trong phạm vi 100."
   },
   {
@@ -20,7 +20,7 @@
     "grade": "1",
     "subject": "math",
     "title": "Cộng trừ trong phạm vi 10",
-    "image": "assets/mathTopic/toan1/congtruphamvi10.png",
+    "image": "assets/topic/mathTopic/toan1/congtruphamvi10.png",
     "description": "Thực hiện phép cộng và phép trừ trong phạm vi 10."
   },
   {
@@ -28,7 +28,7 @@
     "grade": "1",
     "subject": "math",
     "title": "Cộng trừ trong phạm vi 100",
-    "image": "assets/mathTopic/toan1/congtruphamvi100.png",
+    "image": "assets/topic/mathTopic/toan1/congtruphamvi100.png",
     "description": "Thực hiện phép cộng và phép trừ trong phạm vi 100."
   },
   {
@@ -36,7 +36,7 @@
     "grade": "1",
     "subject": "math",
     "title": "Đo lường đơn giản",
-    "image": "assets/mathTopic/toan1/doluongdongian.png",
+    "image": "assets/topic/mathTopic/toan1/doluongdongian.png",
     "description": "Làm quen với độ dài, thời gian và các đơn vị đo cơ bản."
   },
   {
@@ -44,7 +44,7 @@
     "grade": "1",
     "subject": "math",
     "title": "Hình học cơ bản",
-    "image": "assets/mathTopic/toan1/hinhhoccoban.png",
+    "image": "assets/topic/mathTopic/toan1/hinhhoccoban.png",
     "description": "Nhận biết các hình học cơ bản và vị trí trong không gian."
   },
 
@@ -53,7 +53,7 @@
     "grade": "2",
     "subject": "math",
     "title": "Các số đến 1000",
-    "image": "assets/mathTopic/toan2/cacsoden1000.png",
+    "image": "assets/topic/mathTopic/toan2/cacsoden1000.png",
     "description": "Đọc, viết, so sánh các số trong phạm vi 1000."
   },
   {
@@ -61,7 +61,7 @@
     "grade": "2",
     "subject": "math",
     "title": "Cộng trừ trong phạm vi 1000",
-    "image": "assets/mathTopic/toan2/congtruphamvi1000.png",
+    "image": "assets/topic/mathTopic/toan2/congtruphamvi1000.png",
     "description": "Thực hiện các phép cộng và trừ trong phạm vi 1000."
   },
   {
@@ -69,7 +69,7 @@
     "grade": "2",
     "subject": "math",
     "title": "Phép nhân",
-    "image": "assets/mathTopic/toan2/phepnhan.png",
+    "image": "assets/topic/mathTopic/toan2/phepnhan.png",
     "description": "Làm quen và thực hành các bảng nhân cơ bản."
   },
   {
@@ -77,7 +77,7 @@
     "grade": "2",
     "subject": "math",
     "title": "Phép chia",
-    "image": "assets/mathTopic/toan2/phepchia.png",
+    "image": "assets/topic/mathTopic/toan2/phepchia.png",
     "description": "Làm quen và thực hành các bảng chia cơ bản."
   },
   {
@@ -85,7 +85,7 @@
     "grade": "2",
     "subject": "math",
     "title": "Đo lường",
-    "image": "assets/mathTopic/toan2/doluong.png",
+    "image": "assets/topic/mathTopic/toan2/doluong.png",
     "description": "Độ dài, khối lượng, dung tích và thời gian."
   },
   {
@@ -93,7 +93,7 @@
     "grade": "2",
     "subject": "math",
     "title": "Hình học",
-    "image": "assets/mathTopic/toan2/hinhhoc.png",
+    "image": "assets/topic/mathTopic/toan2/hinhhoc.png",
     "description": "Nhận biết và vận dụng các hình học cơ bản."
   },
 
@@ -102,7 +102,7 @@
     "grade": "3",
     "subject": "math",
     "title": "Các số đến 100000",
-    "image": "assets/mathTopic/toan3/cacsoden100000.png",
+    "image": "assets/topic/mathTopic/toan3/cacsoden100000.png",
     "description": "Đọc, viết và so sánh các số trong phạm vi 100000."
   },
   {
@@ -110,7 +110,7 @@
     "grade": "3",
     "subject": "math",
     "title": "Phép cộng và phép trừ",
-    "image": "assets/mathTopic/toan3/phepcongvapheptru.png",
+    "image": "assets/topic/mathTopic/toan3/phepcongvapheptru.png",
     "description": "Thực hiện các phép cộng và trừ với số tự nhiên."
   },
   {
@@ -118,7 +118,7 @@
     "grade": "3",
     "subject": "math",
     "title": "Phép nhân và phép chia",
-    "image": "assets/mathTopic/toan3/phepnhanvaphepchia.png",
+    "image": "assets/topic/mathTopic/toan3/phepnhanvaphepchia.png",
     "description": "Thực hiện các phép nhân và chia với số tự nhiên."
   },
   {
@@ -126,7 +126,7 @@
     "grade": "3",
     "subject": "math",
     "title": "Đo lường",
-    "image": "assets/mathTopic/toan3/doluong.png",
+    "image": "assets/topic/mathTopic/toan3/doluong.png",
     "description": "Vận dụng các đơn vị đo trong thực tế."
   },
   {
@@ -134,7 +134,7 @@
     "grade": "3",
     "subject": "math",
     "title": "Hình học",
-    "image": "assets/mathTopic/toan3/hinhhoc.png",
+    "image": "assets/topic/mathTopic/toan3/hinhhoc.png",
     "description": "Các hình phẳng và bài toán hình học cơ bản."
   },
   {
@@ -142,7 +142,7 @@
     "grade": "3",
     "subject": "math",
     "title": "Thống kê",
-    "image": "assets/mathTopic/toan3/thongke.png",
+    "image": "assets/topic/mathTopic/toan3/thongke.png",
     "description": "Thu thập, đọc và phân tích dữ liệu đơn giản."
   },
 
@@ -151,7 +151,7 @@
     "grade": "4",
     "subject": "math",
     "title": "Số tự nhiên",
-    "image": "assets/mathTopic/toan4/sotunhien.png",
+    "image": "assets/topic/mathTopic/toan4/sotunhien.png",
     "description": "Ôn tập và mở rộng kiến thức về số tự nhiên."
   },
   {
@@ -159,7 +159,7 @@
     "grade": "4",
     "subject": "math",
     "title": "Các phép tính với số tự nhiên",
-    "image": "assets/mathTopic/toan4/cacpheptinhvoisotunhien.png",
+    "image": "assets/topic/mathTopic/toan4/cacpheptinhvoisotunhien.png",
     "description": "Thực hiện thành thạo các phép tính với số tự nhiên."
   },
   {
@@ -167,7 +167,7 @@
     "grade": "4",
     "subject": "math",
     "title": "Phân số",
-    "image": "assets/mathTopic/toan4/phanso.png",
+    "image": "assets/topic/mathTopic/toan4/phanso.png",
     "description": "Khái niệm, so sánh và các phép tính với phân số."
   },
   {
@@ -175,7 +175,7 @@
     "grade": "4",
     "subject": "math",
     "title": "Đo lường",
-    "image": "assets/mathTopic/toan4/doluong.png",
+    "image": "assets/topic/mathTopic/toan4/doluong.png",
     "description": "Các đại lượng và đơn vị đo thông dụng."
   },
   {
@@ -183,7 +183,7 @@
     "grade": "4",
     "subject": "math",
     "title": "Hình học",
-    "image": "assets/mathTopic/toan4/hinhhoc.png",
+    "image": "assets/topic/mathTopic/toan4/hinhhoc.png",
     "description": "Góc, đường thẳng và các hình hình học."
   },
   {
@@ -191,7 +191,7 @@
     "grade": "4",
     "subject": "math",
     "title": "Thống kê",
-    "image": "assets/mathTopic/toan4/thongke.png",
+    "image": "assets/topic/mathTopic/toan4/thongke.png",
     "description": "Biểu đồ và xử lý dữ liệu đơn giản."
   },
 
@@ -200,7 +200,7 @@
     "grade": "5",
     "subject": "math",
     "title": "Số thập phân",
-    "image": "assets/mathTopic/toan5/sothapphan.png",
+    "image": "assets/topic/mathTopic/toan5/sothapphan.png",
     "description": "Khái niệm và cách biểu diễn số thập phân."
   },
   {
@@ -208,7 +208,7 @@
     "grade": "5",
     "subject": "math",
     "title": "Các phép tính với số thập phân",
-    "image": "assets/mathTopic/toan5/cacpheptinhvoisothapphan.png",
+    "image": "assets/topic/mathTopic/toan5/cacpheptinhvoisothapphan.png",
     "description": "Thực hiện các phép cộng, trừ, nhân, chia số thập phân."
   },
   {
@@ -216,7 +216,7 @@
     "grade": "5",
     "subject": "math",
     "title": "Tỉ số phần trăm",
-    "image": "assets/mathTopic/toan5/tisophantram.png",
+    "image": "assets/topic/mathTopic/toan5/tisophantram.png",
     "description": "Tính toán và vận dụng tỉ số phần trăm."
   },
   {
@@ -224,7 +224,7 @@
     "grade": "5",
     "subject": "math",
     "title": "Đo lường",
-    "image": "assets/mathTopic/toan5/doluong.png",
+    "image": "assets/topic/mathTopic/toan5/doluong.png",
     "description": "Chuyển đổi và vận dụng các đơn vị đo."
   },
   {
@@ -232,7 +232,7 @@
     "grade": "5",
     "subject": "math",
     "title": "Hình học",
-    "image": "assets/mathTopic/toan5/hinhhoc.png",
+    "image": "assets/topic/mathTopic/toan5/hinhhoc.png",
     "description": "Chu vi, diện tích và thể tích các hình cơ bản."
   },
   {
@@ -240,7 +240,7 @@
     "grade": "5",
     "subject": "math",
     "title": "Thống kê và xác suất đơn giản",
-    "image": "assets/mathTopic/toan5/thongkevaxacsuat.png",
+    "image": "assets/topic/mathTopic/toan5/thongkevaxacsuat.png",
     "description": "Đọc dữ liệu, biểu đồ và các tình huống xác suất cơ bản."
   },
 
@@ -249,7 +249,7 @@
     "grade": "1",
     "subject": "english",
     "title": "Myself",
-    "image": "assets/englishTopic/tienganh1/myself.png",
+    "image": "assets/topic/englishTopic/tienganh1/myself.png",
     "description": "Giới thiệu bản thân và các thông tin cơ bản."
   },
   {
@@ -257,7 +257,7 @@
     "grade": "1",
     "subject": "english",
     "title": "Family",
-    "image": "assets/englishTopic/tienganh1/family.png",
+    "image": "assets/topic/englishTopic/tienganh1/family.png",
     "description": "Tìm hiểu các thành viên trong gia đình."
   },
   {
@@ -265,7 +265,7 @@
     "grade": "1",
     "subject": "english",
     "title": "School",
-    "image": "assets/englishTopic/tienganh1/school.png",
+    "image": "assets/topic/englishTopic/tienganh1/school.png",
     "description": "Làm quen với trường học và lớp học."
   },
   {
@@ -273,7 +273,7 @@
     "grade": "1",
     "subject": "english",
     "title": "Toys",
-    "image": "assets/englishTopic/tienganh1/toys.png",
+    "image": "assets/topic/englishTopic/tienganh1/toys.png",
     "description": "Nhận biết và gọi tên các loại đồ chơi."
   },
   {
@@ -281,7 +281,7 @@
     "grade": "1",
     "subject": "english",
     "title": "Colours",
-    "image": "assets/englishTopic/tienganh1/colours.png",
+    "image": "assets/topic/englishTopic/tienganh1/colours.png",
     "description": "Học từ vựng về màu sắc."
   },
   {
@@ -289,7 +289,7 @@
     "grade": "1",
     "subject": "english",
     "title": "Numbers",
-    "image": "assets/englishTopic/tienganh1/numbers.png",
+    "image": "assets/topic/englishTopic/tienganh1/numbers.png",
     "description": "Làm quen với số và cách đếm."
   },
   {
@@ -297,7 +297,7 @@
     "grade": "1",
     "subject": "english",
     "title": "Animals",
-    "image": "assets/englishTopic/tienganh1/animals.png",
+    "image": "assets/topic/englishTopic/tienganh1/animals.png",
     "description": "Học tên các con vật quen thuộc."
   },
   {
@@ -305,7 +305,7 @@
     "grade": "1",
     "subject": "english",
     "title": "Food",
-    "image": "assets/englishTopic/tienganh1/food.png",
+    "image": "assets/topic/englishTopic/tienganh1/food.png",
     "description": "Học từ vựng về đồ ăn."
   },
 
@@ -314,7 +314,7 @@
     "grade": "2",
     "subject": "english",
     "title": "Myself",
-    "image": "assets/englishTopic/tienganh2/myself.png",
+    "image": "assets/topic/englishTopic/tienganh2/myself.png",
     "description": "Mô tả bản thân và sở thích."
   },
   {
@@ -322,7 +322,7 @@
     "grade": "2",
     "subject": "english",
     "title": "Family",
-    "image": "assets/englishTopic/tienganh2/family.png",
+    "image": "assets/topic/englishTopic/tienganh2/family.png",
     "description": "Nói về gia đình và các thành viên."
   },
   {
@@ -330,7 +330,7 @@
     "grade": "2",
     "subject": "english",
     "title": "School",
-    "image": "assets/englishTopic/tienganh2/school.png",
+    "image": "assets/topic/englishTopic/tienganh2/school.png",
     "description": "Tìm hiểu các hoạt động ở trường."
   },
   {
@@ -338,7 +338,7 @@
     "grade": "2",
     "subject": "english",
     "title": "Things Around Us",
-    "image": "assets/englishTopic/tienganh2/thingsaroundus.png",
+    "image": "assets/topic/englishTopic/tienganh2/thingsaroundus.png",
     "description": "Nhận biết các đồ vật quen thuộc."
   },
   {
@@ -346,7 +346,7 @@
     "grade": "2",
     "subject": "english",
     "title": "Food and Drink",
-    "image": "assets/englishTopic/tienganh2/foodanddrink.png",
+    "image": "assets/topic/englishTopic/tienganh2/foodanddrink.png",
     "description": "Học từ vựng đồ ăn và thức uống."
   },
   {
@@ -354,7 +354,7 @@
     "grade": "2",
     "subject": "english",
     "title": "Animals",
-    "image": "assets/englishTopic/tienganh2/animals.png",
+    "image": "assets/topic/englishTopic/tienganh2/animals.png",
     "description": "Mở rộng từ vựng về động vật."
   },
   {
@@ -362,7 +362,7 @@
     "grade": "2",
     "subject": "english",
     "title": "Places",
-    "image": "assets/englishTopic/tienganh2/places.png",
+    "image": "assets/topic/englishTopic/tienganh2/places.png",
     "description": "Nhận biết các địa điểm quen thuộc."
   },
   {
@@ -370,7 +370,7 @@
     "grade": "2",
     "subject": "english",
     "title": "Daily Routines",
-    "image": "assets/englishTopic/tienganh2/dailyroutines.png",
+    "image": "assets/topic/englishTopic/tienganh2/dailyroutines.png",
     "description": "Nói về các hoạt động hằng ngày."
   },
 
@@ -379,7 +379,7 @@
     "grade": "3",
     "subject": "english",
     "title": "Family",
-    "image": "assets/englishTopic/tienganh3/family.png",
+    "image": "assets/topic/englishTopic/tienganh3/family.png",
     "description": "Mô tả gia đình."
   },
   {
@@ -387,7 +387,7 @@
     "grade": "3",
     "subject": "english",
     "title": "Friends",
-    "image": "assets/englishTopic/tienganh3/friends.png",
+    "image": "assets/topic/englishTopic/tienganh3/friends.png",
     "description": "Nói về bạn bè và các mối quan hệ."
   },
   {
@@ -395,7 +395,7 @@
     "grade": "3",
     "subject": "english",
     "title": "School",
-    "image": "assets/englishTopic/tienganh3/school.png",
+    "image": "assets/topic/englishTopic/tienganh3/school.png",
     "description": "Các hoạt động trong trường học."
   },
   {
@@ -403,7 +403,7 @@
     "grade": "3",
     "subject": "english",
     "title": "Hobbies",
-    "image": "assets/englishTopic/tienganh3/hobbies.png",
+    "image": "assets/topic/englishTopic/tienganh3/hobbies.png",
     "description": "Nói về sở thích cá nhân."
   },
   {
@@ -411,7 +411,7 @@
     "grade": "3",
     "subject": "english",
     "title": "Food and Drink",
-    "image": "assets/englishTopic/tienganh3/foodanddrink.png",
+    "image": "assets/topic/englishTopic/tienganh3/foodanddrink.png",
     "description": "Từ vựng đồ ăn và đồ uống."
   },
   {
@@ -419,7 +419,7 @@
     "grade": "3",
     "subject": "english",
     "title": "Animals",
-    "image": "assets/englishTopic/tienganh3/animals.png",
+    "image": "assets/topic/englishTopic/tienganh3/animals.png",
     "description": "Tìm hiểu thế giới động vật."
   },
   {
@@ -427,7 +427,7 @@
     "grade": "3",
     "subject": "english",
     "title": "Places in Town",
-    "image": "assets/englishTopic/tienganh3/placesintown.png",
+    "image": "assets/topic/englishTopic/tienganh3/placesintown.png",
     "description": "Nhận biết các địa điểm trong thành phố."
   },
   {
@@ -435,7 +435,7 @@
     "grade": "3",
     "subject": "english",
     "title": "Weather",
-    "image": "assets/englishTopic/tienganh3/weather.png",
+    "image": "assets/topic/englishTopic/tienganh3/weather.png",
     "description": "Học cách mô tả thời tiết."
   },
 
@@ -444,7 +444,7 @@
     "grade": "4",
     "subject": "english",
     "title": "Family",
-    "image": "assets/englishTopic/tienganh4/family.png",
+    "image": "assets/topic/englishTopic/tienganh4/family.png",
     "description": "Mở rộng chủ đề gia đình."
   },
   {
@@ -452,7 +452,7 @@
     "grade": "4",
     "subject": "english",
     "title": "School",
-    "image": "assets/englishTopic/tienganh4/school.png",
+    "image": "assets/topic/englishTopic/tienganh4/school.png",
     "description": "Mô tả môi trường học tập."
   },
   {
@@ -460,7 +460,7 @@
     "grade": "4",
     "subject": "english",
     "title": "Activities",
-    "image": "assets/englishTopic/tienganh4/activities.png",
+    "image": "assets/topic/englishTopic/tienganh4/activities.png",
     "description": "Nói về các hoạt động hằng ngày."
   },
   {
@@ -468,7 +468,7 @@
     "grade": "4",
     "subject": "english",
     "title": "Hobbies",
-    "image": "assets/englishTopic/tienganh4/hobbies.png",
+    "image": "assets/topic/englishTopic/tienganh4/hobbies.png",
     "description": "Chia sẻ sở thích cá nhân."
   },
   {
@@ -476,7 +476,7 @@
     "grade": "4",
     "subject": "english",
     "title": "Food and Drink",
-    "image": "assets/englishTopic/tienganh4/foodanddrink.png",
+    "image": "assets/topic/englishTopic/tienganh4/foodanddrink.png",
     "description": "Học cách gọi tên món ăn."
   },
   {
@@ -484,7 +484,7 @@
     "grade": "4",
     "subject": "english",
     "title": "Places",
-    "image": "assets/englishTopic/tienganh4/places.png",
+    "image": "assets/topic/englishTopic/tienganh4/places.png",
     "description": "Mô tả địa điểm quen thuộc."
   },
   {
@@ -492,7 +492,7 @@
     "grade": "4",
     "subject": "english",
     "title": "Transport",
-    "image": "assets/englishTopic/tienganh4/transport.png",
+    "image": "assets/topic/englishTopic/tienganh4/transport.png",
     "description": "Từ vựng về phương tiện."
   },
   {
@@ -500,7 +500,7 @@
     "grade": "4",
     "subject": "english",
     "title": "Festivals",
-    "image": "assets/englishTopic/tienganh4/festivals.png",
+    "image": "assets/topic/englishTopic/tienganh4/festivals.png",
     "description": "Khám phá các lễ hội."
   },
 
@@ -509,7 +509,7 @@
     "grade": "5",
     "subject": "english",
     "title": "Family and Friends",
-    "image": "assets/englishTopic/tienganh5/familyandfriends.png",
+    "image": "assets/topic/englishTopic/tienganh5/familyandfriends.png",
     "description": "Nói về gia đình và bạn bè."
   },
   {
@@ -517,7 +517,7 @@
     "grade": "5",
     "subject": "english",
     "title": "School",
-    "image": "assets/englishTopic/tienganh5/school.png",
+    "image": "assets/topic/englishTopic/tienganh5/school.png",
     "description": "Mô tả các hoạt động ở trường."
   },
   {
@@ -525,7 +525,7 @@
     "grade": "5",
     "subject": "english",
     "title": "Hobbies",
-    "image": "assets/englishTopic/tienganh5/hobbies.png",
+    "image": "assets/topic/englishTopic/tienganh5/hobbies.png",
     "description": "Chia sẻ sở thích cá nhân."
   },
   {
@@ -533,7 +533,7 @@
     "grade": "5",
     "subject": "english",
     "title": "Health",
-    "image": "assets/englishTopic/tienganh5/health.png",
+    "image": "assets/topic/englishTopic/tienganh5/health.png",
     "description": "Tìm hiểu về sức khỏe và thói quen tốt."
   },
   {
@@ -541,7 +541,7 @@
     "grade": "5",
     "subject": "english",
     "title": "Food and Drink",
-    "image": "assets/englishTopic/tienganh5/foodanddrink.png",
+    "image": "assets/topic/englishTopic/tienganh5/foodanddrink.png",
     "description": "Học từ vựng về thực phẩm."
   },
   {
@@ -549,7 +549,7 @@
     "grade": "5",
     "subject": "english",
     "title": "Places",
-    "image": "assets/englishTopic/tienganh5/places.png",
+    "image": "assets/topic/englishTopic/tienganh5/places.png",
     "description": "Mô tả các địa điểm."
   },
   {
@@ -557,7 +557,7 @@
     "grade": "5",
     "subject": "english",
     "title": "Environment",
-    "image": "assets/englishTopic/tienganh5/environment.png",
+    "image": "assets/topic/englishTopic/tienganh5/environment.png",
     "description": "Tìm hiểu và bảo vệ môi trường."
   },
   {
@@ -565,7 +565,578 @@
     "grade": "5",
     "subject": "english",
     "title": "Jobs",
-    "image": "assets/englishTopic/tienganh5/jobs.png",
+    "image": "assets/topic/englishTopic/tienganh5/jobs.png",
     "description": "Khám phá các nghề nghiệp khác nhau."
+  },
+  {
+    "topicId": "grade1-alphabet-and-phonics",
+    "grade": "1",
+    "subject": "vietnamese",
+    "title": "Chữ cái và âm vần",
+    "image": "assets/topic/vietnameseTopic/tiengviet1/1.png",
+    "description": "Làm quen bảng chữ cái, âm, vần và cách ghép tiếng."
+  },
+  {
+    "topicId": "grade1-reading",
+    "grade": "1",
+    "subject": "vietnamese",
+    "title": "Tập đọc",
+    "image": "assets/topic/vietnameseTopic/tiengviet1/2.png",
+    "description": "Đọc các đoạn văn, bài thơ ngắn và hiểu nội dung cơ bản."
+  },
+  {
+    "topicId": "grade1-writing",
+    "grade": "1",
+    "subject": "vietnamese",
+    "title": "Tập viết",
+    "image": "assets/topic/vietnameseTopic/tiengviet1/3.png",
+    "description": "Luyện viết chữ đúng mẫu và trình bày sạch đẹp."
+  },
+  {
+    "topicId": "grade1-listening-speaking",
+    "grade": "1",
+    "subject": "vietnamese",
+    "title": "Nghe và nói",
+    "image": "assets/topic/vietnameseTopic/tiengviet1/4.png",
+    "description": "Rèn kỹ năng giao tiếp, kể chuyện và trả lời câu hỏi."
+  },
+  {
+    "topicId": "grade1-vocabulary-around-me",
+    "grade": "1",
+    "subject": "vietnamese",
+    "title": "Từ ngữ quanh em",
+    "image": "assets/topic/vietnameseTopic/tiengviet1/5.png",
+    "description": "Mở rộng vốn từ về gia đình, trường học và cuộc sống."
+  },
+
+  {
+    "topicId": "grade2-reading-comprehension",
+    "grade": "2",
+    "subject": "vietnamese",
+    "title": "Đọc hiểu",
+    "image": "assets/topic/vietnameseTopic/tiengviet2/1.png",
+    "description": "Đọc và hiểu nội dung các văn bản ngắn."
+  },
+  {
+    "topicId": "grade2-spelling",
+    "grade": "2",
+    "subject": "vietnamese",
+    "title": "Chính tả",
+    "image": "assets/topic/vietnameseTopic/tiengviet2/2.png",
+    "description": "Luyện viết đúng chính tả và dấu câu."
+  },
+  {
+    "topicId": "grade2-words-and-sentences",
+    "grade": "2",
+    "subject": "vietnamese",
+    "title": "Từ và câu",
+    "image": "assets/topic/vietnameseTopic/tiengviet2/3.png",
+    "description": "Nhận biết từ loại, câu đơn và cách đặt câu."
+  },
+  {
+    "topicId": "grade2-storytelling",
+    "grade": "2",
+    "subject": "vietnamese",
+    "title": "Kể chuyện",
+    "image": "assets/topic/vietnameseTopic/tiengviet2/4.png",
+    "description": "Kể lại câu chuyện theo tranh hoặc gợi ý."
+  },
+  {
+    "topicId": "grade2-paragraph-writing",
+    "grade": "2",
+    "subject": "vietnamese",
+    "title": "Viết đoạn văn",
+    "image": "assets/topic/vietnameseTopic/tiengviet2/5.png",
+    "description": "Viết đoạn văn ngắn theo chủ đề quen thuộc."
+  },
+
+  {
+    "topicId": "grade3-advanced-reading",
+    "grade": "3",
+    "subject": "vietnamese",
+    "title": "Đọc hiểu nâng cao",
+    "image": "assets/topic/vietnameseTopic/tiengviet3/1.png",
+    "description": "Hiểu ý chính và thông tin trong văn bản."
+  },
+  {
+    "topicId": "grade3-vocabulary-and-grammar",
+    "grade": "3",
+    "subject": "vietnamese",
+    "title": "Luyện từ và câu",
+    "image": "assets/topic/vietnameseTopic/tiengviet3/2.png",
+    "description": "Mở rộng vốn từ và sử dụng câu đúng ngữ pháp."
+  },
+  {
+    "topicId": "grade3-spelling",
+    "grade": "3",
+    "subject": "vietnamese",
+    "title": "Chính tả",
+    "image": "assets/topic/vietnameseTopic/tiengviet3/3.png",
+    "description": "Rèn kỹ năng nghe - viết và ghi nhớ quy tắc chính tả."
+  },
+  {
+    "topicId": "grade3-composition",
+    "grade": "3",
+    "subject": "vietnamese",
+    "title": "Tập làm văn",
+    "image": "assets/topic/vietnameseTopic/tiengviet3/4.png",
+    "description": "Viết đoạn văn kể chuyện, miêu tả và giới thiệu."
+  },
+  {
+    "topicId": "grade3-storytelling-presentation",
+    "grade": "3",
+    "subject": "vietnamese",
+    "title": "Kể chuyện và thuyết trình",
+    "image": "assets/topic/vietnameseTopic/tiengviet3/5.png",
+    "description": "Phát triển kỹ năng trình bày trước tập thể."
+  },
+
+  {
+    "topicId": "grade4-reading-text",
+    "grade": "4",
+    "subject": "vietnamese",
+    "title": "Đọc hiểu văn bản",
+    "image": "assets/topic/vietnameseTopic/tiengviet4/1.png",
+    "description": "Phân tích nội dung và ý nghĩa của văn bản."
+  },
+  {
+    "topicId": "grade4-vocabulary-grammar",
+    "grade": "4",
+    "subject": "vietnamese",
+    "title": "Từ vựng và ngữ pháp",
+    "image": "assets/topic/vietnameseTopic/tiengviet4/2.png",
+    "description": "Học từ loại, câu ghép và biện pháp tu từ đơn giản."
+  },
+  {
+    "topicId": "grade4-composition",
+    "grade": "4",
+    "subject": "vietnamese",
+    "title": "Tập làm văn",
+    "image": "assets/topic/vietnameseTopic/tiengviet4/3.png",
+    "description": "Viết văn kể chuyện, miêu tả và trao đổi ý kiến."
+  },
+  {
+    "topicId": "grade4-spelling",
+    "grade": "4",
+    "subject": "vietnamese",
+    "title": "Chính tả",
+    "image": "assets/topic/vietnameseTopic/tiengviet4/4.png",
+    "description": "Củng cố quy tắc viết đúng chính tả."
+  },
+  {
+    "topicId": "grade4-communication",
+    "grade": "4",
+    "subject": "vietnamese",
+    "title": "Giao tiếp tiếng Việt",
+    "image": "assets/topic/vietnameseTopic/tiengviet4/5.png",
+    "description": "Luyện nghe, nói và trình bày ý kiến rõ ràng."
+  },
+
+  {
+    "topicId": "grade5-reading-comprehension",
+    "grade": "5",
+    "subject": "vietnamese",
+    "title": "Đọc hiểu",
+    "image": "assets/topic/vietnameseTopic/tiengviet5/1.png",
+    "description": "Phân tích nội dung, nghệ thuật và thông điệp văn bản."
+  },
+  {
+    "topicId": "grade5-vocabulary-and-sentences",
+    "grade": "5",
+    "subject": "vietnamese",
+    "title": "Luyện từ và câu",
+    "image": "assets/topic/vietnameseTopic/tiengviet5/2.png",
+    "description": "Mở rộng vốn từ và vận dụng ngữ pháp linh hoạt."
+  },
+  {
+    "topicId": "grade5-composition",
+    "grade": "5",
+    "subject": "vietnamese",
+    "title": "Tập làm văn",
+    "image": "assets/topic/vietnameseTopic/tiengviet5/3.png",
+    "description": "Viết bài văn hoàn chỉnh theo nhiều kiểu bài."
+  },
+  {
+    "topicId": "grade5-spelling",
+    "grade": "5",
+    "subject": "vietnamese",
+    "title": "Chính tả",
+    "image": "assets/topic/vietnameseTopic/tiengviet5/4.png",
+    "description": "Rèn kỹ năng viết chính xác và trình bày đẹp."
+  },
+  {
+    "topicId": "grade5-communication",
+    "grade": "5",
+    "subject": "vietnamese",
+    "title": "Giao tiếp",
+    "image": "assets/topic/vietnameseTopic/tiengviet5/5.png",
+    "description": "Phát triển kỹ năng trình bày và phản biện."
+  },
+  {
+    "topicId": "grade1-body",
+    "grade": "1",
+    "subject": "science",
+    "title": "Cơ thể em",
+    "image": "assets/topic/scienceTopic/khoahoc1/1.png",
+    "description": "Nhận biết các bộ phận cơ thể và cách chăm sóc sức khỏe."
+  },
+  {
+    "topicId": "grade1-family-school",
+    "grade": "1",
+    "subject": "science",
+    "title": "Gia đình và trường học",
+    "image": "assets/topic/scienceTopic/khoahoc1/2.png",
+    "description": "Tìm hiểu môi trường sống và sinh hoạt hằng ngày."
+  },
+  {
+    "topicId": "grade1-plants",
+    "grade": "1",
+    "subject": "science",
+    "title": "Thực vật",
+    "image": "assets/topic/scienceTopic/khoahoc1/3.png",
+    "description": "Quan sát cây cối và đặc điểm cơ bản của chúng."
+  },
+  {
+    "topicId": "grade1-animals",
+    "grade": "1",
+    "subject": "science",
+    "title": "Động vật",
+    "image": "assets/topic/scienceTopic/khoahoc1/4.png",
+    "description": "Nhận biết các loài động vật quen thuộc."
+  },
+  {
+    "topicId": "grade1-weather",
+    "grade": "1",
+    "subject": "science",
+    "title": "Thời tiết",
+    "image": "assets/topic/scienceTopic/khoahoc1/5.png",
+    "description": "Làm quen với các hiện tượng thời tiết."
+  },
+
+  {
+    "topicId": "grade2-health",
+    "grade": "2",
+    "subject": "science",
+    "title": "Sức khỏe",
+    "image": "assets/topic/scienceTopic/khoahoc2/1.png",
+    "description": "Giữ gìn vệ sinh và phòng tránh bệnh đơn giản."
+  },
+  {
+    "topicId": "grade2-plants",
+    "grade": "2",
+    "subject": "science",
+    "title": "Thực vật",
+    "image": "assets/topic/scienceTopic/khoahoc2/2.png",
+    "description": "Tìm hiểu sự phát triển và lợi ích của cây."
+  },
+  {
+    "topicId": "grade2-animals",
+    "grade": "2",
+    "subject": "science",
+    "title": "Động vật",
+    "image": "assets/topic/scienceTopic/khoahoc2/3.png",
+    "description": "Khám phá đặc điểm và môi trường sống của động vật."
+  },
+  {
+    "topicId": "grade2-environment",
+    "grade": "2",
+    "subject": "science",
+    "title": "Môi trường",
+    "image": "assets/topic/scienceTopic/khoahoc2/4.png",
+    "description": "Ý thức bảo vệ môi trường sống xung quanh."
+  },
+  {
+    "topicId": "grade2-nature",
+    "grade": "2",
+    "subject": "science",
+    "title": "Thiên nhiên",
+    "image": "assets/topic/scienceTopic/khoahoc2/5.png",
+    "description": "Quan sát các hiện tượng tự nhiên gần gũi."
+  },
+
+  {
+    "topicId": "grade3-human",
+    "grade": "3",
+    "subject": "science",
+    "title": "Con người",
+    "image": "assets/topic/scienceTopic/khoahoc3/1.png",
+    "description": "Tìm hiểu cơ thể và cách bảo vệ sức khỏe."
+  },
+  {
+    "topicId": "grade3-living-things",
+    "grade": "3",
+    "subject": "science",
+    "title": "Sinh vật",
+    "image": "assets/topic/scienceTopic/khoahoc3/2.png",
+    "description": "Khám phá thế giới thực vật và động vật."
+  },
+  {
+    "topicId": "grade3-matter",
+    "grade": "3",
+    "subject": "science",
+    "title": "Vật chất",
+    "image": "assets/topic/scienceTopic/khoahoc3/3.png",
+    "description": "Làm quen với chất rắn, lỏng và khí."
+  },
+  {
+    "topicId": "grade3-energy",
+    "grade": "3",
+    "subject": "science",
+    "title": "Năng lượng",
+    "image": "assets/topic/scienceTopic/khoahoc3/4.png",
+    "description": "Nhận biết ánh sáng, âm thanh và nhiệt."
+  },
+  {
+    "topicId": "grade3-earth",
+    "grade": "3",
+    "subject": "science",
+    "title": "Trái Đất",
+    "image": "assets/topic/scienceTopic/khoahoc3/5.png",
+    "description": "Tìm hiểu bầu trời và các hiện tượng tự nhiên."
+  },
+
+  {
+    "topicId": "grade4-matter",
+    "grade": "4",
+    "subject": "science",
+    "title": "Chất",
+    "image": "assets/topic/scienceTopic/khoahoc4/1.png",
+    "description": "Tìm hiểu tính chất và sự biến đổi của vật chất."
+  },
+  {
+    "topicId": "grade4-energy",
+    "grade": "4",
+    "subject": "science",
+    "title": "Năng lượng",
+    "image": "assets/topic/scienceTopic/khoahoc4/2.png",
+    "description": "Khám phá điện, nhiệt và các dạng năng lượng."
+  },
+  {
+    "topicId": "grade4-living-things",
+    "grade": "4",
+    "subject": "science",
+    "title": "Sinh vật",
+    "image": "assets/topic/scienceTopic/khoahoc4/3.png",
+    "description": "Nghiên cứu hệ sinh thái và đa dạng sinh học."
+  },
+  {
+    "topicId": "grade4-human",
+    "grade": "4",
+    "subject": "science",
+    "title": "Con người",
+    "image": "assets/topic/scienceTopic/khoahoc4/4.png",
+    "description": "Tìm hiểu các cơ quan và chăm sóc sức khỏe."
+  },
+  {
+    "topicId": "grade4-earth",
+    "grade": "4",
+    "subject": "science",
+    "title": "Trái Đất",
+    "image": "assets/topic/scienceTopic/khoahoc4/5.png",
+    "description": "Khám phá thời tiết, khí hậu và bầu trời."
+  },
+
+  {
+    "topicId": "grade5-matter-energy",
+    "grade": "5",
+    "subject": "science",
+    "title": "Vật chất và năng lượng",
+    "image": "assets/topic/scienceTopic/khoahoc5/1.png",
+    "description": "Vận dụng kiến thức khoa học vào thực tế."
+  },
+  {
+    "topicId": "grade5-living-things",
+    "grade": "5",
+    "subject": "science",
+    "title": "Sinh vật",
+    "image": "assets/topic/scienceTopic/khoahoc5/2.png",
+    "description": "Tìm hiểu vòng đời và môi trường sống."
+  },
+  {
+    "topicId": "grade5-environment",
+    "grade": "5",
+    "subject": "science",
+    "title": "Môi trường",
+    "image": "assets/topic/scienceTopic/khoahoc5/3.png",
+    "description": "Bảo vệ tài nguyên và phát triển bền vững."
+  },
+  {
+    "topicId": "grade5-applied-science",
+    "grade": "5",
+    "subject": "science",
+    "title": "Khoa học ứng dụng",
+    "image": "assets/topic/scienceTopic/khoahoc5/4.png",
+    "description": "Khám phá công nghệ trong đời sống."
+  },
+  {
+    "topicId": "grade5-earth-and-space",
+    "grade": "5",
+    "subject": "science",
+    "title": "Trái Đất và vũ trụ",
+    "image": "assets/topic/scienceTopic/khoahoc5/5.png",
+    "description": "Tìm hiểu Hệ Mặt Trời và không gian."
+  },
+  {
+    "topicId": "grade4-founding-era",
+    "grade": "4",
+    "subject": "history",
+    "title": "Buổi đầu dựng nước",
+    "image": "assets/topic/historyTopic/lichsu4/1.png",
+    "description": "Tìm hiểu thời kỳ Văn Lang và Âu Lạc."
+  },
+  {
+    "topicId": "grade4-northern-domination",
+    "grade": "4",
+    "subject": "history",
+    "title": "Bắc thuộc",
+    "image": "assets/topic/historyTopic/lichsu4/2.png",
+    "description": "Khám phá giai đoạn đấu tranh giành độc lập."
+  },
+  {
+    "topicId": "grade4-dynasties",
+    "grade": "4",
+    "subject": "history",
+    "title": "Các triều đại",
+    "image": "assets/topic/historyTopic/lichsu4/3.png",
+    "description": "Học về nhà Lý, Trần và Hậu Lê."
+  },
+  {
+    "topicId": "grade4-historical-figures",
+    "grade": "4",
+    "subject": "history",
+    "title": "Danh nhân lịch sử",
+    "image": "assets/topic/historyTopic/lichsu4/4.png",
+    "description": "Tìm hiểu các anh hùng và nhân vật tiêu biểu."
+  },
+  {
+    "topicId": "grade4-cultural-heritage",
+    "grade": "4",
+    "subject": "history",
+    "title": "Di sản văn hóa",
+    "image": "assets/topic/historyTopic/lichsu4/5.png",
+    "description": "Khám phá các giá trị văn hóa truyền thống Việt Nam."
+  },
+
+  {
+    "topicId": "grade5-nguyen-dynasty",
+    "grade": "5",
+    "subject": "history",
+    "title": "Nhà Nguyễn",
+    "image": "assets/topic/historyTopic/lichsu5/1.png",
+    "description": "Tìm hiểu triều đại phong kiến cuối cùng của Việt Nam."
+  },
+  {
+    "topicId": "grade5-french-colonization",
+    "grade": "5",
+    "subject": "history",
+    "title": "Thực dân Pháp",
+    "image": "assets/topic/historyTopic/lichsu5/2.png",
+    "description": "Khám phá giai đoạn Pháp xâm lược và đô hộ."
+  },
+  {
+    "topicId": "grade5-vietnamese-revolution",
+    "grade": "5",
+    "subject": "history",
+    "title": "Cách mạng Việt Nam",
+    "image": "assets/topic/historyTopic/lichsu5/3.png",
+    "description": "Tìm hiểu các sự kiện cách mạng tiêu biểu."
+  },
+  {
+    "topicId": "grade5-resistance-wars",
+    "grade": "5",
+    "subject": "history",
+    "title": "Kháng chiến",
+    "image": "assets/topic/historyTopic/lichsu5/4.png",
+    "description": "Học về các cuộc kháng chiến bảo vệ đất nước."
+  },
+  {
+    "topicId": "grade5-modern-vietnam",
+    "grade": "5",
+    "subject": "history",
+    "title": "Việt Nam hiện đại",
+    "image": "assets/topic/historyTopic/lichsu5/5.png",
+    "description": "Khám phá quá trình đổi mới và phát triển đất nước."
+  },
+
+  {
+    "topicId": "grade4-maps",
+    "grade": "4",
+    "subject": "geography",
+    "title": "Bản đồ",
+    "image": "assets/topic/geographyTopic/diali4/1.png",
+    "description": "Học cách đọc bản đồ và xác định phương hướng."
+  },
+  {
+    "topicId": "grade4-natural-features-vietnam",
+    "grade": "4",
+    "subject": "geography",
+    "title": "Thiên nhiên Việt Nam",
+    "image": "assets/topic/geographyTopic/diali4/2.png",
+    "description": "Tìm hiểu địa hình, sông ngòi và khí hậu."
+  },
+  {
+    "topicId": "grade4-deltas",
+    "grade": "4",
+    "subject": "geography",
+    "title": "Đồng bằng",
+    "image": "assets/topic/geographyTopic/diali4/3.png",
+    "description": "Khám phá đặc điểm các vùng đồng bằng."
+  },
+  {
+    "topicId": "grade4-mountains",
+    "grade": "4",
+    "subject": "geography",
+    "title": "Miền núi",
+    "image": "assets/topic/geographyTopic/diali4/4.png",
+    "description": "Tìm hiểu trung du và miền núi Việt Nam."
+  },
+  {
+    "topicId": "grade4-central-highlands",
+    "grade": "4",
+    "subject": "geography",
+    "title": "Tây Nguyên",
+    "image": "assets/topic/geographyTopic/diali4/5.png",
+    "description": "Khám phá thiên nhiên và văn hóa Tây Nguyên."
+  },
+
+  {
+    "topicId": "grade5-seas-and-islands",
+    "grade": "5",
+    "subject": "geography",
+    "title": "Biển đảo",
+    "image": "assets/topic/geographyTopic/diali5/1.png",
+    "description": "Tìm hiểu vùng biển và chủ quyền biển đảo Việt Nam."
+  },
+  {
+    "topicId": "grade5-population",
+    "grade": "5",
+    "subject": "geography",
+    "title": "Dân cư",
+    "image": "assets/topic/geographyTopic/diali5/2.png",
+    "description": "Khám phá sự phân bố dân cư và các dân tộc."
+  },
+  {
+    "topicId": "grade5-economy",
+    "grade": "5",
+    "subject": "geography",
+    "title": "Kinh tế",
+    "image": "assets/topic/geographyTopic/diali5/3.png",
+    "description": "Tìm hiểu các ngành nông nghiệp, công nghiệp và dịch vụ."
+  },
+  {
+    "topicId": "grade5-economic-regions",
+    "grade": "5",
+    "subject": "geography",
+    "title": "Các vùng kinh tế",
+    "image": "assets/topic/geographyTopic/diali5/4.png",
+    "description": "Khám phá đặc điểm từng vùng kinh tế của Việt Nam."
+  },
+  {
+    "topicId": "grade5-vietnam-and-world",
+    "grade": "5",
+    "subject": "geography",
+    "title": "Việt Nam và thế giới",
+    "image": "assets/topic/geographyTopic/diali5/5.png",
+    "description": "Tìm hiểu vị trí, quan hệ và hội nhập quốc tế của Việt Nam."
   }
 ]
