@@ -135,7 +135,7 @@ body.auth-mode .app {
   width: 60%;
   max-width: 154px;
   height: 1px;
-  margin-top: 1px;
+  margin-top: 3px;
   background: #e5e7eb;
 }
 
@@ -4161,7 +4161,7 @@ textarea {
   min-height: 28px;
   padding: 6px 10px 6px 9px;
   border: 1px solid rgba(255, 205, 97, 0.95);
-  border-radius: 16px;
+  border-radius: 10px;
   background: linear-gradient(
     180deg,
     rgba(255, 248, 228, 0.98),
@@ -4177,8 +4177,8 @@ textarea {
 }
 
 .boss-battle-exit-btn img {
-  width: 13px;
-  height: 13px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
   flex: none;
 }
@@ -4196,7 +4196,7 @@ textarea {
   align-self: flex-start;
   min-width: 188px;
   padding: 16px 22px;
-  transform: translateY(25px);
+  transform: translateY(35px);
   border-radius: 28px 28px 28px 10px;
   background: rgba(255, 255, 255, 0.97);
   border: 1px solid rgba(244, 215, 160, 0.8);
@@ -4414,7 +4414,7 @@ textarea {
   display: grid;
   gap: 20px;
   min-width: 0;
-  padding-top: 32px;
+  padding-top: 1px;
 }
 
 .boss-battle-action-row {
@@ -4853,8 +4853,8 @@ textarea {
 }
 
 .boss-battle-next-btn img {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   flex: none;
 }

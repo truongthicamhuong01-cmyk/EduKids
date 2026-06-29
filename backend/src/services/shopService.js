@@ -24,7 +24,7 @@ const {
 const { normalizeCategoryKey } = require("../repositories/inventoryRepository");
 const { toNumber } = require("./petMathService");
 const { applyItemEffectsToPet } = require("./petItemEffectService");
-const { stripDerivedPetFields } = require("./petDecayService");
+const { buildPetRuntimeState, stripDerivedPetFields } = require("./petDecayService");
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -245,6 +245,13 @@ async function buyItem({
     const petState = await getPetState(normalizedUid, transaction).catch(
       () => null,
     );
+    const petConfigBundle = petState
+      ? {
+          petBalance: await readConfigDoc("petBalance", transaction),
+          levelConfig: await readConfigDoc("levelConfig", transaction),
+          evolutionConfig: await readConfigDoc("evolutionConfig", transaction),
+        }
+      : null;
     const userLevel = resolvePetLevel(user, petState);
     const unlockLevel = Math.max(
       1,
@@ -353,6 +360,10 @@ async function buyItem({
       transaction,
     );
 
+    const responsePet = petState
+      ? buildPetRuntimeState(nextPetState || petState, petConfigBundle, new Date())
+      : null;
+
     const response = {
       statusCode: 200,
       message: isMedicineItem
@@ -365,19 +376,19 @@ async function buyItem({
           version: nextInventory.version || 0,
           updatedAt: nextInventory.updatedAt || "",
         },
-        pet: nextPetState
+        pet: responsePet
           ? {
-              petType: nextPetState.petTypeId,
-              level: nextPetState.level,
-              exp: nextPetState.exp,
-              requiredExpToNextLevel: nextPetState.requiredExpToNextLevel,
-              hunger: nextPetState.hunger,
-              happiness: nextPetState.happiness,
-              energy: nextPetState.energy,
-              health: nextPetState.health,
-              mood: nextPetState.mood,
-              stage: nextPetState.stage,
-              version: nextPetState.version,
+              petType: responsePet.petTypeId,
+              level: responsePet.level,
+              exp: responsePet.exp,
+              requiredExpToNextLevel: responsePet.requiredExpToNextLevel,
+              hunger: responsePet.hunger,
+              happiness: responsePet.happiness,
+              energy: responsePet.energy,
+              health: responsePet.health,
+              mood: responsePet.mood,
+              stage: responsePet.stage,
+              version: responsePet.version,
             }
           : null,
         wallet: {

@@ -703,7 +703,7 @@ function updateTaskResetCountdownLabel(root = getLearningPathRoot()) {
     return;
   }
 
-  countdownElement.textContent = `Nhiệm vụ sẽ làm mới: ${uiState.taskResetCountdown || "00:00:00"}`;
+  countdownElement.textContent = `Nhiệm vụ sẽ làm mới sau: ${uiState.taskResetCountdown || "00:00:00"}`;
 }
 
 function updateCountdownTextOnly(root = getLearningPathRoot()) {
@@ -847,7 +847,10 @@ function syncAppWalletFromLearningPath(wallet) {
     };
 
     window.EduKidsCurrentUser = nextProfile;
-    if (window.__EDUKIDS_BOOTSTRAP__ && typeof window.__EDUKIDS_BOOTSTRAP__ === "object") {
+    if (
+      window.__EDUKIDS_BOOTSTRAP__ &&
+      typeof window.__EDUKIDS_BOOTSTRAP__ === "object"
+    ) {
       window.__EDUKIDS_BOOTSTRAP__.currentUser = nextProfile;
     }
 
@@ -1361,7 +1364,9 @@ function syncLearningPathSlots(root, state, graphDiff) {
 
   const coinCount = root.querySelector("[data-learning-path-coin-count]");
   if (coinCount instanceof HTMLElement) {
-    coinCount.textContent = String((state.wallet?.eduCoin ?? state.rewards?.xu) || 0);
+    coinCount.textContent = String(
+      (state.wallet?.eduCoin ?? state.rewards?.xu) || 0,
+    );
   }
 
   const page = root.querySelector("[data-learning-path-page]");
