@@ -3398,7 +3398,7 @@ textarea {
 
   padding: 12px 14px;
 
-  margin-bottom: 12px;
+  margin-bottom: 0;
 
   border: 1px solid var(--border);
 
@@ -3517,6 +3517,11 @@ textarea {
   background: #fff;
   padding: 0 14px;
   font-weight: 700;
+}
+
+#quiz-grade-select,
+#quiz-subject-select {
+  padding-right: 18px;
 }
 
 .quiz-load-btn {
@@ -4193,6 +4198,7 @@ textarea {
 
 .boss-battle-sidebar__speech {
   position: relative;
+  z-index: 2;
   align-self: flex-start;
   min-width: 188px;
   padding: 16px 22px;
@@ -4228,6 +4234,7 @@ textarea {
 
 .boss-battle-sidebar__card {
   position: relative;
+  z-index: 1;
   margin-top: 18px;
   padding: 18px 18px 16px;
   border-radius: 34px;
@@ -4612,11 +4619,7 @@ textarea {
 .boss-battle-question-card__text {
   margin: 0;
   padding: 0 20px;
-  font-size: clamp(
-    calc(1.6rem - 13px),
-    calc(3.7vw - 13px),
-    calc(3.3rem - 13px)
-  );
+  font-size: clamp(calc(1.2rem - 13px), calc(3.2vw - 13px), calc(3rem - 13px));
   line-height: 1.06;
   text-align: center;
   color: #232f6c;
@@ -4704,11 +4707,7 @@ textarea {
 }
 
 .boss-battle-answer-card__text {
-  font-size: clamp(
-    calc(1.45rem - 10px),
-    calc(2.7vw - 10px),
-    calc(2.8rem - 10px)
-  );
+  font-size: clamp(calc(1rem - 10px), calc(2.3vw - 10px), calc(2.4rem - 10px));
   line-height: 1.02;
   font-weight: 900;
   letter-spacing: -0.03em;
@@ -8950,6 +8949,11 @@ img.profile-skeleton {
   gap: 12px;
 }
 
+.learning-path-mountain-card-shell {
+  position: relative;
+  width: 100%;
+}
+
 .learning-path-mountain-card {
   display: grid;
   grid-template-columns: 66px minmax(0, 1fr) 24px;
@@ -8969,6 +8973,45 @@ img.profile-skeleton {
     transform 180ms ease,
     box-shadow 180ms ease,
     background-color 180ms ease;
+}
+
+.learning-path-mountain-info-btn {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  z-index: 4;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #ffffff;
+  color: rgba(75, 85, 99, 0.78);
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.learning-path-mountain-info-btn:hover,
+.learning-path-mountain-info-btn:focus-visible {
+  transform: scale(1.08);
+  color: rgba(55, 65, 81, 0.95);
+  border-color: #9ca3af;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.learning-path-mountain-info-btn:focus-visible {
+  outline: 2px solid rgba(156, 163, 175, 0.24);
+  outline-offset: 2px;
 }
 
 .learning-path-mountain-card:hover {
@@ -9695,8 +9738,8 @@ img.profile-skeleton {
 }
 
 .learning-path-reward-item.is-gold {
-  flex-grow: 0.5;
-  min-width: 70px;
+  flex-grow: 0.65;
+  min-width: 80px;
 }
 
 .learning-path-reward-item.is-amber {
@@ -9711,7 +9754,7 @@ img.profile-skeleton {
 
 .learning-path-reward-item.is-green {
   flex-grow: 1;
-  min-width: 100px;
+  min-width: 90px;
 }
 
 [data-learning-path-reward-slot] {
@@ -16906,9 +16949,9 @@ body.admin-content-drawer-open {
   .boss-battle-question-card__text {
     padding: 0;
     font-size: clamp(
-      calc(1.35rem - 13px),
-      calc(7.2vw - 13px),
-      calc(2.2rem - 13px)
+      calc(1.15rem - 13px),
+      calc(6.8vw - 13px),
+      calc(2rem - 13px)
     );
   }
 

@@ -10,6 +10,7 @@ import {
 
 const MODAL_CLOSE_MS = 220;
 const TRANSITION_MS = 1700;
+const LEARNING_PATH_TIME_ZONE = "Asia/Ho_Chi_Minh";
 
 const CHECK_ICON = `
   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
@@ -46,9 +47,20 @@ const LOCK_ICON = `
   </svg>
 `;
 
+const stageWikiLinks = {
+  1: "https://vi.wikipedia.org/wiki/Puncak_Jaya",
+  2: "https://vi.wikipedia.org/wiki/Vinson_Massif",
+  3: "https://vi.wikipedia.org/wiki/Mount_Elbrus",
+  4: "https://vi.wikipedia.org/wiki/Mount_Kilimanjaro",
+  5: "https://vi.wikipedia.org/wiki/Denali",
+  6: "https://vi.wikipedia.org/wiki/Aconcagua",
+  7: "https://vi.wikipedia.org/wiki/Mount_Everest",
+};
+
 const uiState = {
   bound: false,
   boundRoot: null,
+  visibilityBound: false,
   initialized: false,
   mounted: false,
   loading: false,
@@ -130,6 +142,10 @@ function getLearningPathCheckpointId(checkpoint) {
   return String(checkpoint?.checkpointId || checkpoint?.id || "").trim();
 }
 
+function getStageWikiUrl(stageNumber) {
+  return stageWikiLinks[Number(stageNumber) || 0] || "";
+}
+
 function getLearningPathPageContent(root = getLearningPathRoot()) {
   return root?.querySelector?.("[data-learning-path-page-content]") || null;
 }
@@ -168,6 +184,45 @@ function getLearningPathJourneyStage(root = getLearningPathRoot()) {
 
 function getLearningPathCountdownNode(root = getLearningPathRoot()) {
   return root?.querySelector?.("[data-learning-path-reset-countdown]") || null;
+}
+
+function getLearningPathDateKey(date = new Date()) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: LEARNING_PATH_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  const parts = formatter.formatToParts(date).reduce((acc, part) => {
+    if (part.type !== "literal") {
+      acc[part.type] = part.value;
+    }
+    return acc;
+  }, {});
+
+  return [parts.year, parts.month, parts.day].filter(Boolean).join("-");
+}
+
+function isLearningPathStateStaleForToday(state, date = new Date()) {
+  const lastResetDate = String(state?.limits?.lastResetDate || "").trim();
+  if (!lastResetDate) {
+    return Boolean(state);
+  }
+
+  return lastResetDate !== getLearningPathDateKey(date);
+}
+
+function refreshLearningPathStateIfNeeded() {
+  if (uiState.loading || !uiState.backendState) {
+    return;
+  }
+
+  if (!isLearningPathStateStaleForToday(uiState.backendState)) {
+    return;
+  }
+
+  void hydrateLearningPathStateFromBackend();
 }
 
 function getLearningPathAvatarLayer(root = getLearningPathRoot()) {
@@ -736,6 +791,7 @@ function syncTaskResetCountdownTimer(isModalVisible) {
 
     updateTaskResetCountdown();
     updateCountdownTextOnly();
+    refreshLearningPathStateIfNeeded();
   }, 1000);
 }
 
@@ -976,45 +1032,68 @@ function isLoadingState() {
 }
 
 function renderMountainCard(mountain, state) {
+  const stageNumber =
+    Number(mountain?.stageNumber || mountain?.order || mountain?.index || 0) ||
+    0;
   const isSelected = mountain.id === state.currentMountainId;
   const isEverest = mountain.id === "everest";
   const mountainIcon = getNodeIcon(mountain.id);
+  const wikiUrl = getStageWikiUrl(stageNumber);
 
   return `
-    <button
-      class="learning-path-mountain-card${isSelected ? " is-selected" : ""}${mountain.locked && !isSelected ? " is-locked" : ""}${isEverest ? " is-everest" : ""}"
-      type="button"
-      ${mountain.locked && !isSelected ? 'aria-disabled="true" disabled' : ""}
-      data-page="learning-path"
-    >
-      <span class="learning-path-mountain-thumb" aria-hidden="true">
-        <span class="learning-path-mountain-thumb-fallback" aria-hidden="true">⛰️</span>
-        <img
-          class="learning-path-mountain-thumb-image"
-          src="${escapeHtml(mountainIcon)}"
-          alt=""
-          loading="lazy"
-          decoding="async"
-          onerror="this.style.display='none'; this.parentElement?.classList.add('is-image-missing');"
-        />
-      </span>
+    <div class="learning-path-mountain-card-shell">
+      <button
+        class="learning-path-mountain-card${isSelected ? " is-selected" : ""}${mountain.locked && !isSelected ? " is-locked" : ""}${isEverest ? " is-everest" : ""}"
+        type="button"
+        ${mountain.locked && !isSelected ? 'aria-disabled="true" disabled' : ""}
+        data-page="learning-path"
+      >
+        <span class="learning-path-mountain-thumb" aria-hidden="true">
+          <span class="learning-path-mountain-thumb-fallback" aria-hidden="true">⛰️</span>
+          <img
+            class="learning-path-mountain-thumb-image"
+            src="${escapeHtml(mountainIcon)}"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            onerror="this.style.display='none'; this.parentElement?.classList.add('is-image-missing');"
+          />
+        </span>
 
-      <span class="learning-path-mountain-copy">
-        <span class="learning-path-mountain-continent">${escapeHtml(mountain.continent)}</span>
-        <strong class="learning-path-mountain-name">${escapeHtml(mountain.name)}</strong>
-        <span class="learning-path-mountain-height">${escapeHtml(mountain.height)}</span>
+        <span class="learning-path-mountain-copy">
+          <span class="learning-path-mountain-continent">${escapeHtml(mountain.continent)}</span>
+          <strong class="learning-path-mountain-name">${escapeHtml(mountain.name)}</strong>
+          <span class="learning-path-mountain-height">${escapeHtml(mountain.height)}</span>
 
-        ${
-          isEverest
-            ? '<span class="learning-path-mountain-note">🏆 Hoàn thành để nhận huy hiệu The Explorer</span>'
-            : ""
-        }
-      </span>
+          ${
+            isEverest
+              ? '<span class="learning-path-mountain-note">🏆 Hoàn thành để nhận huy hiệu The Explorer</span>'
+              : ""
+          }
+        </span>
 
-      <span class="learning-path-mountain-lock" aria-hidden="true">
-        ${mountain.locked && !isSelected ? LOCK_ICON : ""}
-      </span>
-    </button>
+        <span class="learning-path-mountain-lock" aria-hidden="true">
+          ${mountain.locked && !isSelected ? LOCK_ICON : ""}
+        </span>
+      </button>
+
+      ${
+        wikiUrl
+          ? `
+            <button
+              type="button"
+              class="learning-path-mountain-info-btn"
+              aria-label="Thông tin về ${escapeHtml(mountain.name)}"
+              data-learning-path-mountain-info
+              data-learning-path-stage-number="${stageNumber}"
+              data-learning-path-wiki-url="${escapeHtml(wikiUrl)}"
+            >
+              !
+            </button>
+          `
+          : ""
+      }
+    </div>
   `;
 }
 
@@ -1034,12 +1113,13 @@ function renderMountainList(state) {
 
       <div class="learning-path-mountain-list">
         ${mountains
-          .map((mountain) =>
+          .map((mountain, index) =>
             renderMountainCard(
               {
                 ...mountain,
                 locked:
                   mountain.id !== state.currentMountainId && mountain.locked,
+                stageNumber: index + 1,
               },
               state,
             ),
@@ -1817,6 +1897,14 @@ function bindLearningPathControlsOnce() {
   uiState.bound = true;
   uiState.boundRoot = root;
   root.addEventListener("click", handleLearningPathRootClick);
+
+  if (!uiState.visibilityBound) {
+    document.addEventListener(
+      "visibilitychange",
+      handleLearningPathVisibilityChange,
+    );
+    uiState.visibilityBound = true;
+  }
 }
 
 function handleLearningPathRootClick(event) {
@@ -1865,6 +1953,21 @@ function handleLearningPathRootClick(event) {
     return;
   }
 
+  const mountainInfoButton = target.closest(
+    "[data-learning-path-mountain-info]",
+  );
+  if (mountainInfoButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    const wikiUrl = String(
+      mountainInfoButton.dataset.learningPathWikiUrl || "",
+    ).trim();
+    if (wikiUrl) {
+      window.open(wikiUrl, "_blank", "noopener,noreferrer");
+    }
+    return;
+  }
+
   const openCheckpointTrigger = target.closest(
     "[data-learning-path-open-checkpoint]",
   );
@@ -1897,6 +2000,14 @@ function handleLearningPathRootClick(event) {
   }
 }
 
+function handleLearningPathVisibilityChange() {
+  if (document.visibilityState !== "visible") {
+    return;
+  }
+
+  refreshLearningPathStateIfNeeded();
+}
+
 export function renderLearningPathPage(root = getLearningPathRoot()) {
   if (!root) {
     return;
@@ -1908,6 +2019,7 @@ export function renderLearningPathPage(root = getLearningPathRoot()) {
   }
 
   bindLearningPathControlsOnce();
+  refreshLearningPathStateIfNeeded();
   const state = getState() || getEmptyLearningPathState();
   if (!uiState.mounted) {
     root.innerHTML = renderLearningPathStaticShell(state);

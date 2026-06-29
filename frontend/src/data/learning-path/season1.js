@@ -143,7 +143,7 @@ const PEAK_POSITION = SUMMIT_CHECKPOINT_POSITION;
 const ROUTE_POSITIONS = [
   { left: 58.4, top: 84.9, side: "left" },
   { left: 38, top: 70.2, side: "left" },
-  { left: 53.2, top: 40, side: "right" },
+  { left: 55.5, top: 58.2, side: "right" },
   { left: 40.3, top: 44.5, side: "left" },
   { left: 58.5, top: 33, side: "right" },
   { left: 45.5, top: 24, side: "left" },
@@ -498,7 +498,7 @@ function createMountain(blueprint, index) {
       checkpointNumber: 2,
       type: "station",
       altitude: getCheckpointAltitudeLabel(summitHeightMeters, 2),
-      position: { left: 59.1, top: 60.65, side: "right" },
+      position: ROUTE_POSITIONS[2],
       reward: stationRewards[2],
       taskKeys: ["assignment-1", "lesson-1", "coach-1"],
       completed: false,

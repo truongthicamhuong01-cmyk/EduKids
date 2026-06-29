@@ -50,6 +50,23 @@ function getBlueprintMountain(mountainId) {
     : null;
 }
 
+function getLearningPathProgressPercent({ currentMountainId, isStart = false }) {
+  const mountainCount = Array.isArray(season1.mountains) ? season1.mountains.length : 0;
+  const totalStages = Math.max(mountainCount - 1, 1);
+
+  if (isStart) {
+    return 0;
+  }
+
+  const currentMountainIndex = getBlueprintMountainIndex(currentMountainId);
+  if (currentMountainIndex < 0) {
+    return 0;
+  }
+
+  const completedStages = Math.min(currentMountainIndex + 1, totalStages);
+  return Number(((completedStages / totalStages) * 100).toFixed(2));
+}
+
 function getCanonicalCheckpointMap(state) {
   const checkpointMap = new Map();
   const checkpoints = [];
@@ -309,8 +326,6 @@ export function adaptLearningPathState(apiState) {
     currentMountain?.checkpoints?.[0] ||
     null;
   const currentCheckpointProgress = currentCheckpoint?.progress || { completed: 0, total: 0 };
-  const completedCount = completedCheckpointIds.size;
-  const totalCheckpointCount = flattenedCheckpoints.length || 1;
   const avatarPosition = currentCheckpoint?.position
     ? cloneValue(currentCheckpoint.position)
     : startPosition;
@@ -346,7 +361,10 @@ export function adaptLearningPathState(apiState) {
       isAtStart: isFreshStart || isBootstrapStart,
       altitudeLabel: isFreshStart || isBootstrapStart ? "0 m" : String(currentCheckpoint?.altitude || ""),
     },
-    progressPercent: Math.round((completedCount / totalCheckpointCount) * 100),
+    progressPercent: getLearningPathProgressPercent({
+      currentMountainId,
+      isStart: isFreshStart || isBootstrapStart,
+    }),
     checkpointProgress: {
       completed: currentCheckpointProgress.completed || 0,
       total: currentCheckpointProgress.total || 0,
