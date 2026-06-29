@@ -106,11 +106,16 @@ body.auth-mode .app {
   flex-direction: column;
 }
 
+.sidebar:not(.admin-sidebar) {
+  padding-top: 5px;
+}
+
 .sidebar:not(.admin-sidebar) .sidebar-brand {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 6px 0 8px;
+  padding: 0;
   margin-bottom: 12px;
   min-width: 0;
 }
@@ -122,6 +127,16 @@ body.auth-mode .app {
   height: auto;
   object-fit: contain;
   flex: none;
+}
+
+.sidebar:not(.admin-sidebar) .sidebar-brand::after {
+  content: "";
+  display: block;
+  width: 60%;
+  max-width: 154px;
+  height: 1px;
+  margin-top: 10px;
+  background: #e5e7eb;
 }
 
 .sidebar-brand {
@@ -517,12 +532,13 @@ body.auth-mode .app {
 .sidebar:not(.admin-sidebar).is-collapsed .sidebar-brand,
 .sidebar:not(.admin-sidebar)[data-sidebar-collapsed="true"] .sidebar-brand,
 .sidebar:not(.admin-sidebar)[aria-collapsed="true"] .sidebar-brand {
-  padding-top: 4px;
+  padding-top: 0;
   padding-bottom: 6px;
 }
 
 .sidebar:not(.admin-sidebar).is-collapsed .sidebar-brand-image,
-.sidebar:not(.admin-sidebar)[data-sidebar-collapsed="true"] .sidebar-brand-image,
+.sidebar:not(.admin-sidebar)[data-sidebar-collapsed="true"]
+  .sidebar-brand-image,
 .sidebar:not(.admin-sidebar)[aria-collapsed="true"] .sidebar-brand-image {
   width: min(70%, 180px);
 }
@@ -4060,9 +4076,21 @@ textarea {
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(circle at 12% 20%, rgba(255, 255, 255, 0.38), transparent 20%),
-    radial-gradient(circle at 88% 12%, rgba(255, 247, 198, 0.28), transparent 18%),
-    radial-gradient(circle at 80% 80%, rgba(78, 190, 105, 0.14), transparent 16%),
+    radial-gradient(
+      circle at 12% 20%,
+      rgba(255, 255, 255, 0.38),
+      transparent 20%
+    ),
+    radial-gradient(
+      circle at 88% 12%,
+      rgba(255, 247, 198, 0.28),
+      transparent 18%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      rgba(78, 190, 105, 0.14),
+      transparent 16%
+    ),
     rgba(12, 18, 38, 0.16);
   backdrop-filter: blur(4px) brightness(0.9);
   opacity: 0.92;
@@ -4134,7 +4162,11 @@ textarea {
   padding: 6px 10px 6px 9px;
   border: 1px solid rgba(255, 205, 97, 0.95);
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(255, 248, 228, 0.98), rgba(255, 239, 198, 0.96));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 248, 228, 0.98),
+    rgba(255, 239, 198, 0.96)
+  );
   color: #6f4300;
   box-shadow: 0 8px 14px rgba(109, 79, 0, 0.14);
   font-size: 0.7rem;
@@ -4199,7 +4231,11 @@ textarea {
   margin-top: 18px;
   padding: 18px 18px 16px;
   border-radius: 34px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(248, 244, 236, 0.96));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.97),
+    rgba(248, 244, 236, 0.96)
+  );
   border: 1px solid rgba(233, 218, 193, 0.75);
   box-shadow: 0 24px 46px rgba(25, 42, 86, 0.16);
   text-align: center;
@@ -4214,7 +4250,11 @@ textarea {
   place-items: center;
   overflow: hidden;
   background:
-    radial-gradient(circle at 34% 28%, rgba(255, 196, 77, 0.3), transparent 34%),
+    radial-gradient(
+      circle at 34% 28%,
+      rgba(255, 196, 77, 0.3),
+      transparent 34%
+    ),
     linear-gradient(180deg, #fff9ef, #ffe7c9);
   box-shadow:
     inset 0 -12px 24px rgba(255, 140, 0, 0.08),
@@ -4405,7 +4445,11 @@ textarea {
   gap: 16px 22px;
   padding: 20px 24px 22px;
   border-radius: 34px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 247, 241, 0.96));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(250, 247, 241, 0.96)
+  );
   border: 1px solid rgba(239, 231, 219, 0.96);
   box-shadow: 0 22px 44px rgba(15, 23, 42, 0.1);
   overflow: hidden;
@@ -4420,7 +4464,11 @@ textarea {
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 30% 30%, rgba(168, 85, 247, 0.2), transparent 40%),
+    radial-gradient(
+      circle at 30% 30%,
+      rgba(168, 85, 247, 0.2),
+      transparent 40%
+    ),
     linear-gradient(180deg, #8f6cf7, #5d42cd);
   box-shadow:
     inset 0 -12px 24px rgba(0, 0, 0, 0.16),
@@ -4488,8 +4536,11 @@ textarea {
   padding: 4px;
   border-radius: 999px;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(230, 236, 247, 0.92));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.94),
+    rgba(230, 236, 247, 0.92)
+  );
   border: 1px solid rgba(255, 255, 255, 0.7);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.82),
@@ -4524,7 +4575,12 @@ textarea {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.38), transparent 30%, rgba(255, 255, 255, 0.12));
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.38),
+    transparent 30%,
+    rgba(255, 255, 255, 0.12)
+  );
   opacity: 0.35;
 }
 
@@ -4532,7 +4588,11 @@ textarea {
   position: relative;
   padding: 28px 28px 30px;
   border-radius: 36px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.985), rgba(248, 246, 240, 0.97));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.985),
+    rgba(248, 246, 240, 0.97)
+  );
   border: 1px solid rgba(238, 230, 218, 0.96);
   box-shadow: 0 24px 46px rgba(15, 23, 42, 0.09);
 }
@@ -4552,7 +4612,11 @@ textarea {
 .boss-battle-question-card__text {
   margin: 0;
   padding: 0 20px;
-  font-size: clamp(calc(1.6rem - 13px), calc(3.7vw - 13px), calc(3.3rem - 13px));
+  font-size: clamp(
+    calc(1.6rem - 13px),
+    calc(3.7vw - 13px),
+    calc(3.3rem - 13px)
+  );
   line-height: 1.06;
   text-align: center;
   color: #232f6c;
@@ -4564,7 +4628,12 @@ textarea {
   width: min(72%, 520px);
   height: 2px;
   margin: 22px auto 24px;
-  background: linear-gradient(90deg, transparent, rgba(226, 191, 129, 0.95), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(226, 191, 129, 0.95),
+    transparent
+  );
 }
 
 .boss-battle-answer-grid {
@@ -4581,7 +4650,11 @@ textarea {
   padding: 22px 24px;
   border-radius: 30px;
   border: 4px solid transparent;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 255, 0.95));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(247, 250, 255, 0.95)
+  );
   box-shadow: 0 18px 32px rgba(35, 48, 106, 0.12);
   cursor: pointer;
   transition:
@@ -4631,7 +4704,11 @@ textarea {
 }
 
 .boss-battle-answer-card__text {
-  font-size: clamp(calc(1.45rem - 10px), calc(2.7vw - 10px), calc(2.8rem - 10px));
+  font-size: clamp(
+    calc(1.45rem - 10px),
+    calc(2.7vw - 10px),
+    calc(2.8rem - 10px)
+  );
   line-height: 1.02;
   font-weight: 900;
   letter-spacing: -0.03em;
@@ -4640,41 +4717,81 @@ textarea {
 
 .boss-battle-answer-card--blue {
   border-color: rgba(59, 130, 246, 0.34);
-  background: linear-gradient(180deg, rgba(245, 250, 255, 0.98), rgba(236, 244, 255, 0.96));
+  background: linear-gradient(
+    180deg,
+    rgba(245, 250, 255, 0.98),
+    rgba(236, 244, 255, 0.96)
+  );
 }
 
 .boss-battle-answer-card--blue .boss-battle-answer-card__badge {
-  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.24), transparent 42%), linear-gradient(180deg, #4f9af8, #2370f4);
+  background:
+    radial-gradient(
+      circle at 30% 30%,
+      rgba(255, 255, 255, 0.24),
+      transparent 42%
+    ),
+    linear-gradient(180deg, #4f9af8, #2370f4);
   color: #fff;
 }
 
 .boss-battle-answer-card--gold {
   border-color: rgba(245, 158, 11, 0.34);
-  background: linear-gradient(180deg, rgba(255, 251, 240, 0.98), rgba(255, 245, 219, 0.96));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 251, 240, 0.98),
+    rgba(255, 245, 219, 0.96)
+  );
 }
 
 .boss-battle-answer-card--gold .boss-battle-answer-card__badge {
-  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.24), transparent 42%), linear-gradient(180deg, #ffd15b, #f6a400);
+  background:
+    radial-gradient(
+      circle at 30% 30%,
+      rgba(255, 255, 255, 0.24),
+      transparent 42%
+    ),
+    linear-gradient(180deg, #ffd15b, #f6a400);
   color: #7a4a00;
 }
 
 .boss-battle-answer-card--green {
   border-color: rgba(34, 197, 94, 0.34);
-  background: linear-gradient(180deg, rgba(243, 254, 244, 0.98), rgba(230, 249, 237, 0.96));
+  background: linear-gradient(
+    180deg,
+    rgba(243, 254, 244, 0.98),
+    rgba(230, 249, 237, 0.96)
+  );
 }
 
 .boss-battle-answer-card--green .boss-battle-answer-card__badge {
-  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.24), transparent 42%), linear-gradient(180deg, #72df92, #2ebf6c);
+  background:
+    radial-gradient(
+      circle at 30% 30%,
+      rgba(255, 255, 255, 0.24),
+      transparent 42%
+    ),
+    linear-gradient(180deg, #72df92, #2ebf6c);
   color: #0b5d2d;
 }
 
 .boss-battle-answer-card--violet {
   border-color: rgba(168, 85, 247, 0.34);
-  background: linear-gradient(180deg, rgba(248, 242, 255, 0.98), rgba(240, 232, 255, 0.96));
+  background: linear-gradient(
+    180deg,
+    rgba(248, 242, 255, 0.98),
+    rgba(240, 232, 255, 0.96)
+  );
 }
 
 .boss-battle-answer-card--violet .boss-battle-answer-card__badge {
-  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.24), transparent 42%), linear-gradient(180deg, #c791ff, #9b5cff);
+  background:
+    radial-gradient(
+      circle at 30% 30%,
+      rgba(255, 255, 255, 0.24),
+      transparent 42%
+    ),
+    linear-gradient(180deg, #c791ff, #9b5cff);
   color: #5f2fb7;
 }
 
@@ -4813,7 +4930,11 @@ textarea {
   gap: 12px;
   padding: 14px 20px;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(250, 244, 232, 0.96));
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(250, 244, 232, 0.96)
+  );
   box-shadow: 0 18px 32px rgba(15, 23, 42, 0.1);
   color: #3d4a98;
   cursor: pointer;
@@ -4860,7 +4981,11 @@ textarea {
   overflow: hidden;
   min-height: 0;
   border-radius: 30px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(244, 248, 255, 0.68));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.82),
+    rgba(244, 248, 255, 0.68)
+  );
   border: 1px solid rgba(255, 255, 255, 0.32);
   box-shadow:
     0 24px 50px rgba(15, 23, 42, 0.18),
@@ -5158,7 +5283,11 @@ textarea {
   min-height: 180px;
   padding: 28px;
   border-radius: 30px;
-  background: linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(248, 250, 252, 0.96));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 252, 246, 0.98),
+    rgba(248, 250, 252, 0.96)
+  );
   box-shadow: 0 22px 42px rgba(15, 23, 42, 0.1);
 }
 
@@ -5186,7 +5315,11 @@ textarea {
 
 .boss-battle-result__card,
 .boss-battle-review__card {
-  background: linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(248, 250, 252, 0.96));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 252, 246, 0.98),
+    rgba(248, 250, 252, 0.96)
+  );
 }
 
 .boss-battle-result__header,
@@ -5196,7 +5329,11 @@ textarea {
 
 .boss-battle-result__score,
 .boss-battle-review__count {
-  background: linear-gradient(135deg, rgba(109, 92, 241, 0.12), rgba(76, 127, 244, 0.14));
+  background: linear-gradient(
+    135deg,
+    rgba(109, 92, 241, 0.12),
+    rgba(76, 127, 244, 0.14)
+  );
   color: #5b43d5;
 }
 
@@ -5214,7 +5351,11 @@ textarea {
 }
 
 .boss-battle-result__review-btn {
-  background: linear-gradient(135deg, rgba(109, 92, 241, 0.12), rgba(76, 127, 244, 0.14));
+  background: linear-gradient(
+    135deg,
+    rgba(109, 92, 241, 0.12),
+    rgba(76, 127, 244, 0.14)
+  );
   color: #2c3d8d;
 }
 
@@ -5240,7 +5381,11 @@ textarea {
   margin: 0 auto 12px;
   padding: 7px 14px;
   border-radius: 999px;
-  background: linear-gradient(135deg, rgba(109, 92, 241, 0.16), rgba(76, 127, 244, 0.18));
+  background: linear-gradient(
+    135deg,
+    rgba(109, 92, 241, 0.16),
+    rgba(76, 127, 244, 0.18)
+  );
   color: #3d4a98;
   font-size: 0.82rem;
   font-weight: 900;
@@ -5262,7 +5407,11 @@ textarea {
   width: min(720px, 100%);
   padding: 30px 32px;
   border-radius: 30px;
-  background: linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(248, 250, 252, 0.96));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 252, 246, 0.98),
+    rgba(248, 250, 252, 0.96)
+  );
   box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
   text-align: center;
 }
@@ -6163,7 +6312,11 @@ textarea {
   width: 60px;
   height: 60px;
   border-radius: 18px;
-  background: linear-gradient(180deg, rgba(61, 107, 232, 0.08), rgba(61, 107, 232, 0.02));
+  background: linear-gradient(
+    180deg,
+    rgba(61, 107, 232, 0.08),
+    rgba(61, 107, 232, 0.02)
+  );
   border: 1px solid rgba(61, 107, 232, 0.1);
   font-size: 28px;
   line-height: 1;
@@ -6208,7 +6361,11 @@ textarea {
   display: grid;
   place-items: center;
   border-radius: 20px;
-  background: linear-gradient(180deg, rgba(61, 107, 232, 0.08), rgba(61, 107, 232, 0.02));
+  background: linear-gradient(
+    180deg,
+    rgba(61, 107, 232, 0.08),
+    rgba(61, 107, 232, 0.02)
+  );
   border: 1px solid rgba(61, 107, 232, 0.1);
   overflow: hidden;
 }
@@ -8240,8 +8397,8 @@ img.profile-skeleton {
 }
 
 .home-stat-card-exp .home-stat-copy h3 {
-  font-size: 17px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .home-exp-progress .progress-fill {
@@ -8807,7 +8964,11 @@ img.profile-skeleton {
 .learning-path-mountain-card.is-everest {
   border-color: #f59e0b;
   background:
-    radial-gradient(circle at top right, rgba(245, 158, 11, 0.16), transparent 40%),
+    radial-gradient(
+      circle at top right,
+      rgba(245, 158, 11, 0.16),
+      transparent 40%
+    ),
     linear-gradient(180deg, #fffaf0 0%, #fff4db 100%);
   box-shadow:
     0 16px 28px rgba(245, 158, 11, 0.18),
@@ -16723,7 +16884,11 @@ body.admin-content-drawer-open {
 
   .boss-battle-question-card__text {
     padding: 0;
-    font-size: clamp(calc(1.35rem - 13px), calc(7.2vw - 13px), calc(2.2rem - 13px));
+    font-size: clamp(
+      calc(1.35rem - 13px),
+      calc(7.2vw - 13px),
+      calc(2.2rem - 13px)
+    );
   }
 
   .boss-battle-answer-grid {
