@@ -10,4 +10,3 @@ firebase deploy --only hosting
 
 todo: Ưu tiên từ trên xuống
 Fix lỗi Responsive
-Tăng độ đẹp UI
