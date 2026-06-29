@@ -135,7 +135,7 @@ body.auth-mode .app {
   width: 60%;
   max-width: 154px;
   height: 1px;
-  margin-top: 8px;
+  margin-top: 1px;
   background: #e5e7eb;
 }
 
@@ -8672,6 +8672,9 @@ img.profile-skeleton {
 }
 
 .mistake-card .btn-danger {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
   width: fit-content;
   min-width: 136px;
   min-height: 40px;

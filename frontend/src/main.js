@@ -7311,6 +7311,22 @@ function normalizeStudentRecentWrongAnswers(record) {
   };
 }
 
+function bindStudentHomeWrongReviewButton(button) {
+  if (!button || button.dataset.studentHomeWrongReviewBound === "true") {
+    return;
+  }
+
+  button.dataset.studentHomeWrongReviewBound = "true";
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void openStudentHomeWrongAnswerReview().catch((error) => {
+      console.error("[EduKids][home-wrong-review] open failed", error);
+      showToast(error?.message || "Không thể mở luyện lỗi sai.", "error");
+    });
+  });
+}
+
 function renderStudentRecentWrongAnswers(progress) {
   const card = document.querySelector(".mistake-card");
 
@@ -7337,7 +7353,8 @@ function renderStudentRecentWrongAnswers(progress) {
   if (button) {
     button.setAttribute("type", "button");
     button.setAttribute("data-action", "student-home-review-wrong");
-    button.toggleAttribute("disabled", recentWrongCount <= 0);
+    button.disabled = recentWrongCount <= 0;
+    bindStudentHomeWrongReviewButton(button);
     button.setAttribute(
       "title",
       recentWrongCount > 0
