@@ -144,6 +144,7 @@ function buildRewardResponse({ reward, user, petState, requestId, sourceType, so
             petType: petState.petTypeId,
             level: petState.level,
             exp: petState.exp,
+            requiredExpToNextLevel: petState.requiredExpToNextLevel,
             hunger: petState.hunger,
             happiness: petState.happiness,
             energy: petState.energy,

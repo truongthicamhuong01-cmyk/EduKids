@@ -102,12 +102,17 @@ function sanitizeLearningPathState(state) {
   };
 }
 
-function buildLearningPathResponse(state, events = []) {
+function buildLearningPathResponse(state, events = [], wallet = null) {
   const sanitizedState = sanitizeLearningPathState(state);
   console.log("[LP_BACKEND_STATE]", sanitizedState);
 
   return {
-    state: sanitizedState,
+    state: {
+      ...sanitizedState,
+      wallet: {
+        eduCoin: Math.max(0, Number(wallet?.eduCoin ?? sanitizedState?.wallet?.eduCoin ?? 0)),
+      },
+    },
     events: Array.isArray(events) ? events : [],
   };
 }
@@ -271,7 +276,7 @@ async function loadLearningPathFacts(userId) {
       return minutes;
     }
 
-    return minutes + explicitMinutes;
+    return minutes + Math.max(0, Math.floor(explicitMinutes));
   }, 0);
 
   const loginCountToday = profile?.stats?.lastStudyDate && isSameLocalDate(profile.stats.lastStudyDate, today) ? 1 : 0;
@@ -297,6 +302,9 @@ async function loadLearningPathFacts(userId) {
     highScoreQuizCountToday,
     assignmentCountToday,
     coachCountToday,
+    wallet: {
+      eduCoin: Math.max(0, Number(profile?.stats?.eduCoin || 0)),
+    },
   };
 }
 
@@ -342,13 +350,14 @@ async function getLearningPathState(userId) {
     },
   );
   const state = engine.getState();
+  const wallet = facts?.wallet || null;
 
   const nextState = engine.exportState();
   if (!loaded.state || JSON.stringify(loaded.state) !== JSON.stringify(nextState)) {
     await persistLearningPathState(loaded.docRef, engine);
   }
 
-  return buildLearningPathResponse(state, collector.events);
+  return buildLearningPathResponse(state, collector.events, wallet);
 }
 
 async function executeLearningPathAction({ userId, action, payload = {} }) {
@@ -378,6 +387,7 @@ async function executeLearningPathAction({ userId, action, payload = {} }) {
   const engine = createEngine(season1, baseState, {
     onEvent: collector.onEvent,
   });
+  const wallet = facts?.wallet || null;
 
   if (normalizedAction === "COMPLETE_TASK") {
     const taskId = String(payload.taskId || payload.id || "").trim();
@@ -407,7 +417,7 @@ async function executeLearningPathAction({ userId, action, payload = {} }) {
 
   await persistLearningPathState(loaded.docRef, engine);
 
-  return buildLearningPathResponse(engine.getState(), collector.events);
+  return buildLearningPathResponse(engine.getState(), collector.events, wallet);
 }
 
 module.exports = {

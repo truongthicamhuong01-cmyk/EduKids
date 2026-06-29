@@ -18,6 +18,89 @@ function normalizeText(value) {
   return String(value || "").trim();
 }
 
+function normalizeItemKey(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+const ITEM_DISPLAY_NAMES = {
+  apple: "Táo",
+  ball: "Bóng",
+  bandage: "Băng cá nhân",
+  "banh-chung": "Bánh chưng",
+  "banh-giay": "Bánh giầy",
+  biscuit: "Bánh quy",
+  carrot: "Cà rốt",
+  "che-sen": "Chè sen",
+  drum: "Trống nhỏ",
+  firstaidkit: "Bộ sơ cứu",
+  herbaltea: "Trà thảo mộc",
+  kite: "Diều",
+  lantern: "Lồng đèn",
+  "lotus-medicine": "Thuốc sen",
+  medicinekit: "Hộp y tế",
+  milk: "Sữa",
+  "paper-mask": "Mặt nạ giấy",
+  pinwheel: "Chong chóng",
+  teddy: "Gấu bông",
+  "to-he": "Tò he",
+  vitamin: "Vitamin",
+  "xoi-gac": "Xôi gấc",
+};
+
+function resolveInventoryItemDisplayName(item = {}, catalogItem = null) {
+  const explicitName = String(
+    item?.displayName ||
+      item?.name ||
+      item?.title ||
+      item?.metadata?.displayName ||
+      item?.metadata?.name ||
+      item?.metadata?.title ||
+      catalogItem?.displayName ||
+      catalogItem?.name ||
+      catalogItem?.title ||
+      "",
+  ).trim();
+
+  if (explicitName) {
+    return explicitName;
+  }
+
+  const itemKey = normalizeItemKey(item?.itemId || item?.id || item?.key || item?.code);
+  return ITEM_DISPLAY_NAMES[itemKey] || String(item?.itemId || item?.id || "").trim();
+}
+
+function enrichInventoryItem(item = {}, catalogItem = null) {
+  const displayName = resolveInventoryItemDisplayName(item, catalogItem);
+  const icon = String(
+    item?.icon ||
+      item?.metadata?.icon ||
+      catalogItem?.icon ||
+      item?.itemId ||
+      item?.id ||
+      "",
+  ).trim();
+
+  return {
+    ...item,
+    name: displayName,
+    title: displayName,
+    displayName,
+    icon,
+    metadata: {
+      ...(item?.metadata || {}),
+      displayName,
+      title: displayName,
+      name: displayName,
+      icon,
+      category: String(catalogItem?.category || item?.category || item?.metadata?.category || "").trim(),
+    },
+  };
+}
+
 function ensureStudent(user) {
   if (!user) {
     throw new ApiError(401, "Thiếu xác thực", PET_ERROR_CODES.UNAUTHORIZED);
@@ -28,13 +111,30 @@ function ensureStudent(user) {
   }
 }
 
-function flattenInventoryState(state = {}) {
+function flattenInventoryState(state = {}, catalog = null) {
   const categories = state.categories && typeof state.categories === "object" ? state.categories : {};
+  const catalogItems = {};
+
+  if (catalog && typeof catalog.items === "object") {
+    Object.entries(catalog.items).forEach(([key, value]) => {
+      const normalizedKey =
+        normalizeItemKey(key) ||
+        normalizeItemKey(value?.itemId) ||
+        normalizeItemKey(value?.id) ||
+        normalizeItemKey(value?.key) ||
+        normalizeItemKey(value?.code);
+      if (normalizedKey) {
+        catalogItems[normalizedKey] = value;
+      }
+    });
+  }
 
   return Object.fromEntries(
     Object.entries(categories).map(([categoryKey, items]) => [
       categoryKey,
-      Object.values(items || {}).sort((left, right) => String(left.itemId).localeCompare(String(right.itemId))),
+      Object.values(items || {})
+        .map((item) => enrichInventoryItem(item, catalogItems[normalizeItemKey(item?.itemId)] || null))
+        .sort((left, right) => String(left.itemId).localeCompare(String(right.itemId))),
     ]),
   );
 }
@@ -61,7 +161,23 @@ function buildInventorySummary(state = {}) {
 
 function getItemFromCatalog(catalog, itemId) {
   const items = catalog && typeof catalog.items === "object" ? catalog.items : {};
-  return items[normalizeText(itemId)] || null;
+  const normalizedKey = normalizeItemKey(itemId);
+
+  if (items[normalizedKey]) {
+    return items[normalizedKey];
+  }
+
+  const fallbackEntry = Object.entries(items).find(([key, value]) => {
+    const candidateKey =
+      normalizeItemKey(key) ||
+      normalizeItemKey(value?.itemId) ||
+      normalizeItemKey(value?.id) ||
+      normalizeItemKey(value?.key) ||
+      normalizeItemKey(value?.code);
+    return candidateKey === normalizedKey;
+  });
+
+  return fallbackEntry ? fallbackEntry[1] : null;
 }
 
 function getInventoryItemDurabilityConfig(itemConfig = {}) {
@@ -214,6 +330,9 @@ function addItemToInventory(state, itemConfig, quantity = 1) {
     updatedAt: new Date().toISOString(),
     metadata: {
       ...(existing.metadata || {}),
+      name: itemConfig.name || itemConfig.title || itemId,
+      title: itemConfig.title || itemConfig.name || itemId,
+      displayName: itemConfig.displayName || itemConfig.name || itemConfig.title || itemId,
       icon: itemConfig.icon || "",
       description: itemConfig.description || "",
       ...(isToy
@@ -347,7 +466,7 @@ async function getInventory({ uid, requestId = "" }) {
     message: "Lấy kho vật phẩm thành công",
     data: {
       inventory: {
-        categories: flattenInventoryState(nextInventory),
+        categories: flattenInventoryState(nextInventory, catalog),
         summary: buildInventorySummary(nextInventory),
         version: nextInventory.version || 0,
         updatedAt: nextInventory.updatedAt || "",
@@ -420,7 +539,7 @@ async function useItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
         message: "Pet đang ngủ. Bạn có thể đánh thức Pet bằng cách chạm nhẹ vào người Pet nhé.",
         data: {
           inventory: {
-            categories: flattenInventoryState(hydratedInventory.state),
+            categories: flattenInventoryState(hydratedInventory.state, catalog),
             summary: buildInventorySummary(hydratedInventory.state),
             version: hydratedInventory.state.version || 0,
             updatedAt: hydratedInventory.state.updatedAt || "",
@@ -431,6 +550,7 @@ async function useItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
                 petType: runtimePet.petTypeId,
                 name: runtimePet.petName,
                 isSleeping: Boolean(runtimePet.isSleeping),
+                requiredExpToNextLevel: runtimePet.requiredExpToNextLevel,
                 sleepGraceUntil: runtimePet.sleepGraceUntil || null,
               }
             : null,
@@ -503,7 +623,7 @@ async function useItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
       message: "Sử dụng vật phẩm thành công",
       data: {
         inventory: {
-          categories: flattenInventoryState(nextInventory),
+          categories: flattenInventoryState(nextInventory, catalog),
           summary: buildInventorySummary(nextInventory),
           version: nextInventory.version || 0,
           updatedAt: nextInventory.updatedAt || "",
@@ -513,6 +633,7 @@ async function useItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
               petType: nextPetState.petTypeId,
               level: nextPetState.level,
               exp: nextPetState.exp,
+              requiredExpToNextLevel: nextPetState.requiredExpToNextLevel,
               hunger: nextPetState.hunger,
               happiness: nextPetState.happiness,
               energy: nextPetState.energy,

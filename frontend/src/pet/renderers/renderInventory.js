@@ -1,6 +1,21 @@
 import { asElement, escapeHtml } from "../utils/dom.js";
 import { resolveItemIconPath } from "../utils/assetResolver.js";
 
+function getInventoryItemLabel(item = {}) {
+  return String(
+    item.displayName ||
+      item.name ||
+      item.title ||
+      item.metadata?.displayName ||
+      item.metadata?.name ||
+      item.metadata?.title ||
+      item.itemName ||
+      item.itemTitle ||
+      item.itemId ||
+      "",
+  ).trim();
+}
+
 export function renderInventory(target, state = {}) {
   const root = asElement(target);
 
@@ -26,7 +41,7 @@ export function renderInventory(target, state = {}) {
               <li class="pet-inventory__item">
                 <img src="${resolveItemIconPath(item)}" alt="" aria-hidden="true" />
                 <div>
-                  <strong>${escapeHtml(item.itemId)}</strong>
+                  <strong>${escapeHtml(getInventoryItemLabel(item))}</strong>
                   <span>${escapeHtml(item.quantity ?? 0)} x</span>
                   ${Number(item.maxDurability) > 0 ? `<span>Độ bền: ${escapeHtml(item.durability ?? item.maxDurability)} / ${escapeHtml(item.maxDurability)}</span>` : ""}
                 </div>

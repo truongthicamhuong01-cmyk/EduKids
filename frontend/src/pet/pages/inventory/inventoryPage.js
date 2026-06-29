@@ -134,6 +134,21 @@ function formatDurabilitySummary(item) {
   return `Độ bền: ${formatNumber(Math.min(maxDurability, durability))} / ${formatNumber(maxDurability)}`;
 }
 
+function getInventoryItemLabel(item = {}) {
+  return String(
+    item.displayName ||
+      item.name ||
+      item.title ||
+      item.metadata?.displayName ||
+      item.metadata?.name ||
+      item.metadata?.title ||
+      item.itemName ||
+      item.itemTitle ||
+      item.itemId ||
+      "",
+  ).trim();
+}
+
 function buildFxId() {
   return `toy-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -545,6 +560,7 @@ export function createInventoryPage({ store, petApi, inventoryApi } = {}) {
   function renderToyCard(item, index) {
     const icon = resolveItemIconPath(item);
     const itemId = String(item.itemId || "").trim();
+    const itemLabel = getInventoryItemLabel(item);
     const quantity = Math.max(0, Number(item.quantity || 0));
     const durability = Math.max(0, Number(item.durability || 0));
     const disabled = quantity <= 0 || durability <= 0 || Boolean(state.playingItemId);
@@ -555,9 +571,9 @@ export function createInventoryPage({ store, petApi, inventoryApi } = {}) {
     return `
       <article class="pet-inventory-card ${toneClass} ${disabled ? "is-disabled" : ""}" data-inventory-item-id="${escapeHtml(itemId)}">
         <div class="pet-inventory-card__inner">
-          <h3 class="pet-inventory-card__title">${escapeHtml(item.name || itemId)}</h3>
+          <h3 class="pet-inventory-card__title">${escapeHtml(itemLabel)}</h3>
           <div class="pet-inventory-card__visual">
-            <img src="${escapeHtml(icon)}" alt="${escapeHtml(item.name || itemId)}" loading="eager" decoding="async" />
+            <img src="${escapeHtml(icon)}" alt="${escapeHtml(itemLabel)}" loading="eager" decoding="async" />
           </div>
           <div class="pet-inventory-card__quantity">Số lượng: <strong data-inventory-quantity="${escapeHtml(itemId)}">${formatNumber(quantity)}</strong></div>
           <div class="pet-inventory-card__durability">${escapeHtml(durabilitySummary)}</div>

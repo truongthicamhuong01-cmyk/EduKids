@@ -336,6 +336,7 @@ export function adaptLearningPathState(apiState) {
     checkpoint: currentCheckpoint ? cloneValue(currentCheckpoint) : null,
     checkpoints: cloneValue(flattenedCheckpoints),
     rewards: cloneValue(source.rewards || { xu: 0, exp: 0, badges: [] }),
+    wallet: cloneValue(source.wallet || { eduCoin: 0 }),
     progress: resolvedProgress,
     limits: cloneValue(source.limits || {}),
     lockNotice: String(source.lockNotice || source.notice || ""),

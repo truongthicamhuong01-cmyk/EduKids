@@ -13,7 +13,10 @@ import "./services/systemSettingsService.js";
 import "./services/adminStatsService.js";
 import "./services/appReviewService.js";
 import "./services/topicAccuracyService.js";
-import { renderLearningPathPage } from "./pages/student/learning-path/learningPathPage.js";
+import {
+  renderLearningPathPage,
+  syncLearningPathWalletFromProfile,
+} from "./pages/student/learning-path/learningPathPage.js";
 import { adaptLearningPathState } from "./data/learning-path/learningPathStateAdapter.js";
 import "./style.css";
 
@@ -6378,6 +6381,14 @@ function formatStatValue(value) {
   return Number.isFinite(numeric) ? String(numeric) : "--";
 }
 
+function formatStudyMinutesValue(value) {
+  const numeric = Number(value);
+
+  return Number.isFinite(numeric)
+    ? String(Math.max(0, Math.floor(numeric)))
+    : "--";
+}
+
 function getDisplayName(fullName) {
   const normalized = String(fullName || "")
     .trim()
@@ -6570,17 +6581,21 @@ function getStudentStreakValue(profile, activityLogs = []) {
 function getStudentStudyMinutesValue(profile, activityLogs = []) {
   const logs = Array.isArray(activityLogs) ? activityLogs : [];
   const stats = profile?.stats || {};
-  const numericStudyMinutes =
-    Number(stats.studyMinutes) ||
-    Number(stats.studyTimeMinutes) ||
-    Number(stats.timeStudied);
+  const numericStudyMinutes = [
+    stats.studyMinutes,
+    stats.studyTimeMinutes,
+    stats.timeStudied,
+  ]
+    .map((value) => Number(value))
+    .find((value) => Number.isFinite(value));
 
-  if (Number.isFinite(numericStudyMinutes) && numericStudyMinutes > 0) {
-    return numericStudyMinutes;
+  if (Number.isFinite(numericStudyMinutes)) {
+    return Math.max(0, Math.floor(numericStudyMinutes));
   }
 
   return logs.reduce(
-    (total, entry) => total + Math.max(0, Number(entry?.studyMinutes) || 0),
+    (total, entry) =>
+      total + Math.max(0, Math.floor(Number(entry?.studyMinutes) || 0)),
     0,
   );
 }
@@ -6716,9 +6731,9 @@ function calculateWeeklyProgress(activityLogs) {
   });
 
   const studyTime = recentLogs.reduce((total, entry) => {
-    const explicitMinutes = Number(entry?.studyMinutes);
-    if (Number.isFinite(explicitMinutes) && explicitMinutes > 0) {
-      return total + explicitMinutes;
+    const rawExplicitMinutes = Number(entry?.studyMinutes);
+    if (Number.isFinite(rawExplicitMinutes)) {
+      return total + Math.max(0, Math.floor(rawExplicitMinutes));
     }
 
     return total;
@@ -6872,7 +6887,7 @@ function renderStudentProgressPage(profile, activityLogs = null) {
   const emptyStateNode = root.querySelector("[data-progress-empty-state]");
 
   if (studyTimeNode) {
-    studyTimeNode.textContent = `${formatStatValue(overview.studyTime)} phút`;
+    studyTimeNode.textContent = `${formatStudyMinutesValue(overview.studyTime)} phút`;
   }
 
   if (completedNode) {
@@ -7710,7 +7725,10 @@ async function fetchStudentWeeklyActivityLogs(profile) {
     assignmentSnapshot.docs.forEach((doc) => {
       const data = doc.data() || {};
       const totalQuestions = Number(data.totalQuestions) || 0;
-      const explicitMinutes = Number(data.studyMinutes) || 0;
+      const rawExplicitMinutes = Number(data.studyMinutes);
+      const explicitMinutes = Number.isFinite(rawExplicitMinutes)
+        ? Math.max(0, Math.floor(rawExplicitMinutes))
+        : null;
       logs.push({
         id: doc.id,
         type: "assignment",
@@ -7722,7 +7740,10 @@ async function fetchStudentWeeklyActivityLogs(profile) {
           "",
         totalQuestions,
         score: data.score ?? null,
-        studyMinutes: explicitMinutes || Math.max(0, totalQuestions * 2),
+        studyMinutes:
+          explicitMinutes !== null
+            ? explicitMinutes
+            : Math.max(0, totalQuestions * 2),
       });
     });
   } catch (error) {
@@ -7741,7 +7762,10 @@ async function fetchStudentWeeklyActivityLogs(profile) {
     progressSnapshot.docs.forEach((doc) => {
       const data = doc.data() || {};
       const totalQuestions = Number(data.totalAnswered) || 0;
-      const explicitMinutes = Number(data.studyMinutes) || 0;
+      const rawExplicitMinutes = Number(data.studyMinutes);
+      const explicitMinutes = Number.isFinite(rawExplicitMinutes)
+        ? Math.max(0, Math.floor(rawExplicitMinutes))
+        : null;
       logs.push({
         id: doc.id,
         type: "topic-progress",
@@ -7749,7 +7773,10 @@ async function fetchStudentWeeklyActivityLogs(profile) {
           data.updatedAt || data.accuracyUpdatedAt || data.createdAt || "",
         totalQuestions,
         score: data.percentage ?? null,
-        studyMinutes: explicitMinutes || Math.max(0, totalQuestions * 2),
+        studyMinutes:
+          explicitMinutes !== null
+            ? explicitMinutes
+            : Math.max(0, totalQuestions * 2),
       });
     });
   } catch (error) {
@@ -7780,7 +7807,7 @@ async function syncStudentWeeklyProgress(profile) {
   const averageScoreNode = root.querySelector("[data-weekly-average-score]");
 
   if (studyTimeNode) {
-    studyTimeNode.textContent = `${formatStatValue(weeklyProgress.studyTime)} phút`;
+    studyTimeNode.textContent = `${formatStudyMinutesValue(weeklyProgress.studyTime)} phút`;
   }
 
   if (totalQuestionsNode) {
@@ -8120,6 +8147,11 @@ function applyLatestCurrentUser(profile) {
     renderStudentHomeOverview(normalizedProfile);
     renderStudentProfile(normalizedProfile);
   }
+
+  syncPetWalletFromProfile(normalizedProfile);
+  if (typeof syncLearningPathWalletFromProfile === "function") {
+    syncLearningPathWalletFromProfile(normalizedProfile);
+  }
 }
 
 function syncPetWalletFromProfile(profile) {
@@ -8200,7 +8232,7 @@ function renderStudentProfile(profile) {
       profile,
       activityLogs,
     );
-    studyMinutes.innerHTML = `${formatStatValue(resolvedStudyMinutes)} <span>phút</span>`;
+    studyMinutes.innerHTML = `${formatStudyMinutesValue(resolvedStudyMinutes)} <span>phút</span>`;
   }
 
   if (fullName) {
@@ -9118,6 +9150,12 @@ const STUDENT_QUIZ_DEFAULTS = {
   grade: "1",
   subject: "math",
 };
+const STUDENT_QUIZ_GRADE_OPTIONS = ["1", "2", "3", "4", "5"];
+const STUDENT_QUIZ_RESTRICTED_GRADE_OPTIONS = new Set(["1", "2", "3"]);
+const STUDENT_QUIZ_RESTRICTED_SUBJECT_OPTIONS = new Set([
+  "history",
+  "geography",
+]);
 
 const studentQuizState = {
   initialized: false,
@@ -9170,6 +9208,8 @@ const bossBattleState = {
   revealedCorrectAnswer: "",
   revealedCorrect: null,
   terminalLocked: false,
+  answerRequestSeq: 0,
+  activeAnswerRequestSeq: 0,
 };
 
 const bossBattleReviewMode = {
@@ -9345,6 +9385,84 @@ function getInitialStudentQuizGrade() {
   }
 
   return STUDENT_QUIZ_DEFAULTS.grade;
+}
+
+function getStudentQuizGradeOptions(subject = studentQuizState.subject) {
+  const normalizedSubject = getSubjectKey(subject);
+
+  return STUDENT_QUIZ_GRADE_OPTIONS.filter((grade) => {
+    if (!STUDENT_QUIZ_RESTRICTED_SUBJECT_OPTIONS.has(normalizedSubject)) {
+      return true;
+    }
+
+    return !STUDENT_QUIZ_RESTRICTED_GRADE_OPTIONS.has(grade);
+  });
+}
+
+function getStudentQuizSubjectOptions(grade = studentQuizState.grade) {
+  const normalizedGrade = normalizeQuizText(grade);
+
+  return SUBJECT_DEFINITIONS.filter((subject) => {
+    if (!STUDENT_QUIZ_RESTRICTED_GRADE_OPTIONS.has(normalizedGrade)) {
+      return true;
+    }
+
+    return !STUDENT_QUIZ_RESTRICTED_SUBJECT_OPTIONS.has(subject.key);
+  });
+}
+
+function normalizeStudentQuizSelection(
+  grade = studentQuizState.grade,
+  subject = studentQuizState.subject,
+) {
+  const normalizedGrade = normalizeQuizText(grade) || STUDENT_QUIZ_DEFAULTS.grade;
+  const normalizedSubject = getSubjectKey(subject) || STUDENT_QUIZ_DEFAULTS.subject;
+  const gradeOptions = getStudentQuizGradeOptions(normalizedSubject);
+  const subjectOptions = getStudentQuizSubjectOptions(normalizedGrade);
+  let nextGrade = normalizedGrade;
+  let nextSubject = normalizedSubject;
+
+  if (STUDENT_QUIZ_RESTRICTED_SUBJECT_OPTIONS.has(normalizedSubject)) {
+    nextGrade = gradeOptions.includes(normalizedGrade)
+      ? normalizedGrade
+      : gradeOptions[0] || STUDENT_QUIZ_DEFAULTS.grade;
+  } else if (STUDENT_QUIZ_RESTRICTED_GRADE_OPTIONS.has(normalizedGrade)) {
+    nextSubject = subjectOptions.some((item) => item.key === normalizedSubject)
+      ? normalizedSubject
+      : subjectOptions[0]?.key || STUDENT_QUIZ_DEFAULTS.subject;
+  } else {
+    nextGrade = gradeOptions.includes(normalizedGrade)
+      ? normalizedGrade
+      : gradeOptions[0] || STUDENT_QUIZ_DEFAULTS.grade;
+    nextSubject = subjectOptions.some((item) => item.key === normalizedSubject)
+      ? normalizedSubject
+      : subjectOptions[0]?.key || STUDENT_QUIZ_DEFAULTS.subject;
+  }
+
+  if (!gradeOptions.includes(nextGrade)) {
+    nextGrade = gradeOptions[0] || STUDENT_QUIZ_DEFAULTS.grade;
+  }
+
+  if (!subjectOptions.some((item) => item.key === nextSubject)) {
+    nextSubject = subjectOptions[0]?.key || STUDENT_QUIZ_DEFAULTS.subject;
+  }
+
+  return {
+    grade: nextGrade,
+    subject: nextSubject,
+  };
+}
+
+function syncStudentQuizSelectionState() {
+  const selection = normalizeStudentQuizSelection(
+    studentQuizState.grade,
+    studentQuizState.subject,
+  );
+
+  studentQuizState.grade = selection.grade;
+  studentQuizState.subject = selection.subject;
+
+  return selection;
 }
 
 function getStudentTopicImage(topic) {
@@ -10285,6 +10403,11 @@ async function restoreBossBattleSessionFromStorage(quizData = null) {
       normalizeQuizText(session.sessionId || session.id || "") !==
         recoveryState.sessionId
     ) {
+      return false;
+    }
+
+    if (normalizeBossBattleStatus(session.status) !== "active") {
+      clearBossBattleRecoveryStorageState();
       return false;
     }
 
@@ -11385,8 +11508,9 @@ async function handleBossBattlePopupAction(action) {
     clearBossBattleRecoveryStorageState();
 
     if (topicId) {
-      await loadStudentQuizByTopic(topicId);
+      await loadStudentQuizByTopic(topicId, { forceFreshBattle: true });
     }
+    return;
   }
 
   if (normalizedAction === "boss-review-back-topic") {
@@ -11441,6 +11565,8 @@ function resetBossBattleState(totalQuestions = 0) {
   bossBattleState.revealedCorrectAnswer = "";
   bossBattleState.revealedCorrect = null;
   bossBattleState.terminalLocked = false;
+  bossBattleState.answerRequestSeq = 0;
+  bossBattleState.activeAnswerRequestSeq = 0;
   bossBattleAnimationState.currentState = "idle";
   bossBattleAnimationState.currentFrame = 1;
   bossBattleAnimationState.playOnce = false;
@@ -11928,6 +12054,7 @@ async function createBossBattleSessionForCurrentQuiz() {
 async function submitBossBattleAnswer(questionIndex, selected) {
   const sessionId = normalizeQuizText(bossBattleState.sessionId);
   const normalizedSelected = normalizeQuizText(selected).toUpperCase();
+  const requestSeq = Number(bossBattleState.answerRequestSeq || 0) + 1;
 
   if (!sessionId) {
     throw new Error("Battle session chưa được khởi tạo.");
@@ -11950,6 +12077,8 @@ async function submitBossBattleAnswer(questionIndex, selected) {
     return null;
   }
 
+  bossBattleState.answerRequestSeq = requestSeq;
+  bossBattleState.activeAnswerRequestSeq = requestSeq;
   bossBattleState.answering = true;
   renderStudentQuizFlow();
 
@@ -11968,17 +12097,26 @@ async function submitBossBattleAnswer(questionIndex, selected) {
       },
     );
 
+    if (bossBattleState.activeAnswerRequestSeq !== requestSeq) {
+      return null;
+    }
+
+    const responseData = response.data || {};
     applyBossBattleSessionResponse(response.data || {});
     bossBattleState.answerPhase = "reveal";
     bossBattleState.selectedAnswer = normalizedSelected;
     bossBattleState.selectedQuestionIndex = Number(questionIndex) || 0;
     bossBattleState.revealedQuestion = questionSnapshot.question || null;
-    bossBattleState.revealedCorrectAnswer = getBossBattleQuestionCorrectAnswer(
-      questionSnapshot.question,
-    );
-    bossBattleState.revealedCorrect = Boolean(response.data?.correct === true);
+    bossBattleState.revealedCorrectAnswer = normalizeQuizText(
+      responseData.correctAnswer ||
+        getBossBattleQuestionCorrectAnswer(questionSnapshot.question),
+    ).toUpperCase();
+    bossBattleState.revealedCorrect = Boolean(responseData.correct === true);
     return response.data || null;
   } finally {
+    if (bossBattleState.activeAnswerRequestSeq === requestSeq) {
+      bossBattleState.activeAnswerRequestSeq = 0;
+    }
     bossBattleState.answering = false;
     renderStudentQuizFlow();
   }
@@ -12132,6 +12270,10 @@ async function fetchStudentQuizTopics() {
 }
 
 function getStudentSubjectsScreenHtml() {
+  const selection = syncStudentQuizSelectionState();
+  const gradeOptions = getStudentQuizGradeOptions(selection.subject);
+  const subjectOptions = getStudentQuizSubjectOptions(selection.grade);
+
   return `
     <div class="student-subjects-screen">
       <div class="quiz-page-hero">
@@ -12147,20 +12289,24 @@ function getStudentSubjectsScreenHtml() {
         <label class="quiz-filter">
           <span>Khối lớp</span>
           <select id="quiz-grade-select">
-            <option value="1">Lớp 1</option>
-            <option value="2">Lớp 2</option>
-            <option value="3">Lớp 3</option>
-            <option value="4">Lớp 4</option>
-            <option value="5">Lớp 5</option>
+            ${gradeOptions
+              .map(
+                (grade) =>
+                  `<option value="${grade}" ${grade === selection.grade ? "selected" : ""}>Lớp ${grade}</option>`,
+              )
+              .join("")}
           </select>
         </label>
 
         <label class="quiz-filter">
           <span>Môn học</span>
           <select id="quiz-subject-select">
-            ${SUBJECT_DEFINITIONS.map(
-              (subject) => `<option value="${subject.key}">${subject.label}</option>`,
-            ).join("")}
+            ${subjectOptions
+              .map(
+                (subject) =>
+                  `<option value="${subject.key}" ${subject.key === selection.subject ? "selected" : ""}>${subject.label}</option>`,
+              )
+              .join("")}
           </select>
         </label>
 
@@ -12191,15 +12337,7 @@ function ensureStudentSubjectsScreenMounted() {
     return null;
   }
 
-  const hasSubjectScreen =
-    getStudentQuizGradeSelect() &&
-    getStudentQuizSubjectSelect() &&
-    getStudentQuizTopicGrid() &&
-    getStudentQuizEmptyState() &&
-    getStudentResultScreen() &&
-    getStudentWrongReviewScreen();
-
-  if (hasSubjectScreen && !getStudentQuizScreen()) {
+  if (isStudentBossBattleScreenActive()) {
     return root;
   }
 
@@ -12306,7 +12444,10 @@ function renderStudentQuizScreen() {
       ? bossBattleReviewMode.revealedCorrectAnswer
       : bossBattleState.revealedCorrectAnswer,
   ).toUpperCase();
-  const correctAnswer = getBossBattleQuestionCorrectAnswer(currentQuestion);
+  const correctAnswer =
+    answerRevealMode && revealedCorrectAnswer
+      ? revealedCorrectAnswer
+      : getBossBattleQuestionCorrectAnswer(currentQuestion);
   const currentPet = getBossBattleCurrentPetState();
   const petDisplayName = currentPet?.petName || "Chưa có Pet";
   const petDisplayLevel = currentPet?.petLevel || null;
@@ -13091,10 +13232,11 @@ async function loadStudentQuizTopics() {
   const subject = normalizeQuizText(
     subjectSelect?.value || studentQuizState.subject,
   );
+  const selection = normalizeStudentQuizSelection(grade, subject);
 
   setStudentQuizScreen("subjects");
-  studentQuizState.grade = grade || STUDENT_QUIZ_DEFAULTS.grade;
-  studentQuizState.subject = subject || STUDENT_QUIZ_DEFAULTS.subject;
+  studentQuizState.grade = selection.grade;
+  studentQuizState.subject = selection.subject;
   studentQuizState.selectedTopicId = "";
   studentQuizState.quiz = null;
   studentQuizState.answers = [];
@@ -13145,8 +13287,9 @@ async function refreshStudentQuizTopics() {
   }
 }
 
-async function loadStudentQuizByTopic(topicId) {
+async function loadStudentQuizByTopic(topicId, options = {}) {
   const normalizedTopicId = normalizeQuizText(topicId);
+  const forceFreshBattle = Boolean(options.forceFreshBattle);
 
   if (!normalizedTopicId) {
     return;
@@ -13200,8 +13343,12 @@ async function loadStudentQuizByTopic(topicId) {
     studentQuizState.quiz = quizData;
     studentQuizState.answers = [];
     resetBossBattleState(questionCount);
-    const restored = await restoreBossBattleSessionFromStorage(quizData);
+    const restored =
+      !forceFreshBattle && (await restoreBossBattleSessionFromStorage(quizData));
     if (!restored) {
+      if (forceFreshBattle) {
+        clearBossBattleRecoveryStorageState();
+      }
       await createBossBattleSessionForCurrentQuiz();
     }
   } catch (error) {
@@ -13524,9 +13671,10 @@ document.addEventListener("click", (event) => {
       );
 
       closeBossBattlePopup();
+      clearBossBattleRecoveryStorageState();
 
       if (topicId) {
-        void loadStudentQuizByTopic(topicId);
+        void loadStudentQuizByTopic(topicId, { forceFreshBattle: true });
       }
       return;
     }

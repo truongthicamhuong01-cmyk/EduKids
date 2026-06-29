@@ -2,6 +2,7 @@ const {
   executeLearningPathAction,
   getLearningPathState,
 } = require("../services/learningPathService");
+const { findUserById } = require("../services/userService");
 const { rewardLearningPath } = require("../services/rewardService");
 
 async function getState(req, res, next) {
@@ -57,6 +58,12 @@ async function action(req, res, next) {
         }).catch(() => null),
       ),
     );
+
+    const refreshedProfile = await findUserById(userId).catch(() => null);
+    const refreshedWallet = {
+      eduCoin: Math.max(0, Number(refreshedProfile?.stats?.eduCoin || 0)),
+    };
+    state.wallet = refreshedWallet;
 
     res.status(200).json({
       state,

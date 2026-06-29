@@ -51,6 +51,25 @@ function normalizeBattleSessionLock(lock) {
   };
 }
 
+function isReusableBattleSession(session, { userId, topicId, quizId } = {}) {
+  if (!session || typeof session !== "object") {
+    return false;
+  }
+
+  if (normalizeText(session.userId) !== normalizeText(userId)) {
+    return false;
+  }
+
+  if (normalizeStatus(session.status) !== "active") {
+    return false;
+  }
+
+  return (
+    normalizeText(session.topicId) === normalizeText(topicId) &&
+    normalizeText(session.quizId) === normalizeText(quizId)
+  );
+}
+
 function getOptionLabel(option, fallbackIndex) {
   return normalizeAnswerLabel(option?.label || ["A", "B", "C", "D"][fallbackIndex] || "");
 }
@@ -327,7 +346,13 @@ async function createBattleSessionFromQuiz({ userId, topicId, quizId }) {
     if (activeLock?.sessionId) {
       const activeSession = await getBattleSessionById(activeLock.sessionId, transaction);
 
-      if (activeSession && normalizeStatus(activeSession.status) === "active") {
+      if (
+        isReusableBattleSession(activeSession, {
+          userId: normalizedUserId,
+          topicId: normalizedTopicId,
+          quizId: normalizedQuizId,
+        })
+      ) {
         return {
           existing: true,
           session: activeSession,
@@ -349,13 +374,13 @@ async function createBattleSessionFromQuiz({ userId, topicId, quizId }) {
       answers: [],
       status: "active",
       rewardStatus: "pending",
-    rewardSummary: null,
-    rewardedAt: "",
-    startedAt: now,
-    completedAt: "",
-    createdAt: now,
-    updatedAt: now,
-  };
+      rewardSummary: null,
+      rewardedAt: "",
+      startedAt: now,
+      completedAt: "",
+      createdAt: now,
+      updatedAt: now,
+    };
 
     transaction.set(getBattleSessionRef(sessionId), session, { merge: true });
     transaction.set(
@@ -638,7 +663,7 @@ function getBattleSessionStudyMinutes(session = {}) {
     return 0;
   }
 
-  return Number((diffMs / 60000).toFixed(1));
+  return Math.max(0, Math.floor(diffMs / 60000));
 }
 
 async function completeBattleSession({ sessionId, userId }) {

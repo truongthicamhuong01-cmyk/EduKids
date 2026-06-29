@@ -4133,6 +4133,7 @@ textarea {
   align-self: flex-start;
   min-width: 188px;
   padding: 16px 22px;
+  transform: translateY(20px);
   border-radius: 28px 28px 28px 10px;
   background: rgba(255, 255, 255, 0.97);
   border: 1px solid rgba(244, 215, 160, 0.8);
@@ -6064,20 +6065,24 @@ textarea {
 
 #profile .student-profile-badge-grid {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 152px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-flow: row;
+  grid-auto-rows: minmax(148px, auto);
   gap: 12px;
   align-items: stretch;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 2px 2px 8px;
+  align-content: start;
+  max-height: min(60vh, 540px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 2px 4px 8px 2px;
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x proximity;
+  scroll-snap-type: y proximity;
+  scrollbar-gutter: stable;
 }
 
 #profile .student-profile-badge-grid::-webkit-scrollbar {
-  height: 8px;
+  width: 8px;
 }
 
 #profile .student-profile-badge-grid::-webkit-scrollbar-track {
@@ -6456,8 +6461,9 @@ textarea {
   }
 
   #profile .student-profile-badge-grid {
-    grid-auto-columns: 138px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+    max-height: min(58vh, 520px);
     padding-bottom: 6px;
   }
 
@@ -6515,6 +6521,13 @@ textarea {
   .profile-edit-cancel-btn,
   .profile-edit-save-btn {
     width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  #profile .student-profile-badge-grid {
+    grid-template-columns: 1fr;
+    max-height: min(56vh, 460px);
   }
 }
 

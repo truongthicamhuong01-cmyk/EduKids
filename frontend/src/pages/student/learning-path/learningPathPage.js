@@ -222,6 +222,7 @@ function getEmptyLearningPathState() {
     mountain: null,
     checkpoints: [],
     rewards: { xu: 0, exp: 0, badges: [] },
+    wallet: { eduCoin: 0 },
     progressPercent: 0,
     checkpoint: null,
     avatar: { position: { left: 0, top: 0 } },
@@ -558,6 +559,7 @@ async function hydrateLearningPathStateFromBackend() {
       : "Backend Learning Path chưa trả về state hợp lệ.";
 
     applyLearningPathEvents(data?.events);
+    syncAppWalletFromLearningPath(remoteState.wallet);
 
     commitLearningPathState();
 
@@ -613,6 +615,7 @@ async function performLearningPathAction(action, payload = {}) {
     uiState.limitNotice = remoteState?.lockNotice || "";
 
     applyLearningPathEvents(data?.events);
+    syncAppWalletFromLearningPath(remoteState.wallet);
 
     commitLearningPathState();
 
@@ -805,6 +808,69 @@ function showMountainCompletionPopup(event) {
   };
 
   return true;
+}
+
+function syncLearningPathWalletFromProfile(profile) {
+  const eduCoin = Math.max(0, Math.floor(Number(profile?.stats?.eduCoin || 0)));
+
+  if (!uiState.backendState) {
+    return;
+  }
+
+  const currentWallet = uiState.backendState.wallet || {};
+  if (Number(currentWallet.eduCoin || 0) === eduCoin) {
+    return;
+  }
+
+  uiState.backendState = {
+    ...uiState.backendState,
+    wallet: {
+      ...currentWallet,
+      eduCoin,
+    },
+  };
+
+  scheduleRender();
+}
+
+function syncAppWalletFromLearningPath(wallet) {
+  const eduCoin = Math.max(0, Math.floor(Number(wallet?.eduCoin || 0)));
+  const currentUser = getOfficialCurrentUser();
+
+  if (currentUser && typeof currentUser === "object") {
+    const nextProfile = {
+      ...currentUser,
+      stats: {
+        ...(currentUser.stats || {}),
+        eduCoin,
+      },
+    };
+
+    window.EduKidsCurrentUser = nextProfile;
+    if (window.__EDUKIDS_BOOTSTRAP__ && typeof window.__EDUKIDS_BOOTSTRAP__ === "object") {
+      window.__EDUKIDS_BOOTSTRAP__.currentUser = nextProfile;
+    }
+
+    try {
+      localStorage.setItem("edukids-current-user", JSON.stringify(nextProfile));
+      localStorage.setItem("currentUser", JSON.stringify(nextProfile));
+      localStorage.setItem("user", JSON.stringify(nextProfile));
+    } catch {
+      // Ignore storage write failures and keep the in-memory state in sync.
+    }
+  }
+
+  const petStore = window.EduKidsPet?.store;
+  if (petStore?.setState) {
+    petStore.setState(
+      {
+        wallet: {
+          eduCoin,
+        },
+      },
+      "STATE_UPDATED",
+    );
+  }
 }
 
 function applyLearningPathEvent(event) {
@@ -1242,7 +1308,7 @@ function renderLearningPathStaticShell(state) {
         </div>
         <div class="learning-path-coin-card" aria-label="Xu Edu hiện có">
           <span class="learning-path-coin-label">🪙 Xu Edu</span>
-          <strong data-learning-path-coin-count>${escapeHtml(state.rewards?.xu || 0)}</strong>
+          <strong data-learning-path-coin-count>${escapeHtml((state.wallet?.eduCoin ?? state.rewards?.xu) || 0)}</strong>
         </div>
       </header>
 
@@ -1295,7 +1361,7 @@ function syncLearningPathSlots(root, state, graphDiff) {
 
   const coinCount = root.querySelector("[data-learning-path-coin-count]");
   if (coinCount instanceof HTMLElement) {
-    coinCount.textContent = String(state.rewards?.xu || 0);
+    coinCount.textContent = String((state.wallet?.eduCoin ?? state.rewards?.xu) || 0);
   }
 
   const page = root.querySelector("[data-learning-path-page]");
@@ -1863,3 +1929,5 @@ export function renderLearningPathPage(root = getLearningPathRoot()) {
     }
   }
 }
+
+export { syncLearningPathWalletFromProfile };

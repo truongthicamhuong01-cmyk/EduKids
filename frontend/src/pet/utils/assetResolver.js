@@ -46,25 +46,31 @@ function getFirstManifestPath(collection) {
 
 function getItemIconAlias(iconKey, category) {
   const aliases = {
-    apple: "cookie",
-    biscuit: "cookie",
-    bread: "cookie",
-    cake: "present",
-    candy: "present",
-    cushion: "present",
-    dessert: "cookie",
+    apple: "apple",
+    biscuit: "biscuit",
+    bread: "bread",
+    cake: "cake",
+    candy: "candy",
+    cushion: "cushion",
+    dessert: "dessert",
     eventpass: "present",
     "event-pass": "present",
     food: "cookie",
     foods: "cookie",
     fluffy: "ball",
     "medicine-kit": "present",
-    medicinekit: "present",
+    medicinekit: "medicinekit",
     hat: "present",
     rice: "cookie",
     snack: "cookie",
-    teddy: "ball",
-    toy: "ball",
+    teddy: "teddy",
+    toy: "toy",
+    tohe: "to-he",
+    papermask: "paper-mask",
+    firstaidkit: "firstaidkit",
+    herbaltea: "herbaltea",
+    lotusmedicine: "lotus-medicine",
+    xoigac: "xoi-gac",
   };
 
   if (aliases[iconKey]) {
@@ -257,17 +263,21 @@ export function resolveShopBackgroundPath({ petType = "" } = {}) {
 }
 
 export function resolveItemIconPath(item = {}) {
-  const iconKey = normalizeSlug(item.icon || item.itemId);
+  const itemKey = normalizeSlug(item.itemId || item.id || item.key || item.code);
+  const iconKey = normalizeSlug(item.icon);
   const category = normalizeSlug(item.category);
-  const aliasKey = getItemIconAlias(iconKey, category);
+  const canonicalKey = itemKey || iconKey;
+  const aliasKey = getItemIconAlias(canonicalKey || iconKey, category);
 
   if (String(item.icon || "").trim().startsWith("/")) {
     return normalizeAssetPath(item.icon);
   }
 
   return (
+    normalizeAssetPath(petAssetManifest.shopIcons?.[canonicalKey]) ||
     normalizeAssetPath(petAssetManifest.shopIcons?.[iconKey]) ||
     (aliasKey ? normalizeAssetPath(petAssetManifest.shopIcons?.[aliasKey]) : "") ||
+    normalizeAssetPath(petAssetManifest.genericIcons?.[canonicalKey]) ||
     normalizeAssetPath(petAssetManifest.genericIcons?.[iconKey]) ||
     normalizeAssetPath(petAssetManifest.genericIcons?.[category]) ||
     (aliasKey ? normalizeAssetPath(petAssetManifest.genericIcons?.[aliasKey]) : "") ||

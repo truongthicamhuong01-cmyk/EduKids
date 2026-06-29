@@ -270,7 +270,7 @@ async function buyItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
       message: isMedicineItem ? "Mua v? s? d?ng v?t ph?m th?nh c?ng" : "Mua v?t ph?m th?nh c?ng",
       data: {
         inventory: {
-          categories: flattenInventoryState(nextInventory),
+          categories: flattenInventoryState(nextInventory, catalog),
           summary: buildInventorySummary(nextInventory),
           version: nextInventory.version || 0,
           updatedAt: nextInventory.updatedAt || "",
@@ -280,6 +280,7 @@ async function buyItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
               petType: nextPetState.petTypeId,
               level: nextPetState.level,
               exp: nextPetState.exp,
+              requiredExpToNextLevel: nextPetState.requiredExpToNextLevel,
               hunger: nextPetState.hunger,
               happiness: nextPetState.happiness,
               energy: nextPetState.energy,

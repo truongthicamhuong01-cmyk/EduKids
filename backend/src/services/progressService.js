@@ -226,7 +226,9 @@ function normalizeLearningActivityInput(activity = {}) {
       ? Number((accuracy / 10).toFixed(1))
       : 0;
   const explicitStudyMinutes = Number(activity?.studyMinutes);
-  let studyMinutes = Number.isFinite(explicitStudyMinutes) ? Math.max(0, explicitStudyMinutes) : 0;
+  let studyMinutes = Number.isFinite(explicitStudyMinutes)
+    ? Math.max(0, Math.floor(explicitStudyMinutes))
+    : 0;
 
   if (
     studyMinutes <= 0 &&
@@ -239,7 +241,7 @@ function normalizeLearningActivityInput(activity = {}) {
     if (!Number.isNaN(startedDate.getTime()) && !Number.isNaN(completedDate.getTime())) {
       const diffMs = completedDate.getTime() - startedDate.getTime();
       if (diffMs > 0) {
-        studyMinutes = Number((diffMs / 60000).toFixed(1));
+        studyMinutes = Math.max(0, Math.floor(diffMs / 60000));
       }
     }
   }
@@ -373,7 +375,9 @@ async function recordLearningActivity(userId, activity = {}) {
 
     const nextStats = {
       ...currentStats,
-      studyMinutes: Math.max(0, Number(currentStats.studyMinutes) || 0) + Math.max(0, Number(normalizedActivity.studyMinutes) || 0),
+      studyMinutes:
+        Math.max(0, Math.floor(Number(currentStats.studyMinutes) || 0)) +
+        Math.max(0, Math.floor(Number(normalizedActivity.studyMinutes) || 0)),
       lastStudyDate: completedAt,
       averageScore: calculateAverageScore(nextActivityLogs),
     };
