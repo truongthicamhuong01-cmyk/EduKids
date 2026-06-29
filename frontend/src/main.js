@@ -26,6 +26,7 @@ const bootstrapState = (window.__EDUKIDS_BOOTSTRAP__ ||= {
   authMode: "login",
   currentUser: null,
   initializedUid: null,
+  renderWarmupSent: false,
 });
 
 const AUTH_SESSION_KEY = "edukids-current-user";
@@ -23124,6 +23125,25 @@ function escapeHtml(value) {
 }
 
 let toastHideTimer = null;
+
+function triggerRenderWarmup() {
+  if (bootstrapState.renderWarmupSent) {
+    return;
+  }
+
+  bootstrapState.renderWarmupSent = true;
+
+  void fetch(`${API_BASE_URL}/api/ping`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
+    credentials: "include",
+    cache: "no-store",
+  }).catch(() => null);
+}
+
+triggerRenderWarmup();
 
 function showToast(message, type = "success") {
   if (typeof document === "undefined") {
