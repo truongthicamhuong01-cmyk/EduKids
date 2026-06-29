@@ -7451,7 +7451,8 @@ async function syncStudentRecentWrongAnswers(profile) {
   const result = await fetchStudentRecentWrongAnswers(profile);
   renderStudentRecentWrongAnswers({
     ...result,
-    recentWrongCount: Number(result?.wrongCount ?? result?.recentWrongCount) || 0,
+    recentWrongCount:
+      Number(result?.wrongCount ?? result?.recentWrongCount) || 0,
   });
 }
 
@@ -10646,26 +10647,28 @@ function getBossBattleRewardPreviewSummary() {
       normalizeBossBattleStatus(bossBattleState.battleStatus) === "victory",
     totalXP,
     totalCoin,
-    rewardXP: totalXP,
-    rewardCoin: totalCoin,
+    rewardXP: previewXP,
+    rewardCoin: previewCoin,
     totalRewardXP: totalXP,
     totalRewardCoin: totalCoin,
   };
 }
 
 function normalizeBossBattleRewardSummary(summary = {}) {
+  const xpAwardedValue = Number(summary?.xpAwarded ?? summary?.rewardXP ?? 0);
+  const coinAwardedValue = Number(summary?.coinAwarded ?? summary?.rewardCoin ?? 0);
   const totalExpValue = Number(
     summary?.totalXP ??
-      summary?.rewardXP ??
       summary?.userExpAfter ??
       summary?.xpAwarded ??
+      summary?.rewardXP ??
       0,
   );
   const totalCoinValue = Number(
     summary?.totalCoin ??
-      summary?.rewardCoin ??
       summary?.userCoinAfter ??
       summary?.coinAwarded ??
+      summary?.rewardCoin ??
       0,
   );
 
@@ -10696,8 +10699,8 @@ function normalizeBossBattleRewardSummary(summary = {}) {
       0,
       Math.floor(Number(summary?.totalQuestions) || 0),
     ),
-    xpAwarded: Math.max(0, Math.floor(Number(summary?.xpAwarded) || 0)),
-    coinAwarded: Math.max(0, Math.floor(Number(summary?.coinAwarded) || 0)),
+    xpAwarded: Math.max(0, Math.floor(xpAwardedValue || 0)),
+    coinAwarded: Math.max(0, Math.floor(coinAwardedValue || 0)),
     rankStars: Math.max(0, Math.floor(Number(summary?.rankStars) || 0)),
     rank: normalizeQuizText(summary?.rank || summary?.rankLabel || ""),
     rankLabel: normalizeQuizText(summary?.rankLabel || summary?.rank || ""),
@@ -10708,8 +10711,8 @@ function normalizeBossBattleRewardSummary(summary = {}) {
     totalCoin: Math.max(0, Math.floor(totalCoinValue || 0)),
   };
 
-  normalized.rewardXP = normalized.totalXP;
-  normalized.rewardCoin = normalized.totalCoin;
+  normalized.rewardXP = normalized.xpAwarded;
+  normalized.rewardCoin = normalized.coinAwarded;
   normalized.totalRewardXP = normalized.totalXP;
   normalized.totalRewardCoin = normalized.totalCoin;
 
@@ -10790,10 +10793,6 @@ async function syncBossBattleRewardWithBackend() {
     const session = response.data?.session || null;
     const summary = {
       ...backendSummary,
-      rewardXP: backendSummary.totalXP,
-      rewardCoin: backendSummary.totalCoin,
-      totalRewardXP: backendSummary.totalXP,
-      totalRewardCoin: backendSummary.totalCoin,
     };
 
     bossBattleRewardSyncState.summary = summary;
@@ -11508,38 +11507,38 @@ async function fetchQuizDataForBossBattleReview(quizId) {
     return null;
   }
 
+  if (parsedQuizId.versionId) {
+    const versionSnapshot = await firestore
+      .collection("quizzes")
+      .doc(parsedQuizId.parentId)
+      .collection("versions")
+      .doc(parsedQuizId.versionId)
+      .get();
+
+    if (versionSnapshot.exists) {
+      const versionData = versionSnapshot.data() || {};
+
+      return {
+        id: versionSnapshot.id,
+        ...(versionData.data || versionData.quizData || {}),
+      };
+    }
+
+    return null;
+  }
+
   const parentSnapshot = await firestore
     .collection("quizzes")
     .doc(parsedQuizId.parentId)
     .get();
 
-  if (parentSnapshot.exists) {
-    return {
-      id: parentSnapshot.id,
-      ...(parentSnapshot.data() || {}),
-    };
-  }
-
-  if (!parsedQuizId.versionId) {
+  if (!parentSnapshot.exists) {
     return null;
   }
-
-  const versionSnapshot = await firestore
-    .collection("quizzes")
-    .doc(parsedQuizId.parentId)
-    .collection("versions")
-    .doc(parsedQuizId.versionId)
-    .get();
-
-  if (!versionSnapshot.exists) {
-    return null;
-  }
-
-  const versionData = versionSnapshot.data() || {};
 
   return {
-    id: versionSnapshot.id,
-    ...(versionData.data || versionData.quizData || {}),
+    id: parentSnapshot.id,
+    ...(parentSnapshot.data() || {}),
   };
 }
 
@@ -11558,7 +11557,11 @@ async function openStudentHomeWrongAnswerReview() {
 
   const quizData = await fetchQuizDataForBossBattleReview(quizId);
 
-  if (!quizData || !Array.isArray(quizData.questions) || quizData.questions.length === 0) {
+  if (
+    !quizData ||
+    !Array.isArray(quizData.questions) ||
+    quizData.questions.length === 0
+  ) {
     showToast("Không thể mở lại bộ câu hỏi gần nhất.", "error");
     return;
   }
@@ -13111,7 +13114,7 @@ function renderStudentQuizScreen() {
           </div>
           <div class="boss-battle-popup__reward-strip">
             <span>Boss vẫn còn HP</span>
-            <strong>Preview chỉ hiển thị trên UI, chưa sync reward thật.</strong>
+            
           </div>
           <div class="boss-battle-popup__reward-badges">
             <div class="boss-battle-popup__reward-badge">

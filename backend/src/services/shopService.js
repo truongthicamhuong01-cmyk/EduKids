@@ -7,9 +7,20 @@ const {
   saveInventoryState,
   saveInventoryTransaction,
 } = require("../repositories/inventoryRepository");
-const { getUserById, updateUserById } = require("../repositories/userRepository");
-const { getPetState, runTransaction, savePetState } = require("../repositories/petRepository");
-const { addItemToInventory, buildInventorySummary, flattenInventoryState } = require("./inventoryService");
+const {
+  getUserById,
+  updateUserById,
+} = require("../repositories/userRepository");
+const {
+  getPetState,
+  runTransaction,
+  savePetState,
+} = require("../repositories/petRepository");
+const {
+  addItemToInventory,
+  buildInventorySummary,
+  flattenInventoryState,
+} = require("./inventoryService");
 const { normalizeCategoryKey } = require("../repositories/inventoryRepository");
 const { toNumber } = require("./petMathService");
 const { applyItemEffectsToPet } = require("./petItemEffectService");
@@ -45,7 +56,9 @@ const ECONOMY_SHOP_PRICES = {
 };
 
 function resolveEconomyShopPrice(itemConfig) {
-  const itemId = normalizeText(itemConfig?.itemId || itemConfig?.id || itemConfig?.key || itemConfig?.code);
+  const itemId = normalizeText(
+    itemConfig?.itemId || itemConfig?.id || itemConfig?.key || itemConfig?.code,
+  );
   const overridePrice = ECONOMY_SHOP_PRICES[itemId];
 
   if (Number.isFinite(overridePrice)) {
@@ -61,7 +74,11 @@ function ensureStudent(user) {
   }
 
   if (String(user.role || "").toLowerCase() !== "student") {
-    throw new ApiError(403, "Chỉ học sinh mới được dùng Shop", PET_ERROR_CODES.FORBIDDEN);
+    throw new ApiError(
+      403,
+      "Chỉ học sinh mới được dùng Shop",
+      PET_ERROR_CODES.FORBIDDEN,
+    );
   }
 }
 
@@ -80,9 +97,14 @@ function buildShopItemView(itemConfig, userLevel, inventoryState) {
     itemConfig.itemId || itemConfig.id || itemConfig.key || itemConfig.code,
   );
   const categoryKey = normalizeCategoryKey(itemConfig.category);
-  const ownedQuantity = Number(inventoryState?.categories?.[categoryKey]?.[itemId]?.quantity || 0);
+  const ownedQuantity = Number(
+    inventoryState?.categories?.[categoryKey]?.[itemId]?.quantity || 0,
+  );
   const maxStack = Math.max(1, Math.floor(toNumber(itemConfig.maxStack, 99)));
-  const unlockLevel = Math.max(1, Math.floor(toNumber(itemConfig.unlockLevel, 1)));
+  const unlockLevel = Math.max(
+    1,
+    Math.floor(toNumber(itemConfig.unlockLevel, 1)),
+  );
   const name = normalizeText(itemConfig.name || itemConfig.title || itemId);
   const key = normalizeText(itemConfig.key || itemId);
   const code = normalizeText(itemConfig.code || itemId);
@@ -118,15 +140,22 @@ async function getShop({ uid, requestId = "" }) {
   ]);
 
   if (!catalog) {
-    throw new ApiError(404, "Shop Catalog không tồn tại", PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND, {
-      missingDocs: ["shopCatalog"],
-    });
+    throw new ApiError(
+      404,
+      "Shop Catalog không tồn tại",
+      PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND,
+      {
+        missingDocs: ["shopCatalog"],
+      },
+    );
   }
 
   const userLevel = resolvePetLevel(user, petState);
   const items = Object.values(getItemMap(catalog))
     .filter(Boolean)
-    .map((itemConfig) => buildShopItemView(itemConfig, userLevel, inventoryState))
+    .map((itemConfig) =>
+      buildShopItemView(itemConfig, userLevel, inventoryState),
+    )
     .sort((left, right) => {
       const leftOrder = Number(left.sortOrder || 0);
       const rightOrder = Number(right.sortOrder || 0);
@@ -154,7 +183,12 @@ async function getShop({ uid, requestId = "" }) {
   };
 }
 
-async function buyItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
+async function buyItem({
+  uid,
+  body = {},
+  requestId = "",
+  idempotencyKey = "",
+}) {
   const normalizedUid = normalizeText(uid);
   const itemId = normalizeItemReference(
     body.itemId || body.item || body.id || body.key || body.code || "",
@@ -162,69 +196,110 @@ async function buyItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
   const quantity = Math.max(1, Math.floor(Number(body.quantity) || 1));
 
   if (!itemId) {
-    throw new ApiError(400, "itemId is required", PET_ERROR_CODES.VALIDATION_ERROR);
+    throw new ApiError(
+      400,
+      "itemId is required",
+      PET_ERROR_CODES.VALIDATION_ERROR,
+    );
   }
 
   const catalog = await readConfigDoc("shopCatalog");
   if (!catalog) {
-    throw new ApiError(404, "Shop Catalog kh?ng t?n t?i", PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND, {
-      missingDocs: ["shopCatalog"],
-    });
+    throw new ApiError(
+      404,
+      "Shop Catalog không tồn tại",
+      PET_ERROR_CODES.GAME_CONFIG_NOT_FOUND,
+      {
+        missingDocs: ["shopCatalog"],
+      },
+    );
   }
 
   const itemConfig = getItemMap(catalog)[itemId];
   if (!itemConfig) {
-    throw new ApiError(404, "Item kh?ng t?n t?i", PET_ERROR_CODES.ITEM_NOT_FOUND);
+    throw new ApiError(
+      404,
+      "Item không tồn tại",
+      PET_ERROR_CODES.ITEM_NOT_FOUND,
+    );
   }
 
-  const isMedicineItem = normalizeCategoryKey(itemConfig.category) === "medicine";
+  const isMedicineItem =
+    normalizeCategoryKey(itemConfig.category) === "medicine";
 
   const result = await runTransaction(async (transaction) => {
     const user = await getUserById(normalizedUid, transaction);
     ensureStudent(user);
 
     if (idempotencyKey) {
-      const cached = await getInventoryTransaction(normalizedUid, `shop:${idempotencyKey}`, transaction);
+      const cached = await getInventoryTransaction(
+        normalizedUid,
+        `shop:${idempotencyKey}`,
+        transaction,
+      );
       if (cached?.response) {
         return cached.response;
       }
     }
 
-    const petState = await getPetState(normalizedUid, transaction).catch(() => null);
+    const petState = await getPetState(normalizedUid, transaction).catch(
+      () => null,
+    );
     const userLevel = resolvePetLevel(user, petState);
-    const unlockLevel = Math.max(1, Math.floor(toNumber(itemConfig.unlockLevel, 1)));
+    const unlockLevel = Math.max(
+      1,
+      Math.floor(toNumber(itemConfig.unlockLevel, 1)),
+    );
     if (userLevel < unlockLevel) {
-      throw new ApiError(403, "V?t ph?m ch?a ???c m? kh?a", PET_ERROR_CODES.SHOP_ITEM_LOCKED, {
-        unlockLevel,
-        userLevel,
-      });
+      throw new ApiError(
+        403,
+        "Vật phẩm chưa được mở khóa.",
+        PET_ERROR_CODES.SHOP_ITEM_LOCKED,
+        {
+          unlockLevel,
+          userLevel,
+        },
+      );
     }
 
     const inventory = await getInventoryState(normalizedUid, transaction);
     const categoryKey = normalizeCategoryKey(itemConfig.category);
-    const existingQuantity = Number(inventory?.categories?.[categoryKey]?.[itemId]?.quantity || 0);
+    const existingQuantity = Number(
+      inventory?.categories?.[categoryKey]?.[itemId]?.quantity || 0,
+    );
     const maxStack = Math.max(1, Math.floor(toNumber(itemConfig.maxStack, 99)));
     if (!isMedicineItem && existingQuantity + quantity > maxStack) {
-      throw new ApiError(409, "V??t gi?i h?n s? l??ng v?t ph?m", PET_ERROR_CODES.ITEM_OUT_OF_STOCK, {
-        maxStack,
-        existingQuantity,
-      });
+      throw new ApiError(
+        409,
+        "Vượt giới hạn số lượng vật phẩm.",
+        PET_ERROR_CODES.ITEM_OUT_OF_STOCK,
+        {
+          maxStack,
+          existingQuantity,
+        },
+      );
     }
 
     const coinBalance = Math.max(0, Number(user?.stats?.eduCoin || 0));
     const price = Math.max(0, resolveEconomyShopPrice(itemConfig) * quantity);
     if (coinBalance < price) {
-      throw new ApiError(400, "Kh?ng ?? Xu Edu", PET_ERROR_CODES.NOT_ENOUGH_COIN, {
-        coinBalance,
-        price,
-      });
+      throw new ApiError(
+        400,
+        "Không đủ Xu Edu",
+        PET_ERROR_CODES.NOT_ENOUGH_COIN,
+        {
+          coinBalance,
+          price,
+        },
+      );
     }
 
     const nextCoinBalance = coinBalance - price;
     const nextStats = {
       ...(user.stats || {}),
       eduCoin: nextCoinBalance,
-      totalEduCoinSpent: Math.max(0, Number(user?.stats?.totalEduCoinSpent || 0)) + price,
+      totalEduCoinSpent:
+        Math.max(0, Number(user?.stats?.totalEduCoinSpent || 0)) + price,
     };
 
     let nextInventory = inventory;
@@ -236,10 +311,14 @@ async function buyItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
         const scaledItemConfig = {
           ...itemConfig,
           effects: Object.fromEntries(
-            Object.entries(itemConfig.effects || {}).map(([effectKey, effectValue]) => [
-              effectKey,
-              Number.isFinite(Number(effectValue)) ? Number(effectValue) * qty : effectValue,
-            ]),
+            Object.entries(itemConfig.effects || {}).map(
+              ([effectKey, effectValue]) => [
+                effectKey,
+                Number.isFinite(Number(effectValue))
+                  ? Number(effectValue) * qty
+                  : effectValue,
+              ],
+            ),
           ),
         };
         const bundle = {
@@ -248,8 +327,17 @@ async function buyItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
           evolutionConfig: await readConfigDoc("evolutionConfig", transaction),
         };
 
-        nextPetState = applyItemEffectsToPet(petState, scaledItemConfig, bundle, new Date());
-        await savePetState(normalizedUid, stripDerivedPetFields(nextPetState), transaction);
+        nextPetState = applyItemEffectsToPet(
+          petState,
+          scaledItemConfig,
+          bundle,
+          new Date(),
+        );
+        await savePetState(
+          normalizedUid,
+          stripDerivedPetFields(nextPetState),
+          transaction,
+        );
       }
     } else {
       nextInventory = addItemToInventory(inventory, itemConfig, quantity);
@@ -267,7 +355,9 @@ async function buyItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
 
     const response = {
       statusCode: 200,
-      message: isMedicineItem ? "Mua v? s? d?ng v?t ph?m th?nh c?ng" : "Mua v?t ph?m th?nh c?ng",
+      message: isMedicineItem
+        ? "Mua và sử dụng vật phẩm thành công."
+        : "Mua vật phẩm thành công",
       data: {
         inventory: {
           categories: flattenInventoryState(nextInventory, catalog),
@@ -303,10 +393,10 @@ async function buyItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
       popupEvents: [
         {
           type: "SHOP_BUY_SUCCESS",
-          title: "Mua th?nh c?ng",
+          title: "Mua thành công",
           message: isMedicineItem
-            ? `${itemConfig.name || itemId} ?? ???c mua v? d?ng ngay.`
-            : `${itemConfig.name || itemId} ?? ???c th?m v?o kho.`,
+            ? `${itemConfig.name || itemId} đã được mua và dùng ngay.`
+            : `${itemConfig.name || itemId} đã được thêm vào kho.`,
           icon: itemConfig.icon || "shop",
           priority: "normal",
           duration: 2200,
@@ -353,7 +443,6 @@ async function buyItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
 
   return result;
 }
-
 
 module.exports = {
   buyItem,
