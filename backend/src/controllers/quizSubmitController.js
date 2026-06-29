@@ -1,7 +1,10 @@
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/apiError");
 const successResponse = require("../utils/apiResponse");
-const { gradeQuizSubmission } = require("../services/quizGradeService");
+const {
+  gradeQuizSubmission,
+  getRecentWrongAnswersByUserId,
+} = require("../services/quizGradeService");
 const { awardExp } = require("../services/progressService");
 const { findUserById } = require("../services/userService");
 const { rewardLessonComplete, rewardHighScore } = require("../services/rewardService");
@@ -49,10 +52,16 @@ const submitQuiz = asyncHandler(async (req, res) => {
     idempotencyKey: `high-score:${quizId}:${userId}`,
   }).catch(() => null);
   const latestProfile = awardResult?.user || (await findUserById(userId).catch(() => null));
+  const recentWrongAnswers = await getRecentWrongAnswersByUserId(userId).catch(() => null);
 
   return successResponse(res, 200, "Quiz submitted successfully", {
     ...result,
-    profile: latestProfile || undefined,
+    profile: latestProfile
+      ? {
+          ...latestProfile,
+          recentWrongAnswers,
+        }
+      : undefined,
   });
 });
 

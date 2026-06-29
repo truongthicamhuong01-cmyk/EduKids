@@ -4,6 +4,7 @@ const successResponse = require("../utils/apiResponse");
 const { normalizeString, isValidGender } = require("../utils/validators");
 const { ensureUserCode, findUserById, updateUserById } = require("../services/userService");
 const { updateUserStreak } = require("../services/progressService");
+const { getRecentWrongAnswersByUserId } = require("../services/quizGradeService");
 
 function getCurrentUid(req) {
   return req.user?.uid || req.user?.userId || null;
@@ -24,14 +25,19 @@ const me = asyncHandler(async (req, res) => {
 
   const userWithCode = await ensureUserCode(uid, user);
   const updatedUser = await updateUserStreak(uid).catch(() => userWithCode);
+  const recentWrongAnswers = await getRecentWrongAnswersByUserId(uid).catch(() => null);
+  const profileWithWrongAnswers = {
+    ...updatedUser,
+    recentWrongAnswers,
+  };
   const requiredFields = ["uid", "username", "role", "gender", "createdAt"];
-  const missingFields = requiredFields.filter((field) => !updatedUser[field]);
+  const missingFields = requiredFields.filter((field) => !profileWithWrongAnswers[field]);
 
   if (missingFields.length > 0) {
     throw new ApiError(422, `Missing user fields: ${missingFields.join(", ")}`);
   }
 
-  return successResponse(res, 200, "User profile fetched successfully", updatedUser);
+  return successResponse(res, 200, "User profile fetched successfully", profileWithWrongAnswers);
 });
 
 const updateMe = asyncHandler(async (req, res) => {

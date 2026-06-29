@@ -5890,11 +5890,13 @@ async function syncSidebarProfile() {
 
     renderSidebarProfileCards(resolvedProfile || profile);
     renderStudentHomeOverview(resolvedProfile || profile);
+    void syncStudentRecentWrongAnswers(resolvedProfile || profile);
     void syncStudentProgress(resolvedProfile || profile);
   } catch (error) {
     console.warn("Không thể đồng bộ sidebar user:", error);
     renderSidebarProfileCards(profile);
     renderStudentHomeOverview(profile);
+    void syncStudentRecentWrongAnswers(profile);
     void syncStudentProgress(profile);
   }
 }
@@ -7274,10 +7276,38 @@ function getStudentRecentWrongCount(record) {
     : [];
 
   if (Number.isFinite(wrongCount) && wrongCount >= 0) {
-    return Math.max(0, Math.floor(wrongCount));
+    return Math.max(wrongQuestions.length, Math.floor(wrongCount));
   }
 
   return wrongQuestions.length;
+}
+
+function normalizeStudentRecentWrongAnswers(record) {
+  if (!record || typeof record !== "object") {
+    return null;
+  }
+
+  const wrongQuestions = Array.isArray(record.wrongQuestions)
+    ? record.wrongQuestions.filter(Boolean)
+    : [];
+  const wrongCount = Number(record.wrongCount);
+
+  return {
+    id: String(record.id || record.quizId || "").trim(),
+    quizId: String(record.quizId || "").trim(),
+    wrongCount:
+      Number.isFinite(wrongCount) && wrongCount >= 0
+        ? Math.max(wrongQuestions.length, Math.floor(wrongCount))
+        : wrongQuestions.length,
+    wrongQuestions,
+    totalQuestions: Math.max(0, Math.floor(Number(record.totalQuestions) || 0)),
+    correctAnswers: Math.max(0, Math.floor(Number(record.correctAnswers) || 0)),
+    score: Math.max(0, Math.floor(Number(record.score) || 0)),
+    submittedAt: String(
+      record.submittedAt || record.updatedAt || record.createdAt || "",
+    ).trim(),
+    updatedAt: String(record.updatedAt || record.createdAt || "").trim(),
+  };
 }
 
 function renderStudentRecentWrongAnswers(progress) {
@@ -7320,18 +7350,40 @@ async function fetchStudentRecentWrongAnswers(profile) {
   const cacheKey = String(
     profile?.uid || profile?.userId || profile?.id || "",
   ).trim();
-  const cached = studentRecentWrongAnswersCache.get(cacheKey);
-
-  if (cached) {
-    return cached;
-  }
-
   const studentId = cacheKey;
 
   if (!studentId) {
     return {
       recentWrongCount: 0,
     };
+  }
+
+  const embeddedRecentWrongAnswers = normalizeStudentRecentWrongAnswers(
+    profile?.recentWrongAnswers || profile?.wrongAnswers || null,
+  );
+
+  if (embeddedRecentWrongAnswers) {
+    const result = {
+      id: embeddedRecentWrongAnswers.id,
+      quizId: embeddedRecentWrongAnswers.quizId,
+      wrongCount: embeddedRecentWrongAnswers.wrongCount,
+      wrongQuestions: embeddedRecentWrongAnswers.wrongQuestions,
+      totalQuestions: embeddedRecentWrongAnswers.totalQuestions,
+      correctAnswers: embeddedRecentWrongAnswers.correctAnswers,
+      score: embeddedRecentWrongAnswers.score,
+      submittedAt: embeddedRecentWrongAnswers.submittedAt,
+      updatedAt: embeddedRecentWrongAnswers.updatedAt,
+      recentWrongCount: embeddedRecentWrongAnswers.wrongCount,
+    };
+
+    studentRecentWrongAnswersCache.set(cacheKey, result);
+    return result;
+  }
+
+  const cached = studentRecentWrongAnswersCache.get(cacheKey);
+
+  if (cached) {
+    return cached;
   }
 
   const firestore =
@@ -7367,6 +7419,7 @@ async function fetchStudentRecentWrongAnswers(profile) {
         score: Number(data.score) || 0,
         submittedAt: data.updatedAt || data.createdAt || "",
         updatedAt: data.updatedAt || data.createdAt || "",
+        recentWrongCount: getStudentRecentWrongCount(data),
       };
 
       studentRecentWrongAnswersCache.set(cacheKey, result);
@@ -7382,6 +7435,7 @@ async function fetchStudentRecentWrongAnswers(profile) {
     wrongQuestions: [],
     quizId: "",
     updatedAt: "",
+    recentWrongCount: 0,
   };
 
   studentRecentWrongAnswersCache.set(cacheKey, fallback);

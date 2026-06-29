@@ -54,6 +54,45 @@ function buildWrongAnswerEntry({ questionIndex, question, correctOption, userOpt
   };
 }
 
+function normalizeWrongAnswersRecord(record = {}, fallbackId = "") {
+  const wrongQuestions = Array.isArray(record?.wrongQuestions)
+    ? record.wrongQuestions.filter(Boolean)
+    : [];
+  const wrongCount = Number(record?.wrongCount);
+
+  return {
+    id: String(record?.id || fallbackId || record?.quizId || "").trim(),
+    userId: String(record?.userId || "").trim(),
+    quizId: String(record?.quizId || "").trim(),
+    wrongCount:
+      Number.isFinite(wrongCount) && wrongCount >= 0
+        ? Math.max(wrongQuestions.length, Math.floor(wrongCount))
+        : wrongQuestions.length,
+    wrongQuestions,
+    totalQuestions: Math.max(0, Math.floor(Number(record?.totalQuestions) || 0)),
+    correctAnswers: Math.max(0, Math.floor(Number(record?.correctAnswers) || 0)),
+    score: Math.max(0, Math.floor(Number(record?.score) || 0)),
+    createdAt: String(record?.createdAt || "").trim(),
+    updatedAt: String(record?.updatedAt || record?.createdAt || "").trim(),
+  };
+}
+
+async function getRecentWrongAnswersByUserId(userId) {
+  const normalizedUserId = String(userId || "").trim();
+
+  if (!normalizedUserId) {
+    return null;
+  }
+
+  const snapshot = await WRONG_ANSWERS_COLLECTION.doc(normalizedUserId).get();
+
+  if (!snapshot.exists) {
+    return null;
+  }
+
+  return normalizeWrongAnswersRecord(snapshot.data() || {}, snapshot.id);
+}
+
 async function getQuizById(quizId) {
   const normalizedQuizId = String(quizId || "").trim();
 
@@ -198,6 +237,7 @@ async function gradeQuizSubmission({ userId, quizId, answers }) {
       totalQuestions,
       correctAnswers,
       score,
+      wrongCount: wrongQuestions.length,
       wrongQuestions,
       createdAt,
       updatedAt: createdAt,
@@ -226,4 +266,6 @@ async function gradeQuizSubmission({ userId, quizId, answers }) {
 module.exports = {
   gradeQuizSubmission,
   getQuizById,
+  getRecentWrongAnswersByUserId,
+  normalizeWrongAnswersRecord,
 };

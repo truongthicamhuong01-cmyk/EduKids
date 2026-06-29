@@ -8462,21 +8462,39 @@ img.profile-skeleton {
   margin-bottom: 16px;
 }
 
+.home-strength-weakness-card {
+  padding: 20px;
+}
+
+.home-strength-weakness-card h3 {
+  margin-bottom: 10px;
+}
+
+.home-strength-weakness-card p {
+  margin: 0 0 8px;
+  line-height: 1.35;
+}
+
+.home-strength-weakness-card .skill-tags {
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .green-tag {
   background: #dcfce7;
   color: #166534;
-  padding: 6px 12px;
+  padding: 5px 10px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .red-tag {
   background: #fee2e2;
   color: #991b1b;
-  padding: 6px 12px;
+  padding: 5px 10px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 

@@ -1,6 +1,10 @@
 const crypto = require("crypto");
 const ApiError = require("../utils/apiError");
-const { getQuizById } = require("./quizGradeService");
+const { db } = require("../firebase");
+const {
+  getQuizById,
+  normalizeWrongAnswersRecord,
+} = require("./quizGradeService");
 const { awardExp, recordLearningActivity } = require("./progressService");
 const { grantReward } = require("./rewardService");
 const { recordUserTopicAccuracy } = require("./quizSelectionService");
@@ -12,6 +16,8 @@ const {
   runTransaction,
   updateBattleSessionById,
 } = require("../repositories/battleSessionRepository");
+
+const WRONG_ANSWERS_COLLECTION = db.collection("wrong_answers");
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -258,6 +264,64 @@ function buildAnswerRecord({
     combo,
     answeredAt: new Date().toISOString(),
   };
+}
+
+function buildBattleWrongAnswerRecord(questionIndex, question, answer) {
+  const options = Array.isArray(question?.options) ? question.options : [];
+  const selectedAnswer = normalizeAnswerLabel(answer?.selected);
+  const selectedOption =
+    options.find((option) => normalizeAnswerLabel(option?.label) === selectedAnswer) || null;
+  const correctOption = getCorrectOption(question);
+
+  return {
+    questionIndex,
+    question: String(question?.question || "").trim(),
+    correctAnswer: normalizeAnswerLabel(correctOption?.label),
+    userAnswer: selectedAnswer || null,
+    correctAnswerText: String(correctOption?.text || "").trim(),
+    userAnswerText: String(selectedOption?.text || "").trim(),
+  };
+}
+
+function buildBattleWrongAnswersRecord(session = {}, quiz = {}, summary = {}) {
+  const questions = Array.isArray(quiz?.questions) ? quiz.questions : [];
+  const answers = Array.isArray(session?.answers) ? session.answers : [];
+  const wrongQuestions = [];
+
+  answers.forEach((answer) => {
+    if (!answer || answer.correct !== false) {
+      return;
+    }
+
+    const questionIndex = Number(answer.questionIndex);
+
+    if (!Number.isInteger(questionIndex) || questionIndex < 0) {
+      return;
+    }
+
+    const question = questions[questionIndex] || null;
+    if (!question) {
+      return;
+    }
+
+    wrongQuestions.push(
+      buildBattleWrongAnswerRecord(questionIndex, question, answer),
+    );
+  });
+
+  return normalizeWrongAnswersRecord(
+    {
+      userId: String(session?.userId || "").trim(),
+      quizId: String(session?.quizId || "").trim(),
+      totalQuestions: questions.length,
+      correctAnswers: Math.max(0, Math.floor(Number(summary?.correctAnswers) || 0)),
+      score: Math.max(0, Math.floor(Number(summary?.accuracy) || 0)),
+      wrongQuestions,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    session?.userId || "",
+  );
 }
 
 function buildBattleSessionResponse(session) {
@@ -864,10 +928,20 @@ async function completeBattleSession({ sessionId, userId }) {
   });
   const topicResults = buildBossBattleTopicResults(currentSession, quiz);
   const topicId = String(currentSession.topicId || preparedSession.topicId || "").trim();
+  const recentWrongAnswers = buildBattleWrongAnswersRecord(
+    currentSession,
+    quiz,
+    rewardSummary,
+  );
 
   if (topicId) {
     await recordUserTopicAccuracy(normalizedUserId, topicId, topicResults);
   }
+
+  await WRONG_ANSWERS_COLLECTION.doc(normalizedUserId).set(
+    recentWrongAnswers,
+    { merge: true },
+  );
 
   const progressReceipt = await recordLearningActivity(normalizedUserId, {
     sourceType: "bossBattle",
@@ -912,7 +986,17 @@ async function completeBattleSession({ sessionId, userId }) {
     achievements: {
       unlocked: unlockedAchievements,
     },
-    profile: progressReceipt?.user || rewardUserBeforeGrant || null,
+    profile: progressReceipt?.user
+      ? {
+          ...progressReceipt.user,
+          recentWrongAnswers,
+        }
+      : rewardUserBeforeGrant
+        ? {
+            ...rewardUserBeforeGrant,
+            recentWrongAnswers,
+          }
+        : null,
   };
 }
 
