@@ -178,12 +178,48 @@ const adminStatsState = {
 };
 
 const SUBJECT_DEFINITIONS = [
-  { key: "math", label: "Toán", shortLabel: "Toán", iconClass: "math", iconLabel: "➗" },
-  { key: "english", label: "Tiếng Anh", shortLabel: "English", iconClass: "english", iconLabel: "ABC" },
-  { key: "vietnamese", label: "Tiếng Việt", shortLabel: "Tiếng Việt", iconClass: "subject-vietnamese", iconLabel: "TV" },
-  { key: "science", label: "Khoa học", shortLabel: "Khoa học", iconClass: "subject-science", iconLabel: "🔬" },
-  { key: "history", label: "Lịch sử", shortLabel: "Lịch sử", iconClass: "subject-history", iconLabel: "🏛" },
-  { key: "geography", label: "Địa lý", shortLabel: "Địa lý", iconClass: "subject-geography", iconLabel: "🗺" },
+  {
+    key: "math",
+    label: "Toán",
+    shortLabel: "Toán",
+    iconClass: "math",
+    iconLabel: "➗",
+  },
+  {
+    key: "english",
+    label: "Tiếng Anh",
+    shortLabel: "English",
+    iconClass: "english",
+    iconLabel: "ABC",
+  },
+  {
+    key: "vietnamese",
+    label: "Tiếng Việt",
+    shortLabel: "Tiếng Việt",
+    iconClass: "subject-vietnamese",
+    iconLabel: "TV",
+  },
+  {
+    key: "science",
+    label: "Khoa học",
+    shortLabel: "Khoa học",
+    iconClass: "subject-science",
+    iconLabel: "🔬",
+  },
+  {
+    key: "history",
+    label: "Lịch sử",
+    shortLabel: "Lịch sử",
+    iconClass: "subject-history",
+    iconLabel: "🏛",
+  },
+  {
+    key: "geography",
+    label: "Địa lý",
+    shortLabel: "Địa lý",
+    iconClass: "subject-geography",
+    iconLabel: "🗺",
+  },
 ];
 
 function getSubjectDefinition(subject) {
@@ -207,7 +243,9 @@ function getSubjectKey(subject) {
     return definition.key;
   }
 
-  return String(subject || "").trim().toLowerCase();
+  return String(subject || "")
+    .trim()
+    .toLowerCase();
 }
 
 function getSubjectLabel(subject) {
@@ -2348,7 +2386,7 @@ function buildAdminStatsViewModel(source, rangeKey = "week") {
       chartSeries.some((item) => Number(item.value) > 0) ||
       Boolean(
         SUBJECT_DEFINITIONS.some((subject) => topTopics[subject.key]) ||
-          topClasses.length > 0,
+        topClasses.length > 0,
       ),
   };
 }
@@ -2534,9 +2572,13 @@ function renderAdminStatsPage() {
     emptyDescription: viewModel.chartEmptyDescription,
   });
   SUBJECT_DEFINITIONS.forEach((subject) => {
-    renderAdminStatsTopic(subject.key, viewModel.topTopics?.[subject.key] || null, {
-      loading,
-    });
+    renderAdminStatsTopic(
+      subject.key,
+      viewModel.topTopics?.[subject.key] || null,
+      {
+        loading,
+      },
+    );
   });
   renderAdminStatsTable(viewModel.topClasses || [], { loading });
 }
@@ -6631,6 +6673,10 @@ function getStudentProgressStats(profile) {
   };
 }
 
+function getBossBattleProgressStats(profile) {
+  return getStudentProgressStats(profile);
+}
+
 function getStudentGrade(profile) {
   const className = normalizeQuizText(profile?.className);
   const classMatch = className.match(/(\d+)/);
@@ -7221,28 +7267,17 @@ function buildStudentHomeAssignments(assignments) {
   return selected.slice(0, 2);
 }
 
-function calculateRecentWrongAnswers(records) {
-  const logs = Array.isArray(records) ? records : [];
-  const sorted = [...logs]
-    .map((entry) => ({
-      ...entry,
-      time: getAssignmentSortTime(entry),
-    }))
-    .sort((left, right) => right.time - left.time);
+function getStudentRecentWrongCount(record) {
+  const wrongCount = Number(record?.wrongCount);
+  const wrongQuestions = Array.isArray(record?.wrongQuestions)
+    ? record.wrongQuestions
+    : [];
 
-  for (const entry of sorted) {
-    const wrongCount = Number(entry?.wrongCount ?? entry?.wrongAnswersCount);
-
-    if (Number.isFinite(wrongCount) && wrongCount > 0) {
-      return {
-        recentWrongCount: wrongCount,
-      };
-    }
+  if (Number.isFinite(wrongCount) && wrongCount >= 0) {
+    return Math.max(0, Math.floor(wrongCount));
   }
 
-  return {
-    recentWrongCount: 0,
-  };
+  return wrongQuestions.length;
 }
 
 function renderStudentRecentWrongAnswers(progress) {
@@ -7270,10 +7305,13 @@ function renderStudentRecentWrongAnswers(progress) {
 
   if (button) {
     button.setAttribute("type", "button");
-    button.setAttribute("data-retry-later", "true");
+    button.setAttribute("data-action", "student-home-review-wrong");
+    button.toggleAttribute("disabled", recentWrongCount <= 0);
     button.setAttribute(
       "title",
-      "Chức năng luyện lại sẽ được hoàn thiện ở giai đoạn sau",
+      recentWrongCount > 0
+        ? "Mở Boss Battle để luyện lại các câu sai gần nhất"
+        : "Không có câu sai gần đây để luyện",
     );
   }
 }
@@ -7309,34 +7347,6 @@ async function fetchStudentRecentWrongAnswers(profile) {
     };
   }
 
-  const records = [];
-
-  try {
-    const assignmentSnapshot = await firestore
-      .collection("assignment_submissions")
-      .where("studentId", "==", studentId)
-      .get();
-
-    assignmentSnapshot.docs.forEach((doc) => {
-      const data = doc.data() || {};
-      records.push({
-        id: doc.id,
-        wrongCount: Number(data.wrongCount) || 0,
-        submittedAt:
-          data.submittedAt ||
-          data.gradedAt ||
-          data.updatedAt ||
-          data.createdAt ||
-          "",
-      });
-    });
-  } catch (error) {
-    console.warn(
-      "Không thể tải lịch sử bài làm để tính câu sai gần đây:",
-      error,
-    );
-  }
-
   try {
     const wrongSnapshot = await firestore
       .collection("wrong_answers")
@@ -7345,21 +7355,37 @@ async function fetchStudentRecentWrongAnswers(profile) {
 
     if (wrongSnapshot.exists) {
       const data = wrongSnapshot.data() || {};
-      records.push({
+      const result = {
         id: wrongSnapshot.id,
-        wrongCount: Array.isArray(data.wrongQuestions)
-          ? data.wrongQuestions.length
-          : Number(data.wrongCount) || 0,
+        quizId: String(data.quizId || "").trim(),
+        wrongCount: getStudentRecentWrongCount(data),
+        wrongQuestions: Array.isArray(data.wrongQuestions)
+          ? data.wrongQuestions
+          : [],
+        totalQuestions: Number(data.totalQuestions) || 0,
+        correctAnswers: Number(data.correctAnswers) || 0,
+        score: Number(data.score) || 0,
         submittedAt: data.updatedAt || data.createdAt || "",
-      });
+        updatedAt: data.updatedAt || data.createdAt || "",
+      };
+
+      studentRecentWrongAnswersCache.set(cacheKey, result);
+      return result;
     }
   } catch (error) {
     console.warn("Không thể tải wrong_answers để tính câu sai gần đây:", error);
   }
 
-  const result = calculateRecentWrongAnswers(records);
-  studentRecentWrongAnswersCache.set(cacheKey, result);
-  return result;
+  const fallback = {
+    recentWrongCount: 0,
+    wrongCount: 0,
+    wrongQuestions: [],
+    quizId: "",
+    updatedAt: "",
+  };
+
+  studentRecentWrongAnswersCache.set(cacheKey, fallback);
+  return fallback;
 }
 
 async function syncStudentRecentWrongAnswers(profile) {
@@ -7368,7 +7394,10 @@ async function syncStudentRecentWrongAnswers(profile) {
   }
 
   const result = await fetchStudentRecentWrongAnswers(profile);
-  renderStudentRecentWrongAnswers(result);
+  renderStudentRecentWrongAnswers({
+    ...result,
+    recentWrongCount: Number(result?.wrongCount ?? result?.recentWrongCount) || 0,
+  });
 }
 
 function renderStudentHomeAssignments(assignments) {
@@ -7627,7 +7656,8 @@ async function handleAICoachAnalyze() {
 async function openAICoachPracticeTopic(topicId, grade, subject) {
   const normalizedTopicId = normalizeQuizText(topicId);
   const normalizedGrade = normalizeQuizText(grade);
-  const normalizedSubject = getSubjectKey(subject) || STUDENT_QUIZ_DEFAULTS.subject;
+  const normalizedSubject =
+    getSubjectKey(subject) || STUDENT_QUIZ_DEFAULTS.subject;
 
   if (!isAiTopicLearningEnabled()) {
     showToast("AI Học theo chủ đề hiện đang tắt trong hệ thống.", "error");
@@ -8138,6 +8168,7 @@ function applyLatestCurrentUser(profile) {
 
   bootstrapState.currentUser = normalizedProfile;
   window.EduKidsCurrentUser = normalizedProfile;
+  studentRecentWrongAnswersCache.clear();
   saveAuthSession(
     normalizedProfile,
     localStorage.getItem("authToken") || localStorage.getItem("token"),
@@ -8152,6 +8183,7 @@ function applyLatestCurrentUser(profile) {
   if (typeof syncLearningPathWalletFromProfile === "function") {
     syncLearningPathWalletFromProfile(normalizedProfile);
   }
+  void syncStudentRecentWrongAnswers(normalizedProfile);
 }
 
 function syncPetWalletFromProfile(profile) {
@@ -9415,8 +9447,10 @@ function normalizeStudentQuizSelection(
   grade = studentQuizState.grade,
   subject = studentQuizState.subject,
 ) {
-  const normalizedGrade = normalizeQuizText(grade) || STUDENT_QUIZ_DEFAULTS.grade;
-  const normalizedSubject = getSubjectKey(subject) || STUDENT_QUIZ_DEFAULTS.subject;
+  const normalizedGrade =
+    normalizeQuizText(grade) || STUDENT_QUIZ_DEFAULTS.grade;
+  const normalizedSubject =
+    getSubjectKey(subject) || STUDENT_QUIZ_DEFAULTS.subject;
   const gradeOptions = getStudentQuizGradeOptions(normalizedSubject);
   const subjectOptions = getStudentQuizSubjectOptions(normalizedGrade);
   let nextGrade = normalizedGrade;
@@ -9600,6 +9634,21 @@ function isBossBattleTerminalStatus(value) {
     normalized === "defeat" ||
     normalized === "completed"
   );
+}
+
+function resolveBossBattleStatus(nextStatus, previousStatus = "") {
+  const normalizedNextStatus = normalizeBossBattleStatus(nextStatus);
+
+  if (isBossBattleTerminalStatus(normalizedNextStatus)) {
+    return normalizedNextStatus;
+  }
+
+  const normalizedPreviousStatus = normalizeBossBattleStatus(previousStatus);
+  if (isBossBattleTerminalStatus(normalizedPreviousStatus)) {
+    return normalizedPreviousStatus;
+  }
+
+  return normalizedNextStatus;
 }
 
 function getBossBattleStateFromHP(hp) {
@@ -10550,6 +10599,21 @@ function getBossBattleRewardPreviewSummary() {
 }
 
 function normalizeBossBattleRewardSummary(summary = {}) {
+  const totalExpValue = Number(
+    summary?.totalXP ??
+      summary?.rewardXP ??
+      summary?.userExpAfter ??
+      summary?.xpAwarded ??
+      0,
+  );
+  const totalCoinValue = Number(
+    summary?.totalCoin ??
+      summary?.rewardCoin ??
+      summary?.userCoinAfter ??
+      summary?.coinAwarded ??
+      0,
+  );
+
   const normalized = {
     score: Math.max(
       0,
@@ -10585,14 +10649,8 @@ function normalizeBossBattleRewardSummary(summary = {}) {
     rankBonusCoin: Math.max(0, Math.floor(Number(summary?.rankBonusCoin) || 0)),
     victory: Boolean(summary?.victory),
     maxCombo: Math.max(0, Math.floor(Number(summary?.maxCombo) || 0)),
-    totalXP: Math.max(
-      0,
-      Math.floor(Number(summary?.totalXP ?? summary?.rewardXP) || 0),
-    ),
-    totalCoin: Math.max(
-      0,
-      Math.floor(Number(summary?.totalCoin ?? summary?.rewardCoin) || 0),
-    ),
+    totalXP: Math.max(0, Math.floor(totalExpValue || 0)),
+    totalCoin: Math.max(0, Math.floor(totalCoinValue || 0)),
   };
 
   normalized.rewardXP = normalized.totalXP;
@@ -10692,8 +10750,9 @@ async function syncBossBattleRewardWithBackend() {
       bossBattleState.sessionId = normalizeQuizText(
         session.sessionId || session.id || sessionId,
       );
-      bossBattleState.battleStatus = normalizeBossBattleStatus(
-        session.status || bossBattleState.battleStatus,
+      bossBattleState.battleStatus = resolveBossBattleStatus(
+        session.status || session.battleStatus,
+        bossBattleState.battleStatus,
       );
     }
 
@@ -10981,7 +11040,7 @@ function getBossBattlePopupMode(status, bossHP = bossBattleState.bossHP) {
 
 function getBossBattleHintCountLabel(value) {
   const hintCount = Math.max(0, Math.floor(Number(value) || 0));
-  return `Hint x${hintCount}`;
+  return `Gợi ý x${hintCount}`;
 }
 
 function getBossBattleHiddenOptionSet() {
@@ -11347,6 +11406,136 @@ function showBossBattleWrongAnswerReview() {
   bossBattleReviewMode.reviewedCount = 0;
   bossBattleReviewMode.correctCount = 0;
   bossBattleReviewMode.completedVisible = wrongQuestions.length === 0;
+  renderStudentQuizFlow();
+  scrollToElement("student-boss-battle-screen");
+}
+
+function parseBossBattleQuizId(quizId) {
+  const normalizedQuizId = normalizeQuizText(quizId);
+  const separatorIndex = normalizedQuizId.lastIndexOf("::");
+
+  if (separatorIndex < 0) {
+    return {
+      parentId: normalizedQuizId,
+      versionId: "",
+    };
+  }
+
+  return {
+    parentId: normalizedQuizId.slice(0, separatorIndex),
+    versionId: normalizedQuizId.slice(separatorIndex + 2),
+  };
+}
+
+async function fetchQuizDataForBossBattleReview(quizId) {
+  const firestore = getFirestoreInstance();
+  const normalizedQuizId = normalizeQuizText(quizId);
+
+  if (!firestore || !normalizedQuizId) {
+    return null;
+  }
+
+  const directSnapshot = await firestore
+    .collection("quizzes")
+    .doc(normalizedQuizId)
+    .get();
+
+  if (directSnapshot.exists) {
+    return {
+      id: directSnapshot.id,
+      ...(directSnapshot.data() || {}),
+    };
+  }
+
+  const parsedQuizId = parseBossBattleQuizId(normalizedQuizId);
+
+  if (!parsedQuizId.parentId) {
+    return null;
+  }
+
+  const parentSnapshot = await firestore
+    .collection("quizzes")
+    .doc(parsedQuizId.parentId)
+    .get();
+
+  if (parentSnapshot.exists) {
+    return {
+      id: parentSnapshot.id,
+      ...(parentSnapshot.data() || {}),
+    };
+  }
+
+  if (!parsedQuizId.versionId) {
+    return null;
+  }
+
+  const versionSnapshot = await firestore
+    .collection("quizzes")
+    .doc(parsedQuizId.parentId)
+    .collection("versions")
+    .doc(parsedQuizId.versionId)
+    .get();
+
+  if (!versionSnapshot.exists) {
+    return null;
+  }
+
+  const versionData = versionSnapshot.data() || {};
+
+  return {
+    id: versionSnapshot.id,
+    ...(versionData.data || versionData.quizData || {}),
+  };
+}
+
+async function openStudentHomeWrongAnswerReview() {
+  const profile = getCurrentAuthUser();
+  const recentWrongAnswers = await fetchStudentRecentWrongAnswers(profile);
+  const wrongQuestions = Array.isArray(recentWrongAnswers?.wrongQuestions)
+    ? recentWrongAnswers.wrongQuestions
+    : [];
+  const quizId = normalizeQuizText(recentWrongAnswers?.quizId);
+
+  if (wrongQuestions.length === 0 || !quizId) {
+    showToast("Không có câu sai gần đây để luyện.", "error");
+    return;
+  }
+
+  const quizData = await fetchQuizDataForBossBattleReview(quizId);
+
+  if (!quizData || !Array.isArray(quizData.questions) || quizData.questions.length === 0) {
+    showToast("Không thể mở lại bộ câu hỏi gần nhất.", "error");
+    return;
+  }
+
+  const reviewQuestions = buildBossBattleWrongReviewQuestionsFromStoredData(
+    quizData.questions,
+    wrongQuestions,
+  );
+
+  if (reviewQuestions.length === 0) {
+    showToast("Không có câu sai để luyện lại.", "error");
+    return;
+  }
+
+  closeBossBattlePopup();
+  closeBossBattleAchievementPopup();
+  clearBossBattleRecoveryStorageState();
+  resetBossBattleState(0);
+  setStudentQuizScreen("bossBattle");
+  studentQuizState.quiz = quizData;
+  bossBattleReviewMode.active = true;
+  bossBattleReviewMode.wrongQuestions = reviewQuestions;
+  bossBattleReviewMode.currentQuestionIndex = 0;
+  bossBattleReviewMode.selectedAnswer = "";
+  bossBattleReviewMode.answerPhase = "idle";
+  bossBattleReviewMode.locked = false;
+  bossBattleReviewMode.reviewedCount = 0;
+  bossBattleReviewMode.correctCount = 0;
+  bossBattleReviewMode.completedVisible = false;
+  bossBattleReviewMode.revealedQuestion = null;
+  bossBattleReviewMode.revealedCorrectAnswer = "";
+  bossBattleReviewMode.revealedCorrect = null;
   renderStudentQuizFlow();
   scrollToElement("student-boss-battle-screen");
 }
@@ -11935,12 +12124,14 @@ function applyBossBattleSessionResponse(payload = {}) {
   bossBattleState.playerHP = playerHP;
   bossBattleState.combo = combo;
   bossBattleState.bossState = bossState;
-  bossBattleState.battleStatus =
+  bossBattleState.battleStatus = resolveBossBattleStatus(
+    battleStatus,
     bossBattleState.terminalLocked &&
-    battleStatus === "active" &&
-    isBossBattleTerminalStatus(currentBattleStatus)
+      battleStatus === "active" &&
+      isBossBattleTerminalStatus(currentBattleStatus)
       ? currentBattleStatus
-      : battleStatus;
+      : bossBattleState.battleStatus,
+  );
   bossBattleState.loadingSession = false;
   bossBattleState.answering = false;
   bossBattleState.hintLoading = false;
@@ -12470,16 +12661,22 @@ function renderStudentQuizScreen() {
   );
   const bossHP = Math.max(0, Math.floor(Number(bossBattleState.bossHP) || 0));
   const bossHpPercent = Math.max(0, Math.min(100, bossHP));
+  const profileProgress = getBossBattleProgressStats(profile);
   const profileCoins = getBossBattleCoins(profile);
-  const profileExp = getBossBattleExp(profile);
   const rewardSummary = getBossBattleRewardDisplaySummary();
+  const displayedRewardRawXP = Number.isFinite(
+    Number(bossBattleRewardCounterState.displayXP),
+  )
+    ? Number(bossBattleRewardCounterState.displayXP)
+    : Number(profileProgress.exp || 0);
+  const displayedRewardProgress = calculateLevel(displayedRewardRawXP);
   const displayedRewardXP = Math.max(
     0,
-    Math.round(
-      Number.isFinite(Number(bossBattleRewardCounterState.displayXP))
-        ? Number(bossBattleRewardCounterState.displayXP)
-        : profileExp,
-    ),
+    Math.round(displayedRewardProgress.currentExp),
+  );
+  const displayedRewardRequiredExp = Math.max(
+    1,
+    Math.round(displayedRewardProgress.requiredExp),
   );
   const displayedRewardCoin = Math.max(
     0,
@@ -12714,9 +12911,9 @@ function renderStudentQuizScreen() {
             <span>XP</span>
           </div>
           <div class="boss-battle-sidebar__progress">
-            <div class="boss-battle-sidebar__progress-fill" style="width: ${escapeHtml(String(Math.min(100, displayedRewardXP > 0 ? displayedRewardXP % 100 || 60 : 60)))}%"></div>
+            <div class="boss-battle-sidebar__progress-fill" style="width: ${escapeHtml(String(Math.max(0, Math.min(100, (displayedRewardXP / displayedRewardRequiredExp) * 100))))}%"></div>
           </div>
-          <strong><span data-boss-reward-xp-counter>${escapeHtml(String(displayedRewardXP))}</span> / 100</strong>
+          <strong><span data-boss-reward-xp-counter>${escapeHtml(String(displayedRewardXP))}</span> / ${escapeHtml(String(displayedRewardRequiredExp))}</strong>
         </div>
 
         <div class="boss-battle-sidebar__metric">
@@ -13081,6 +13278,63 @@ function renderStudentQuizScreen() {
   refreshBossBattleVisualLayer();
 }
 
+function buildBossBattleWrongReviewQuestionsFromStoredData(
+  quizQuestions = [],
+  wrongQuestions = [],
+) {
+  const questions = Array.isArray(quizQuestions) ? quizQuestions : [];
+  const wrongEntries = Array.isArray(wrongQuestions) ? wrongQuestions : [];
+
+  return wrongEntries
+    .map((entry) => {
+      const questionIndex = Math.max(0, Number(entry?.questionIndex) || 0);
+      const question = questions[questionIndex] || null;
+      const options = Array.isArray(question?.options)
+        ? question.options.map((option, optionIndex) => ({
+            index: optionIndex,
+            label: normalizeQuizText(option?.label).toUpperCase(),
+            text: normalizeQuizText(option?.text || option?.label),
+            correct: Boolean(option?.correct),
+          }))
+        : [];
+      const selectedAnswer = normalizeQuizText(
+        entry?.userAnswer || entry?.selected || "",
+      ).toUpperCase();
+      const selectedOption =
+        options.find((option) => option.label === selectedAnswer) || null;
+      const correctOption =
+        options.find((option) => option.correct === true) || null;
+      const correctAnswer = normalizeQuizText(
+        entry?.correctAnswer || correctOption?.label,
+      ).toUpperCase();
+
+      return {
+        questionIndex,
+        question:
+          normalizeQuizText(question?.question) ||
+          normalizeQuizText(entry?.question) ||
+          `Câu ${questionIndex + 1}`,
+        options,
+        userAnswer: selectedAnswer,
+        userAnswerText: normalizeQuizText(
+          entry?.userAnswerText ||
+            selectedOption?.text ||
+            selectedOption?.label ||
+            entry?.selected ||
+            "",
+        ),
+        correctAnswer,
+        correctAnswerText: normalizeQuizText(
+          entry?.correctAnswerText ||
+            correctOption?.text ||
+            correctOption?.label ||
+            "",
+        ),
+      };
+    })
+    .filter((item) => Boolean(item.question));
+}
+
 function renderStudentResultScreen() {
   const screen = getStudentResultScreen();
 
@@ -13344,7 +13598,8 @@ async function loadStudentQuizByTopic(topicId, options = {}) {
     studentQuizState.answers = [];
     resetBossBattleState(questionCount);
     const restored =
-      !forceFreshBattle && (await restoreBossBattleSessionFromStorage(quizData));
+      !forceFreshBattle &&
+      (await restoreBossBattleSessionFromStorage(quizData));
     if (!restored) {
       if (forceFreshBattle) {
         clearBossBattleRecoveryStorageState();
@@ -13574,6 +13829,7 @@ document.addEventListener("click", (event) => {
       action === "boss-review-back-topic" ||
       action === "boss-review-retry" ||
       action === "show-wrong-review" ||
+      action === "student-home-review-wrong" ||
       action === "boss-achievement-close";
 
     if (shouldPlayClick) {
@@ -13692,6 +13948,13 @@ document.addEventListener("click", (event) => {
 
     if (action === "show-wrong-review") {
       showStudentWrongAnswerReview();
+      return;
+    }
+
+    if (action === "student-home-review-wrong") {
+      void openStudentHomeWrongAnswerReview().catch((error) => {
+        showToast(error?.message || "Không thể mở luyện lỗi sai.", "error");
+      });
       return;
     }
 
@@ -19005,7 +19268,8 @@ function getAssignmentAiTopicsKey() {
 }
 
 async function loadAssignmentAiTopics({ force = false } = {}) {
-  const subject = normalizeSubjectLabel(manualAssignmentState.subject || "") || "math";
+  const subject =
+    normalizeSubjectLabel(manualAssignmentState.subject || "") || "math";
   const grade = String(assignmentAiState.grade || "4").trim() || "4";
   const topicsKey = `${grade}:${subject}`;
 

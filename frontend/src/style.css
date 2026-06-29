@@ -94,7 +94,7 @@ body.auth-mode .app {
   width: 256px;
   background: #fff;
   border-right: 1px solid var(--border);
-  padding: 22px;
+  padding: 16px 16px 22px;
 
   position: fixed;
   top: 0;
@@ -104,6 +104,24 @@ body.auth-mode .app {
 
   display: flex;
   flex-direction: column;
+}
+
+.sidebar:not(.admin-sidebar) .sidebar-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0 8px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.sidebar:not(.admin-sidebar) .sidebar-brand-image {
+  display: block;
+  width: min(100%, 232px);
+  max-width: 232px;
+  height: auto;
+  object-fit: contain;
+  flex: none;
 }
 
 .sidebar-brand {
@@ -494,6 +512,19 @@ body.auth-mode .app {
 .sidebar[data-sidebar-collapsed="true"] .sidebar-brand,
 .sidebar[aria-collapsed="true"] .sidebar-brand {
   justify-content: center;
+}
+
+.sidebar:not(.admin-sidebar).is-collapsed .sidebar-brand,
+.sidebar:not(.admin-sidebar)[data-sidebar-collapsed="true"] .sidebar-brand,
+.sidebar:not(.admin-sidebar)[aria-collapsed="true"] .sidebar-brand {
+  padding-top: 4px;
+  padding-bottom: 6px;
+}
+
+.sidebar:not(.admin-sidebar).is-collapsed .sidebar-brand-image,
+.sidebar:not(.admin-sidebar)[data-sidebar-collapsed="true"] .sidebar-brand-image,
+.sidebar:not(.admin-sidebar)[aria-collapsed="true"] .sidebar-brand-image {
+  width: min(70%, 180px);
 }
 
 @keyframes sidebarShimmer {
@@ -4133,7 +4164,7 @@ textarea {
   align-self: flex-start;
   min-width: 188px;
   padding: 16px 22px;
-  transform: translateY(20px);
+  transform: translateY(25px);
   border-radius: 28px 28px 28px 10px;
   background: rgba(255, 255, 255, 0.97);
   border: 1px solid rgba(244, 215, 160, 0.8);
@@ -4521,7 +4552,7 @@ textarea {
 .boss-battle-question-card__text {
   margin: 0;
   padding: 0 20px;
-  font-size: clamp(calc(1.6rem - 9px), calc(3.7vw - 9px), calc(3.3rem - 9px));
+  font-size: clamp(calc(1.6rem - 13px), calc(3.7vw - 13px), calc(3.3rem - 13px));
   line-height: 1.06;
   text-align: center;
   color: #232f6c;
@@ -4600,7 +4631,7 @@ textarea {
 }
 
 .boss-battle-answer-card__text {
-  font-size: clamp(calc(1.45rem - 8px), calc(2.7vw - 8px), calc(2.8rem - 8px));
+  font-size: clamp(calc(1.45rem - 10px), calc(2.7vw - 10px), calc(2.8rem - 10px));
   line-height: 1.02;
   font-weight: 900;
   letter-spacing: -0.03em;
@@ -6005,6 +6036,7 @@ textarea {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+  align-items: stretch;
 }
 
 #profile .student-profile-panel {
@@ -6013,6 +6045,16 @@ textarea {
   border-radius: 18px;
   padding: 18px 20px;
   box-shadow: 0 10px 26px rgba(43, 55, 90, 0.06);
+}
+
+#profile .student-profile-grid > .student-profile-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#profile .student-profile-grid > .student-profile-panel:nth-child(2) {
+  overflow: hidden;
 }
 
 #profile .student-profile-panel h3 {
@@ -6059,8 +6101,11 @@ textarea {
 }
 
 #profile .student-profile-badge-shell {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+  flex: 1;
+  min-height: 0;
 }
 
 #profile .student-profile-badge-grid {
@@ -6071,7 +6116,9 @@ textarea {
   gap: 12px;
   align-items: stretch;
   align-content: start;
-  max-height: min(60vh, 540px);
+  flex: 1;
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 2px 4px 8px 2px;
@@ -6107,6 +6154,7 @@ textarea {
   border: 1px solid #edf1f6;
   border-radius: 18px;
   text-align: center;
+  flex: 1;
 }
 
 #profile .student-profile-badge-empty-icon {
@@ -16675,7 +16723,7 @@ body.admin-content-drawer-open {
 
   .boss-battle-question-card__text {
     padding: 0;
-    font-size: clamp(calc(1.35rem - 9px), calc(7.2vw - 9px), calc(2.2rem - 9px));
+    font-size: clamp(calc(1.35rem - 13px), calc(7.2vw - 13px), calc(2.2rem - 13px));
   }
 
   .boss-battle-answer-grid {

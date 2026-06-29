@@ -8,7 +8,7 @@ const {
   saveInventoryTransaction,
 } = require("../repositories/inventoryRepository");
 const { getUserById, updateUserById } = require("../repositories/userRepository");
-const { getPetState, runTransaction } = require("../repositories/petRepository");
+const { getPetState, runTransaction, savePetState } = require("../repositories/petRepository");
 const { addItemToInventory, buildInventorySummary, flattenInventoryState } = require("./inventoryService");
 const { normalizeCategoryKey } = require("../repositories/inventoryRepository");
 const { toNumber } = require("./petMathService");
