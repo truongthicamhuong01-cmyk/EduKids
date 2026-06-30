@@ -8303,15 +8303,28 @@ function getExplicitEduCoinValue(profile) {
   const stats = profile?.stats;
 
   if (!stats || typeof stats !== "object") {
-    return null;
+    const legacyTopLevelCoin = Number(profile?.eduCoin ?? profile?.eduCoins);
+    return Number.isFinite(legacyTopLevelCoin)
+      ? Math.max(0, Math.floor(legacyTopLevelCoin))
+      : null;
   }
 
   if (!Object.prototype.hasOwnProperty.call(stats, "eduCoin")) {
-    return null;
+    const legacyTopLevelCoin = Number(profile?.eduCoin ?? profile?.eduCoins);
+    return Number.isFinite(legacyTopLevelCoin)
+      ? Math.max(0, Math.floor(legacyTopLevelCoin))
+      : null;
   }
 
   const value = Number(stats.eduCoin);
-  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : null;
+  if (Number.isFinite(value)) {
+    return Math.max(0, Math.floor(value));
+  }
+
+  const legacyTopLevelCoin = Number(profile?.eduCoin ?? profile?.eduCoins);
+  return Number.isFinite(legacyTopLevelCoin)
+    ? Math.max(0, Math.floor(legacyTopLevelCoin))
+    : null;
 }
 
 function syncPetWalletFromProfile(profile) {

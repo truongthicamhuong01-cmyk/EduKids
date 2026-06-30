@@ -536,19 +536,28 @@ function getExplicitEduCoinValue(source) {
   const stats = source?.stats;
 
   if (!stats || typeof stats !== "object") {
-    return null;
+    const legacyTopLevelCoin = Number(source?.eduCoin ?? source?.eduCoins);
+    return Number.isFinite(legacyTopLevelCoin)
+      ? Math.max(0, Math.floor(legacyTopLevelCoin))
+      : null;
   }
 
   if (!Object.prototype.hasOwnProperty.call(stats, "eduCoin")) {
-    return null;
+    const legacyTopLevelCoin = Number(source?.eduCoin ?? source?.eduCoins);
+    return Number.isFinite(legacyTopLevelCoin)
+      ? Math.max(0, Math.floor(legacyTopLevelCoin))
+      : null;
   }
 
   const coinValue = Number(stats.eduCoin);
-  if (!Number.isFinite(coinValue)) {
-    return null;
+  if (Number.isFinite(coinValue)) {
+    return Math.max(0, Math.floor(coinValue));
   }
 
-  return Math.max(0, Math.floor(coinValue));
+  const legacyTopLevelCoin = Number(source?.eduCoin ?? source?.eduCoins);
+  return Number.isFinite(legacyTopLevelCoin)
+    ? Math.max(0, Math.floor(legacyTopLevelCoin))
+    : null;
 }
 
 function getLearningPathCoinValue(state) {
@@ -1086,7 +1095,20 @@ function syncLearningPathWalletFromProfile(profile) {
 }
 
 function syncAppWalletFromLearningPath(wallet) {
-  const eduCoin = Math.max(0, Math.floor(Number(wallet?.eduCoin || 0)));
+  if (
+    !wallet ||
+    typeof wallet !== "object" ||
+    !Object.prototype.hasOwnProperty.call(wallet, "eduCoin")
+  ) {
+    return;
+  }
+
+  const rawEduCoin = Number(wallet.eduCoin);
+  if (!Number.isFinite(rawEduCoin)) {
+    return;
+  }
+
+  const eduCoin = Math.max(0, Math.floor(rawEduCoin));
   uiState.lastKnownCoinValue = eduCoin;
   const currentUser = getOfficialCurrentUser();
 

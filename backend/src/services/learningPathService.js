@@ -106,11 +106,18 @@ function buildLearningPathResponse(state, events = [], wallet = null) {
   const sanitizedState = sanitizeLearningPathState(state);
   console.log("[LP_BACKEND_STATE]", sanitizedState);
 
+  const resolvedWalletCoin = [
+    wallet?.eduCoin,
+    wallet?.eduCoins,
+    sanitizedState?.wallet?.eduCoin,
+    sanitizedState?.wallet?.eduCoins,
+  ].find((value) => Number.isFinite(Number(value)));
+
   return {
     state: {
       ...sanitizedState,
       wallet: {
-        eduCoin: Math.max(0, Number(wallet?.eduCoin ?? sanitizedState?.wallet?.eduCoin ?? 0)),
+        eduCoin: Math.max(0, Math.floor(Number(resolvedWalletCoin ?? 0))),
       },
     },
     events: Array.isArray(events) ? events : [],
@@ -303,7 +310,16 @@ async function loadLearningPathFacts(userId) {
     assignmentCountToday,
     coachCountToday,
     wallet: {
-      eduCoin: Math.max(0, Number(profile?.stats?.eduCoin || 0)),
+      eduCoin: Math.max(
+        0,
+        Number(
+          profile?.stats?.eduCoin ??
+            profile?.stats?.eduCoins ??
+            profile?.eduCoin ??
+            profile?.eduCoins ??
+            0,
+        ),
+      ),
     },
   };
 }

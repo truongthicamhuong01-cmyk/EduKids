@@ -98,6 +98,24 @@ import { API_BASE_URL } from "../config.js";
     }
 
     const stats = profile.stats && typeof profile.stats === "object" ? { ...profile.stats } : {};
+    if (
+      !Object.prototype.hasOwnProperty.call(stats, "eduCoin") &&
+      Object.prototype.hasOwnProperty.call(profile, "eduCoin")
+    ) {
+      stats.eduCoin = profile.eduCoin;
+    }
+
+    if (
+      !Object.prototype.hasOwnProperty.call(stats, "eduCoin") &&
+      Object.prototype.hasOwnProperty.call(profile, "eduCoins")
+    ) {
+      stats.eduCoin = profile.eduCoins;
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(stats, "eduCoins") && Object.prototype.hasOwnProperty.call(stats, "eduCoin")) {
+      stats.eduCoins = stats.eduCoin;
+    }
+
     const classTags = Array.isArray(profile.classTags) ? profile.classTags : [];
     const classTagNames = Array.isArray(profile.classTagNames) ? profile.classTagNames : [];
 

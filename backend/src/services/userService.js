@@ -45,6 +45,8 @@ function getDefaultStats(role) {
 
 function normalizeStats(role, stats = {}) {
   const defaultStats = getDefaultStats(role);
+  const hasEduCoin = Object.prototype.hasOwnProperty.call(stats || {}, "eduCoin");
+  const hasLegacyEduCoins = Object.prototype.hasOwnProperty.call(stats || {}, "eduCoins");
 
   if (!stats || typeof stats !== "object" || Object.keys(stats).length === 0) {
     return defaultStats;
@@ -53,6 +55,14 @@ function normalizeStats(role, stats = {}) {
   const normalized = {
     ...stats,
   };
+
+  if (!hasEduCoin && hasLegacyEduCoins) {
+    normalized.eduCoin = stats.eduCoins;
+  }
+
+  if (hasEduCoin && !Object.prototype.hasOwnProperty.call(normalized, "eduCoins")) {
+    normalized.eduCoins = stats.eduCoin;
+  }
 
   Object.keys(defaultStats).forEach((key) => {
     if (!Object.prototype.hasOwnProperty.call(normalized, key) || normalized[key] === undefined || normalized[key] === null) {
@@ -110,6 +120,23 @@ function mapUserDoc(doc) {
   }
 
   const data = doc.data() || {};
+  const statsSource =
+    data.stats && typeof data.stats === "object" ? { ...data.stats } : {};
+
+  if (
+    !Object.prototype.hasOwnProperty.call(statsSource, "eduCoin") &&
+    Object.prototype.hasOwnProperty.call(data, "eduCoin")
+  ) {
+    statsSource.eduCoin = data.eduCoin;
+  }
+
+  if (
+    !Object.prototype.hasOwnProperty.call(statsSource, "eduCoin") &&
+    Object.prototype.hasOwnProperty.call(data, "eduCoins")
+  ) {
+    statsSource.eduCoin = data.eduCoins;
+  }
+
   const joinedClasses = Array.isArray(data.joinedClasses) ? data.joinedClasses : [];
   const classIds = Array.isArray(data.classIds) ? data.classIds : [];
   const resolvedClassIds = Array.from(
@@ -137,7 +164,7 @@ function mapUserDoc(doc) {
     phone: data.phone || "",
     address: data.address || "",
     note: data.note || "",
-    stats: normalizeStats(data.role, data.stats),
+    stats: normalizeStats(data.role, statsSource),
     rewards: data.rewards && typeof data.rewards === "object" ? data.rewards : { badges: [] },
     subjects: Array.isArray(data.subjects) ? data.subjects : getDefaultSubjects(data.role),
     classTags: Array.isArray(data.classTags) ? data.classTags : [],
