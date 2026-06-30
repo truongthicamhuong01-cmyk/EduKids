@@ -11,6 +11,5 @@ firebase deploy --only hosting
 
 todo:
 Chuẩn bị topic 3 câu, learning path
-
-Fix lỗi Responsive
+Đổi link wiki
 ```

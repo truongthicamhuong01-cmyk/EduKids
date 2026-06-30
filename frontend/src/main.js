@@ -783,6 +783,9 @@ function applyRoleVisibility(role = getCurrentRole()) {
     return;
   }
 
+  document.body.classList.toggle("student-mode", normalizedRole === "student");
+  document.body.classList.toggle("teacher-mode", normalizedRole === "teacher");
+
   const allowedPages = ROLE_ALLOWED_PAGES[normalizedRole];
   const showStudentCard = normalizedRole === "student";
   const showTeacherCard = normalizedRole === "teacher";
@@ -24717,6 +24720,16 @@ function bindAppEventsOnce() {
 
     hidePetModulePages();
     changePage(previousPage);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") {
+      return;
+    }
+
+    if (document.body.classList.contains("sidebar-open")) {
+      closeSidebar();
+    }
   });
 
   bootstrapState.appBound = true;
