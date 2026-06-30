@@ -15968,6 +15968,41 @@ body.admin-content-drawer-open {
     padding: 16px;
   }
 
+  #subjects .quiz-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "load load"
+      "grade subject";
+    gap: 12px;
+    padding: 14px;
+  }
+
+  #subjects .quiz-toolbar .quiz-filter {
+    min-width: 0;
+  }
+
+  #subjects .quiz-toolbar .quiz-filter:nth-of-type(1) {
+    grid-area: grade;
+  }
+
+  #subjects .quiz-toolbar .quiz-filter:nth-of-type(2) {
+    grid-area: subject;
+  }
+
+  #subjects .quiz-toolbar .quiz-load-btn {
+    grid-area: load;
+    width: 100%;
+    min-height: 48px;
+    padding: 0 14px;
+    border-radius: 14px;
+  }
+
+  #subjects .quiz-toolbar .quiz-filter select {
+    min-height: 48px;
+    border-radius: 14px;
+    padding: 0 14px;
+  }
+
   .home-content-inner {
     padding: 16px;
   }

@@ -23393,7 +23393,7 @@ function syncInstallAppButtons() {
           : "pending"
         : "unsupported";
 
-    button.disabled = installed || (supported && !hasPrompt);
+    button.disabled = installed;
 
     if (installed) {
       button.title = "Ứng dụng đã được cài đặt";
@@ -23420,10 +23420,10 @@ function syncInstallAppButtons() {
       return;
     }
 
-    button.title = "Chờ trình duyệt sẵn sàng cài đặt ứng dụng";
+    button.title = "Ứng dụng sẽ khả dụng để cài đặt sau khi trình duyệt sẵn sàng";
     button.setAttribute(
       "aria-label",
-      "Chờ trình duyệt sẵn sàng cài đặt ứng dụng",
+      "Ứng dụng sẽ khả dụng để cài đặt sau khi trình duyệt sẵn sàng",
     );
   });
 }
@@ -23448,8 +23448,9 @@ async function handleInstallAppRequest() {
   const installPrompt = deferredInstallPrompt;
 
   if (!installPrompt) {
+    console.log("[EduKids][pwa] beforeinstallprompt not available yet");
     showToast(
-      "Trình duyệt chưa sẵn sàng hiển thị hộp thoại cài đặt. Vui lòng thử lại sau.",
+      "Ứng dụng sẽ khả dụng để cài đặt sau khi bạn sử dụng website thêm một lúc.",
       "error",
     );
     return;
@@ -23479,6 +23480,8 @@ function bindPwaInstallEventsOnce() {
   syncInstallAppButtons();
 
   window.addEventListener("beforeinstallprompt", (event) => {
+    console.log("beforeinstallprompt fired");
+    console.log(event);
     event.preventDefault();
     deferredInstallPrompt = event;
     pwaInstallState.supported = true;
@@ -23487,6 +23490,7 @@ function bindPwaInstallEventsOnce() {
   });
 
   window.addEventListener("appinstalled", () => {
+    console.log("appinstalled fired");
     deferredInstallPrompt = null;
     pwaInstallState.installed = true;
     syncInstallAppButtons();
