@@ -64,6 +64,7 @@ const uiState = {
   mounted: false,
   loading: false,
   backendState: null,
+  displayState: null,
   graphState: null,
   errorMessage: "",
   authRetryTimer: null,
@@ -101,6 +102,18 @@ function escapeCssSelectorValue(value) {
   return String(value ?? "")
     .replaceAll("\\", "\\\\")
     .replaceAll('"', '\\"');
+}
+
+function cloneLearningPathState(value) {
+  if (typeof structuredClone === "function") {
+    try {
+      return structuredClone(value);
+    } catch {
+      // Fall back to JSON cloning below.
+    }
+  }
+
+  return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
 function normalizePublicAssetPath(value) {
@@ -260,12 +273,18 @@ function commitLearningPathState() {
   const effectiveState = state || getEmptyLearningPathState();
   const nextGraphState = createGraphState(effectiveState);
   const graphDiff = diffGraphState(uiState.graphState, nextGraphState);
+  const shouldMountTransitionFrame =
+    Boolean(uiState.transition && !uiState.transition.started) &&
+    !graphDiff.versionChanged;
   uiState.graphState = nextGraphState;
 
   syncTaskResetCountdownTimer(
     uiState.modalCheckpointId !== null || uiState.modalClosing,
   );
-  syncLearningPathSlots(root, effectiveState, graphDiff);
+  syncLearningPathSlots(root, effectiveState, {
+    ...graphDiff,
+    versionChanged: graphDiff.versionChanged || shouldMountTransitionFrame,
+  });
   syncRewardLayoutWidth(root);
 
   if (uiState.modalCheckpointId !== null && uiState.modalFocusRequested) {
@@ -405,6 +424,7 @@ function finalizeLearningPathTransition(root = getLearningPathRoot()) {
 
   const completedKey = String(transition.key || transition.toCheckpointId || "").trim();
   uiState.transitionCompletedKey = completedKey;
+  uiState.displayState = cloneLearningPathState(uiState.backendState);
 
   if (uiState.pendingRewardPopup) {
     uiState.rewardPopup = uiState.pendingRewardPopup;
@@ -466,7 +486,23 @@ function blurFocusedLearningPathStationElement(root = getLearningPathRoot()) {
 }
 
 function getState() {
-  return uiState.backendState;
+  return uiState.displayState || uiState.backendState;
+}
+
+function showLearningPathToast(message) {
+  const text = String(message || "").trim();
+  if (!text) {
+    return false;
+  }
+
+  if (typeof window.showToast === "function") {
+    window.showToast(text, "error");
+    return true;
+  }
+
+  uiState.limitNotice = text;
+  scheduleRender();
+  return true;
 }
 
 function getOfficialCurrentUser() {
@@ -739,6 +775,7 @@ function extractRemoteLearningPathState(payload) {
 async function hydrateLearningPathStateFromBackend({
   silent = false,
   pendingTransition = null,
+  pendingDisplayState = null,
 } = {}) {
   const userId = getLearningPathUserId();
   if (!userId) {
@@ -763,16 +800,6 @@ async function hydrateLearningPathStateFromBackend({
       `/learning-path/state/${encodeURIComponent(userId)}`,
     );
 
-    console.log("[LP RAW RESPONSE]", data);
-    console.log("[LP RAW RESPONSE WALLET]", {
-      walletEduCoin: data?.state?.wallet?.eduCoin,
-      walletEduCoins: data?.state?.wallet?.eduCoins,
-      profileEduCoin: data?.profile?.eduCoin,
-      profileEduCoins: data?.profile?.eduCoins,
-      stateEduCoin: data?.state?.eduCoin,
-      stateEduCoins: data?.state?.eduCoins,
-    });
-
     const backendState = extractRemoteLearningPathState(data?.state);
 
     if (!backendState) {
@@ -780,6 +807,7 @@ async function hydrateLearningPathStateFromBackend({
     }
 
     const remoteState = adaptLearningPathState(backendState);
+    const previousDisplayState = cloneLearningPathState(getState());
 
     uiState.backendState = remoteState;
     uiState.loading = false;
@@ -789,12 +817,10 @@ async function hydrateLearningPathStateFromBackend({
       ? ""
       : "Backend Learning Path chưa trả về state hợp lệ.";
 
-    console.log("[LP BEFORE UPDATE]", getOfficialCurrentUser()?.stats?.eduCoin);
-    console.log("[LP INCOMING WALLET]", remoteState?.wallet?.eduCoin);
-    console.trace("Learning Path hydrate -> syncAppWalletFromLearningPath");
-
     applyLearningPathEvents(data?.events);
     syncAppWalletFromLearningPath(remoteState.wallet);
+
+    const isTransitioning = Boolean(uiState.transition || pendingTransition);
 
     if (
       silent &&
@@ -809,8 +835,18 @@ async function hydrateLearningPathStateFromBackend({
         started: false,
       };
       uiState.pendingTransition = null;
-    } else if (pendingTransition) {
+      uiState.displayState =
+        cloneLearningPathState(pendingDisplayState) ||
+        previousDisplayState ||
+        cloneLearningPathState(remoteState);
+    } else if (isTransitioning) {
       uiState.pendingTransition = null;
+      uiState.displayState =
+        cloneLearningPathState(pendingDisplayState) ||
+        previousDisplayState ||
+        cloneLearningPathState(remoteState);
+    } else {
+      uiState.displayState = cloneLearningPathState(remoteState);
     }
 
     commitLearningPathState();
@@ -846,6 +882,7 @@ async function performLearningPathAction(action, payload = {}) {
 
   try {
     const isNextCheckpointAction = normalizedAction === "NEXT_CHECKPOINT";
+    const previousDisplayState = cloneLearningPathState(getState());
     const data = await requestLearningPathApi("/learning-path/action", {
       method: "POST",
       body: {
@@ -875,6 +912,10 @@ async function performLearningPathAction(action, payload = {}) {
       deferAvatarTransition: isNextCheckpointAction,
     });
 
+    uiState.displayState = isNextCheckpointAction && hasTransitionEvent
+      ? previousDisplayState || cloneLearningPathState(remoteState)
+      : cloneLearningPathState(remoteState);
+
     if (isNextCheckpointAction) {
       await new Promise((resolve) => requestLearningPathModalClose(resolve));
     }
@@ -884,6 +925,10 @@ async function performLearningPathAction(action, payload = {}) {
       pendingTransition:
         isNextCheckpointAction && hasTransitionEvent
           ? uiState.pendingTransition
+          : null,
+      pendingDisplayState:
+        isNextCheckpointAction && hasTransitionEvent
+          ? previousDisplayState
           : null,
     });
 
@@ -918,6 +963,7 @@ function openCheckpointModal(checkpointId) {
     checkpoint.status || checkpoint.state,
   );
   if (status === "locked") {
+    showLearningPathToast("Bạn đã lên trạm ngày hôm nay rồi, ngày mai quay lại nhé!");
     return;
   }
 
@@ -1113,6 +1159,16 @@ function syncLearningPathWalletFromProfile(profile) {
     },
   };
 
+  if (uiState.displayState) {
+    uiState.displayState = {
+      ...uiState.displayState,
+      wallet: {
+        ...((uiState.displayState && uiState.displayState.wallet) || {}),
+        eduCoin,
+      },
+    };
+  }
+
   scheduleRender();
 }
 
@@ -1135,25 +1191,13 @@ function syncAppWalletFromLearningPath(wallet) {
   const currentUserCoin = getExplicitEduCoinValue(currentUser);
 
   if (currentUserCoin !== null && currentUserCoin > 0 && eduCoin <= 0) {
-    console.log("[LP SKIP SYNC]", {
-      currentUserCoin,
-      incomingCoin: eduCoin,
-    });
     return;
   }
 
   if (currentUserCoin !== null && currentUserCoin > 0 && eduCoin < currentUserCoin) {
-    console.log("[LP SKIP SYNC]", {
-      currentUserCoin,
-      incomingCoin: eduCoin,
-    });
     return;
   }
 
-  console.log("[LP BEFORE UPDATE]", getOfficialCurrentUser()?.stats?.eduCoin);
-  console.log("[LP INCOMING]", eduCoin);
-  console.log("[LP AFTER UPDATE]", eduCoin);
-  console.trace("Update student");
   uiState.lastKnownCoinValue = eduCoin;
 
   if (currentUser && typeof currentUser === "object") {
@@ -1177,7 +1221,6 @@ function syncAppWalletFromLearningPath(wallet) {
       localStorage.setItem("edukids-current-user", JSON.stringify(nextProfile));
       localStorage.setItem("currentUser", JSON.stringify(nextProfile));
       localStorage.setItem("user", JSON.stringify(nextProfile));
-      console.log("[LP PROFILE AFTER SYNC]", nextProfile?.stats?.eduCoin);
     } catch {
       // Ignore storage write failures and keep the in-memory state in sync.
     }
@@ -2293,11 +2336,6 @@ export function renderLearningPathPage(root = getLearningPathRoot()) {
   if (!root) {
     return;
   }
-
-  console.log("[LP_RENDER]", {
-    currentUserCoin: getOfficialCurrentUser()?.stats?.eduCoin,
-    currentUserStats: getOfficialCurrentUser()?.stats || null,
-  });
 
   if (!uiState.initialized) {
     uiState.initialized = true;

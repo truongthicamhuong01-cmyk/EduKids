@@ -45,12 +45,9 @@ function getLocalWeekKey(date = new Date()) {
     firstThursday.setUTCDate(firstThursday.getUTCDate() - firstThursdayDayNum + 3);
 
     const weekNumber = 1 + Math.round((target - firstThursday) / (7 * 24 * 60 * 60 * 1000));
-    const resolvedWeekKey = `${target.getUTCFullYear()}-${padTwo(weekNumber)}`;
-    console.log("[LP_WEEK_KEY] resolvedWeekKey", resolvedWeekKey);
-    return resolvedWeekKey;
+    return `${target.getUTCFullYear()}-${padTwo(weekNumber)}`;
   } catch (error) {
     const fallbackWeekKey = `fallback-${Math.floor(new Date(date).getTime() / (7 * 24 * 60 * 60 * 1000))}`;
-    console.log("[LP_WEEK_KEY] resolvedWeekKey", fallbackWeekKey);
     return fallbackWeekKey;
   }
 }

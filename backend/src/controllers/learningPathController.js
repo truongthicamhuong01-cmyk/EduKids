@@ -12,11 +12,6 @@ async function getState(req, res, next) {
     const state = result?.state || {};
     const events = Array.isArray(result?.events) ? result.events : [];
 
-    console.log("[LP_API_GET_STATE]", {
-      userId: String(userId || "").trim(),
-      walletEduCoin: state?.wallet?.eduCoin,
-    });
-
     res.status(200).json({
       state,
       events,
@@ -69,11 +64,6 @@ async function action(req, res, next) {
       eduCoin: Math.max(0, Number(refreshedProfile?.stats?.eduCoin || 0)),
     };
     state.wallet = refreshedWallet;
-
-    console.log("[LP_API_ACTION]", {
-      userId,
-      walletEduCoin: state?.wallet?.eduCoin,
-    });
 
     res.status(200).json({
       state,

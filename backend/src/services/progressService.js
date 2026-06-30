@@ -71,15 +71,7 @@ function updateStreak(user, now = new Date()) {
   };
 }
 
-function isDevelopment() {
-  return process.env.NODE_ENV !== "production";
-}
-
-function logProgress(message, payload) {
-  if (isDevelopment()) {
-    console.log(message, payload || "");
-  }
-}
+function logProgress() {}
 
 async function awardExp(userId, amount, source, rewardId = "") {
   const normalizedUserId = String(userId || "").trim();

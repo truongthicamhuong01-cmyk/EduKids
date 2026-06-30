@@ -112,12 +112,6 @@ function buildLearningPathResponse(state, events = [], wallet = null) {
     sanitizedState?.wallet?.eduCoins,
   ].find((value) => Number.isFinite(Number(value)));
 
-  console.log("[LP_RESPONSE_WALLET]", {
-    stateWallet: sanitizedState?.wallet || null,
-    inputWallet: wallet,
-    resolvedWalletCoin,
-  });
-
   return {
     state: {
       ...sanitizedState,
@@ -135,11 +129,6 @@ async function loadLearningPathState(userId) {
   const snapshot = await docRef.get();
 
   if (snapshot.exists) {
-    console.log("[LP_FIRESTORE_READ]", {
-      path: `learningPathProgress/${normalizedUserId}`,
-      exists: true,
-    });
-
     return {
       state: unwrapStoredLearningPathState(snapshot.data()),
       docRef,
@@ -147,15 +136,6 @@ async function loadLearningPathState(userId) {
       isBootstrap: false,
     };
   }
-
-  console.log("[LP_FIRESTORE_READ]", {
-    path: `learningPathProgress/${normalizedUserId}`,
-    exists: false,
-  });
-  console.log("[LP_FIRESTORE_MISS]", {
-    path: `learningPathProgress/${normalizedUserId}`,
-    userId: normalizedUserId,
-  });
 
   const bootstrapState = buildBootstrapLearningPathState(normalizedUserId);
   await persistLearningPathState(docRef, { exportState: () => bootstrapState }, "create");
@@ -236,16 +216,6 @@ async function loadLearningPathFacts(userId) {
     db.collection("wrong_answers").doc(normalizedUserId).get().catch(() => null),
     findUserById(normalizedUserId).catch(() => null),
   ]);
-
-  console.log("[LP_FACTS_PROFILE]", {
-    userId: normalizedUserId,
-    hasProfile: Boolean(profile),
-    profileStats: profile?.stats || null,
-    profileEduCoin: profile?.stats?.eduCoin,
-    profileEduCoins: profile?.stats?.eduCoins,
-    profileTopLevelEduCoin: profile?.eduCoin,
-    profileTopLevelEduCoins: profile?.eduCoins,
-  });
 
   const normalizedSubmissions = Array.isArray(submissions) ? submissions : [];
   const today = new Date();
@@ -347,13 +317,6 @@ async function persistLearningPathState(docRef, engine, mode = "merge") {
     seasonId: state.seasonId || season1.id,
     userId: state.userId || "",
   };
-
-  console.log("[LP_FIRESTORE_WRITE]", {
-    path: `learningPathProgress/${String(payload.userId || docRef.id || "").trim()}`,
-    mode,
-    currentCheckpointId: payload.currentCheckpointId || "",
-    checkpointId: payload.checkpointId || "",
-  });
 
   await docRef.set(payload, { merge: true });
 }

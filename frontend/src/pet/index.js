@@ -63,10 +63,6 @@ let petNavigationBound = false;
 let petUiBootstrapped = false;
 let petInteractBound = false;
 
-if (assetAudit?.issues?.length > 0 && import.meta.env.DEV) {
-  console.debug("[EduKids][Pet][Assets] audit issues", assetAudit.issues);
-}
-
 function renderAll(state) {
   renderPet("[data-pet-root]", state);
   renderStats("[data-pet-stats-root]", state);

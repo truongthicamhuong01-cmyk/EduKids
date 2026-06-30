@@ -1,4 +1,4 @@
-const CACHE_NAME = "edukids-shell-v3";
+const CACHE_NAME = "edukids-shell-v4";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -61,10 +61,14 @@ self.addEventListener("fetch", (event) => {
 
         return fetch(request)
           .then((response) => {
+            const contentType = response.headers.get("content-type") || "";
+            const isHtmlResponse = contentType.includes("text/html");
+
             if (
               !response ||
               response.status !== 200 ||
-              response.type === "opaque"
+              response.type === "opaque" ||
+              (isHtmlResponse && request.mode !== "navigate")
             ) {
               return response;
             }
@@ -77,7 +81,13 @@ self.addEventListener("fetch", (event) => {
 
             return response;
           })
-          .catch(() => caches.match("/index.html"));
+          .catch((error) => {
+            if (request.mode === "navigate") {
+              return caches.match("/index.html");
+            }
+
+            throw error;
+          });
       }),
     );
   }

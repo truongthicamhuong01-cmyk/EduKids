@@ -6109,11 +6109,6 @@ function changePage(pageId) {
   }
 
   if (targetPageId === "learning-path" && normalizeRole(role) === "student") {
-    console.log("[PAGE_CHANGE]", {
-      from: previousPage,
-      to: targetPageId,
-      currentUserCoin: getCurrentAuthUser()?.stats?.eduCoin,
-    });
     renderLearningPathPage();
   }
 }
@@ -8261,13 +8256,8 @@ function applyLatestCurrentUser(profile) {
   const normalizedProfile =
     window.EduKidsProfileService?.normalizeProfile?.(profile) || profile;
 
-  console.log("[Before update]", bootstrapState.currentUser?.stats?.eduCoin);
-  console.log("[Incoming]", normalizedProfile?.stats?.eduCoin);
-  console.trace("Update student");
-
   bootstrapState.currentUser = normalizedProfile;
   window.EduKidsCurrentUser = normalizedProfile;
-  console.log("[Wallet AFTER]", normalizedProfile?.stats?.eduCoin);
   studentRecentWrongAnswersCache.clear();
   saveAuthSession(
     normalizedProfile,
@@ -8321,11 +8311,6 @@ function syncPetWalletFromProfile(profile) {
   if (coinValue === null) {
     return;
   }
-
-  console.log("[Before update]", bootstrapState.currentUser?.stats?.eduCoin);
-  console.log("[Incoming]", coinValue);
-  console.log("[Wallet AFTER]", coinValue);
-  console.trace("Update student");
 
   if (!pet?.store?.setState) {
     return;
@@ -8964,7 +8949,6 @@ async function openProfileEditModal() {
         localStorage.getItem("authToken") || localStorage.getItem("token"),
       );
       renderProfileView(updatedProfile);
-      console.info("Đã cập nhật hồ sơ thành công.");
       closeModal();
     } catch (error) {
       if (feedback) {
@@ -23402,6 +23386,8 @@ function showToast(message, type = "success") {
   }, 3000);
 }
 
+window.showToast = showToast;
+
 function isAppInstalled() {
   if (typeof window === "undefined") {
     return false;
@@ -23483,7 +23469,6 @@ async function handleInstallAppRequest() {
   const installPrompt = deferredInstallPrompt;
 
   if (!installPrompt) {
-    console.log("[EduKids][pwa] beforeinstallprompt not available yet");
     await openInstallGuideModal();
     return;
   }
@@ -23596,11 +23581,7 @@ function bindPwaInstallEventsOnce() {
   bootstrapState.pwaBound = true;
   pwaInstallState.installed = isAppInstalled();
   syncInstallAppButtons();
-  console.log("[PWA] listener registered");
-
   window.addEventListener("beforeinstallprompt", (event) => {
-    console.log("[PWA] beforeinstallprompt fired");
-    console.log(event);
     event.preventDefault();
     deferredInstallPrompt = event;
     pwaInstallState.supported = true;
@@ -23609,7 +23590,6 @@ function bindPwaInstallEventsOnce() {
   });
 
   window.addEventListener("appinstalled", () => {
-    console.log("appinstalled fired");
     deferredInstallPrompt = null;
     pwaInstallState.installed = true;
     syncInstallAppButtons();
@@ -23634,14 +23614,7 @@ function registerServiceWorker() {
   const doRegister = () => {
     navigator.serviceWorker
       .register("/sw.js")
-      .then((registration) => {
-        console.log("[PWA] service worker registered", {
-          scope: registration.scope,
-          active: Boolean(registration.active),
-          installing: Boolean(registration.installing),
-          waiting: Boolean(registration.waiting),
-        });
-      })
+      .then(() => {})
       .catch((error) => {
         console.warn("[EduKids][pwa] service worker registration failed", error);
       });
@@ -23655,34 +23628,8 @@ function registerServiceWorker() {
   window.addEventListener("load", doRegister, { once: true });
 }
 
-async function logServiceWorkerRegistrations() {
-  if (
-    typeof navigator === "undefined" ||
-    !("serviceWorker" in navigator) ||
-    typeof navigator.serviceWorker.getRegistrations !== "function"
-  ) {
-    return;
-  }
-
-  try {
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    console.log(
-      "[PWA] service worker registrations",
-      registrations.map((registration) => ({
-        scope: registration.scope,
-        active: Boolean(registration.active),
-        installing: Boolean(registration.installing),
-        waiting: Boolean(registration.waiting),
-      })),
-    );
-  } catch (error) {
-    console.warn("[PWA] unable to read service worker registrations", error);
-  }
-}
-
 bindPwaInstallEventsOnce();
 registerServiceWorker();
-void logServiceWorkerRegistrations();
 
 function syncSidebarToggleButtons(isOpen) {
   const expanded = String(Boolean(isOpen));
