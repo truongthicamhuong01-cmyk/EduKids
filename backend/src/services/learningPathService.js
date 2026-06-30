@@ -104,7 +104,6 @@ function sanitizeLearningPathState(state) {
 
 function buildLearningPathResponse(state, events = [], wallet = null) {
   const sanitizedState = sanitizeLearningPathState(state);
-  console.log("[LP_BACKEND_STATE]", sanitizedState);
 
   const resolvedWalletCoin = [
     wallet?.eduCoin,
@@ -112,6 +111,12 @@ function buildLearningPathResponse(state, events = [], wallet = null) {
     sanitizedState?.wallet?.eduCoin,
     sanitizedState?.wallet?.eduCoins,
   ].find((value) => Number.isFinite(Number(value)));
+
+  console.log("[LP_RESPONSE_WALLET]", {
+    stateWallet: sanitizedState?.wallet || null,
+    inputWallet: wallet,
+    resolvedWalletCoin,
+  });
 
   return {
     state: {
@@ -231,6 +236,16 @@ async function loadLearningPathFacts(userId) {
     db.collection("wrong_answers").doc(normalizedUserId).get().catch(() => null),
     findUserById(normalizedUserId).catch(() => null),
   ]);
+
+  console.log("[LP_FACTS_PROFILE]", {
+    userId: normalizedUserId,
+    hasProfile: Boolean(profile),
+    profileStats: profile?.stats || null,
+    profileEduCoin: profile?.stats?.eduCoin,
+    profileEduCoins: profile?.stats?.eduCoins,
+    profileTopLevelEduCoin: profile?.eduCoin,
+    profileTopLevelEduCoins: profile?.eduCoins,
+  });
 
   const normalizedSubmissions = Array.isArray(submissions) ? submissions : [];
   const today = new Date();

@@ -755,6 +755,16 @@ async function hydrateLearningPathStateFromBackend({
       `/learning-path/state/${encodeURIComponent(userId)}`,
     );
 
+    console.log("[LP RAW RESPONSE]", data);
+    console.log("[LP RAW RESPONSE WALLET]", {
+      walletEduCoin: data?.state?.wallet?.eduCoin,
+      walletEduCoins: data?.state?.wallet?.eduCoins,
+      profileEduCoin: data?.profile?.eduCoin,
+      profileEduCoins: data?.profile?.eduCoins,
+      stateEduCoin: data?.state?.eduCoin,
+      stateEduCoins: data?.state?.eduCoins,
+    });
+
     const backendState = extractRemoteLearningPathState(data?.state);
 
     if (!backendState) {
@@ -1115,6 +1125,7 @@ function syncAppWalletFromLearningPath(wallet) {
   const eduCoin = Math.max(0, Math.floor(rawEduCoin));
   console.log("[LP BEFORE UPDATE]", getOfficialCurrentUser()?.stats?.eduCoin);
   console.log("[LP INCOMING]", eduCoin);
+  console.log("[LP AFTER UPDATE]", eduCoin);
   console.trace("Update student");
   uiState.lastKnownCoinValue = eduCoin;
   const currentUser = getOfficialCurrentUser();
@@ -1140,6 +1151,7 @@ function syncAppWalletFromLearningPath(wallet) {
       localStorage.setItem("edukids-current-user", JSON.stringify(nextProfile));
       localStorage.setItem("currentUser", JSON.stringify(nextProfile));
       localStorage.setItem("user", JSON.stringify(nextProfile));
+      console.log("[LP PROFILE AFTER SYNC]", nextProfile?.stats?.eduCoin);
     } catch {
       // Ignore storage write failures and keep the in-memory state in sync.
     }
@@ -2255,6 +2267,11 @@ export function renderLearningPathPage(root = getLearningPathRoot()) {
   if (!root) {
     return;
   }
+
+  console.log("[LP_RENDER]", {
+    currentUserCoin: getOfficialCurrentUser()?.stats?.eduCoin,
+    currentUserStats: getOfficialCurrentUser()?.stats || null,
+  });
 
   if (!uiState.initialized) {
     uiState.initialized = true;

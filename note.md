@@ -11,4 +11,5 @@ firebase deploy --only hosting
 
 todo:
  - Fix lỗi 0 xu Edu
+ - Fix lỗi làm nhiệm vụ Learning Path xem AI Coach mà không hiện đã làm và không nhận được thưởng
 ```

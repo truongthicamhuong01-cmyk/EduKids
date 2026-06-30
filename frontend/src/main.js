@@ -6109,6 +6109,11 @@ function changePage(pageId) {
   }
 
   if (targetPageId === "learning-path" && normalizeRole(role) === "student") {
+    console.log("[PAGE_CHANGE]", {
+      from: previousPage,
+      to: targetPageId,
+      currentUserCoin: getCurrentAuthUser()?.stats?.eduCoin,
+    });
     renderLearningPathPage();
   }
 }
@@ -7728,17 +7733,6 @@ async function handleAICoachAnalyze() {
 
     aiCoachState.analysis = analysis;
     aiCoachState.error = "";
-    void recordAiUsageLog({
-      feature: "coach",
-      action: "analyze",
-      status: "success",
-      success: true,
-      userId: profile?.uid || profile?.userId || profile?.id || "",
-      role: profile?.role || "student",
-      meta: {
-        fromCache: Boolean(analysis?.fromCache),
-      },
-    });
   } catch (error) {
     const rawMessage = String(error?.message || "");
     aiCoachState.error = rawMessage.includes(
@@ -7747,18 +7741,6 @@ async function handleAICoachAnalyze() {
       ? "Bạn cần làm bài trước khi AI Coach có thể phân tích."
       : "Không thể phân tích kết quả học tập. Vui lòng thử lại.";
     showToast(aiCoachState.error, "error");
-    void recordAiUsageLog({
-      feature: "coach",
-      action: "analyze",
-      status: "failed",
-      success: false,
-      userId: profile?.uid || profile?.userId || profile?.id || "",
-      role: profile?.role || "student",
-      message: aiCoachState.error,
-      meta: {
-        rawMessage,
-      },
-    });
   } finally {
     aiCoachState.loading = false;
     aiCoachState.initialized = true;
@@ -8285,6 +8267,7 @@ function applyLatestCurrentUser(profile) {
 
   bootstrapState.currentUser = normalizedProfile;
   window.EduKidsCurrentUser = normalizedProfile;
+  console.log("[Wallet AFTER]", normalizedProfile?.stats?.eduCoin);
   studentRecentWrongAnswersCache.clear();
   saveAuthSession(
     normalizedProfile,
@@ -8341,6 +8324,7 @@ function syncPetWalletFromProfile(profile) {
 
   console.log("[Before update]", bootstrapState.currentUser?.stats?.eduCoin);
   console.log("[Incoming]", coinValue);
+  console.log("[Wallet AFTER]", coinValue);
   console.trace("Update student");
 
   if (!pet?.store?.setState) {
