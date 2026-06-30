@@ -81,6 +81,7 @@ const uiState = {
   transitionEndHandler: null,
   transitionCompletedKey: "",
   limitNotice: null,
+  lastKnownCoinValue: null,
 };
 
 function getLearningPathRoot() {
@@ -531,6 +532,88 @@ function getLearningPathUserId() {
   ).trim();
 }
 
+function getExplicitEduCoinValue(source) {
+  const stats = source?.stats;
+
+  if (!stats || typeof stats !== "object") {
+    return null;
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(stats, "eduCoin")) {
+    return null;
+  }
+
+  const coinValue = Number(stats.eduCoin);
+  if (!Number.isFinite(coinValue)) {
+    return null;
+  }
+
+  return Math.max(0, Math.floor(coinValue));
+}
+
+function getLearningPathCoinValue(state) {
+  const backendCoin = Number(state?.wallet?.eduCoin);
+  const rewardCoin = Number(state?.rewards?.xu);
+  const hasBackendState = Boolean(uiState.backendState);
+  const isInitialLoading = uiState.loading && !hasBackendState;
+
+  if (hasBackendState) {
+    if (Number.isFinite(backendCoin)) {
+      const normalizedCoin = Math.max(0, Math.floor(backendCoin));
+      uiState.lastKnownCoinValue = normalizedCoin;
+      return normalizedCoin;
+    }
+
+    if (Number.isFinite(rewardCoin)) {
+      const normalizedCoin = Math.max(0, Math.floor(rewardCoin));
+      uiState.lastKnownCoinValue = normalizedCoin;
+      return normalizedCoin;
+    }
+  }
+
+  if (isInitialLoading) {
+    const profileCoin = getExplicitEduCoinValue(getOfficialCurrentUser());
+    if (profileCoin !== null && profileCoin > 0) {
+      uiState.lastKnownCoinValue = profileCoin;
+      return profileCoin;
+    }
+
+    return uiState.lastKnownCoinValue;
+  }
+
+  if (Number.isFinite(backendCoin)) {
+    const normalizedCoin = Math.max(0, Math.floor(backendCoin));
+    uiState.lastKnownCoinValue = normalizedCoin;
+    return normalizedCoin;
+  }
+
+  if (Number.isFinite(rewardCoin)) {
+    const normalizedCoin = Math.max(0, Math.floor(rewardCoin));
+    uiState.lastKnownCoinValue = normalizedCoin;
+    return normalizedCoin;
+  }
+
+  return uiState.lastKnownCoinValue;
+}
+
+function renderLearningPathCoinCount(state) {
+  const coinValue = getLearningPathCoinValue(state);
+
+  if (coinValue === null) {
+    return `
+      <strong
+        class="profile-skeleton"
+        data-learning-path-coin-count
+        aria-busy="true"
+      >&nbsp;</strong>
+    `;
+  }
+
+  return `
+    <strong data-learning-path-coin-count>${escapeHtml(String(coinValue))}</strong>
+  `;
+}
+
 function scheduleAuthReadyRetry() {
   if (uiState.authRetryTimer) {
     return;
@@ -971,7 +1054,15 @@ function showMountainCompletionPopup(event) {
 }
 
 function syncLearningPathWalletFromProfile(profile) {
-  const eduCoin = Math.max(0, Math.floor(Number(profile?.stats?.eduCoin || 0)));
+  const eduCoin = getExplicitEduCoinValue(profile);
+
+  if (eduCoin === null) {
+    return;
+  }
+
+  if (eduCoin > 0 || uiState.backendState) {
+    uiState.lastKnownCoinValue = eduCoin;
+  }
 
   if (!uiState.backendState) {
     return;
@@ -982,6 +1073,7 @@ function syncLearningPathWalletFromProfile(profile) {
     return;
   }
 
+  // Don't treat a missing wallet field as 0; partial profile refreshes can otherwise wipe the live coin state.
   uiState.backendState = {
     ...uiState.backendState,
     wallet: {
@@ -995,6 +1087,7 @@ function syncLearningPathWalletFromProfile(profile) {
 
 function syncAppWalletFromLearningPath(wallet) {
   const eduCoin = Math.max(0, Math.floor(Number(wallet?.eduCoin || 0)));
+  uiState.lastKnownCoinValue = eduCoin;
   const currentUser = getOfficialCurrentUser();
 
   if (currentUser && typeof currentUser === "object") {
@@ -1496,7 +1589,7 @@ function renderLearningPathStaticShell(state) {
         </div>
         <div class="learning-path-coin-card" aria-label="Xu Edu hiện có">
           <span class="learning-path-coin-label">🪙 Xu Edu</span>
-          <strong data-learning-path-coin-count>${escapeHtml((state.wallet?.eduCoin ?? state.rewards?.xu) || 0)}</strong>
+          ${renderLearningPathCoinCount(state)}
         </div>
       </header>
 
@@ -1549,9 +1642,11 @@ function syncLearningPathSlots(root, state, graphDiff) {
 
   const coinCount = root.querySelector("[data-learning-path-coin-count]");
   if (coinCount instanceof HTMLElement) {
-    coinCount.textContent = String(
-      (state.wallet?.eduCoin ?? state.rewards?.xu) || 0,
-    );
+    const coinValue = getLearningPathCoinValue(state);
+    const isLoadingCoin = coinValue === null;
+    coinCount.classList.toggle("profile-skeleton", isLoadingCoin);
+    coinCount.setAttribute("aria-busy", isLoadingCoin ? "true" : "false");
+    coinCount.innerHTML = isLoadingCoin ? "&nbsp;" : String(coinValue);
   }
 
   const page = root.querySelector("[data-learning-path-page]");

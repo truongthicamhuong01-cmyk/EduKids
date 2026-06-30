@@ -75,6 +75,18 @@ function renderAll(state) {
   renderLoading("[data-pet-loading-root]", state.loading, "Đang tải dữ liệu...");
 }
 
+function clearPetBootstrapLoadingShell() {
+  const host = document.getElementById("pet");
+  if (!(host instanceof HTMLElement)) {
+    return;
+  }
+
+  const loadingShell = host.querySelector("[data-pet-bootstrap-loading]");
+  if (loadingShell instanceof HTMLElement) {
+    loadingShell.remove();
+  }
+}
+
 function syncUiFromStore(snapshot) {
   renderAll(snapshot);
 
@@ -96,6 +108,7 @@ petStore.subscribe(syncUiFromStore);
 const feedbackManager = createFeedbackManager({ store: petStore });
 
 function bootstrapPetUi() {
+  clearPetBootstrapLoadingShell();
   syncUiFromStore(petStore.getState());
   feedbackManager.sync(petStore.getState());
 }
@@ -182,6 +195,7 @@ function bindPetInteractEvents() {
 }
 
 function bootstrapPetModule() {
+  clearPetBootstrapLoadingShell();
   if (petUiBootstrapped) {
     bootstrapPetUi();
     return window.EduKidsPet;
@@ -198,6 +212,7 @@ function bootstrapPetModule() {
 
 function showPetModule() {
   bootstrapPetModule();
+  clearPetBootstrapLoadingShell();
   hidePetModule();
 
   const snapshot = petStore.getState();

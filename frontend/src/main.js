@@ -569,6 +569,32 @@ function showPetModulePage() {
   pet.showPetModule();
 }
 
+function showPetBootstrapLoadingShell() {
+  const petRoot = document.getElementById("pet");
+  if (!(petRoot instanceof HTMLElement)) {
+    return;
+  }
+
+  let loadingShell = petRoot.querySelector("[data-pet-bootstrap-loading]");
+  if (!(loadingShell instanceof HTMLElement)) {
+    loadingShell = document.createElement("div");
+    loadingShell.className = "pet-bootstrap-loading";
+    loadingShell.dataset.petBootstrapLoading = "true";
+    loadingShell.innerHTML = `
+      <div class="pet-bootstrap-loading__panel" role="status" aria-live="polite">
+        <span class="pet-bootstrap-loading__spinner" aria-hidden="true"></span>
+        <div class="pet-bootstrap-loading__copy">
+          <strong>Đang tải Pet...</strong>
+          <span>Vui lòng chờ trong giây lát.</span>
+        </div>
+      </div>
+    `;
+    petRoot.replaceChildren(loadingShell);
+  } else {
+    loadingShell.hidden = false;
+  }
+}
+
 async function ensurePetModuleLoaded() {
   if (getPetModuleApi()?.ui) {
     return getPetModuleApi();
@@ -5897,18 +5923,16 @@ async function syncSidebarProfile() {
     }
 
     if (resolvedProfile) {
-      bootstrapState.currentUser = resolvedProfile;
-      window.EduKidsCurrentUser = resolvedProfile;
+      // Refresh the shared user source once here; Pet and Learning Path read from it and can otherwise keep a stale 0 coin session.
+      applyLatestCurrentUser(resolvedProfile);
     }
 
     renderSidebarProfileCards(resolvedProfile || profile);
-    renderStudentHomeOverview(resolvedProfile || profile);
     void syncStudentRecentWrongAnswers(resolvedProfile || profile);
     void syncStudentProgress(resolvedProfile || profile);
   } catch (error) {
     console.warn("Không thể đồng bộ sidebar user:", error);
     renderSidebarProfileCards(profile);
-    renderStudentHomeOverview(profile);
     void syncStudentRecentWrongAnswers(profile);
     void syncStudentProgress(profile);
   }
@@ -5976,6 +6000,10 @@ function changePage(pageId) {
   syncRouteForPageChange(targetPageId, previousPage, role);
 
   if (targetPageId === "pet" && role === "student") {
+    if (!getPetModuleApi()?.ui) {
+      // Pet is lazy-loaded, so render a synchronous fallback before the module and data finish hydrating.
+      showPetBootstrapLoadingShell();
+    }
     void ensurePetModuleLoaded()
       .then(() => {
         if (currentPage === "pet") {
@@ -8271,12 +8299,28 @@ function applyLatestCurrentUser(profile) {
   void syncStudentRecentWrongAnswers(normalizedProfile);
 }
 
+function getExplicitEduCoinValue(profile) {
+  const stats = profile?.stats;
+
+  if (!stats || typeof stats !== "object") {
+    return null;
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(stats, "eduCoin")) {
+    return null;
+  }
+
+  const value = Number(stats.eduCoin);
+  return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : null;
+}
+
 function syncPetWalletFromProfile(profile) {
   const pet = getPetModuleApi();
-  const coinValue = Math.max(
-    0,
-    Math.floor(Number(profile?.stats?.eduCoin || 0)),
-  );
+  const coinValue = getExplicitEduCoinValue(profile);
+
+  if (coinValue === null) {
+    return;
+  }
 
   if (!pet?.store?.setState) {
     return;
@@ -8683,8 +8727,8 @@ async function ensureProfileLoaded(pageId) {
 
     profileState.current = profile;
     profileState.error = null;
-    bootstrapState.currentUser = profile;
-    window.EduKidsCurrentUser = profile;
+    // Keep the global user snapshot and every coin-aware screen in sync with the fresh profile.
+    applyLatestCurrentUser(profile);
     renderProfileView(profile);
   } catch (error) {
     profileState.error = error;
@@ -9687,7 +9731,7 @@ function getBossBattleOptionMeta(index) {
 }
 
 function getBossBattleCoins(profile) {
-  return Math.max(0, Math.floor(Number(profile?.stats?.eduCoin || 0)));
+  return getExplicitEduCoinValue(profile) ?? 0;
 }
 
 function getBossBattleExp(profile) {
@@ -20993,14 +21037,11 @@ function buildTeacherStatsViewModel(rawData, rangeKey = "7d") {
   const highestAverageScore = Math.max(
     ...studentAverages.map((student) => Number(student.averageScore) || 0),
   );
-  const topStudents =
-    Number.isFinite(highestAverageScore) && highestAverageScore >= 6
-      ? studentAverages.filter(
-          (student) =>
-            Number(student.averageScore) === highestAverageScore &&
-            Number(student.averageScore) >= 6,
-        )
-      : [];
+  const topStudents = Number.isFinite(highestAverageScore)
+    ? studentAverages.filter(
+        (student) => Number(student.averageScore) === highestAverageScore,
+      )
+    : [];
 
   const topicBuckets = new Map();
   studentIds.forEach((studentId) => {
@@ -21624,7 +21665,7 @@ function renderTeacherStatsPageState(viewModel) {
 
   setTeacherStatsCardVisibility(
     topStudentsNode,
-    Array.isArray(viewModel.topStudents) && viewModel.topStudents.length > 0,
+    true,
   );
   setTeacherStatsCardVisibility(
     supportStudentsNode,
@@ -23420,11 +23461,8 @@ function syncInstallAppButtons() {
       return;
     }
 
-    button.title = "Ứng dụng sẽ khả dụng để cài đặt sau khi trình duyệt sẵn sàng";
-    button.setAttribute(
-      "aria-label",
-      "Ứng dụng sẽ khả dụng để cài đặt sau khi trình duyệt sẵn sàng",
-    );
+    button.title = "Xem hướng dẫn cài đặt ứng dụng";
+    button.setAttribute("aria-label", "Xem hướng dẫn cài đặt ứng dụng");
   });
 }
 
@@ -23437,22 +23475,11 @@ async function handleInstallAppRequest() {
     return;
   }
 
-  if (!pwaInstallState.supported) {
-    showToast(
-      "Thiết bị hoặc trình duyệt này không hỗ trợ cài đặt ứng dụng.",
-      "error",
-    );
-    return;
-  }
-
   const installPrompt = deferredInstallPrompt;
 
   if (!installPrompt) {
     console.log("[EduKids][pwa] beforeinstallprompt not available yet");
-    showToast(
-      "Ứng dụng sẽ khả dụng để cài đặt sau khi bạn sử dụng website thêm một lúc.",
-      "error",
-    );
+    await openInstallGuideModal();
     return;
   }
 
@@ -23468,6 +23495,92 @@ async function handleInstallAppRequest() {
     deferredInstallPrompt = null;
     syncInstallAppButtons();
   }
+}
+
+function buildInstallGuideMarkup() {
+  return `
+    <div class="install-guide-intro">
+      <p>
+        Trình duyệt hiện chưa gửi prompt cài đặt tự động, nhưng bạn vẫn có thể
+        cài EduKids bằng menu của trình duyệt.
+      </p>
+    </div>
+
+    <section class="install-guide-section">
+      <h4>Chrome Desktop</h4>
+      <ul>
+        <li>Nhấn biểu tượng cài đặt trên thanh địa chỉ nếu có.</li>
+        <li>Hoặc mở menu <strong>⋮</strong> và chọn <strong>Cài đặt ứng dụng</strong>.</li>
+      </ul>
+    </section>
+
+    <section class="install-guide-section">
+      <h4>Chrome Android</h4>
+      <ul>
+        <li>Mở menu <strong>⋮</strong>.</li>
+        <li>Chọn <strong>Thêm vào Màn hình chính</strong> hoặc <strong>Cài đặt ứng dụng</strong>.</li>
+      </ul>
+    </section>
+
+    <section class="install-guide-section">
+      <h4>Safari iPhone/iPad</h4>
+      <ul>
+        <li>Nhấn nút <strong>Chia sẻ</strong>.</li>
+        <li>Chọn <strong>Thêm vào Màn hình chính</strong>.</li>
+      </ul>
+    </section>
+
+    <section class="install-guide-section">
+      <h4>Lưu ý</h4>
+      <ul>
+        <li>Nếu bạn đã cài EduKids, nút sẽ chuyển sang trạng thái đã cài đặt.</li>
+        <li>Nếu trình duyệt không có mục cài đặt, hãy dùng menu của trình duyệt hoặc cập nhật phiên bản mới nhất.</li>
+      </ul>
+    </section>
+  `;
+}
+
+function openInstallGuideModal() {
+  return new Promise((resolve) => {
+    const modal = document.createElement("div");
+    modal.className = "modal-overlay install-guide-overlay";
+    modal.innerHTML = `
+      <div class="modal install-guide-modal" role="dialog" aria-modal="true" aria-labelledby="install-guide-title">
+        <div class="modal-header">
+          <h3 id="install-guide-title">Cài đặt ứng dụng EduKids</h3>
+          <button class="close-btn" type="button" aria-label="Đóng cửa sổ">×</button>
+        </div>
+        <div class="modal-content install-guide-content">
+          ${buildInstallGuideMarkup()}
+          <div class="install-guide-actions">
+            <button type="button" class="confirm-modal-confirm-btn" data-install-guide-close>Đã hiểu</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const finish = () => {
+      if (!modal.isConnected) {
+        resolve();
+        return;
+      }
+
+      modal.remove();
+      resolve();
+    };
+
+    document.body.appendChild(modal);
+
+    modal.querySelector(".close-btn")?.addEventListener("click", finish);
+    modal
+      .querySelector("[data-install-guide-close]")
+      ?.addEventListener("click", finish);
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) {
+        finish();
+      }
+    });
+  });
 }
 
 function bindPwaInstallEventsOnce() {
