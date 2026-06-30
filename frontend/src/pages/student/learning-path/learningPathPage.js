@@ -565,12 +565,20 @@ function getLearningPathCoinValue(state) {
   const rewardCoin = Number(state?.rewards?.xu);
   const hasBackendState = Boolean(uiState.backendState);
   const isInitialLoading = uiState.loading && !hasBackendState;
+  const profileCoin = getExplicitEduCoinValue(getOfficialCurrentUser());
 
   if (hasBackendState) {
     if (Number.isFinite(backendCoin)) {
       const normalizedCoin = Math.max(0, Math.floor(backendCoin));
-      uiState.lastKnownCoinValue = normalizedCoin;
-      return normalizedCoin;
+      if (normalizedCoin > 0) {
+        uiState.lastKnownCoinValue = normalizedCoin;
+        return normalizedCoin;
+      }
+
+      if (profileCoin !== null) {
+        uiState.lastKnownCoinValue = profileCoin;
+        return profileCoin;
+      }
     }
 
     if (Number.isFinite(rewardCoin)) {
@@ -1123,12 +1131,30 @@ function syncAppWalletFromLearningPath(wallet) {
   }
 
   const eduCoin = Math.max(0, Math.floor(rawEduCoin));
+  const currentUser = getOfficialCurrentUser();
+  const currentUserCoin = getExplicitEduCoinValue(currentUser);
+
+  if (currentUserCoin !== null && currentUserCoin > 0 && eduCoin <= 0) {
+    console.log("[LP SKIP SYNC]", {
+      currentUserCoin,
+      incomingCoin: eduCoin,
+    });
+    return;
+  }
+
+  if (currentUserCoin !== null && currentUserCoin > 0 && eduCoin < currentUserCoin) {
+    console.log("[LP SKIP SYNC]", {
+      currentUserCoin,
+      incomingCoin: eduCoin,
+    });
+    return;
+  }
+
   console.log("[LP BEFORE UPDATE]", getOfficialCurrentUser()?.stats?.eduCoin);
   console.log("[LP INCOMING]", eduCoin);
   console.log("[LP AFTER UPDATE]", eduCoin);
   console.trace("Update student");
   uiState.lastKnownCoinValue = eduCoin;
-  const currentUser = getOfficialCurrentUser();
 
   if (currentUser && typeof currentUser === "object") {
     const nextProfile = {
