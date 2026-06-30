@@ -59,6 +59,52 @@
         </button>
       </header>
 
+      <aside
+        class="student-mobile-sidebar"
+        id="student-mobile-sidebar"
+        aria-label="Điều hướng học sinh"
+      >
+        <nav>
+          <div class="menu-item active" data-page="student-home">
+            🏠 Trang chủ
+          </div>
+
+          <div class="menu-item" data-page="ai-coach">🤖 AI Coach</div>
+
+          <div class="menu-item" data-page="subjects">📚 Học theo chủ đề</div>
+
+          <div class="menu-item" data-page="assignments">📝 Bài tập</div>
+
+          <div class="menu-item" data-page="learning-path">
+            🏔️ Learning Path
+          </div>
+
+          <div class="menu-item" data-page="pet">🐾 Thú cưng</div>
+
+          <div class="menu-item" data-page="progress">📈 Tiến độ</div>
+
+          <div class="menu-item" data-page="profile">👤 Hồ sơ</div>
+
+          <div
+            class="student-card"
+            data-sidebar-card="student"
+            data-sidebar-role="student"
+            aria-busy="true"
+          >
+            <img
+              data-sidebar-avatar
+              src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+              alt=""
+            />
+
+            <div class="student-card-info">
+              <h4 data-sidebar-name>Đang tải...</h4>
+              <p data-sidebar-role-label>Học sinh</p>
+            </div>
+          </div>
+        </nav>
+      </aside>
+
       <aside class="sidebar" id="app-sidebar" aria-label="Điều hướng chính">
         <div class="sidebar-brand">
           <img
@@ -766,6 +812,20 @@
                     </svg>
                   </span>
                   Chỉnh sửa hồ sơ
+                </button>
+
+                <button
+                  class="student-profile-install-btn"
+                  type="button"
+                  data-install-app-btn
+                  aria-label="Cài đặt ứng dụng EduKids"
+                  title="Cài đặt ứng dụng EduKids"
+                >
+                  <img
+                    src="/assets/install.png"
+                    alt=""
+                    aria-hidden="true"
+                  />
                 </button>
 
                 <button
@@ -1927,6 +1987,20 @@
                     </svg>
                   </span>
                   Chỉnh sửa hồ sơ
+                </button>
+
+                <button
+                  class="teacher-profile-install-btn"
+                  type="button"
+                  data-install-app-btn
+                  aria-label="Cài đặt ứng dụng EduKids"
+                  title="Cài đặt ứng dụng EduKids"
+                >
+                  <img
+                    src="/assets/install.png"
+                    alt=""
+                    aria-hidden="true"
+                  />
                 </button>
 
                 <button

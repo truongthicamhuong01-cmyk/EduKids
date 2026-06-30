@@ -2,20 +2,20 @@
   "name": "EduKids",
   "short_name": "EduKids",
   "description": "Nền tảng học tập EduKids tối ưu cho học sinh và giáo viên.",
-  "start_url": "./index.html",
-  "scope": "./",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#4f46e5",
   "icons": [
     {
-      "src": "assets/edukids-icon-192.png",
+      "src": "/assets/edukids-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "assets/edukids-icon-512.png",
+      "src": "/assets/edukids-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"

@@ -5899,6 +5899,29 @@ textarea {
     box-shadow 0.2s ease;
 }
 
+#profile .student-profile-install-btn {
+  border: 1.5px solid #b9cbff;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f7ff 100%);
+  color: #3355e6;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(67, 91, 194, 0.08);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+}
+
 #profile .student-profile-edit-btn span {
   display: inline-flex;
   width: 18px;
@@ -5908,6 +5931,14 @@ textarea {
 #profile .student-profile-edit-btn svg {
   width: 18px;
   height: 18px;
+}
+
+#profile .student-profile-install-btn img,
+#teacher-profile .teacher-profile-install-btn img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
 }
 
 #profile .student-profile-review-btn,
@@ -5940,7 +5971,11 @@ textarea {
 #profile .student-profile-edit-btn:hover,
 #profile .student-profile-edit-btn:focus-visible,
 #teacher-profile .teacher-profile-edit-btn:hover,
-#teacher-profile .teacher-profile-edit-btn:focus-visible {
+#teacher-profile .teacher-profile-edit-btn:focus-visible,
+#profile .student-profile-install-btn:hover,
+#profile .student-profile-install-btn:focus-visible,
+#teacher-profile .teacher-profile-install-btn:hover,
+#teacher-profile .teacher-profile-install-btn:focus-visible {
   background: #f3f7ff;
   border-color: #95afff;
   transform: translateY(-1px);
@@ -6658,6 +6693,12 @@ textarea {
   #profile .student-profile-logout-btn {
     flex: 1 1 0;
     justify-content: center;
+  }
+
+  #profile .student-profile-install-btn {
+    flex: 0 0 44px;
+    width: 44px;
+    min-width: 44px;
   }
 
   #profile .student-profile-stats {
@@ -14717,6 +14758,29 @@ img.profile-skeleton {
   box-shadow: 0 10px 22px rgba(67, 91, 194, 0.08);
 }
 
+#teacher-profile .teacher-profile-install-btn {
+  border: 1.5px solid #b9cbff;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f4f7ff 100%);
+  color: #3355e6;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(67, 91, 194, 0.08);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+}
+
 #teacher-profile .teacher-profile-edit-btn span {
   display: inline-flex;
   width: 18px;
@@ -14768,6 +14832,14 @@ img.profile-skeleton {
 #teacher-profile .teacher-profile-logout-btn svg {
   width: 18px;
   height: 18px;
+}
+
+#profile .student-profile-install-btn:disabled,
+#teacher-profile .teacher-profile-install-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+  transform: none;
+  box-shadow: 0 8px 18px rgba(67, 91, 194, 0.06);
 }
 
 #teacher-profile .teacher-profile-hero {
@@ -15184,8 +15256,15 @@ body:not(.auth-mode) #auth-root {
 .auth-brand-name {
   font-size: 28px;
   font-weight: 800;
-  color: #243a73;
   letter-spacing: -0.03em;
+}
+
+.auth-brand-edu {
+  color: #2f67d6;
+}
+
+.auth-brand-kids {
+  color: #f0b11a;
 }
 
 .auth-form-head {
@@ -15674,6 +15753,10 @@ body:not(.auth-mode) #auth-root {
   display: none;
 }
 
+.student-mobile-sidebar {
+  display: none;
+}
+
 .sidebar-backdrop {
   display: none;
 }
@@ -15771,12 +15854,14 @@ body.admin-content-drawer-open {
 
   body.student-mode .app-mobile-brand {
     gap: 0;
+    order: 2;
+    margin-left: auto;
   }
 
   body.student-mode .app-mobile-brand-image {
     display: block;
     width: auto;
-    height: 28px;
+    height: 24px;
     max-width: min(52vw, 160px);
     object-fit: contain;
   }
@@ -15784,6 +15869,10 @@ body.admin-content-drawer-open {
   body.student-mode .app-mobile-brand > img:not(.app-mobile-brand-image),
   body.student-mode .app-mobile-brand-copy {
     display: none;
+  }
+
+  body.student-mode .mobile-menu-toggle {
+    order: 1;
   }
 
   .mobile-menu-toggle {
@@ -15810,24 +15899,47 @@ body.admin-content-drawer-open {
   }
 
   body.student-mode .sidebar {
+    display: none;
+  }
+
+  body.student-mode .student-mobile-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
     width: min(82vw, 320px);
-    left: auto;
-    right: 0;
-    height: 100dvh;
-    padding: 14px 16px 16px;
-    transform: translateX(105%);
-    transition: transform 0.28s ease;
-    z-index: 1080;
-    box-shadow: -18px 0 40px rgba(15, 23, 42, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px 16px 16px;
+    background: #fff;
+    border-right: 1px solid var(--border);
+    box-shadow: 18px 0 40px rgba(15, 23, 42, 0.18);
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    border-right: none;
-    border-left: 1px solid var(--border);
+    z-index: 1080;
+    transform: translate3d(-100%, 0, 0);
+    transition: transform 0.28s ease;
+    will-change: transform;
   }
 
-  body.student-mode.sidebar-open .sidebar {
-    transform: translateX(0);
+  body.student-mode.sidebar-open .student-mobile-sidebar {
+    transform: translate3d(0, 0, 0);
+  }
+
+  body.student-mode .student-mobile-sidebar nav {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  body.student-mode .student-mobile-sidebar .student-card {
+    width: 100%;
+    align-self: stretch;
+    margin-top: auto;
   }
 
   body.student-mode .sidebar-backdrop {
@@ -15844,10 +15956,6 @@ body.admin-content-drawer-open {
   body.student-mode.sidebar-open .sidebar-backdrop {
     opacity: 1;
     pointer-events: auto;
-  }
-
-  body.student-mode .sidebar-brand {
-    display: none;
   }
 
   .content {
@@ -16648,6 +16756,12 @@ body.admin-content-drawer-open {
   #teacher-profile .teacher-profile-logout-btn {
     width: 100%;
     justify-content: center;
+  }
+
+  #teacher-profile .teacher-profile-install-btn {
+    width: 44px;
+    min-width: 44px;
+    flex: 0 0 44px;
   }
 
   .classroom-create-actions,

@@ -45,6 +45,15 @@ const AUTH_CLEAR_KEYS = [
   AUTH_SESSION_KEY,
 ];
 
+let deferredInstallPrompt = null;
+let pwaInstallState = {
+  installed: false,
+  supported:
+    typeof window !== "undefined" &&
+    (typeof window.BeforeInstallPromptEvent !== "undefined" ||
+      "onbeforeinstallprompt" in window),
+};
+
 const ROLE_DEFAULT_PAGES = {
   student: "student-home",
   teacher: "teacher-dashboard",
@@ -8639,6 +8648,7 @@ function renderProfileView(profile) {
   void syncStudentStrengthWeakness(profile);
   void syncStudentHomeAssignments(profile);
   void syncStudentRecentWrongAnswers(profile);
+  syncInstallAppButtons();
 
   applyProfileSkeleton(profileType, false);
   setProfileLoadingState(profileType, false);
@@ -23346,6 +23356,175 @@ function showToast(message, type = "success") {
   }, 3000);
 }
 
+function isAppInstalled() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return Boolean(
+    window.matchMedia?.("(display-mode: standalone)")?.matches ||
+      window.navigator.standalone,
+  );
+}
+
+function getInstallAppButtons() {
+  return document.querySelectorAll("[data-install-app-btn]");
+}
+
+function syncInstallAppButtons() {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const installed = pwaInstallState.installed || isAppInstalled();
+  const supported = pwaInstallState.supported;
+  const hasPrompt = Boolean(deferredInstallPrompt);
+
+  getInstallAppButtons().forEach((button) => {
+    if (!button) {
+      return;
+    }
+
+    button.dataset.installState = installed
+      ? "installed"
+      : supported
+        ? hasPrompt
+          ? "ready"
+          : "pending"
+        : "unsupported";
+
+    button.disabled = installed || (supported && !hasPrompt);
+
+    if (installed) {
+      button.title = "Ứng dụng đã được cài đặt";
+      button.setAttribute("aria-label", "Ứng dụng đã được cài đặt");
+      button.setAttribute("aria-disabled", "true");
+      return;
+    }
+
+    button.removeAttribute("aria-disabled");
+
+    if (!supported) {
+      button.title =
+        "Thiết bị hoặc trình duyệt này không hỗ trợ cài đặt ứng dụng";
+      button.setAttribute(
+        "aria-label",
+        "Thiết bị hoặc trình duyệt này không hỗ trợ cài đặt ứng dụng",
+      );
+      return;
+    }
+
+    if (hasPrompt) {
+      button.title = "Cài đặt ứng dụng EduKids";
+      button.setAttribute("aria-label", "Cài đặt ứng dụng EduKids");
+      return;
+    }
+
+    button.title = "Chờ trình duyệt sẵn sàng cài đặt ứng dụng";
+    button.setAttribute(
+      "aria-label",
+      "Chờ trình duyệt sẵn sàng cài đặt ứng dụng",
+    );
+  });
+}
+
+async function handleInstallAppRequest() {
+  const installed = pwaInstallState.installed || isAppInstalled();
+
+  if (installed) {
+    syncInstallAppButtons();
+    showToast("Ứng dụng đã được cài đặt.", "success");
+    return;
+  }
+
+  if (!pwaInstallState.supported) {
+    showToast(
+      "Thiết bị hoặc trình duyệt này không hỗ trợ cài đặt ứng dụng.",
+      "error",
+    );
+    return;
+  }
+
+  const installPrompt = deferredInstallPrompt;
+
+  if (!installPrompt) {
+    showToast(
+      "Trình duyệt chưa sẵn sàng hiển thị hộp thoại cài đặt. Vui lòng thử lại sau.",
+      "error",
+    );
+    return;
+  }
+
+  deferredInstallPrompt = null;
+  syncInstallAppButtons();
+
+  try {
+    installPrompt.prompt();
+    await installPrompt.userChoice;
+  } catch (error) {
+    console.warn("[EduKids][pwa] install prompt failed", error);
+  } finally {
+    deferredInstallPrompt = null;
+    syncInstallAppButtons();
+  }
+}
+
+function bindPwaInstallEventsOnce() {
+  if (typeof window === "undefined" || bootstrapState.pwaBound) {
+    return;
+  }
+
+  bootstrapState.pwaBound = true;
+  pwaInstallState.installed = isAppInstalled();
+  syncInstallAppButtons();
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    pwaInstallState.supported = true;
+    pwaInstallState.installed = isAppInstalled();
+    syncInstallAppButtons();
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    pwaInstallState.installed = true;
+    syncInstallAppButtons();
+    showToast("EduKids đã được cài đặt.", "success");
+  });
+
+  if (isAppInstalled()) {
+    pwaInstallState.installed = true;
+    syncInstallAppButtons();
+  }
+}
+
+function registerServiceWorker() {
+  if (
+    typeof window === "undefined" ||
+    typeof navigator === "undefined" ||
+    !("serviceWorker" in navigator)
+  ) {
+    return;
+  }
+
+  const doRegister = () => {
+    navigator.serviceWorker.register("/sw.js").catch((error) => {
+      console.warn("[EduKids][pwa] service worker registration failed", error);
+    });
+  };
+
+  if (document.readyState === "complete") {
+    doRegister();
+    return;
+  }
+
+  window.addEventListener("load", doRegister, { once: true });
+}
+
+bindPwaInstallEventsOnce();
+registerServiceWorker();
+
 function syncSidebarToggleButtons(isOpen) {
   const expanded = String(Boolean(isOpen));
 
@@ -23418,7 +23597,9 @@ function renderAuthBrand() {
   return `
     <div class="auth-brand">
       <img src="assets/robot.png" alt="EduKids" class="auth-brand-icon" />
-      <div class="auth-brand-name">EduKids</div>
+      <div class="auth-brand-name" aria-label="EduKids">
+        <span class="auth-brand-edu">Edu</span><span class="auth-brand-kids">Kids</span>
+      </div>
     </div>
   `;
 }
@@ -24691,6 +24872,13 @@ function bindAppEventsOnce() {
     );
     if (learningPathContinueButton) {
       changePage("subjects");
+      return;
+    }
+
+    const installAppButton = event.target.closest("[data-install-app-btn]");
+    if (installAppButton) {
+      event.preventDefault();
+      await handleInstallAppRequest();
       return;
     }
 
