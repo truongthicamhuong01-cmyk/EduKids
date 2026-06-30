@@ -15861,7 +15861,7 @@ body.admin-content-drawer-open {
   body.student-mode .app-mobile-brand-image {
     display: block;
     width: auto;
-    height: 24px;
+    height: 44px;
     max-width: min(52vw, 160px);
     object-fit: contain;
   }
