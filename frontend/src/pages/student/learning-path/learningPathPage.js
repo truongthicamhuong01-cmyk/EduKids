@@ -9,7 +9,6 @@ import {
 } from "./graphEngineV3.js";
 
 const MODAL_CLOSE_MS = 220;
-const TRANSITION_MS = 1700;
 const LEARNING_PATH_TIME_ZONE = "Asia/Ho_Chi_Minh";
 
 const CHECK_ICON = `
@@ -77,8 +76,10 @@ const uiState = {
   taskResetTimer: null,
   rewardPopup: null,
   pendingRewardPopup: null,
+  pendingTransition: null,
   transition: null,
-  transitionTimer: null,
+  transitionEndHandler: null,
+  transitionCompletedKey: "",
   limitNotice: null,
 };
 
@@ -222,7 +223,17 @@ function refreshLearningPathStateIfNeeded() {
     return;
   }
 
-  void hydrateLearningPathStateFromBackend();
+  void hydrateLearningPathStateFromBackend({ silent: true });
+}
+
+function refreshLearningPathStateOnEntry() {
+  if (uiState.loading) {
+    return;
+  }
+
+  void hydrateLearningPathStateFromBackend({
+    silent: Boolean(uiState.backendState),
+  });
 }
 
 function getLearningPathAvatarLayer(root = getLearningPathRoot()) {
@@ -304,11 +315,6 @@ function clearTimers() {
     window.clearInterval(uiState.taskResetTimer);
     uiState.taskResetTimer = null;
   }
-
-  if (uiState.transitionTimer) {
-    window.clearTimeout(uiState.transitionTimer);
-    uiState.transitionTimer = null;
-  }
 }
 
 function syncRewardLayoutWidth(root = getLearningPathRoot()) {
@@ -373,6 +379,61 @@ function requestRewardPopupClose() {
   uiState.rewardPopup = null;
   uiState.pendingRewardPopup = null;
   scheduleRender();
+}
+
+function clearPendingLearningPathTransition() {
+  if (uiState.transitionEndHandler) {
+    const movingAvatar = getLearningPathRoot()?.querySelector?.(
+      "[data-learning-path-moving-avatar]",
+    );
+    if (movingAvatar instanceof HTMLElement) {
+      movingAvatar.removeEventListener("transitionend", uiState.transitionEndHandler);
+    }
+    uiState.transitionEndHandler = null;
+  }
+
+  uiState.transition = null;
+  uiState.pendingTransition = null;
+}
+
+function finalizeLearningPathTransition(root = getLearningPathRoot()) {
+  const transition = uiState.transition;
+  if (!transition) {
+    return;
+  }
+
+  const completedKey = String(transition.key || transition.toCheckpointId || "").trim();
+  uiState.transitionCompletedKey = completedKey;
+
+  if (uiState.pendingRewardPopup) {
+    uiState.rewardPopup = uiState.pendingRewardPopup;
+    uiState.pendingRewardPopup = null;
+  }
+
+  clearPendingLearningPathTransition();
+  scheduleRender();
+  focusLearningPathCheckpoint(root);
+}
+
+function focusLearningPathCheckpoint(root = getLearningPathRoot()) {
+  const state = getState();
+  const checkpointId = String(state?.currentCheckpointId || state?.checkpointId || "").trim();
+  if (!root || !checkpointId) {
+    return;
+  }
+
+  const selector = `[data-learning-path-checkpoint="${escapeCssSelectorValue(checkpointId)}"]`;
+  const checkpointTrigger = root.querySelector(selector);
+  const checkpointAnchor = checkpointTrigger?.closest?.(".learning-path-station-anchor");
+  const focusTarget = checkpointAnchor || checkpointTrigger;
+
+  if (focusTarget && typeof focusTarget.scrollIntoView === "function") {
+    focusTarget.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "center",
+    });
+  }
 }
 
 function blurFocusedLearningPathElement() {
@@ -575,7 +636,10 @@ function extractRemoteLearningPathState(payload) {
   return payload;
 }
 
-async function hydrateLearningPathStateFromBackend() {
+async function hydrateLearningPathStateFromBackend({
+  silent = false,
+  pendingTransition = null,
+} = {}) {
   const userId = getLearningPathUserId();
   if (!userId) {
     scheduleAuthReadyRetry();
@@ -590,7 +654,9 @@ async function hydrateLearningPathStateFromBackend() {
 
   uiState.loading = true;
   uiState.errorMessage = "";
-  scheduleRender();
+  if (!silent || !uiState.backendState) {
+    scheduleRender();
+  }
 
   try {
     const data = await requestLearningPathApi(
@@ -615,6 +681,23 @@ async function hydrateLearningPathStateFromBackend() {
 
     applyLearningPathEvents(data?.events);
     syncAppWalletFromLearningPath(remoteState.wallet);
+
+    if (
+      silent &&
+      pendingTransition &&
+      pendingTransition.key &&
+      pendingTransition.key !== uiState.transitionCompletedKey &&
+      String(remoteState?.checkpointId || remoteState?.currentCheckpointId || "") ===
+        String(pendingTransition.toCheckpointId || "")
+    ) {
+      uiState.transition = {
+        ...pendingTransition,
+        started: false,
+      };
+      uiState.pendingTransition = null;
+    } else if (pendingTransition) {
+      uiState.pendingTransition = null;
+    }
 
     commitLearningPathState();
 
@@ -648,6 +731,7 @@ async function performLearningPathAction(action, payload = {}) {
   }
 
   try {
+    const isNextCheckpointAction = normalizedAction === "NEXT_CHECKPOINT";
     const data = await requestLearningPathApi("/learning-path/action", {
       method: "POST",
       body: {
@@ -669,12 +753,36 @@ async function performLearningPathAction(action, payload = {}) {
     uiState.errorMessage = "";
     uiState.limitNotice = remoteState?.lockNotice || "";
 
-    applyLearningPathEvents(data?.events);
-    syncAppWalletFromLearningPath(remoteState.wallet);
+    const hasTransitionEvent = Array.isArray(data?.events)
+      ? data.events.some((event) => event?.eventName === "AVATAR_POSITION_CHANGED")
+      : false;
 
-    commitLearningPathState();
+    applyLearningPathEvents(data?.events, {
+      deferAvatarTransition: isNextCheckpointAction,
+    });
 
-    return remoteState;
+    if (isNextCheckpointAction) {
+      await new Promise((resolve) => requestLearningPathModalClose(resolve));
+    }
+
+    const refetchedState = await hydrateLearningPathStateFromBackend({
+      silent: true,
+      pendingTransition:
+        isNextCheckpointAction && hasTransitionEvent
+          ? uiState.pendingTransition
+          : null,
+    });
+
+    if (!refetchedState) {
+      uiState.backendState = remoteState;
+      uiState.loading = false;
+      uiState.pendingTransition = null;
+      syncAppWalletFromLearningPath(remoteState.wallet);
+      commitLearningPathState();
+      return remoteState;
+    }
+
+    return refetchedState;
   } catch (error) {
     uiState.errorMessage =
       error?.message || "Không thể thực hiện action Learning Path.";
@@ -795,13 +903,6 @@ function syncTaskResetCountdownTimer(isModalVisible) {
   }, 1000);
 }
 
-function clearTransitionTimer() {
-  if (uiState.transitionTimer) {
-    window.clearTimeout(uiState.transitionTimer);
-    uiState.transitionTimer = null;
-  }
-}
-
 function showCheckpointRewardPopup(event) {
   const checkpoint = event?.payload?.checkpoint || null;
   if (!checkpoint) {
@@ -827,22 +928,25 @@ function showAvatarTransition(event) {
     return false;
   }
 
-  clearTransitionTimer();
-  uiState.transition = {
+  const key = String(
+    [
+      payload.checkpointId || "",
+      payload.from?.left,
+      payload.from?.top,
+      payload.to?.left,
+      payload.to?.top,
+    ]
+      .filter((value) => value !== "")
+      .join(":"),
+  ).trim();
+
+  uiState.pendingTransition = {
     from: payload.from,
     to: payload.to,
-    toCheckpointId: payload.checkpointId,
+    toCheckpointId: String(payload.checkpointId || "").trim(),
+    key,
     started: false,
   };
-
-  uiState.transitionTimer = window.setTimeout(() => {
-    if (uiState.pendingRewardPopup) {
-      uiState.rewardPopup = uiState.pendingRewardPopup;
-      uiState.pendingRewardPopup = null;
-    }
-    uiState.transition = null;
-    scheduleRender();
-  }, TRANSITION_MS);
 
   return true;
 }
@@ -932,7 +1036,7 @@ function syncAppWalletFromLearningPath(wallet) {
   }
 }
 
-function applyLearningPathEvent(event) {
+function applyLearningPathEvent(event, options = {}) {
   if (!event || typeof event !== "object") {
     return false;
   }
@@ -955,19 +1059,20 @@ function applyLearningPathEvent(event) {
     case "REWARD_GRANTED":
       return true;
     case "AVATAR_POSITION_CHANGED":
-      return showAvatarTransition(event);
+      return showAvatarTransition(event, options);
     default:
       return true;
   }
 }
 
-function applyLearningPathEvents(events) {
+function applyLearningPathEvents(events, options = {}) {
   if (!Array.isArray(events)) {
     return false;
   }
 
   return events.reduce(
-    (shouldRender, event) => applyLearningPathEvent(event) || shouldRender,
+    (shouldRender, event) =>
+      applyLearningPathEvent(event, options) || shouldRender,
     false,
   );
 }
@@ -1510,6 +1615,20 @@ function startAvatarTransitionAnimation(root = getLearningPathRoot()) {
   }
 
   transition.started = true;
+  const finishTransition = (event) => {
+    if (event.target !== movingAvatar) {
+      return;
+    }
+
+    if (event.propertyName !== "left" && event.propertyName !== "top") {
+      return;
+    }
+
+    finalizeLearningPathTransition(root);
+  };
+
+  uiState.transitionEndHandler = finishTransition;
+  movingAvatar.addEventListener("transitionend", finishTransition);
   window.requestAnimationFrame(() => {
     if (!uiState.transition || !movingAvatar.isConnected) {
       return;
@@ -2016,10 +2135,11 @@ export function renderLearningPathPage(root = getLearningPathRoot()) {
   if (!uiState.initialized) {
     uiState.initialized = true;
     void hydrateLearningPathStateFromBackend();
+  } else {
+    refreshLearningPathStateOnEntry();
   }
 
   bindLearningPathControlsOnce();
-  refreshLearningPathStateIfNeeded();
   const state = getState() || getEmptyLearningPathState();
   if (!uiState.mounted) {
     root.innerHTML = renderLearningPathStaticShell(state);

@@ -23478,9 +23478,10 @@ function bindPwaInstallEventsOnce() {
   bootstrapState.pwaBound = true;
   pwaInstallState.installed = isAppInstalled();
   syncInstallAppButtons();
+  console.log("[PWA] listener registered");
 
   window.addEventListener("beforeinstallprompt", (event) => {
-    console.log("beforeinstallprompt fired");
+    console.log("[PWA] beforeinstallprompt fired");
     console.log(event);
     event.preventDefault();
     deferredInstallPrompt = event;
@@ -23513,9 +23514,19 @@ function registerServiceWorker() {
   }
 
   const doRegister = () => {
-    navigator.serviceWorker.register("/sw.js").catch((error) => {
-      console.warn("[EduKids][pwa] service worker registration failed", error);
-    });
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((registration) => {
+        console.log("[PWA] service worker registered", {
+          scope: registration.scope,
+          active: Boolean(registration.active),
+          installing: Boolean(registration.installing),
+          waiting: Boolean(registration.waiting),
+        });
+      })
+      .catch((error) => {
+        console.warn("[EduKids][pwa] service worker registration failed", error);
+      });
   };
 
   if (document.readyState === "complete") {
@@ -23526,8 +23537,34 @@ function registerServiceWorker() {
   window.addEventListener("load", doRegister, { once: true });
 }
 
+async function logServiceWorkerRegistrations() {
+  if (
+    typeof navigator === "undefined" ||
+    !("serviceWorker" in navigator) ||
+    typeof navigator.serviceWorker.getRegistrations !== "function"
+  ) {
+    return;
+  }
+
+  try {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    console.log(
+      "[PWA] service worker registrations",
+      registrations.map((registration) => ({
+        scope: registration.scope,
+        active: Boolean(registration.active),
+        installing: Boolean(registration.installing),
+        waiting: Boolean(registration.waiting),
+      })),
+    );
+  } catch (error) {
+    console.warn("[PWA] unable to read service worker registrations", error);
+  }
+}
+
 bindPwaInstallEventsOnce();
 registerServiceWorker();
+void logServiceWorkerRegistrations();
 
 function syncSidebarToggleButtons(isOpen) {
   const expanded = String(Boolean(isOpen));
