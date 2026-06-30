@@ -50,8 +50,8 @@ const LOCK_ICON = `
 const stageWikiLinks = {
   1: "https://vi.wikipedia.org/wiki/Puncak_Jaya",
   2: "https://vi.wikipedia.org/wiki/Vinson_Massif",
-  3: "https://vi.wikipedia.org/wiki/Mount_Elbrus",
-  4: "https://vi.wikipedia.org/wiki/Mount_Kilimanjaro",
+  3: "https://vi.wikipedia.org/wiki/Elbrus",
+  4: "https://vi.wikipedia.org/wiki/N%C3%BAi_Kilimanjaro",
   5: "https://vi.wikipedia.org/wiki/Denali",
   6: "https://vi.wikipedia.org/wiki/Aconcagua",
   7: "https://vi.wikipedia.org/wiki/Mount_Everest",
