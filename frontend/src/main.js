@@ -9749,6 +9749,10 @@ function getBossBattleHearts(answeredCount, totalQuestions) {
   return Math.min(total, Math.max(1, playerHP));
 }
 
+function getBossBattleTotalHearts(totalQuestions) {
+  return Math.max(1, Math.ceil(Math.max(0, Number(totalQuestions) || 0) / 2));
+}
+
 function getBossBattleQuestionStageIndex(totalQuestions, answeredCount) {
   const total = Math.max(1, Number(totalQuestions || 0));
   const answered = Math.max(0, Number(answeredCount || 0));
@@ -11268,14 +11272,14 @@ async function requestBossBattleHint() {
   }
 }
 
-function getBossBattleHeartMarkup(playerHP) {
-  const totalSlots = 5;
+function getBossBattleHeartMarkup(playerHP, totalSlots = 1) {
+  const totalHearts = Math.max(1, Number(totalSlots) || 1);
   const activeCount = Math.max(
     0,
-    Math.min(totalSlots, Math.floor(Number(playerHP) || 0)),
+    Math.min(totalHearts, Math.floor(Number(playerHP) || 0)),
   );
 
-  return Array.from({ length: totalSlots }, (_, index) => {
+  return Array.from({ length: totalHearts }, (_, index) => {
     const isActive = index < activeCount;
 
     return `
@@ -11854,6 +11858,7 @@ async function handleBossBattlePopupAction(action) {
 
 function resetBossBattleState(totalQuestions = 0) {
   const normalizedTotalQuestions = Math.max(0, Number(totalQuestions) || 0);
+  const totalHearts = getBossBattleTotalHearts(normalizedTotalQuestions);
   clearBossBattleAnimationTimers();
   clearBossBattleRewardCounterAnimation();
   clearBossBattleAchievementPopupTimer();
@@ -11868,18 +11873,12 @@ function resetBossBattleState(totalQuestions = 0) {
   bossBattleState.currentQuestionIndex = 0;
   bossBattleState.totalQuestions = normalizedTotalQuestions;
   bossBattleState.bossHP = 100;
-  bossBattleState.playerHP = Math.max(
-    1,
-    Math.ceil(normalizedTotalQuestions / 2),
-  );
+  bossBattleState.playerHP = totalHearts;
   bossBattleState.combo = 0;
   bossBattleState.bossState = "idle";
   bossBattleState.battleStatus = "idle";
   bossBattleState.visualBossHP = 100;
-  bossBattleState.visualPlayerHP = Math.max(
-    1,
-    Math.ceil(normalizedTotalQuestions / 2),
-  );
+  bossBattleState.visualPlayerHP = totalHearts;
   bossBattleState.hintRemaining = 3;
   bossBattleState.hintLoading = false;
   bossBattleState.hiddenOptions = [];
@@ -12788,9 +12787,10 @@ function renderStudentQuizScreen() {
     terminalLocked && battleStatus === "active" ? "completed" : battleStatus;
   const battleStatusLabel = getBossBattleStatusLabel(battleStatus);
   const bossStateLabel = normalizeQuizText(bossBattleState.bossState || "idle");
+  const totalHearts = getBossBattleTotalHearts(bossBattleState.totalQuestions);
   const playerHP = Math.max(
     0,
-    Math.floor(Number(bossBattleState.playerHP) || 0),
+    Math.min(totalHearts, Math.floor(Number(bossBattleState.playerHP) || 0)),
   );
   const comboValue = Math.max(
     0,
@@ -13031,7 +13031,7 @@ function renderStudentQuizScreen() {
             <img src="${getBossBattleIconPath("heart")}" alt="" aria-hidden="true" />
             <span>MÁU</span>
           </div>
-          <div class="boss-battle-sidebar__hearts">${getBossBattleHeartMarkup(playerHP)}</div>
+          <div class="boss-battle-sidebar__hearts">${getBossBattleHeartMarkup(playerHP, totalHearts)}</div>
         </div>
 
         <div class="boss-battle-sidebar__metric boss-battle-sidebar__metric--combo ${comboValue >= 5 ? "is-combo-strong" : comboValue >= 3 ? "is-combo-glow" : ""}">

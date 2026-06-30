@@ -124,6 +124,17 @@ const TASK_BLUEPRINTS = [
     targetRoute: "/student/assignments",
   },
   {
+    idSuffix: "assignment-teacher",
+    type: "assignment",
+    icon: "📝",
+    metric: "assignmentCountToday",
+    threshold: 1,
+    title: () => "Làm 1 bài tập giáo viên giao",
+    description: () =>
+      "Chỉ tính bài tập được giáo viên giao, nộp và chấm trong ngày hiện tại.",
+    targetRoute: "/student/assignments",
+  },
+  {
     idSuffix: "coach-1",
     type: "coach",
     icon: "🎯",
@@ -494,7 +505,7 @@ function createMountain(blueprint, index) {
       altitude: getCheckpointAltitudeLabel(summitHeightMeters, 2),
       position: ROUTE_POSITIONS[2],
       reward: stationRewards[2],
-      taskKeys: ["assignment-1", "lesson-1", "quiz-2"],
+      taskKeys: ["assignment-teacher", "lesson-1", "login"],
       completed: false,
     }),
     createCheckpoint({
