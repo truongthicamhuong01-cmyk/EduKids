@@ -8279,6 +8279,10 @@ function applyLatestCurrentUser(profile) {
   const normalizedProfile =
     window.EduKidsProfileService?.normalizeProfile?.(profile) || profile;
 
+  console.log("[Before update]", bootstrapState.currentUser?.stats?.eduCoin);
+  console.log("[Incoming]", normalizedProfile?.stats?.eduCoin);
+  console.trace("Update student");
+
   bootstrapState.currentUser = normalizedProfile;
   window.EduKidsCurrentUser = normalizedProfile;
   studentRecentWrongAnswersCache.clear();
@@ -8334,6 +8338,10 @@ function syncPetWalletFromProfile(profile) {
   if (coinValue === null) {
     return;
   }
+
+  console.log("[Before update]", bootstrapState.currentUser?.stats?.eduCoin);
+  console.log("[Incoming]", coinValue);
+  console.trace("Update student");
 
   if (!pet?.store?.setState) {
     return;

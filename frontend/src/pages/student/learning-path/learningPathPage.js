@@ -771,6 +771,10 @@ async function hydrateLearningPathStateFromBackend({
       ? ""
       : "Backend Learning Path chưa trả về state hợp lệ.";
 
+    console.log("[LP BEFORE UPDATE]", getOfficialCurrentUser()?.stats?.eduCoin);
+    console.log("[LP INCOMING WALLET]", remoteState?.wallet?.eduCoin);
+    console.trace("Learning Path hydrate -> syncAppWalletFromLearningPath");
+
     applyLearningPathEvents(data?.events);
     syncAppWalletFromLearningPath(remoteState.wallet);
 
@@ -1109,6 +1113,9 @@ function syncAppWalletFromLearningPath(wallet) {
   }
 
   const eduCoin = Math.max(0, Math.floor(rawEduCoin));
+  console.log("[LP BEFORE UPDATE]", getOfficialCurrentUser()?.stats?.eduCoin);
+  console.log("[LP INCOMING]", eduCoin);
+  console.trace("Update student");
   uiState.lastKnownCoinValue = eduCoin;
   const currentUser = getOfficialCurrentUser();
 
