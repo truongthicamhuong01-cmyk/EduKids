@@ -39,7 +39,7 @@ function createLandingMarkup() {
           </div>
 
           <div class="landing-section__copy">
-            <h1 id="landing-hero-title">Biến việc học thành cuộc phiêu lưu ⛰️</h1>
+            <h1 id="landing-hero-title">Biến việc học thành cuộc phiêu lưu kỳ thú ⛰️</h1>
             <button type="button" class="landing-cta" data-landing-route="/login">
               Bắt đầu hành trình 🚀
             </button>

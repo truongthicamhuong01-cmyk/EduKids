@@ -10,8 +10,7 @@ const PROFILE_APP_INFO_FOOTER_HTML = `
           <span class="profile-app-info-brand-edu">Edu</span><span class="profile-app-info-brand-kids">Kids</span>
         </strong>
         <p>
-          Nền tảng học tập trò chơi hóa ứng dụng trí tuệ nhân tạo
-          (AI)
+          Nền tảng học tập trò chơi hóa\nứng dụng trí tuệ nhân tạo (AI)
         </p>
       </div>
     </div>
@@ -45,7 +44,7 @@ const PROFILE_APP_INFO_FOOTER_HTML = `
       </p>
       <p>
         Github Repo:
-        <a href="https://github.com/truongthicamhuong01-cmyk/EduKids" target="_blank" rel="noreferrer">github.com/truongthicamhuong01-cmyk/EduKids</a>
+        <a href="https://github.com/truongthicamhuong01-cmyk/EduKids" target="_blank" rel="noreferrer">github.com/EduKids</a>
       </p>
     </div>
   </div>

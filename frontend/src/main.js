@@ -21682,11 +21682,7 @@ function renderTeacherStatsPageState(viewModel) {
   }
 
   setTeacherStatsCardVisibility(topStudentsNode, true);
-  setTeacherStatsCardVisibility(
-    supportStudentsNode,
-    Array.isArray(viewModel.supportStudents) &&
-      viewModel.supportStudents.length > 0,
-  );
+  setTeacherStatsCardVisibility(supportStudentsNode, true);
 }
 
 function bindTeacherStatsControls() {
