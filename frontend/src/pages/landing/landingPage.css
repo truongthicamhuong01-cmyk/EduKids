@@ -30,7 +30,7 @@ body.landing-mode #auth-root {
 .landing-main {
   width: 100%;
   margin: 0;
-  padding: 0 0 48px;
+  padding: 0 0 12px;
 }
 
 .landing-navbar {
@@ -235,7 +235,7 @@ body.landing-mode #auth-root {
 
   .landing-main {
     width: 100%;
-    padding-bottom: 40px;
+    padding-bottom: 10px;
   }
 
   .landing-section__copy {
