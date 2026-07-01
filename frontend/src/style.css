@@ -616,7 +616,11 @@ body.auth-mode .app {
   min-height: clamp(320px, 56vh, 680px);
   padding: 32px;
   background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.88), rgba(246, 242, 255, 0.92)),
+    radial-gradient(
+      circle at top,
+      rgba(255, 255, 255, 0.88),
+      rgba(246, 242, 255, 0.92)
+    ),
     linear-gradient(180deg, #f8f5ff 0%, #eef4ff 100%);
 }
 
@@ -9919,7 +9923,7 @@ img.profile-skeleton {
 }
 
 .learning-path-reward-item.is-blue {
-  flex-grow: 0.8;
+  flex-grow: 1;
   min-width: 90px;
 }
 

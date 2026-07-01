@@ -1,6 +1,9 @@
 const ApiError = require("../utils/apiError");
 const { PET_ACTIONS, PET_ERROR_CODES } = require("../constants/petConstants");
-const { getUserById, updateUserById } = require("../repositories/userRepository");
+const {
+  getUserById,
+  updateUserById,
+} = require("../repositories/userRepository");
 const {
   getPetRequest,
   getPetState,
@@ -29,15 +32,27 @@ function isStudentUser(user) {
 
 function ensureStudentUser(user) {
   if (!user) {
-    throw new ApiError(401, "Người dùng chưa đăng nhập", PET_ERROR_CODES.UNAUTHORIZED);
+    throw new ApiError(
+      401,
+      "Người dùng chưa đăng nhập",
+      PET_ERROR_CODES.UNAUTHORIZED,
+    );
   }
 
   if (!isStudentUser(user)) {
-    throw new ApiError(403, "Chỉ học sinh mới được sử dụng Pet", PET_ERROR_CODES.FORBIDDEN);
+    throw new ApiError(
+      403,
+      "Chỉ học sinh mới được sử dụng Pet",
+      PET_ERROR_CODES.FORBIDDEN,
+    );
   }
 }
 
-function requireObject(value, fieldName, errorCode = PET_ERROR_CODES.INVALID_GAME_CONFIG) {
+function requireObject(
+  value,
+  fieldName,
+  errorCode = PET_ERROR_CODES.INVALID_GAME_CONFIG,
+) {
   if (!value || typeof value !== "object") {
     throw new ApiError(422, `Thiếu cấu hình ${fieldName}`, errorCode, {
       fieldName,
@@ -54,7 +69,9 @@ function hasPath(source, path) {
     }
 
     const parentPath = segments.slice(0, index).join(".");
-    const parent = parentPath.split(".").reduce((acc, key) => acc && acc[key], source);
+    const parent = parentPath
+      .split(".")
+      .reduce((acc, key) => acc && acc[key], source);
     return parent && Object.prototype.hasOwnProperty.call(parent, segment);
   });
 }
@@ -62,7 +79,10 @@ function hasPath(source, path) {
 function assertConfigShape(configs) {
   const petBalance = requireObject(configs.petBalance, "petBalance");
   const levelConfig = requireObject(configs.levelConfig, "levelConfig");
-  const evolutionConfig = requireObject(configs.evolutionConfig, "evolutionConfig");
+  const evolutionConfig = requireObject(
+    configs.evolutionConfig,
+    "evolutionConfig",
+  );
 
   const requiredPetBalancePaths = [
     "statLimits.minValue",
@@ -80,35 +100,69 @@ function assertConfigShape(configs) {
     "moodThresholds",
   ];
 
-  const missingPetBalance = requiredPetBalancePaths.filter((path) => !hasPath(petBalance, path));
+  const missingPetBalance = requiredPetBalancePaths.filter(
+    (path) => !hasPath(petBalance, path),
+  );
   if (missingPetBalance.length > 0) {
-    throw new ApiError(422, "Cấu hình petBalance chưa đầy đủ", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
-      missingFields: missingPetBalance,
-    });
+    throw new ApiError(
+      422,
+      "Cấu hình petBalance chưa đầy đủ",
+      PET_ERROR_CODES.INVALID_GAME_CONFIG,
+      {
+        missingFields: missingPetBalance,
+      },
+    );
   }
 
-  const requiredLevelConfigPaths = ["curveType", "baseExp", "linearStep", "quadraticFactor", "levelCap"];
-  const missingLevelConfig = requiredLevelConfigPaths.filter((path) => !hasPath(levelConfig, path));
+  const requiredLevelConfigPaths = [
+    "curveType",
+    "baseExp",
+    "linearStep",
+    "quadraticFactor",
+    "levelCap",
+  ];
+  const missingLevelConfig = requiredLevelConfigPaths.filter(
+    (path) => !hasPath(levelConfig, path),
+  );
   if (missingLevelConfig.length > 0) {
-    throw new ApiError(422, "Cấu hình levelConfig chưa đầy đủ", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
-      missingFields: missingLevelConfig,
-    });
+    throw new ApiError(
+      422,
+      "Cấu hình levelConfig chưa đầy đủ",
+      PET_ERROR_CODES.INVALID_GAME_CONFIG,
+      {
+        missingFields: missingLevelConfig,
+      },
+    );
   }
 
   const hasPetTypeRules =
     Array.isArray(evolutionConfig.petTypes) ||
-    (evolutionConfig.byPetType && typeof evolutionConfig.byPetType === "object");
+    (evolutionConfig.byPetType &&
+      typeof evolutionConfig.byPetType === "object");
 
   if (!hasPetTypeRules) {
-    throw new ApiError(422, "Cấu hình evolutionConfig chưa đầy đủ", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
-      missingFields: ["petTypes|byPetType"],
-    });
+    throw new ApiError(
+      422,
+      "Cấu hình evolutionConfig chưa đầy đủ",
+      PET_ERROR_CODES.INVALID_GAME_CONFIG,
+      {
+        missingFields: ["petTypes|byPetType"],
+      },
+    );
   }
 
-  if (!Array.isArray(evolutionConfig.stages) || evolutionConfig.stages.length === 0) {
-    throw new ApiError(422, "Cấu hình evolutionConfig.stages chưa đầy đủ", PET_ERROR_CODES.INVALID_GAME_CONFIG, {
-      missingFields: ["stages"],
-    });
+  if (
+    !Array.isArray(evolutionConfig.stages) ||
+    evolutionConfig.stages.length === 0
+  ) {
+    throw new ApiError(
+      422,
+      "Cấu hình evolutionConfig.stages chưa đầy đủ",
+      PET_ERROR_CODES.INVALID_GAME_CONFIG,
+      {
+        missingFields: ["stages"],
+      },
+    );
   }
 
   return {
@@ -119,7 +173,10 @@ function assertConfigShape(configs) {
 }
 
 function getStatLimits(petBalance = {}) {
-  const statLimits = requireObject(petBalance.statLimits, "petBalance.statLimits");
+  const statLimits = requireObject(
+    petBalance.statLimits,
+    "petBalance.statLimits",
+  );
 
   return {
     minValue: toNumber(statLimits.minValue, 0),
@@ -139,7 +196,10 @@ function getAllowedPetTypes(evolutionConfig = {}) {
     });
   }
 
-  if (evolutionConfig.byPetType && typeof evolutionConfig.byPetType === "object") {
+  if (
+    evolutionConfig.byPetType &&
+    typeof evolutionConfig.byPetType === "object"
+  ) {
     Object.keys(evolutionConfig.byPetType).forEach((typeId) => {
       const normalized = normalizeText(typeId);
       if (normalized) {
@@ -164,10 +224,15 @@ function ensureAllowedPetType(petTypeId, evolutionConfig) {
   }
 
   if (!allowedPetTypes.includes(petTypeId)) {
-    throw new ApiError(400, "Loại Pet không hợp lệ", PET_ERROR_CODES.INVALID_PET_TYPE, {
-      petTypeId,
-      allowedPetTypes,
-    });
+    throw new ApiError(
+      400,
+      "Loại Pet không hợp lệ",
+      PET_ERROR_CODES.INVALID_PET_TYPE,
+      {
+        petTypeId,
+        allowedPetTypes,
+      },
+    );
   }
 }
 
@@ -238,10 +303,13 @@ function buildPetResponse(petState, configs, extra = {}) {
   const normalizedPet = buildRuntimePetState(petState, configs, new Date());
 
   const canFeed = normalizedPet.hunger < maxStatValue;
-  const canPlay = normalizedPet.energy > toNumber(petBalance.actions?.play?.minEnergyToAllow, 0);
+  const canPlay =
+    normalizedPet.energy >
+    toNumber(petBalance.actions?.play?.minEnergyToAllow, 0);
   const canSleep =
     !normalizedPet.isSleeping &&
-    normalizedPet.energy < toNumber(petBalance.actions?.sleep?.maxEnergyToAllow, maxStatValue);
+    normalizedPet.energy <
+      toNumber(petBalance.actions?.sleep?.maxEnergyToAllow, maxStatValue);
 
   return {
     pet: {
@@ -252,7 +320,12 @@ function buildPetResponse(petState, configs, extra = {}) {
     },
     hasPet: true,
     wallet: {
-      eduCoin: Math.max(0, Number(extra?.wallet?.eduCoin ?? extra?.wallet?.coin ?? extra?.eduCoin ?? 0)),
+      eduCoin: Math.max(
+        0,
+        Number(
+          extra?.wallet?.eduCoin ?? extra?.wallet?.coin ?? extra?.eduCoin ?? 0,
+        ),
+      ),
     },
     derivedState: {
       mood: normalizedPet.mood,
@@ -275,12 +348,22 @@ function getCooldownRemaining(lastActionAt, cooldownSeconds, now = new Date()) {
     return 0;
   }
 
-  const elapsedSeconds = Math.floor((now.getTime() - actionTime.getTime()) / 1000);
+  const elapsedSeconds = Math.floor(
+    (now.getTime() - actionTime.getTime()) / 1000,
+  );
   return Math.max(0, cooldownSeconds - elapsedSeconds);
 }
 
-function ensureActionCooldown(petState, actionName, actionConfig, now = new Date()) {
-  const cooldownSeconds = Math.max(0, Math.floor(toNumber(actionConfig.cooldownSeconds, 0)));
+function ensureActionCooldown(
+  petState,
+  actionName,
+  actionConfig,
+  now = new Date(),
+) {
+  const cooldownSeconds = Math.max(
+    0,
+    Math.floor(toNumber(actionConfig.cooldownSeconds, 0)),
+  );
   if (cooldownSeconds <= 0) {
     return;
   }
@@ -296,10 +379,15 @@ function ensureActionCooldown(petState, actionName, actionConfig, now = new Date
   const remaining = getCooldownRemaining(lastActionAt, cooldownSeconds, now);
 
   if (remaining > 0) {
-    throw new ApiError(429, "Hành động đang trong thời gian chờ", PET_ERROR_CODES.ACTION_COOLDOWN_ACTIVE, {
-      actionName,
-      retryAfterSeconds: remaining,
-    });
+    throw new ApiError(
+      429,
+      "Hành động đang trong thời gian chờ",
+      PET_ERROR_CODES.ACTION_COOLDOWN_ACTIVE,
+      {
+        actionName,
+        retryAfterSeconds: remaining,
+      },
+    );
   }
 }
 
@@ -326,7 +414,15 @@ function ensureCachedResponse(requestRecord, requestKey) {
   return requestRecord.response;
 }
 
-function applyActionDelta(petState, actionName, actionConfig, petBalance, levelConfig, evolutionConfig, now = new Date()) {
+function applyActionDelta(
+  petState,
+  actionName,
+  actionConfig,
+  petBalance,
+  levelConfig,
+  evolutionConfig,
+  now = new Date(),
+) {
   const deltas = {
     hunger: 0,
     happiness: 0,
@@ -372,40 +468,72 @@ function getActionConfig(petBalance = {}, actionName = "") {
   const actionConfig = actions[actionName];
 
   if (!actionConfig || typeof actionConfig !== "object") {
-    throw new ApiError(422, `Thiếu cấu hình cho hành động ${actionName}`, PET_ERROR_CODES.INVALID_GAME_CONFIG, {
-      actionName,
-    });
+    throw new ApiError(
+      422,
+      `Thiếu cấu hình cho hành động ${actionName}`,
+      PET_ERROR_CODES.INVALID_GAME_CONFIG,
+      {
+        actionName,
+      },
+    );
   }
 
   return actionConfig;
 }
 
-function validateActionGate(petState, actionName, petBalance, now = new Date()) {
+function validateActionGate(
+  petState,
+  actionName,
+  petBalance,
+  now = new Date(),
+) {
   const actionConfig = getActionConfig(petBalance, actionName);
   const maxStatValue = toNumber(petBalance.statLimits?.maxValue, 100);
   const minEnergyToPlay = toNumber(actionConfig.minEnergyToAllow, 0);
-  const maxEnergyToSleep = toNumber(actionConfig.maxEnergyToAllow, maxStatValue);
+  const maxEnergyToSleep = toNumber(
+    actionConfig.maxEnergyToAllow,
+    maxStatValue,
+  );
   const minHungerToFeed = toNumber(actionConfig.minHungerToAllow, maxStatValue);
 
-  if (actionName === PET_ACTIONS.FEED && toNumber(petState.hunger, 0) >= minHungerToFeed) {
+  if (
+    actionName === PET_ACTIONS.FEED &&
+    toNumber(petState.hunger, 0) >= minHungerToFeed
+  ) {
     throw new ApiError(400, "Pet đã no rồi", PET_ERROR_CODES.PET_TOO_FULL, {
       actionName,
       hunger: petState.hunger,
     });
   }
 
-  if (actionName === PET_ACTIONS.PLAY && toNumber(petState.energy, 0) <= minEnergyToPlay) {
-    throw new ApiError(400, "Pet đang quá mệt để chơi", PET_ERROR_CODES.PET_TOO_TIRED, {
-      actionName,
-      energy: petState.energy,
-    });
+  if (
+    actionName === PET_ACTIONS.PLAY &&
+    toNumber(petState.energy, 0) <= minEnergyToPlay
+  ) {
+    throw new ApiError(
+      400,
+      "Pet đang quá mệt để chơi",
+      PET_ERROR_CODES.PET_TOO_TIRED,
+      {
+        actionName,
+        energy: petState.energy,
+      },
+    );
   }
 
-  if (actionName === PET_ACTIONS.SLEEP && toNumber(petState.energy, 0) >= maxEnergyToSleep) {
-    throw new ApiError(400, "Pet chưa cần ngủ ngay", PET_ERROR_CODES.PET_NOT_READY, {
-      actionName,
-      energy: petState.energy,
-    });
+  if (
+    actionName === PET_ACTIONS.SLEEP &&
+    toNumber(petState.energy, 0) >= maxEnergyToSleep
+  ) {
+    throw new ApiError(
+      400,
+      "Pet chưa cần ngủ ngay",
+      PET_ERROR_CODES.PET_NOT_READY,
+      {
+        actionName,
+        energy: petState.energy,
+      },
+    );
   }
 
   ensureActionCooldown(petState, actionName, actionConfig, now);
@@ -442,12 +570,19 @@ async function getPet({ uid, requestId = "" }) {
     const petState = await getPetState(normalizedUid, transaction);
 
     if (!petState) {
-      throw new ApiError(404, "Không tìm thấy Pet của bạn", PET_ERROR_CODES.PET_NOT_FOUND);
+      throw new ApiError(
+        404,
+        "Không tìm thấy Pet của bạn",
+        PET_ERROR_CODES.PET_NOT_FOUND,
+      );
     }
 
     const configs = assertConfigShape(await getGameConfigBundle());
     const synced = await syncPetRuntime(normalizedUid, petState, configs, now);
-    const nextVersion = Math.max(1, Math.floor(toNumber(petState.version, 0)) + 1);
+    const nextVersion = Math.max(
+      1,
+      Math.floor(toNumber(petState.version, 0)) + 1,
+    );
     const petToSave = {
       ...stripDerivedPetFields(synced.state),
       version: nextVersion,
@@ -490,7 +625,12 @@ async function getPet({ uid, requestId = "" }) {
   return result;
 }
 
-async function selectPet({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
+async function selectPet({
+  uid,
+  body = {},
+  requestId = "",
+  idempotencyKey = "",
+}) {
   const normalizedUid = normalizeText(uid);
   const petTypeId = normalizeText(body.petTypeId);
   const petName = normalizeText(body.petName || body.name);
@@ -498,7 +638,10 @@ async function selectPet({ uid, body = {}, requestId = "", idempotencyKey = "" }
 
   const configs = assertConfigShape(await getGameConfigBundle());
   const petBalance = requireObject(configs.petBalance, "petBalance");
-  const evolutionConfig = requireObject(configs.evolutionConfig, "evolutionConfig");
+  const evolutionConfig = requireObject(
+    configs.evolutionConfig,
+    "evolutionConfig",
+  );
   const now = new Date();
 
   ensureAllowedPetType(petTypeId, evolutionConfig);
@@ -508,7 +651,11 @@ async function selectPet({ uid, body = {}, requestId = "", idempotencyKey = "" }
     ensureStudentUser(user);
 
     if (idempotencyKey) {
-      const cached = await getPetRequest(normalizedUid, idempotencyKey, transaction);
+      const cached = await getPetRequest(
+        normalizedUid,
+        idempotencyKey,
+        transaction,
+      );
       const cachedResponse = ensureCachedResponse(cached, idempotencyKey);
       if (cachedResponse) {
         return cachedResponse;
@@ -517,9 +664,18 @@ async function selectPet({ uid, body = {}, requestId = "", idempotencyKey = "" }
 
     const existingPet = await getPetState(normalizedUid, transaction);
     if (existingPet || normalizeText(user?.selectedPetId)) {
-      throw new ApiError(409, "Bạn đã chọn Pet rồi", PET_ERROR_CODES.PET_ALREADY_SELECTED, {
-        petTypeId: existingPet?.petTypeId || existingPet?.petType || user?.selectedPetId || "",
-      });
+      throw new ApiError(
+        409,
+        "Bạn đã chọn Pet rồi",
+        PET_ERROR_CODES.PET_ALREADY_SELECTED,
+        {
+          petTypeId:
+            existingPet?.petTypeId ||
+            existingPet?.petType ||
+            user?.selectedPetId ||
+            "",
+        },
+      );
     }
 
     const initialStats = getInitialPetStats(petBalance);
@@ -619,7 +775,13 @@ async function selectPet({ uid, body = {}, requestId = "", idempotencyKey = "" }
   return result;
 }
 
-async function mutatePetAction({ uid, actionName, body = {}, requestId = "", idempotencyKey = "" }) {
+async function mutatePetAction({
+  uid,
+  actionName,
+  body = {},
+  requestId = "",
+  idempotencyKey = "",
+}) {
   const normalizedUid = normalizeText(uid);
   ensureStudentUser(await getUserById(normalizedUid));
   const now = new Date();
@@ -631,16 +793,27 @@ async function mutatePetAction({ uid, actionName, body = {}, requestId = "", ide
     const petState = await getPetState(normalizedUid, transaction);
 
     if (!petState) {
-      throw new ApiError(404, "Không tìm thấy Pet của bạn", PET_ERROR_CODES.PET_NOT_FOUND);
+      throw new ApiError(
+        404,
+        "Không tìm thấy Pet của bạn",
+        PET_ERROR_CODES.PET_NOT_FOUND,
+      );
     }
 
     const configs = assertConfigShape(await getGameConfigBundle());
     const petBalance = requireObject(configs.petBalance, "petBalance");
     const levelConfig = requireObject(configs.levelConfig, "levelConfig");
-    const evolutionConfig = requireObject(configs.evolutionConfig, "evolutionConfig");
+    const evolutionConfig = requireObject(
+      configs.evolutionConfig,
+      "evolutionConfig",
+    );
 
     if (idempotencyKey) {
-      const cached = await getPetRequest(normalizedUid, idempotencyKey, transaction);
+      const cached = await getPetRequest(
+        normalizedUid,
+        idempotencyKey,
+        transaction,
+      );
       const cachedResponse = ensureCachedResponse(cached, idempotencyKey);
       if (cachedResponse) {
         return cachedResponse;
@@ -689,7 +862,12 @@ async function mutatePetAction({ uid, actionName, body = {}, requestId = "", ide
       return response;
     }
 
-    const actionConfig = validateActionGate(syncedState, actionName, petBalance, now);
+    const actionConfig = validateActionGate(
+      syncedState,
+      actionName,
+      petBalance,
+      now,
+    );
     const nextState = applyActionDelta(
       syncedState,
       actionName,
@@ -700,7 +878,11 @@ async function mutatePetAction({ uid, actionName, body = {}, requestId = "", ide
       now,
     );
 
-    await savePetState(normalizedUid, stripDerivedPetFields(nextState), transaction);
+    await savePetState(
+      normalizedUid,
+      stripDerivedPetFields(nextState),
+      transaction,
+    );
     await updateUserById(
       normalizedUid,
       {
@@ -857,16 +1039,27 @@ async function sleep({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
 
     const petState = await getPetState(normalizedUid, transaction);
     if (!petState) {
-      throw new ApiError(404, "Khong tim thay Pet cua ban", PET_ERROR_CODES.PET_NOT_FOUND);
+      throw new ApiError(
+        404,
+        "Khong tim thay Pet cua ban",
+        PET_ERROR_CODES.PET_NOT_FOUND,
+      );
     }
 
     const configs = assertConfigShape(await getGameConfigBundle());
     const petBalance = requireObject(configs.petBalance, "petBalance");
     const levelConfig = requireObject(configs.levelConfig, "levelConfig");
-    const evolutionConfig = requireObject(configs.evolutionConfig, "evolutionConfig");
+    const evolutionConfig = requireObject(
+      configs.evolutionConfig,
+      "evolutionConfig",
+    );
 
     if (idempotencyKey) {
-      const cached = await getPetRequest(normalizedUid, idempotencyKey, transaction);
+      const cached = await getPetRequest(
+        normalizedUid,
+        idempotencyKey,
+        transaction,
+      );
       const cachedResponse = ensureCachedResponse(cached, idempotencyKey);
       if (cachedResponse) {
         return cachedResponse;
@@ -913,7 +1106,12 @@ async function sleep({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
       return response;
     }
 
-    const actionConfig = validateActionGate(syncedState, PET_ACTIONS.SLEEP, petBalance, now);
+    const actionConfig = validateActionGate(
+      syncedState,
+      PET_ACTIONS.SLEEP,
+      petBalance,
+      now,
+    );
     const nextState = applyActionDelta(
       syncedState,
       PET_ACTIONS.SLEEP,
@@ -924,7 +1122,11 @@ async function sleep({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
       now,
     );
 
-    await savePetState(normalizedUid, stripDerivedPetFields(nextState), transaction);
+    await savePetState(
+      normalizedUid,
+      stripDerivedPetFields(nextState),
+      transaction,
+    );
     await updateUserById(
       normalizedUid,
       {
@@ -1022,13 +1224,21 @@ async function wake({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
 
     const petState = await getPetState(normalizedUid, transaction);
     if (!petState) {
-      throw new ApiError(404, "Khong tim thay Pet cua ban", PET_ERROR_CODES.PET_NOT_FOUND);
+      throw new ApiError(
+        404,
+        "Khong tim thay Pet cua ban",
+        PET_ERROR_CODES.PET_NOT_FOUND,
+      );
     }
 
     const configs = assertConfigShape(await getGameConfigBundle());
 
     if (idempotencyKey) {
-      const cached = await getPetRequest(normalizedUid, idempotencyKey, transaction);
+      const cached = await getPetRequest(
+        normalizedUid,
+        idempotencyKey,
+        transaction,
+      );
       const cachedResponse = ensureCachedResponse(cached, idempotencyKey);
       if (cachedResponse) {
         return cachedResponse;
@@ -1075,7 +1285,9 @@ async function wake({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
       return response;
     }
 
-    const wakeGraceUntil = new Date(now.getTime() + SLEEP_GRACE_DURATION_MS).toISOString();
+    const wakeGraceUntil = new Date(
+      now.getTime() + SLEEP_GRACE_DURATION_MS,
+    ).toISOString();
     const wakeState = {
       ...syncedState,
       isSleeping: false,
