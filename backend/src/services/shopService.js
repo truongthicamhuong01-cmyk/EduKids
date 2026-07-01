@@ -45,14 +45,14 @@ function normalizeItemReference(value) {
 }
 
 const ECONOMY_SHOP_PRICES = {
-  ball: 30,
-  teddy: 38,
-  kite: 63,
-  pinwheel: 50,
-  drum: 70,
-  lantern: 75,
-  toHe: 55,
-  paperMask: 60,
+  ball: 75,
+  teddy: 83,
+  kite: 102,
+  pinwheel: 98,
+  drum: 117,
+  lantern: 120,
+  toHe: 98,
+  paperMask: 105,
 };
 
 function resolveEconomyShopPrice(itemConfig) {

@@ -1,0 +1,241 @@
+body.landing-mode {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.13), transparent 30%),
+    radial-gradient(circle at top right, rgba(251, 191, 36, 0.12), transparent 24%),
+    linear-gradient(180deg, #fdfefe 0%, #f6f9ff 100%);
+}
+
+body.landing-mode .app,
+body.landing-mode #auth-root {
+  display: none !important;
+}
+
+#landing-root[hidden] {
+  display: none !important;
+}
+
+.landing-shell {
+  min-height: 100vh;
+  color: #0f172a;
+}
+
+.landing-main {
+  width: 100%;
+  margin: 0;
+  padding: 0 0 48px;
+}
+
+.landing-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+  backdrop-filter: blur(10px);
+}
+
+.landing-brand,
+.landing-nav-link,
+.landing-cta {
+  border: none;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.landing-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  background: transparent;
+}
+
+.landing-brand-image {
+  display: block;
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
+.landing-navbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.landing-nav-link {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: transparent;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.landing-nav-link.is-accent,
+.landing-cta {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.22);
+}
+
+.landing-nav-link:hover,
+.landing-brand:hover,
+.landing-cta:hover {
+  transform: translateY(-1px) scale(1.01);
+}
+
+.landing-section {
+  margin-top: 0;
+}
+
+.landing-hero {
+  padding-top: 0;
+  margin-bottom: 32px;
+}
+
+.landing-hero__media {
+  position: relative;
+  width: 100%;
+  margin: 0;
+}
+
+.landing-hero__media::after,
+.landing-pillars::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 136px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.landing-hero__media::after {
+  bottom: -1px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(248, 250, 252, 0.84) 100%
+  );
+}
+
+.landing-pillars::before {
+  top: -1px;
+  background: linear-gradient(
+    to bottom,
+    rgba(248, 250, 252, 0.84) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+.landing-hero__image,
+.landing-pillars__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.landing-section__copy {
+  width: 100%;
+  margin: 24px 0 0;
+  padding: 0 24px;
+  text-align: center;
+}
+
+.landing-section__copy h1,
+.landing-section__head h2 {
+  margin: 0;
+  letter-spacing: -0.04em;
+  color: #0f172a;
+}
+
+.landing-section__copy h1 {
+  font-size: clamp(1.75rem, 2.4vw, 2.8rem);
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.landing-section__copy p {
+  margin-top: 12px;
+  font-size: clamp(1rem, 1.5vw, 1.15rem);
+  line-height: 1.7;
+  color: #64748b;
+}
+
+.landing-cta {
+  margin-top: 22px;
+  min-height: 52px;
+  padding: 0 28px;
+  border-radius: 999px;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.landing-pillars {
+  padding-top: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-main > .profile-app-info-card {
+  width: calc(100% - 30px);
+  margin: 20px 15px 10px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1023px) {
+  .landing-navbar {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .landing-section__copy h1 {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 767px) {
+  .landing-navbar {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .landing-navbar-actions {
+    width: 100%;
+  }
+
+  .landing-nav-link,
+  .landing-cta {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .landing-main {
+    width: 100%;
+    padding-bottom: 40px;
+  }
+
+  .landing-section__copy {
+    width: 100%;
+    padding: 0 16px;
+  }
+
+  .landing-section__copy h1 {
+    white-space: normal;
+  }
+}

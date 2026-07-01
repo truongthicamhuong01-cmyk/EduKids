@@ -18,6 +18,7 @@ const {
 } = require("../repositories/battleSessionRepository");
 
 const WRONG_ANSWERS_COLLECTION = db.collection("wrong_answers");
+const BOSS_BATTLE_COIN_REWARD_MULTIPLIER = 0.7;
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -648,6 +649,10 @@ function buildBossBattleRewardSummary({
 
   if (isRewardEligible) {
     coinAwarded = Math.max(70, Math.min(160, coinAwarded));
+    coinAwarded = Math.max(
+      0,
+      Math.floor(coinAwarded * BOSS_BATTLE_COIN_REWARD_MULTIPLIER),
+    );
   }
 
   return {

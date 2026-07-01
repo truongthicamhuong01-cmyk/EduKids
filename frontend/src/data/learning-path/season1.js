@@ -523,7 +523,7 @@ function createMountain(blueprint, index) {
       altitude: getCheckpointAltitudeLabel(summitHeightMeters, 3),
       position: ROUTE_POSITIONS[3],
       reward: stationRewards[3],
-      taskKeys: ["coach-1", "study-30", "quiz-1"],
+      taskKeys: ["login", "quiz-1", "coach-1"],
       completed: false,
     }),
 

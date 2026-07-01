@@ -50,21 +50,55 @@ function getBlueprintMountain(mountainId) {
     : null;
 }
 
-function getLearningPathProgressPercent({ currentMountainId, isStart = false }) {
-  const mountainCount = Array.isArray(season1.mountains) ? season1.mountains.length : 0;
-  const totalStages = Math.max(mountainCount - 1, 1);
-
+function getLearningPathProgressPercent({
+  currentMountainId,
+  currentCheckpointId,
+  isStart = false,
+}) {
   if (isStart) {
     return 0;
   }
 
-  const currentMountainIndex = getBlueprintMountainIndex(currentMountainId);
-  if (currentMountainIndex < 0) {
+  const currentMountain = getBlueprintMountain(currentMountainId);
+  const checkpoints = Array.isArray(currentMountain?.checkpoints)
+    ? currentMountain.checkpoints
+    : [];
+
+  if (checkpoints.length <= 0) {
     return 0;
   }
 
-  const completedStages = Math.min(currentMountainIndex + 1, totalStages);
-  return Number(((completedStages / totalStages) * 100).toFixed(2));
+  const resolvedCheckpointIndex = (() => {
+    const directIndex = checkpoints.findIndex(
+      (checkpoint) => String(checkpoint?.id || "").trim() === String(currentCheckpointId || "").trim(),
+    );
+
+    if (directIndex >= 0) {
+      return directIndex;
+    }
+
+    const currentStatusIndex = checkpoints.findIndex((checkpoint) => {
+      const status = normalizeStatus(checkpoint?.status || checkpoint?.state);
+      return status === "current";
+    });
+
+    if (currentStatusIndex >= 0) {
+      return currentStatusIndex;
+    }
+
+    for (let index = checkpoints.length - 1; index >= 0; index -= 1) {
+      const status = normalizeStatus(checkpoints[index]?.status || checkpoints[index]?.state);
+      if (status === "completed") {
+        return index;
+      }
+    }
+
+    return 0;
+  })();
+
+  const totalSegments = Math.max(checkpoints.length - 1, 1);
+  const completedSegments = Math.min(Math.max(resolvedCheckpointIndex, 0), totalSegments);
+  return Number(((completedSegments / totalSegments) * 100).toFixed(2));
 }
 
 function getCanonicalCheckpointMap(state) {
@@ -363,6 +397,7 @@ export function adaptLearningPathState(apiState) {
     },
     progressPercent: getLearningPathProgressPercent({
       currentMountainId,
+      currentCheckpointId: resolvedCheckpointId,
       isStart: isFreshStart || isBootstrapStart,
     }),
     checkpointProgress: {

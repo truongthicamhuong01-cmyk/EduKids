@@ -17,6 +17,8 @@ import {
   renderLearningPathPage,
   syncLearningPathWalletFromProfile,
 } from "./pages/student/learning-path/learningPathPage.js";
+import { hydrateProfileAppInfoFooters } from "./components/profileAppInfoFooter.js";
+import { renderLandingPage } from "./pages/landing/landingPage.js";
 import { adaptLearningPathState } from "./data/learning-path/learningPathStateAdapter.js";
 import "./style.css";
 
@@ -655,9 +657,31 @@ function isAdminRoute() {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
-function redirectToLoginRoute() {
+function getPublicRouteViewForPathname(pathname = window.location?.pathname || "") {
+  const normalizedPathname = String(pathname || "").replace(/\/+$/, "") || "/";
+
+  if (normalizedPathname === "/register") {
+    return "register";
+  }
+
+  if (normalizedPathname === "/login") {
+    return "login";
+  }
+
+  return "landing";
+}
+
+function redirectToLandingRoute() {
   if (window.location.pathname !== "/") {
     window.history.replaceState({}, "", "/");
+  }
+}
+
+function redirectToAuthRoute(view = "login") {
+  const nextPath = view === "register" ? "/register" : "/login";
+
+  if (window.location.pathname !== nextPath) {
+    window.history.replaceState({}, "", nextPath);
   }
 }
 
@@ -5009,7 +5033,6 @@ async function toggleAdminSystemSetting(settingKey) {
 function handleAdminSettingsAction(action) {
   if (action === "logout") {
     setAdminAuthenticated(false);
-    redirectToLoginRoute();
     showLoginScreen();
   }
 }
@@ -5036,7 +5059,7 @@ function applySystemAccessGate() {
 
   if (sessionUser && role) {
     bootstrapState.currentUser = sessionUser;
-    setAuthMode(false);
+    setAppMode();
     initApp(sessionUser);
   } else {
     initializeAuth();
@@ -10723,7 +10746,9 @@ function getBossBattleRewardPreviewSummary() {
 
 function normalizeBossBattleRewardSummary(summary = {}) {
   const xpAwardedValue = Number(summary?.xpAwarded ?? summary?.rewardXP ?? 0);
-  const coinAwardedValue = Number(summary?.coinAwarded ?? summary?.rewardCoin ?? 0);
+  const coinAwardedValue = Number(
+    summary?.coinAwarded ?? summary?.rewardCoin ?? 0,
+  );
   const totalExpValue = Number(
     summary?.totalXP ??
       summary?.userExpAfter ??
@@ -12591,7 +12616,7 @@ function getStudentSubjectsScreenHtml() {
         <div>
           <h1>Học theo chủ đề - Boss Battle Quiz</h1>
           <p class="subtitle">
-            Chọn khối lớp, môn học và chủ đề để bước vào trận đấu ngay trong Dashboard.
+            Chọn khối lớp, môn học và chủ đề để bước vào trận đấu với Boss nhé.
           </p>
         </div>
       </div>
@@ -20781,10 +20806,14 @@ function getTeacherStatsAverage(values) {
 
 function getTeacherStatsViewCacheKey(data, rangeKey = "7d") {
   const teacherId = String(teacherStatsState.teacherId || "").trim();
-  const classId = String(data?.classroom?.id || teacherStatsState.selectedClassId || "").trim();
+  const classId = String(
+    data?.classroom?.id || teacherStatsState.selectedClassId || "",
+  ).trim();
   const revision = Number(teacherStatsState.dataRevision || 0);
 
-  return [teacherId, classId, String(rangeKey || "7d").trim(), revision].join(":");
+  return [teacherId, classId, String(rangeKey || "7d").trim(), revision].join(
+    ":",
+  );
 }
 
 function getTeacherStatsCachedViewModel(data, rangeKey = "7d") {
@@ -21652,10 +21681,7 @@ function renderTeacherStatsPageState(viewModel) {
     );
   }
 
-  setTeacherStatsCardVisibility(
-    topStudentsNode,
-    true,
-  );
+  setTeacherStatsCardVisibility(topStudentsNode, true);
   setTeacherStatsCardVisibility(
     supportStudentsNode,
     Array.isArray(viewModel.supportStudents) &&
@@ -21768,9 +21794,15 @@ async function loadTeacherStatsData({
   teacherStatsState.teacherId = teacherId;
   const requestToken = teacherStatsState.renderToken + 1;
   teacherStatsState.renderToken = requestToken;
-  const cacheKeyPrefix = [teacherId, selectedClassId || teacherStatsState.selectedClassId || ""].join(":");
+  const cacheKeyPrefix = [
+    teacherId,
+    selectedClassId || teacherStatsState.selectedClassId || "",
+  ].join(":");
   Array.from(teacherStatsViewCache.keys()).forEach((key) => {
-    if (key.startsWith(`${teacherId}:`) && !key.startsWith(`${cacheKeyPrefix}:`)) {
+    if (
+      key.startsWith(`${teacherId}:`) &&
+      !key.startsWith(`${cacheKeyPrefix}:`)
+    ) {
       teacherStatsViewCache.delete(key);
     }
   });
@@ -22576,7 +22608,9 @@ function renderManualAssignmentShell() {
   `;
 }
 
-function syncManualAssignmentClassSelect(classes = manualAssignmentState.classes) {
+function syncManualAssignmentClassSelect(
+  classes = manualAssignmentState.classes,
+) {
   const classSelect = getManualAssignmentClassSelect();
 
   if (!classSelect) {
@@ -22591,7 +22625,9 @@ function syncManualAssignmentClassSelect(classes = manualAssignmentState.classes
 
   if (
     manualAssignmentState.classId &&
-    !nextClasses.some((classroom) => classroom.id === manualAssignmentState.classId)
+    !nextClasses.some(
+      (classroom) => classroom.id === manualAssignmentState.classId,
+    )
   ) {
     manualAssignmentState.classId = nextClasses[0]?.id || "";
   }
@@ -22656,7 +22692,10 @@ async function loadManualAssignmentClasses({ force = false } = {}) {
     return classes;
   } catch (error) {
     console.warn("Không thể tải danh sách lớp cho bài tập thủ công:", error);
-    if (!Array.isArray(manualAssignmentState.classes) || manualAssignmentState.classes.length === 0) {
+    if (
+      !Array.isArray(manualAssignmentState.classes) ||
+      manualAssignmentState.classes.length === 0
+    ) {
       classSelect.innerHTML = `
         <option value="">Không thể tải danh sách lớp.</option>
       `;
@@ -23220,6 +23259,7 @@ function getAuthContainer() {
 
 function setAuthMode(isAuthMode) {
   document.body.classList.toggle("auth-mode", isAuthMode);
+  document.body.classList.remove("landing-mode");
 
   if (isAuthMode) {
     closeSidebar();
@@ -23227,6 +23267,7 @@ function setAuthMode(isAuthMode) {
 
   const appShell = getAppShell();
   const authRoot = getAuthContainer();
+  const landingRoot = getLandingRoot();
 
   if (appShell) {
     appShell.hidden = isAuthMode;
@@ -23234,6 +23275,10 @@ function setAuthMode(isAuthMode) {
 
   if (authRoot) {
     authRoot.hidden = !isAuthMode;
+  }
+
+  if (landingRoot) {
+    landingRoot.hidden = true;
   }
 }
 
@@ -23287,9 +23332,8 @@ function handleLogout() {
   delete window.EduKidsCurrentAssignment;
   resetManualAssignmentState();
   resetAssignmentAiState();
-  setAuthMode(true);
-  redirectToLoginRoute();
-  renderAuthScreen("login");
+  redirectToLandingRoute();
+  showLandingScreen();
 }
 
 function whenDomReady() {
@@ -23308,6 +23352,55 @@ function getAppShell() {
 
 function getAuthRoot() {
   return document.getElementById("auth-root");
+}
+
+function getLandingRoot() {
+  return document.getElementById("landing-root");
+}
+
+function setAppMode() {
+  document.body.classList.remove("auth-mode", "landing-mode");
+
+  const appShell = getAppShell();
+  const authRoot = getAuthContainer();
+  const landingRoot = getLandingRoot();
+
+  if (appShell) {
+    appShell.hidden = false;
+  }
+
+  if (authRoot) {
+    authRoot.hidden = true;
+  }
+
+  if (landingRoot) {
+    landingRoot.hidden = true;
+  }
+}
+
+function setLandingMode(isLandingMode) {
+  document.body.classList.toggle("landing-mode", isLandingMode);
+
+  if (isLandingMode) {
+    document.body.classList.remove("auth-mode");
+    closeSidebar();
+  }
+
+  const appShell = getAppShell();
+  const authRoot = getAuthContainer();
+  const landingRoot = getLandingRoot();
+
+  if (appShell) {
+    appShell.hidden = isLandingMode;
+  }
+
+  if (authRoot) {
+    authRoot.hidden = isLandingMode;
+  }
+
+  if (landingRoot) {
+    landingRoot.hidden = !isLandingMode;
+  }
 }
 
 function setAuthFeedback(message, kind = "error") {
@@ -23395,7 +23488,7 @@ function isAppInstalled() {
 
   return Boolean(
     window.matchMedia?.("(display-mode: standalone)")?.matches ||
-      window.navigator.standalone,
+    window.navigator.standalone,
   );
 }
 
@@ -23616,7 +23709,10 @@ function registerServiceWorker() {
       .register("/sw.js")
       .then(() => {})
       .catch((error) => {
-        console.warn("[EduKids][pwa] service worker registration failed", error);
+        console.warn(
+          "[EduKids][pwa] service worker registration failed",
+          error,
+        );
       });
   };
 
@@ -24217,21 +24313,14 @@ function goToAdminDashboard() {
 
 function showLoginScreen() {
   setAdminMode(false);
-  setAuthMode(true);
-
-  const authRoot = getAuthRoot();
-  if (authRoot) {
-    authRoot.removeAttribute("data-rendered-mode");
-  }
-
-  renderAuthScreen("login");
+  showAuthScreen("login");
 }
 
 function syncCurrentRouteState() {
   if (isAdminRoute()) {
     if (!isAdminAuthenticated()) {
-      redirectToLoginRoute();
-      showLoginScreen();
+      redirectToAuthRoute("login");
+      showAuthScreen("login");
       return;
     }
 
@@ -24249,6 +24338,15 @@ function syncCurrentRouteState() {
 
   bindStudentQuizControlsOnce();
   initializeAuth();
+}
+
+function normalizeAuthenticatedRoute() {
+  const pathname =
+    String(window.location?.pathname || "").replace(/\/+$/, "") || "/";
+
+  if (pathname === "/login" || pathname === "/register") {
+    window.history.replaceState({}, "", "/");
+  }
 }
 
 function setFeedbackMessage(form, message, type) {
@@ -24387,6 +24485,36 @@ function renderAuthView(view = bootstrapState.authMode) {
   renderAuthScreen(view);
 }
 
+function showAuthScreen(view = "login") {
+  setAuthMode(true);
+  redirectToAuthRoute(view);
+  window.scrollTo({ top: 0, behavior: "auto" });
+
+  const authRoot = getAuthRoot();
+  if (authRoot) {
+    authRoot.removeAttribute("data-rendered-mode");
+  }
+
+  renderAuthScreen(view);
+}
+
+function showLandingScreen() {
+  setLandingMode(true);
+  window.scrollTo({ top: 0, behavior: "auto" });
+
+  const landingRoot = getLandingRoot();
+  if (landingRoot) {
+    landingRoot.removeAttribute("data-rendered-mode");
+  }
+
+  renderLandingPage(landingRoot, {
+    navigateTo: (path) => {
+      window.history.pushState({}, "", path);
+      syncCurrentRouteState();
+    },
+  });
+}
+
 function bindAuthRootEventsOnce() {
   const authRoot = getAuthRoot();
 
@@ -24417,9 +24545,9 @@ function bindAuthRootEventsOnce() {
     if (switchButton) {
       const nextMode = switchButton.dataset.authSwitch;
       if (nextMode === "login" || nextMode === "register") {
-        authRoot.removeAttribute("data-rendered-mode");
         closeAdminAuthModal();
-        renderAuthScreen(nextMode);
+        window.history.pushState({}, "", `/${nextMode}`);
+        syncCurrentRouteState();
       }
       return;
     }
@@ -24605,7 +24733,7 @@ async function handleLoginSubmit(form) {
         authRoot.innerHTML = "";
       }
 
-      setAuthMode(false);
+      setAppMode();
       initApp(authUser);
     }, 250);
   } catch (error) {
@@ -25106,13 +25234,21 @@ function initializeAuth() {
 
   if (sessionUser && role) {
     bootstrapState.currentUser = sessionUser;
-    setAuthMode(false);
+    normalizeAuthenticatedRoute();
+    setAppMode();
     initApp(sessionUser);
     return;
   }
 
   bootstrapState.currentUser = null;
   bootstrapState.initializedUid = null;
+  const publicView = getPublicRouteViewForPathname();
+
+  if (publicView === "landing") {
+    showLandingScreen();
+    return;
+  }
+
   setAuthMode(true);
 
   if (appShell) {
@@ -25123,8 +25259,7 @@ function initializeAuth() {
     authRoot.removeAttribute("data-rendered-mode");
   }
 
-  redirectToLoginRoute();
-  renderAuthScreen("login");
+  showAuthScreen(publicView);
 }
 
 function syncAuthState() {
@@ -25138,7 +25273,8 @@ function syncAuthState() {
 
   if (sessionUser && role) {
     bootstrapState.currentUser = sessionUser;
-    setAuthMode(false);
+    normalizeAuthenticatedRoute();
+    setAppMode();
     initApp(sessionUser);
     return;
   }
@@ -25146,6 +25282,13 @@ function syncAuthState() {
   bootstrapState.currentUser = null;
   bootstrapState.initializedUid = null;
   bootstrapState.authMode = "login";
+  const publicView = getPublicRouteViewForPathname();
+
+  if (publicView === "landing") {
+    showLandingScreen();
+    return;
+  }
+
   setAuthMode(true);
 
   const authRoot = getAuthRoot();
@@ -25153,26 +25296,17 @@ function syncAuthState() {
     authRoot.removeAttribute("data-rendered-mode");
   }
 
-  redirectToLoginRoute();
-  renderAuthScreen("login");
+  showAuthScreen(publicView);
 }
 
 function installCompatibilityGlobals() {
   window.checkAuth = () => getCurrentAuthUser();
   window.renderLogin = () => {
-    const authRoot = getAuthRoot();
-    if (authRoot) {
-      authRoot.removeAttribute("data-rendered-mode");
-    }
-    renderAuthView("login");
+    showAuthScreen("login");
     return getAuthRoot()?.innerHTML || "";
   };
   window.renderRegister = () => {
-    const authRoot = getAuthRoot();
-    if (authRoot) {
-      authRoot.removeAttribute("data-rendered-mode");
-    }
-    renderAuthView("register");
+    showAuthScreen("register");
     return getAuthRoot()?.innerHTML || "";
   };
   window.initApp = initApp;
@@ -25216,6 +25350,7 @@ function installCompatibilityGlobals() {
 
 async function bootstrap() {
   installCompatibilityGlobals();
+  hydrateProfileAppInfoFooters();
   const systemSettingsService = getSystemSettingsService();
 
   if (typeof systemSettingsService?.observeSystemSettings === "function") {

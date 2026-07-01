@@ -46,8 +46,8 @@ const petBalance = {
   offline: {
     capMinutes: 1440,
     stepMinutes: 10,
-    hungerDecayPerStep: 1,
-    energyDecayPerStep: 1,
+    hungerDecayPerStep: 1.12,
+    energyDecayPerStep: 0.85,
     happinessDecayPerStep: 1,
     happinessDecayEverySteps: 2,
     health: {
@@ -327,7 +327,7 @@ const shopCatalog = {
       itemId: "biscuit",
       name: "Bánh quy",
       category: "food",
-      price: 15,
+      price: 23,
       effects: {
         hungerDelta: 12,
         happinessDelta: 1,
@@ -344,7 +344,7 @@ const shopCatalog = {
       itemId: "milk",
       name: "Sữa",
       category: "food",
-      price: 18,
+      price: 27,
       effects: {
         hungerDelta: 18,
         healthDelta: 2,
@@ -362,7 +362,7 @@ const shopCatalog = {
       itemId: "apple",
       name: "Táo",
       category: "food",
-      price: 20,
+      price: 30,
       effects: {
         hungerDelta: 22,
         healthDelta: 4,
@@ -379,7 +379,7 @@ const shopCatalog = {
       itemId: "carrot",
       name: "Cà Rốt",
       category: "food",
-      price: 20,
+      price: 30,
       effects: {
         hungerDelta: 20,
         healthDelta: 3,
@@ -396,7 +396,7 @@ const shopCatalog = {
       itemId: "banhChung",
       name: "Bánh Chưng",
       category: "food",
-      price: 30,
+      price: 45,
       effects: {
         hungerDelta: 35,
         healthDelta: 5,
@@ -413,7 +413,7 @@ const shopCatalog = {
       itemId: "banhGiay",
       name: "Bánh Giầy",
       category: "food",
-      price: 28,
+      price: 42,
       effects: {
         hungerDelta: 32,
         healthDelta: 4,
@@ -430,7 +430,7 @@ const shopCatalog = {
       itemId: "xoiGac",
       name: "Xôi Gấc",
       category: "food",
-      price: 32,
+      price: 48,
       effects: {
         hungerDelta: 30,
         healthDelta: 6,
@@ -447,7 +447,7 @@ const shopCatalog = {
       itemId: "cheSen",
       name: "Chè Sen",
       category: "food",
-      price: 35,
+      price: 53,
       effects: {
         hungerDelta: 25,
         healthDelta: 8,
@@ -465,7 +465,7 @@ const shopCatalog = {
       itemId: "ball",
       name: "Bóng",
       category: "toy",
-      price: 50,
+      price: 75,
       effects: {
         happinessDelta: 10,
         healthDelta: 1,
@@ -485,7 +485,7 @@ const shopCatalog = {
       itemId: "teddy",
       name: "Gấu bông",
       category: "toy",
-      price: 55,
+      price: 83,
       effects: {
         happinessDelta: 12,
         healthDelta: 2,
@@ -505,7 +505,7 @@ const shopCatalog = {
       itemId: "kite",
       name: "Diều Giấy",
       category: "toy",
-      price: 68,
+      price: 102,
       effects: {
         happinessDelta: 16,
         healthDelta: 2,
@@ -525,7 +525,7 @@ const shopCatalog = {
       itemId: "pinwheel",
       name: "Chong Chóng",
       category: "toy",
-      price: 65,
+      price: 98,
       effects: {
         happinessDelta: 14,
         healthDelta: 1,
@@ -545,7 +545,7 @@ const shopCatalog = {
       itemId: "drum",
       name: "Trống Nhỏ",
       category: "toy",
-      price: 78,
+      price: 117,
       effects: {
         happinessDelta: 18,
         healthDelta: 1,
@@ -565,7 +565,7 @@ const shopCatalog = {
       itemId: "lantern",
       name: "Đèn Lồng",
       category: "toy",
-      price: 80,
+      price: 120,
       effects: {
         happinessDelta: 20,
         healthDelta: 2,
@@ -585,7 +585,7 @@ const shopCatalog = {
       itemId: "toHe",
       name: "Tò He",
       category: "toy",
-      price: 65,
+      price: 98,
       effects: {
         happinessDelta: 15,
         healthDelta: 1,
@@ -605,7 +605,7 @@ const shopCatalog = {
       itemId: "paperMask",
       name: "Mặt Nạ Giấy Bồi",
       category: "toy",
-      price: 70,
+      price: 105,
       effects: {
         happinessDelta: 16,
         healthDelta: 1,
@@ -625,7 +625,7 @@ const shopCatalog = {
       itemId: "bandage",
       name: "Băng Cá Nhân",
       category: "medicine",
-      price: 30,
+      price: 45,
       effects: {
         healthDelta: 15,
       },
@@ -641,7 +641,7 @@ const shopCatalog = {
       itemId: "vitamin",
       name: "Vitamin",
       category: "medicine",
-      price: 35,
+      price: 53,
       effects: {
         healthDelta: 25,
       },
@@ -657,7 +657,7 @@ const shopCatalog = {
       itemId: "medicineKit",
       name: "Bộ Hồi Phục",
       category: "medicine",
-      price: 100,
+      price: 150,
       effects: {
         healthDelta: 60,
       },
@@ -673,7 +673,7 @@ const shopCatalog = {
       itemId: "herbalTea",
       name: "Trà Thảo Mộc",
       category: "medicine",
-      price: 50,
+      price: 75,
       effects: {
         healthDelta: 35,
       },
@@ -689,7 +689,7 @@ const shopCatalog = {
       itemId: "lotusMedicine",
       name: "Cao Sen",
       category: "medicine",
-      price: 60,
+      price: 90,
       effects: {
         healthDelta: 40,
       },
@@ -705,7 +705,7 @@ const shopCatalog = {
       itemId: "firstAidKit",
       name: "Túi Sơ Cứu",
       category: "medicine",
-      price: 80,
+      price: 120,
       effects: {
         healthDelta: 50,
       },

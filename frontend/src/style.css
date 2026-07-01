@@ -6498,7 +6498,8 @@ textarea {
 }
 
 #profile .profile-app-info-card,
-#teacher-profile .profile-app-info-card {
+#teacher-profile .profile-app-info-card,
+#landing-root .profile-app-info-card {
   margin-top: 20px;
   margin-bottom: 10px;
   padding: 26px 28px 20px;
@@ -6509,7 +6510,8 @@ textarea {
 }
 
 #profile .profile-app-info-grid,
-#teacher-profile .profile-app-info-grid {
+#teacher-profile .profile-app-info-grid,
+#landing-root .profile-app-info-grid {
   display: grid;
   grid-template-columns:
     minmax(0, 1.25fr) minmax(0, 0.8fr) minmax(0, 1fr)
@@ -6519,7 +6521,8 @@ textarea {
 }
 
 #profile .profile-app-info-brand,
-#teacher-profile .profile-app-info-brand {
+#teacher-profile .profile-app-info-brand,
+#landing-root .profile-app-info-brand {
   display: flex;
   align-items: flex-start;
   gap: 16px;
@@ -6527,7 +6530,8 @@ textarea {
 }
 
 #profile .profile-app-info-logo,
-#teacher-profile .profile-app-info-logo {
+#teacher-profile .profile-app-info-logo,
+#landing-root .profile-app-info-logo {
   width: 54px;
   height: 54px;
   border-radius: 16px;
@@ -6543,7 +6547,8 @@ textarea {
 }
 
 #profile .profile-app-info-logo img,
-#teacher-profile .profile-app-info-logo img {
+#teacher-profile .profile-app-info-logo img,
+#landing-root .profile-app-info-logo img {
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -6551,17 +6556,20 @@ textarea {
 }
 
 #profile .profile-app-info-copy,
-#teacher-profile .profile-app-info-copy {
+#teacher-profile .profile-app-info-copy,
+#landing-root .profile-app-info-copy {
   min-width: 0;
 }
 
 #profile .profile-app-info-copy h3,
-#teacher-profile .profile-app-info-copy h3 {
+#teacher-profile .profile-app-info-copy h3,
+#landing-root .profile-app-info-copy h3 {
   display: none;
 }
 
 #profile .profile-app-info-brand-name,
-#teacher-profile .profile-app-info-brand-name {
+#teacher-profile .profile-app-info-brand-name,
+#landing-root .profile-app-info-brand-name {
   display: inline-block;
   margin: 0 0 8px;
   font-size: 22px;
@@ -6574,27 +6582,32 @@ textarea {
 }
 
 #profile .profile-app-info-brand-edu,
-#teacher-profile .profile-app-info-brand-edu {
+#teacher-profile .profile-app-info-brand-edu,
+#landing-root .profile-app-info-brand-edu {
   color: #2563eb;
 }
 
 #profile .profile-app-info-brand-kids,
-#teacher-profile .profile-app-info-brand-kids {
+#teacher-profile .profile-app-info-brand-kids,
+#landing-root .profile-app-info-brand-kids {
   color: #f59e0b;
 }
 
 #profile .profile-app-info-copy strong,
-#teacher-profile .profile-app-info-copy strong {
+#teacher-profile .profile-app-info-copy strong,
+#landing-root .profile-app-info-copy strong {
   display: block;
 }
 
 #profile .profile-app-info-brand-name + p,
-#teacher-profile .profile-app-info-brand-name + p {
+#teacher-profile .profile-app-info-brand-name + p,
+#landing-root .profile-app-info-brand-name + p {
   margin-top: 0;
 }
 
 #profile .profile-app-info-copy p,
-#teacher-profile .profile-app-info-copy p {
+#teacher-profile .profile-app-info-copy p,
+#landing-root .profile-app-info-copy p {
   margin: 0;
   font-size: 13px;
   line-height: 1.55;
@@ -6602,7 +6615,8 @@ textarea {
 }
 
 #profile .profile-app-info-column,
-#teacher-profile .profile-app-info-column {
+#teacher-profile .profile-app-info-column,
+#landing-root .profile-app-info-column {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -6620,7 +6634,8 @@ textarea {
 }
 
 #profile .profile-app-info-column strong,
-#teacher-profile .profile-app-info-column strong {
+#teacher-profile .profile-app-info-column strong,
+#landing-root .profile-app-info-column strong {
   font-size: 12px;
   line-height: 1.45;
   font-weight: 400;
@@ -6628,7 +6643,8 @@ textarea {
 }
 
 #profile .profile-app-info-column p,
-#teacher-profile .profile-app-info-column p {
+#teacher-profile .profile-app-info-column p,
+#landing-root .profile-app-info-column p {
   margin: 0;
   font-size: 12px;
   line-height: 1.55;
@@ -6636,14 +6652,16 @@ textarea {
 }
 
 #profile .profile-app-info-author,
-#teacher-profile .profile-app-info-author {
+#teacher-profile .profile-app-info-author,
+#landing-root .profile-app-info-author {
   display: flex;
   flex-direction: column;
   gap: 0;
 }
 
 #profile .profile-app-info-author span,
-#teacher-profile .profile-app-info-author span {
+#teacher-profile .profile-app-info-author span,
+#landing-root .profile-app-info-author span {
   font-size: 12px;
   line-height: 1.45;
   font-weight: 400;
@@ -6655,7 +6673,9 @@ textarea {
 #profile .profile-app-info-column p a,
 #teacher-profile .profile-app-info-column p a,
 #profile .profile-app-info-column strong a,
-#teacher-profile .profile-app-info-column strong a {
+#teacher-profile .profile-app-info-column strong a,
+#landing-root .profile-app-info-column p a,
+#landing-root .profile-app-info-column strong a {
   font-size: inherit;
   font-weight: inherit;
   line-height: inherit;
@@ -6671,24 +6691,31 @@ textarea {
 #profile .profile-app-info-column strong a:hover,
 #profile .profile-app-info-column strong a:focus-visible,
 #teacher-profile .profile-app-info-column strong a:hover,
-#teacher-profile .profile-app-info-column strong a:focus-visible {
+#teacher-profile .profile-app-info-column strong a:focus-visible,
+#landing-root .profile-app-info-column p a:hover,
+#landing-root .profile-app-info-column p a:focus-visible,
+#landing-root .profile-app-info-column strong a:hover,
+#landing-root .profile-app-info-column strong a:focus-visible {
   text-decoration: underline;
 }
 
 #profile .profile-app-info-footer,
-#teacher-profile .profile-app-info-footer {
+#teacher-profile .profile-app-info-footer,
+#landing-root .profile-app-info-footer {
   margin-top: 22px;
 }
 
 #profile .profile-app-info-divider,
-#teacher-profile .profile-app-info-divider {
+#teacher-profile .profile-app-info-divider,
+#landing-root .profile-app-info-divider {
   height: 1px;
   background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
   opacity: 0.9;
 }
 
 #profile .profile-app-info-footer p,
-#teacher-profile .profile-app-info-footer p {
+#teacher-profile .profile-app-info-footer p,
+#landing-root .profile-app-info-footer p {
   margin: 14px 0 0;
   text-align: center;
   font-size: 12px;
@@ -6721,19 +6748,22 @@ textarea {
   }
 
   #profile .profile-app-info-grid,
-  #teacher-profile .profile-app-info-grid {
+  #teacher-profile .profile-app-info-grid,
+  #landing-root .profile-app-info-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 18px;
   }
 
   #profile .profile-app-info-brand,
-  #teacher-profile .profile-app-info-brand {
+  #teacher-profile .profile-app-info-brand,
+  #landing-root .profile-app-info-brand {
     align-items: center;
     grid-column: 1 / -1;
   }
 
   #profile .profile-app-info-column:last-child,
-  #teacher-profile .profile-app-info-column:last-child {
+  #teacher-profile .profile-app-info-column:last-child,
+  #landing-root .profile-app-info-column:last-child {
     grid-column: 1 / -1;
   }
 
@@ -6787,35 +6817,41 @@ textarea {
   }
 
   #profile .profile-app-info-card,
-  #teacher-profile .profile-app-info-card {
+  #teacher-profile .profile-app-info-card,
+  #landing-root .profile-app-info-card {
     padding: 20px 16px 16px;
     margin-top: 16px;
   }
 
   #profile .profile-app-info-brand,
-  #teacher-profile .profile-app-info-brand {
+  #teacher-profile .profile-app-info-brand,
+  #landing-root .profile-app-info-brand {
     align-items: flex-start;
   }
 
   #profile .profile-app-info-logo,
-  #teacher-profile .profile-app-info-logo {
+  #teacher-profile .profile-app-info-logo,
+  #landing-root .profile-app-info-logo {
     width: 48px;
     height: 48px;
     border-radius: 14px;
   }
 
   #profile .profile-app-info-brand-name,
-  #teacher-profile .profile-app-info-brand-name {
+  #teacher-profile .profile-app-info-brand-name,
+  #landing-root .profile-app-info-brand-name {
     font-size: 21px;
   }
 
   #profile .profile-app-info-column strong,
-  #teacher-profile .profile-app-info-column strong {
+  #teacher-profile .profile-app-info-column strong,
+  #landing-root .profile-app-info-column strong {
     font-size: 14px;
   }
 
   #profile .profile-app-info-grid,
-  #teacher-profile .profile-app-info-grid {
+  #teacher-profile .profile-app-info-grid,
+  #landing-root .profile-app-info-grid {
     grid-template-columns: 1fr;
   }
 

@@ -11,8 +11,8 @@ const DEFAULT_SLEEP_THRESHOLD = 20;
 const AUTO_WAKE_THRESHOLD = 70;
 const SLEEP_GRACE_DURATION_MS = 15 * 60 * 1000;
 const DECAY_PER_HOUR = {
-  hunger: 1,
-  energy: 1,
+  hunger: 1.12,
+  energy: 0.85,
   happiness: 0.25,
   health: 0.5,
   sleepingEnergyRecovery: 8,

@@ -24,7 +24,7 @@
     radial-gradient(circle at 82% 16%, rgba(255, 255, 255, 0.26) 0 4%, transparent 9%),
     radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.2) 0 4%, transparent 8%),
     linear-gradient(180deg, rgba(255, 236, 159, 0.2) 0%, rgba(255, 250, 230, 0) 20%, rgba(50, 145, 84, 0.1) 100%),
-    var(--pet-shop-scene) center calc(50% + 10px) / cover no-repeat;
+    var(--pet-shop-scene) center calc(50% - 5px) / cover no-repeat;
   filter: saturate(1.05) contrast(1.04);
 }
 
@@ -101,7 +101,7 @@
     radial-gradient(circle at 82% 16%, rgba(255, 255, 255, 0.26) 0 4%, transparent 9%),
     radial-gradient(circle at 18% 18%, rgba(255, 255, 255, 0.2) 0 4%, transparent 8%),
     linear-gradient(180deg, rgba(255, 236, 159, 0.2) 0%, rgba(255, 250, 230, 0) 20%, rgba(50, 145, 84, 0.1) 100%),
-    var(--pet-shop-scene) center calc(50% + 10px) / cover no-repeat;
+    var(--pet-shop-scene) center calc(50% - 5px) / cover no-repeat;
   filter: saturate(1.05) contrast(1.04);
   pointer-events: none;
 }
