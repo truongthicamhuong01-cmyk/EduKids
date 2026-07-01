@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Lưu và tính trạng thái hành trình Learning Path của từng học sinh.
+ * Dữ liệu đầu vào: tiến trình học, bài nộp, AI logs, điểm quiz và hồ sơ user.
+ * Dữ liệu đầu ra: Trạng thái checkpoint, nhiệm vụ, phần thưởng và dữ liệu mở khóa.
+ * File liên quan: src/services/learningPathEngine.js, src/services/learningPathData.js
+ */
 const { db } = require("../firebase");
 const { season1 } = require("./learningPathData");
 const { createEngine } = require("./learningPathEngine");
@@ -348,6 +354,7 @@ async function getLearningPathState(userId) {
 
   const nextState = engine.exportState();
   if (!loaded.state || JSON.stringify(loaded.state) !== JSON.stringify(nextState)) {
+    // Chỉ ghi khi state đổi thật sự để giảm số lần ghi Firestore.
     await persistLearningPathState(loaded.docRef, engine);
   }
 

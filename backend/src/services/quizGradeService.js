@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Chấm quiz, lưu câu sai và cập nhật độ chính xác theo chủ đề.
+ * Dữ liệu đầu vào: quiz trong Firestore, answers từ học sinh.
+ * Dữ liệu đầu ra: Điểm số, danh sách câu sai, dữ liệu đúng/sai theo topic.
+ * File liên quan: src/services/topicAccuracyService.js, src/repositories/*
+ */
 const { db } = require("../firebase");
 const ApiError = require("../utils/apiError");
 const {
@@ -205,6 +211,7 @@ async function gradeQuizSubmission({ userId, quizId, answers }) {
     const isCorrect = selectedLabel && normalizeAnswerLabel(correctOption.label) === selectedLabel;
 
     if (selectedLabel) {
+      // Ghi đúng/sai theo từng câu để cập nhật độ chính xác của topic.
       topicResults.push({
         isCorrect,
       });
@@ -247,6 +254,7 @@ async function gradeQuizSubmission({ userId, quizId, answers }) {
 
   if (quiz.topicId) {
     try {
+      // Nếu cập nhật topic accuracy lỗi thì vẫn giữ được kết quả chấm bài.
       await recordUserTopicAccuracy(normalizedUserId, quiz.topicId, topicResults);
     } catch (error) {
       console.warn("[EduKids][quizGradeService] Unable to update topic accuracy:", error);

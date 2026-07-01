@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Điều khiển toàn bộ màn Learning Path cho học sinh.
+ * Dữ liệu đầu vào: state từ backend, sự kiện click và dữ liệu ví.
+ * Dữ liệu đầu ra: giao diện hành trình, modal nhiệm vụ, reward và avatar.
+ * File liên quan: frontend/src/data/learning-path/learningPathStateAdapter.js, backend/src/services/learningPathService.js
+ */
 import { API_BASE_URL } from "../../../config.js";
 import { adaptLearningPathState } from "../../../data/learning-path/learningPathStateAdapter.js";
 import {
@@ -237,6 +243,7 @@ function refreshLearningPathStateIfNeeded() {
     return;
   }
 
+  // Khi qua ngày mới thì tải lại state để luật mở khóa không bị lệch.
   void hydrateLearningPathStateFromBackend({ silent: true });
 }
 
@@ -379,6 +386,7 @@ function requestLearningPathModalClose(afterClose) {
     return;
   }
 
+  // Đóng chậm một chút để animation không bị giật.
   uiState.modalClosing = true;
   scheduleRender();
 
@@ -422,6 +430,7 @@ function finalizeLearningPathTransition(root = getLearningPathRoot()) {
     return;
   }
 
+  // Sau khi avatar đi xong thì mới đổi state thật ở màn hình.
   const completedKey = String(transition.key || transition.toCheckpointId || "").trim();
   uiState.transitionCompletedKey = completedKey;
   uiState.displayState = cloneLearningPathState(uiState.backendState);
@@ -603,6 +612,7 @@ function getLearningPathCoinValue(state) {
   const isInitialLoading = uiState.loading && !hasBackendState;
   const profileCoin = getExplicitEduCoinValue(getOfficialCurrentUser());
 
+  // Ưu tiên số liệu từ backend, sau đó mới dùng giá trị tạm của hồ sơ hiện tại.
   if (hasBackendState) {
     if (Number.isFinite(backendCoin)) {
       const normalizedCoin = Math.max(0, Math.floor(backendCoin));
@@ -796,6 +806,7 @@ async function hydrateLearningPathStateFromBackend({
   }
 
   try {
+    // Tải state từ backend rồi chuyển sang dạng UI dùng được.
     const data = await requestLearningPathApi(
       `/learning-path/state/${encodeURIComponent(userId)}`,
     );
@@ -883,6 +894,7 @@ async function performLearningPathAction(action, payload = {}) {
   try {
     const isNextCheckpointAction = normalizedAction === "NEXT_CHECKPOINT";
     const previousDisplayState = cloneLearningPathState(getState());
+    // Gọi action xong thì tải lại state để đồng bộ phần thưởng và khóa/mở mốc.
     const data = await requestLearningPathApi("/learning-path/action", {
       method: "POST",
       body: {
@@ -1727,6 +1739,7 @@ function renderLearningPathStaticShell(state) {
 }
 
 function syncLearningPathSlots(root, state, graphDiff) {
+  // Chia nhỏ từng vùng để chỉ render lại đúng phần cần đổi.
   const leftSlot = getLearningPathLeftSlot(root);
   if (leftSlot) {
     leftSlot.innerHTML = renderLearningPathLeftSlot(state);
@@ -2021,6 +2034,7 @@ function renderLearningPathTaskModal(state) {
     return "";
   }
 
+  // Modal này chỉ hiển thị nhiệm vụ của trạm đang mở, không vẽ toàn bộ hành trình.
   const tasks = Array.isArray(checkpoint.tasks) ? checkpoint.tasks : [];
   const completedCount = Number(state.checkpointProgress?.completed) || 0;
   const totalCount =
@@ -2257,6 +2271,7 @@ function handleLearningPathRootClick(event) {
   const retryButton = target.closest("[data-learning-path-retry-load]");
   if (retryButton) {
     event.preventDefault();
+    // Khi lỗi tạm thời thì cho tải lại thay vì bắt học sinh thoát ra.
     void hydrateLearningPathStateFromBackend();
     return;
   }

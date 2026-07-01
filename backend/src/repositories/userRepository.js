@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Đọc và cập nhật document user trong Firestore.
+ * Dữ liệu đầu vào: uid và các trường cần ghi.
+ * Dữ liệu đầu ra: Dữ liệu user hiện tại hoặc trạng thái cập nhật.
+ * File liên quan: src/services/authService.js, src/services/petService.js
+ */
 const { db } = require("../firebase");
 
 const usersCollection = db.collection("users");

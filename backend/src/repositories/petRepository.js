@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Lưu Pet, request idempotent và log hoạt động trong Firestore.
+ * Dữ liệu đầu vào: uid, requestKey, state hoặc payload.
+ * Dữ liệu đầu ra: Document trong collection users/{uid}/pet*.
+ * File liên quan: src/services/petService.js
+ */
 const crypto = require("crypto");
 const { db } = require("../firebase");
 

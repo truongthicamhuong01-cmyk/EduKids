@@ -1,3 +1,9 @@
+/*
+ * Chức năng: API cho Pet và kho đồ đi kèm của học sinh.
+ * Dữ liệu đầu vào: uid từ token, hành động nuôi pet, item trong kho.
+ * Dữ liệu đầu ra: Trạng thái pet, ví, pop-up và animation.
+ * File liên quan: src/controllers/petController.js, src/controllers/inventoryController.js, src/services/petService.js
+ */
 const express = require("express");
 const verifyToken = require("../middleware/verifyToken");
 const { getInventory, useItem } = require("../controllers/inventoryController");

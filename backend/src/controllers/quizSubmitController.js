@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Chấm bài quiz và cộng thưởng sau khi học sinh nộp bài.
+ * Dữ liệu đầu vào: quizId, mảng answers, thông tin user.
+ * Dữ liệu đầu ra: Điểm số, câu sai, hồ sơ cập nhật.
+ * File liên quan: src/services/quizGradeService.js, src/services/progressService.js
+ */
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/apiError");
 const successResponse = require("../utils/apiResponse");

@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Tạo lời nhắc cho Gemini để sinh nhận xét AI Coach.
+ * Dữ liệu đầu vào: Chủ đề mạnh/yếu đã được hệ thống tổng hợp.
+ * Dữ liệu đầu ra: Prompt JSON ngắn gọn cho Gemini trả về nhận xét.
+ * File liên quan: src/services/coachAnalysisService.js
+ */
 function buildCoachPrompt({ bestTopics, weakTopics }) {
   return [
     "Bạn là AI Coach của ứng dụng EduKids dành cho học sinh tiểu học.",

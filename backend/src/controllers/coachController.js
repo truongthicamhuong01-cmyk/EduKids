@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Nhận request AI Coach và ghi log sử dụng AI.
+ * Dữ liệu đầu vào: req.user, tiến trình học của học sinh.
+ * Dữ liệu đầu ra: Kết quả phân tích từ Gemini và log vào Firestore.
+ * File liên quan: src/services/coachAnalysisService.js, src/firebase.js
+ */
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/apiError");
 const successResponse = require("../utils/apiResponse");

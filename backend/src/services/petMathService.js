@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Tính toán điểm, cấp độ, cảm xúc và giai đoạn tiến hóa của Pet.
+ * Dữ liệu đầu vào: exp, level, chỉ số hunger/happiness/energy/health và config.
+ * Dữ liệu đầu ra: Level mới, mood, stage và mức exp còn lại.
+ * File liên quan: src/services/petDecayService.js, src/services/petService.js
+ */
 const { PET_MOOD_PRIORITY } = require("../constants/petConstants");
 
 function toNumber(value, fallback = 0) {

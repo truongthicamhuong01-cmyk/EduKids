@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Tính phần trăm đúng theo chủ đề để hiển thị trên giao diện.
+ * Dữ liệu đầu vào: danh sách câu đúng/sai hoặc số liệu đã lưu.
+ * Dữ liệu đầu ra: totalAnswered, totalCorrect và percentage.
+ * File liên quan: backend/src/services/quizGradeService.js, backend/src/services/quizSelectionService.js
+ */
 (() => {
   function calculateTopicAccuracy(topicResults) {
     const normalizedResults = Array.isArray(topicResults)

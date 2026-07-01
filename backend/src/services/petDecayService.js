@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Tính hao mòn offline và trạng thái ngủ/thức của Pet.
+ * Dữ liệu đầu vào: petState, game config, thời điểm hiện tại.
+ * Dữ liệu đầu ra: Pet đã trừ hao hoặc hồi phục sau thời gian offline.
+ * File liên quan: src/services/petService.js, src/services/petMathService.js
+ */
 const {
   calculateEvolutionStage,
   calculateLevelState,

@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Khởi động toàn bộ API của EduKids và nối các route chính.
+ * Dữ liệu đầu vào: Biến môi trường, request HTTP, dữ liệu Firestore.
+ * Dữ liệu đầu ra: Server Express chạy trên cổng cấu hình sẵn.
+ * File liên quan: src/routes/*, src/controllers/*, src/middleware/verifyToken.js
+ */
 require("dotenv").config();
 
 const crypto = require("crypto");

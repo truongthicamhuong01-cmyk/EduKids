@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Chạy animation Boss theo từng trạng thái HP.
+ * Dữ liệu đầu vào: trạng thái Boss, số frame và đường dẫn ảnh.
+ * Dữ liệu đầu ra: component animation tự đổi frame khi Boss chuyển trạng thái.
+ * File liên quan: frontend/src/boss/bossHp.js
+ */
 const DEFAULT_FRAME_COUNT = 8;
 const DEFAULT_FRAME_DURATION = {
   idle: 140,

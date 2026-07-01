@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Giữ luật nuôi Pet, cập nhật chỉ số và lưu trạng thái.
+ * Dữ liệu đầu vào: trạng thái pet, cấu hình game, item, idempotency key.
+ * Dữ liệu đầu ra: Pet mới, ví EduCoin, pop-up, animation và log trạng thái.
+ * File liên quan: src/services/petDecayService.js, src/services/petMathService.js, src/repositories/petRepository.js
+ */
 const ApiError = require("../utils/apiError");
 const { PET_ACTIONS, PET_ERROR_CODES } = require("../constants/petConstants");
 const {
@@ -40,6 +46,7 @@ function ensureStudentUser(user) {
   }
 
   if (!isStudentUser(user)) {
+    // Pet chỉ dành cho học sinh để giữ đúng trải nghiệm học tập.
     throw new ApiError(
       403,
       "Chỉ học sinh mới được sử dụng Pet",
@@ -570,6 +577,7 @@ async function getPet({ uid, requestId = "" }) {
     const petState = await getPetState(normalizedUid, transaction);
 
     if (!petState) {
+      // Chưa có Pet thì báo rõ để frontend hướng người dùng đi chọn Pet.
       throw new ApiError(
         404,
         "Không tìm thấy Pet của bạn",
@@ -664,6 +672,7 @@ async function selectPet({
 
     const existingPet = await getPetState(normalizedUid, transaction);
     if (existingPet || normalizeText(user?.selectedPetId)) {
+      // Đã chọn Pet rồi thì không cho chọn lại để tránh ghi đè dữ liệu.
       throw new ApiError(
         409,
         "Bạn đã chọn Pet rồi",
@@ -793,6 +802,7 @@ async function mutatePetAction({
     const petState = await getPetState(normalizedUid, transaction);
 
     if (!petState) {
+      // Không có trạng thái Pet thì không thể thực hiện hành động.
       throw new ApiError(
         404,
         "Không tìm thấy Pet của bạn",
@@ -827,6 +837,7 @@ async function mutatePetAction({
       syncedState.isSleeping &&
       (actionName === PET_ACTIONS.FEED || actionName === PET_ACTIONS.PLAY)
     ) {
+      // Khi Pet ngủ thì chỉ cho ngủ tiếp hoặc đánh thức, còn hành động khác bị chặn.
       const response = buildNoopPetResponse({
         petState: syncedState,
         configs,
@@ -1039,6 +1050,7 @@ async function sleep({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
 
     const petState = await getPetState(normalizedUid, transaction);
     if (!petState) {
+      // Chưa có Pet thì không thể cho ngủ hay thức dậy.
       throw new ApiError(
         404,
         "Khong tim thay Pet cua ban",
@@ -1070,6 +1082,7 @@ async function sleep({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
     const syncedState = synced.state;
 
     if (syncedState.isSleeping) {
+      // Pet đang ngủ thì trả thông báo thay vì làm hỏng trạng thái hiện có.
       const response = buildNoopPetResponse({
         petState: syncedState,
         configs,
@@ -1224,6 +1237,7 @@ async function wake({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
 
     const petState = await getPetState(normalizedUid, transaction);
     if (!petState) {
+      // Không có Pet thì không có gì để đánh thức.
       throw new ApiError(
         404,
         "Khong tim thay Pet cua ban",
@@ -1249,6 +1263,7 @@ async function wake({ uid, body = {}, requestId = "", idempotencyKey = "" }) {
     const syncedState = synced.state;
 
     if (!syncedState.isSleeping) {
+      // Đang thức mà bấm wake thì chỉ trả thông báo nhẹ, không đổi dữ liệu.
       const response = buildNoopPetResponse({
         petState: syncedState,
         configs,

@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Điều khiển dữ liệu Learning Path qua API.
+ * Dữ liệu đầu vào: userId và các hành động hoàn thành nhiệm vụ/trạm.
+ * Dữ liệu đầu ra: Trạng thái hành trình, phần thưởng và trạng thái ví.
+ * File liên quan: src/services/learningPathService.js, src/services/rewardService.js
+ */
 const {
   executeLearningPathAction,
   getLearningPathState,

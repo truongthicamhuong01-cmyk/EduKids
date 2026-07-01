@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Đọc topics.json và giao tiếp với Gemini để sinh quiz theo chủ đề.
+ * Dữ liệu đầu vào: topics.json, prompt AI, cấu hình hệ thống.
+ * Dữ liệu đầu ra: JSON quiz đã kiểm tra hợp lệ.
+ * File liên quan: src/services/quizGenerationService.js, src/services/coachAnalysisService.js
+ */
 const fs = require("fs");
 const path = require("path");
 const { GoogleGenAI } = require("@google/genai");

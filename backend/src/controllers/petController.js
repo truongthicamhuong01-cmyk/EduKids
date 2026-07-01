@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Điều khiển các hành động của Pet ở mức API.
+ * Dữ liệu đầu vào: uid, hành động chọn pet, cho ăn, chơi, ngủ, thức.
+ * Dữ liệu đầu ra: Trạng thái pet sau mỗi hành động và pop-up phản hồi.
+ * File liên quan: src/services/petService.js, src/validators/petValidators.js
+ */
 const asyncHandler = require("../utils/asyncHandler");
 const { buildSuccessResponse } = require("../utils/petResponse");
 const {

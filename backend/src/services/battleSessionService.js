@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Giữ toàn bộ luật của Boss Battle và cách cộng thưởng sau trận.
+ * Dữ liệu đầu vào: quiz, câu trả lời của học sinh, trạng thái session.
+ * Dữ liệu đầu ra: HP Boss/HP người chơi, XP, coin, badge và lịch sử câu sai.
+ * File liên quan: src/services/quizGradeService.js, src/services/progressService.js
+ */
 const crypto = require("crypto");
 const ApiError = require("../utils/apiError");
 const { db } = require("../firebase");
@@ -243,6 +249,7 @@ async function unlockBossBattleAchievements({
 
 function getDamagePerCorrectAnswer(totalQuestions) {
   const normalizedTotalQuestions = Math.max(1, Math.floor(Number(totalQuestions) || 0));
+  // Chia đều 100 HP để mỗi câu đúng đều làm Boss yếu đi một lượng rõ ràng.
   return Math.max(1, Math.ceil(100 / normalizedTotalQuestions));
 }
 
@@ -609,6 +616,7 @@ function buildBossBattleRewardSummary({
       return;
     }
 
+    // Mỗi câu đúng vừa cộng combo vừa cộng sát thương cho Boss.
     correctAnswers += 1;
     currentCombo += 1;
     maxCombo = Math.max(maxCombo, currentCombo);
@@ -630,6 +638,7 @@ function buildBossBattleRewardSummary({
   const participationBonus = 25;
 
   if (isRewardEligible) {
+    // Chỉ tính thưởng khi trận đã thắng hoặc đã kết thúc hợp lệ.
     coinAwarded += rankReward.coinBonus;
     if (correctAnswers >= questions.length && questions.length > 0) {
       coinAwarded += completionBonus;
@@ -782,6 +791,7 @@ async function completeBattleSession({ sessionId, userId }) {
   const currentRewardStatus = normalizeRewardStatus(currentSession.rewardStatus);
 
   if (currentRewardStatus === "rewarded") {
+    // Đã nhận thưởng rồi thì trả lại kết quả cũ để tránh cộng thưởng 2 lần.
     const currentProfile = await getUserById(normalizedUserId).catch(() => null);
     return {
       session: buildBattleSessionResponse({
@@ -886,6 +896,7 @@ async function completeBattleSession({ sessionId, userId }) {
   let coinReceipt = null;
 
   if (rewardSummary.xpAwarded > 0) {
+    // XP được cộng trước để hồ sơ học tập cập nhật ngay sau trận.
     xpReceipt = await awardExp(
       normalizedUserId,
       rewardSummary.xpAwarded,
@@ -940,9 +951,11 @@ async function completeBattleSession({ sessionId, userId }) {
   );
 
   if (topicId) {
+    // Cập nhật độ chính xác của topic để AI Coach và thống kê đọc lại sau.
     await recordUserTopicAccuracy(normalizedUserId, topicId, topicResults);
   }
 
+  // Lưu lại câu sai để màn xem lại có thể mở ra đúng câu học sinh làm sai.
   await WRONG_ANSWERS_COLLECTION.doc(normalizedUserId).set(
     recentWrongAnswers,
     { merge: true },
@@ -1077,6 +1090,7 @@ async function answerBattleSession({ sessionId, userId, questionIndex, selected 
     nextCombo += 1;
     nextBossHP = Math.max(0, nextBossHP - damagePerCorrectAnswer);
   } else {
+    // Sai câu này thì Boss không mất máu, người chơi mất 1 HP và combo bị reset.
     nextPlayerHP = Math.max(0, nextPlayerHP - 1);
     nextCombo = 0;
   }

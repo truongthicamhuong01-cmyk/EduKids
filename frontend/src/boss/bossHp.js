@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Hiển thị thanh máu của Boss trong Boss Battle.
+ * Dữ liệu đầu vào: HP hiện tại, trạng thái Boss và callback đổi trạng thái.
+ * Dữ liệu đầu ra: Một component DOM tự cập nhật theo HP.
+ * File liên quan: frontend/src/boss/bossAnimation.js
+ */
 const DEFAULT_HP = 100;
 const MIN_HP = 0;
 const MAX_HP = 100;

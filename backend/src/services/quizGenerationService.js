@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Sinh thêm phiên bản quiz mới bằng Gemini khi topic chưa đủ dữ liệu.
+ * Dữ liệu đầu vào: grade, subject, topicId và cấu hình AI.
+ * Dữ liệu đầu ra: Quiz version mới lưu vào Firestore.
+ * File liên quan: src/services/aiService.js, src/services/quizVersionService.js
+ */
 const ApiError = require("../utils/apiError");
 const { buildQuizPrompt } = require("./aiPrompt");
 const {

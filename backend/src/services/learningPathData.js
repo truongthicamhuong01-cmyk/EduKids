@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Khai báo dữ liệu gốc của hành trình Learning Path.
+ * Dữ liệu đầu vào: Danh sách núi, checkpoint, nhiệm vụ và phần thưởng cố định.
+ * Dữ liệu đầu ra: Blueprint để engine dựng state và màn hiển thị.
+ * File liên quan: src/services/learningPathEngine.js, frontend/src/data/learning-path/*
+ */
 const TASK_BLUEPRINTS = [
   {
     idSuffix: "login",

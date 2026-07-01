@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Tổng hợp tiến độ học rồi gửi phần đã xử lý sang Gemini.
+ * Dữ liệu đầu vào: user_progress, topics.json, cấu hình AI, cache cũ.
+ * Dữ liệu đầu ra: Nhận xét AI Coach, mức học tập, chủ đề mạnh/yếu.
+ * File liên quan: src/controllers/coachController.js, src/services/aiService.js
+ */
 const { GoogleGenAI } = require("@google/genai");
 const { db } = require("../firebase");
 const ApiError = require("../utils/apiError");
@@ -94,6 +100,7 @@ function buildCoachTopics(progressItems) {
   const rankedDesc = sortTopicsByAccuracy(validTopics, "desc");
   const rankedAsc = sortTopicsByAccuracy(validTopics, "asc");
 
+  // Lấy 2 chủ đề mạnh và 2 chủ đề yếu nhất để AI chỉ đọc phần cốt lõi.
   return {
     bestTopics: rankedDesc.slice(0, 2),
     weakTopics: rankedAsc.slice(0, 2),
@@ -174,6 +181,7 @@ async function loadStudentProgress(userId) {
     .collection("topics")
     .get();
 
+  // Chỉ lấy chủ đề đã có dữ liệu để tránh gửi thông tin rỗng sang AI.
   return progressSnapshot.docs
     .map((doc) => normalizeProgressItem(doc, topicMap))
     .filter((item) => item.totalAnswered > 0);
@@ -288,6 +296,7 @@ async function analyzeStudentProgress(userId) {
   const cacheRevision = Number(aiSettings.cacheRevision) || 0;
 
   if (isFreshCoachCache(cacheDoc, signature, cacheRevision)) {
+    // Cache còn mới thì dùng lại, đỡ gọi Gemini và đỡ tốn thời gian chờ.
     return {
       ...cacheDoc.analysis,
       averageAccuracy: Number(cacheDoc.averageAccuracy) || 0,
@@ -313,6 +322,7 @@ async function analyzeStudentProgress(userId) {
     weakTopics,
   });
 
+  // Chỉ gửi dữ liệu đã tổng hợp, không gửi toàn bộ lịch sử thô cho Gemini.
   const client = getGeminiClient();
   const response = await client.models.generateContent({
     model: "gemini-2.5-flash",

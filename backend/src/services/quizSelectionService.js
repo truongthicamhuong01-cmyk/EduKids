@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Chọn phiên bản quiz phù hợp cho từng học sinh.
+ * Dữ liệu đầu vào: danh sách version, lịch sử dùng trước đó, topic metadata.
+ * Dữ liệu đầu ra: version quiz được chọn và lịch sử đã dùng.
+ * File liên quan: src/services/quizVersionService.js, src/services/topicAccuracyService.js
+ */
 const { db } = require("../firebase");
 const ApiError = require("../utils/apiError");
 const { buildVersionQuizId } = require("./quizVersionService");

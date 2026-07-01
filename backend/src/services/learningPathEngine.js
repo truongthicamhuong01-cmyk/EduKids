@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Tính luật mở khóa, hoàn thành và nhận thưởng của Learning Path.
+ * Dữ liệu đầu vào: season blueprint, trạng thái hiện tại, dữ liệu học trong ngày.
+ * Dữ liệu đầu ra: State mới, event mở khóa, reward, và checkpoint hiện tại.
+ * File liên quan: src/services/learningPathService.js, src/services/learningPathData.js
+ */
 const { season1 } = require("./learningPathData");
 const { getLocalDateKey, getLocalWeekKey } = require("../utils/dateUtils");
 
@@ -348,6 +354,7 @@ function applyCheckpointAvailability(state) {
   }
 
   if (shouldHoldUntilTomorrow) {
+    // Đã hoàn thành hôm nay thì giữ lại đến ngày mai để tạo nhịp học đều.
     currentCheckpoint.status = CHECKPOINT_STATE.LOCKED;
     state.lockNotice = "Quay lại vào ngày mai để tiếp tục hành trình";
   } else {
@@ -743,6 +750,7 @@ function createEngine(initialSeason = season1, initialProgress = {}, options = {
     }
 
     if (state.limits.dailyCheckpointCount >= 1) {
+      // Một ngày chỉ cho hoàn thành 1 checkpoint để tránh đi quá nhanh.
       emitCheckpointBlocked("DAILY_LIMIT_REACHED", checkpointId, {
         action: "completeCheckpoint",
       });
@@ -759,6 +767,7 @@ function createEngine(initialSeason = season1, initialProgress = {}, options = {
     const isSummit = Boolean(summitMeta && summitMeta.id === checkpointId);
 
     if (isSummit && state.limits.weeklySummitCount >= 1) {
+      // Summit được giới hạn theo tuần vì đây là mốc quan trọng nhất.
       emitCheckpointBlocked("WEEKLY_LIMIT_REACHED", checkpointId, {
         action: "completeCheckpoint",
       });
@@ -921,6 +930,7 @@ function createEngine(initialSeason = season1, initialProgress = {}, options = {
 
     const nextCheckpoint = getNextCheckpointRecord();
     if (!nextCheckpoint) {
+      // Hết checkpoint thì dừng ở đỉnh cuối và chỉ cập nhật tiến độ.
       syncProgressFromCheckpoints();
       touchState();
       emitStateChanged({

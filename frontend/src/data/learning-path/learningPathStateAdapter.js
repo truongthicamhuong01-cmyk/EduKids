@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Chuyển state từ backend sang dạng mà màn Learning Path đọc được.
+ * Dữ liệu đầu vào: state thô từ API và blueprint season1.
+ * Dữ liệu đầu ra: state đã chuẩn hóa cho UI và avatar.
+ * File liên quan: frontend/src/pages/student/learning-path/learningPathPage.js, backend/src/services/learningPathService.js
+ */
 import { season1 } from "./season1.js";
 
 const DEFAULT_CURRENT_CHECKPOINT_ID = String(season1.mountains?.[0]?.checkpoints?.[0]?.id || "puncak-jaya-start");

@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Điều khiển luồng Boss Battle ở mức API.
+ * Dữ liệu đầu vào: sessionId, câu trả lời, yêu cầu hint và hoàn tất trận.
+ * Dữ liệu đầu ra: Trạng thái trận và phần thưởng sau khi kết thúc.
+ * File liên quan: src/services/battleSessionService.js
+ */
 const asyncHandler = require("../utils/asyncHandler");
 const ApiError = require("../utils/apiError");
 const successResponse = require("../utils/apiResponse");

@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Kiểm tra JWT trước khi cho vào các API cần đăng nhập.
+ * Dữ liệu đầu vào: Header Authorization và thông tin user trong Firestore.
+ * Dữ liệu đầu ra: Gắn req.user hoặc chặn bằng lỗi 401/403/503.
+ * File liên quan: src/controllers/*, src/routes/*
+ */
 const jwt = require("jsonwebtoken");
 const { db } = require("../firebase");
 const { readSystemSettings } = require("../services/systemSettingsService");

@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Áp dụng hiệu ứng của item lên Pet.
+ * Dữ liệu đầu vào: petState, itemConfig, configs và thời điểm hiện tại.
+ * Dữ liệu đầu ra: Trạng thái Pet sau khi dùng item.
+ * File liên quan: src/services/petDecayService.js, src/repositories/inventoryRepository.js
+ */
 const { applyPetMutation } = require("./petDecayService");
 const { normalizeCategoryKey } = require("../repositories/inventoryRepository");
 

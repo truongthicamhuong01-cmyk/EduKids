@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Trang quản trị AI để xem log, bật/tắt và xóa cache Coach.
+ * Dữ liệu đầu vào: Firestore, cấu hình AI và log sử dụng AI.
+ * Dữ liệu đầu ra: Dữ liệu dashboard và thao tác quản trị.
+ * File liên quan: backend/src/services/coachAnalysisService.js, backend/src/services/systemSettingsService.js
+ */
 (() => {
   const AI_LOG_COLLECTION = "ai_usage_logs";
   const AI_SETTINGS_COLLECTION = "systemSettings";

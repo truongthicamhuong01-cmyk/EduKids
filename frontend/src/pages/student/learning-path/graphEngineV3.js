@@ -1,3 +1,9 @@
+/*
+ * Chức năng: Dựng cây trạng thái của bản đồ Learning Path và vị trí avatar.
+ * Dữ liệu đầu vào: state từ backend hoặc từ adapter của frontend.
+ * Dữ liệu đầu ra: graphState để render các checkpoint và avatar.
+ * File liên quan: frontend/src/pages/student/learning-path/learningPathPage.js
+ */
 const NODE_ICON_MAP = {
   everest: "/assets/learning-path/icon/icon-everest.png.jpg",
   elbrus: "/assets/learning-path/icon/icon-elbrus.png.jpg",
