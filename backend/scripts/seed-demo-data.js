@@ -220,26 +220,24 @@ async function safeUpdate(ref, data, options = {}) {
   return ref.update(payload, options);
 }
 
-async function deleteDocumentTree(ref) {
+async function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function deleteDocument(ref) {
   if (!ref) {
     return;
-  }
-
-  let subcollections = [];
-
-  if (typeof ref.listCollections === "function") {
-    subcollections = await ref.listCollections().catch(() => []);
-  }
-
-  for (const collection of subcollections) {
-    const snapshot = await collection.get().catch(() => null);
-    if (!snapshot) {
-      continue;
-    }
-
-    for (const doc of snapshot.docs) {
-      await deleteDocumentTree(doc.ref);
-    }
   }
 
   await ref.delete().catch(() => null);
@@ -252,7 +250,7 @@ async function deleteQueryResults(query) {
   }
 
   for (const doc of snapshot.docs) {
-    await deleteDocumentTree(doc.ref);
+    await deleteDocument(doc.ref);
   }
 }
 
@@ -307,7 +305,8 @@ async function cleanupDemoQuizDoc(quizRootRef) {
   const hasDemoMarker = String(rootData.seedSource || "") === DEMO_MARKER || String(versionData?.data?.seedSource || "") === DEMO_MARKER;
 
   if (hasDemoMarker || payloadSource === "demo-seed") {
-    await deleteDocumentTree(quizRootRef);
+    await deleteDocument(quizRootRef.collection("versions").doc("v1"));
+    await deleteDocument(quizRootRef);
   }
 }
 
@@ -318,17 +317,32 @@ async function cleanupPreviousDemoData(existingUsers, classPlan, topics) {
   const demoQuizIds = buildDemoQuizIds(classPlan, topics);
 
   for (const userId of demoUserIds) {
-    await deleteDocumentTree(db.collection("users").doc(userId));
-    await deleteDocumentTree(db.collection("learningPathProgress").doc(userId));
-    await deleteDocumentTree(db.collection("coach_analysis_cache").doc(userId));
-    await deleteDocumentTree(db.collection("wrong_answers").doc(userId));
-    await deleteDocumentTree(db.collection("user_reward_receipts").doc(userId));
+    await Promise.all([
+      deleteDocument(db.collection("users").doc(userId)),
+      deleteDocument(db.collection("learningPathProgress").doc(userId)),
+      deleteDocument(db.collection("coach_analysis_cache").doc(userId)),
+      deleteDocument(db.collection("wrong_answers").doc(userId)),
+      deleteDocument(db.collection("user_reward_receipts").doc(userId)),
+    ]);
+
+    await Promise.all([
+      deleteQueryResults(db.collection("user_progress").doc(userId).collection("topics")),
+      deleteQueryResults(db.collection("users").doc(userId).collection("pet")),
+      deleteQueryResults(db.collection("users").doc(userId).collection("inventory")),
+      deleteQueryResults(db.collection("users").doc(userId).collection("petRequests")),
+      deleteQueryResults(db.collection("users").doc(userId).collection("inventoryTransactions")),
+      deleteQueryResults(db.collection("users").doc(userId).collection("shopTransactions")),
+    ]);
   }
 
   for (const classId of demoClassIds) {
-    await deleteDocumentTree(db.collection("classes").doc(classId));
-    await deleteDocumentTree(db.collection("assignments").doc(`${classId}-assignment-1`));
-    await deleteDocumentTree(db.collection("assignments").doc(`${classId}-assignment-2`));
+    await Promise.all([
+      deleteDocument(db.collection("classes").doc(classId)),
+      deleteDocument(db.collection("classes").doc(classId).collection("assignments").doc(`${classId}-assignment-1`)),
+      deleteDocument(db.collection("classes").doc(classId).collection("assignments").doc(`${classId}-assignment-2`)),
+      deleteDocument(db.collection("assignments").doc(`${classId}-assignment-1`)),
+      deleteDocument(db.collection("assignments").doc(`${classId}-assignment-2`)),
+    ]);
   }
 
   for (const quizId of demoQuizIds) {
@@ -358,7 +372,7 @@ async function cleanupPreviousDemoData(existingUsers, classPlan, topics) {
 
   const userProgressRoot = db.collection("user_progress");
   for (const userId of demoUserIds) {
-    await deleteDocumentTree(userProgressRoot.doc(userId));
+    await deleteQueryResults(userProgressRoot.doc(userId).collection("topics"));
   }
 
   const rewardReceiptQuery = db.collection("user_reward_receipts").where("seedSource", "==", DEMO_MARKER);
@@ -1079,14 +1093,41 @@ function buildBattleSession(userId, quiz, studentIndex, topicId) {
   };
 }
 
+async function closeAdminApps() {
+  const apps = Array.isArray(admin.apps) ? admin.apps : [];
+
+  await Promise.all(
+    apps.map((app) =>
+      app.delete().catch(() => null),
+    ),
+  );
+}
+
 async function main() {
+  console.log("[seed-demo] START");
+  console.log("[seed-demo] Firebase initialized");
   const roster = buildDesiredRoster();
+  console.log("[seed-demo] Roster prepared", {
+    teachers: USER_COUNT.teacher,
+    students: USER_COUNT.student,
+  });
   const teachers = roster.filter((user) => user.role === "teacher");
   const topics = readTopicsFile().filter((topic) => topic.grade && topic.subject);
+  console.log("[seed-demo] Firestore ready");
   const classPlanPreview = buildClassPlan(teachers);
-  const existingUsersBeforeCleanup = await fetchExistingUsers();
-  await cleanupPreviousDemoData(existingUsersBeforeCleanup, classPlanPreview, topics);
-  const existingUsers = await fetchExistingUsers();
+  console.log("[seed-demo] Loading existing users");
+  const existingUsersBeforeCleanup = await withTimeout(fetchExistingUsers(), 2 * 60 * 1000, "fetchExistingUsers(before cleanup)");
+  console.log("[seed-demo] Existing users loaded");
+  console.log("[seed-demo] Cleanup started");
+  await withTimeout(
+    cleanupPreviousDemoData(existingUsersBeforeCleanup, classPlanPreview, topics),
+    10 * 60 * 1000,
+    "cleanupPreviousDemoData",
+  );
+  console.log("[seed-demo] Cleanup completed");
+  console.log("[seed-demo] Reloading existing users");
+  const existingUsers = await withTimeout(fetchExistingUsers(), 2 * 60 * 1000, "fetchExistingUsers(after cleanup)");
+  console.log("[seed-demo] Existing demo users checked");
   const studentsToCreate = roster.filter((user) => user.role === "student");
   const teachersToCreate = teachers;
   const studentRecords = [];
@@ -1097,6 +1138,7 @@ async function main() {
     students: existingUsers.filter((user) => isDemoUserRecord(user) && String(user.role || "") === "student").length,
     teachers: existingUsers.filter((user) => isDemoUserRecord(user) && String(user.role || "") === "teacher").length,
   });
+  console.log("[seed-demo] Users sync started");
 
   for (const payload of [...teachersToCreate, ...studentsToCreate]) {
     const username = String(payload.username || "").trim().toLowerCase();
@@ -1189,6 +1231,10 @@ async function main() {
 
     userByUsername.set(username, record);
   }
+  console.log("[seed-demo] Users sync completed", {
+    teachers: teacherRecords.length,
+    students: studentRecords.length,
+  });
 
   const teacherMap = new Map(
     teacherRecords.map((teacher) => [String(teacher.username || "").trim().toLowerCase(), teacher]),
@@ -1209,6 +1255,7 @@ async function main() {
   const classPlan = buildClassPlan(orderedTeachers);
   const classDocs = [];
   const quizDocs = [];
+  console.log("[seed-demo] Class seeding started");
 
   for (let classIndex = 0; classIndex < classPlan.length; classIndex += 1) {
     const classroom = classPlan[classIndex];
@@ -1456,6 +1503,10 @@ async function main() {
       }
     }
   }
+  console.log("[seed-demo] Class seeding completed", {
+    classes: classDocs.length,
+    quizzes: quizDocs.length,
+  });
 
   const userProgressCollection = db.collection("user_progress");
   const learningPathCollection = db.collection("learningPathProgress");
@@ -1465,6 +1516,7 @@ async function main() {
   const rewardReceiptCollection = db.collection("user_reward_receipts");
   const rewardLedgerCollection = db.collection("rewardLedger");
   const battleSessionCollection = db.collection("battle_sessions");
+  console.log("[seed-demo] Student enrichment started");
 
   for (let index = 0; index < orderedStudents.length; index += 1) {
     const student = orderedStudents[index];
@@ -1697,6 +1749,8 @@ async function main() {
     })).catch(() => null);
   }
 
+  console.log("[seed-demo] Student enrichment completed");
+
   console.log("[seed-demo] done", {
     teachers: USER_COUNT.teacher,
     students: USER_COUNT.student,
@@ -1706,7 +1760,14 @@ async function main() {
   });
 }
 
-main().catch((error) => {
-  console.error("[seed-demo] failed", error);
-  process.exitCode = 1;
-});
+main()
+  .then(async () => {
+    console.log("[seed-demo] DONE");
+    await closeAdminApps().catch(() => null);
+    process.exit(0);
+  })
+  .catch(async (error) => {
+    console.error("[seed-demo] failed", error && error.stack ? error.stack : error);
+    await closeAdminApps().catch(() => null);
+    process.exit(1);
+  });
