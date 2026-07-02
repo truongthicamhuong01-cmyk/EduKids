@@ -10,4 +10,8 @@ cd frontend
 npm run build
 firebase deploy --only hosting
 
+todo:
+- Tạo 140 acc học sinh, 10 acc giáo viên
+- Làm animation lên trạm
+- Làm thời gian thay đổi tên, tên đăng nhập
 ```

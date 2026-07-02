@@ -1,0 +1,1395 @@
+require("dotenv").config();
+
+const crypto = require("crypto");
+const bcrypt = require("bcrypt");
+const { admin, db } = require("../src/firebase");
+const { createUser, updateUserById } = require("../src/services/userService");
+const { joinClass } = require("../src/services/classService");
+const { createAssignment, createSubmission } = require("../src/services/assignmentService");
+const { createQuizVersion, buildVersionQuizId } = require("../src/services/quizVersionService");
+const { buildQuizDocId, readTopicsFile } = require("../src/services/aiService");
+const { season1 } = require("../src/services/learningPathData");
+const { recordLearningActivity } = require("../src/services/progressService");
+
+const nowIso = () => new Date().toISOString();
+
+const USER_COUNT = {
+  student: 140,
+  teacher: 10,
+};
+
+const ROLE_PREFIX = {
+  student: "hs",
+  teacher: "gv",
+};
+
+const SUBJECTS = ["math", "english", "vietnamese", "science", "history", "geography"];
+const GRADE_SUBJECT_PAIRS = [
+  ["1", "math"],
+  ["1", "english"],
+  ["2", "math"],
+  ["2", "english"],
+  ["3", "math"],
+  ["3", "english"],
+  ["3", "vietnamese"],
+  ["4", "science"],
+  ["4", "history"],
+  ["5", "geography"],
+];
+
+const SURNAMES = [
+  "Nguyễn",
+  "Trần",
+  "Lê",
+  "Phạm",
+  "Hoàng",
+  "Phan",
+  "Vũ",
+  "Võ",
+  "Đặng",
+  "Bùi",
+  "Đỗ",
+  "Hồ",
+  "Ngô",
+  "Dương",
+  "Lý",
+  "Thái",
+];
+
+const STUDENT_MIDDLES = [
+  "Minh",
+  "Thanh",
+  "Thu",
+  "Gia",
+  "Ngọc",
+  "Huỳnh",
+  "Phương",
+  "Diệu",
+  "Kim",
+  "Quỳnh",
+  "Ánh",
+  "Bảo",
+  "Tâm",
+  "Khánh",
+  "Linh",
+  "Nhàn",
+];
+
+const STUDENT_GIVENS = [
+  "An",
+  "Bao",
+  "Chi",
+  "Dung",
+  "Em",
+  "Giang",
+  "Hà",
+  "Khang",
+  "Lan",
+  "Lam",
+  "Mai",
+  "Nam",
+  "Nhi",
+  "Phuc",
+  "Quang",
+  "Quỳnh",
+  "Son",
+  "Tam",
+  "Tuan",
+  "Vy",
+  "Yến",
+  "Ý",
+];
+
+const TEACHER_MIDDLES = [
+  "Hồng",
+  "Thu",
+  "Thanh",
+  "Quỳnh",
+  "Mai",
+  "Ngọc",
+  "Bảo",
+  "Minh",
+  "Diệu",
+  "Xuân",
+];
+
+const TEACHER_GIVENS = [
+  "Anh",
+  "Linh",
+  "Hạnh",
+  "Lan",
+  "Hoa",
+  "Phương",
+  "Trang",
+  "Tuấn",
+  "Khánh",
+  "Đức",
+];
+
+const PET_TYPES = ["horse", "elephant", "cat", "dog"];
+const BADGE_POOL = ["badge_star", "badge_math", "badge_reading", "badge_pet", "badge_path", "badge_bonus"];
+const INVENTORY_ITEMS = [
+  "biscuit",
+  "milk",
+  "apple",
+  "carrot",
+  "ball",
+  "teddy",
+  "kite",
+  "pinwheel",
+  "bandage",
+  "vitamin",
+];
+
+const QUIZ_VERSION_COUNT = 1;
+const ASSIGNMENTS_PER_CLASS = 2;
+const SUBMISSIONS_PER_ASSIGNMENT = 4;
+
+function slugify(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function hashText(value, length = 8) {
+  return crypto
+    .createHash("sha1")
+    .update(String(value || ""))
+    .digest("hex")
+    .slice(0, length);
+}
+
+function sha1Text(value) {
+  return crypto.createHash("sha1").update(String(value || "")).digest("hex");
+}
+
+function pickByIndex(list, index, offset = 0) {
+  if (!Array.isArray(list) || list.length === 0) {
+    return "";
+  }
+
+  return list[(index + offset) % list.length];
+}
+
+function uniqueValue(base, usedValues, suffixSeed = "") {
+  let candidate = String(base || "").trim();
+  let counter = 0;
+
+  while (!candidate || usedValues.has(candidate)) {
+    counter += 1;
+    candidate = `${base}-${hashText(`${suffixSeed}:${counter}`, 4)}`;
+  }
+
+  usedValues.add(candidate);
+  return candidate;
+}
+
+function buildVietnameseFullName(role, index) {
+  const surname = pickByIndex(SURNAMES, index, role === "teacher" ? 2 : 0);
+
+  if (role === "teacher") {
+    const middle = pickByIndex(TEACHER_MIDDLES, index, Math.floor(index / TEACHER_MIDDLES.length));
+    const given = pickByIndex(TEACHER_GIVENS, index, Math.floor(index / TEACHER_GIVENS.length));
+    return `${surname} ${middle} ${given}`;
+  }
+
+  const middle = pickByIndex(STUDENT_MIDDLES, index, Math.floor(index / STUDENT_MIDDLES.length));
+  const given = pickByIndex(STUDENT_GIVENS, index, Math.floor(index / STUDENT_GIVENS.length));
+  return `${surname} ${middle} ${given}`;
+}
+
+function buildUsername(role, fullName, index, existingUsernames, usedUsernames) {
+  const rolePrefix = ROLE_PREFIX[role] || "demo";
+  const slug = slugify(fullName);
+  const suffix = hashText(`${role}:${fullName}:${index}`, 4);
+  const base = `demo-${rolePrefix}-${slug}-${suffix}`;
+  return uniqueValue(base, new Set([...existingUsernames, ...usedUsernames]), `${role}:${index}`);
+}
+
+function buildEmail(username) {
+  return `${username}@edukids.demo`;
+}
+
+function buildGender(index, role) {
+  const isFemale = (index + (role === "teacher" ? 1 : 0)) % 2 === 0;
+  return isFemale ? "female" : "male";
+}
+
+function buildAvatar(role, gender) {
+  if (role === "teacher") {
+    return gender === "female" ? "femaleteacher.png" : "maleteacher.png";
+  }
+
+  return gender === "female" ? "girl.png" : "boy.png";
+}
+
+function buildStudentStats(index, classIndex) {
+  const level = 1 + (index % 18);
+  const exp = 20 + ((index * 37) % 760);
+  const eduCoin = 120 + ((index * 53 + classIndex * 19) % 1800);
+  const totalEduCoinSpent = Math.floor(eduCoin * (0.25 + ((index % 5) * 0.1)));
+  const totalEduCoinEarned = eduCoin + totalEduCoinSpent;
+  const studyMinutes = 35 + ((index * 17 + classIndex * 11) % 780);
+  const streak = 1 + (index % 14);
+  const averageScore = Number((6.2 + ((index % 9) * 0.4)).toFixed(1));
+
+  return {
+    level,
+    exp,
+    streak,
+    lastStudyDate: new Date(Date.now() - ((index % 6) * 86400000)).toISOString(),
+    completedQuestions: 60 + index * 9,
+    studyMinutes,
+    eduCoin,
+    totalEduCoinEarned,
+    totalEduCoinSpent,
+    averageScore,
+    lastRewardAt: new Date(Date.now() - ((index % 4) * 43200000)).toISOString(),
+  };
+}
+
+function buildTeacherStats(index) {
+  return {
+    totalClasses: 0,
+    assignmentsCreated: 0,
+    studentsManaged: 0,
+    averageScore: Number((7.1 + (index % 4) * 0.3).toFixed(1)),
+  };
+}
+
+function buildActivityLogs(userId, topics, quizId, baseScore, count = 4) {
+  const logs = [];
+  const now = new Date();
+
+  for (let index = 0; index < count; index += 1) {
+    const topic = topics[index % topics.length];
+    const completedAt = new Date(now.getTime() - index * 86400000 - 3600000).toISOString();
+
+    logs.push({
+      id: `${userId}:activity:${index}`,
+      idempotencyKey: `${userId}:activity:${index}`,
+      sourceType: index % 2 === 0 ? "quiz" : "assignment",
+      sourceId: `${quizId}:${index}`,
+      topicId: topic.topicId,
+      quizId,
+      startedAt: new Date(new Date(completedAt).getTime() - 1800000).toISOString(),
+      completedAt,
+      score: Number((baseScore - index * 0.2).toFixed(1)),
+      accuracy: Math.max(0, Math.min(100, Math.round((baseScore - index * 0.2) * 10))),
+      totalQuestions: 10,
+      correctAnswers: Math.max(1, Math.round(((baseScore - index * 0.2) / 10) * 10)),
+      wrongAnswers: Math.max(0, 10 - Math.round(((baseScore - index * 0.2) / 10) * 10)),
+      studyMinutes: 15 + index * 10,
+      createdAt: completedAt,
+      updatedAt: completedAt,
+    });
+  }
+
+  return logs;
+}
+
+function buildSubjectsForStudent(classroom) {
+  const subject = String(classroom.subject || "").trim();
+  return SUBJECTS.includes(subject) ? [{ name: subject, progress: 50, color: "blue" }] : [];
+}
+
+function buildInventoryState(index, level) {
+  const foods = {};
+  const toys = {};
+  const medicine = {};
+  const now = nowIso();
+
+  INVENTORY_ITEMS.forEach((itemId, itemIndex) => {
+    const quantity = 1 + ((index + itemIndex) % 4);
+    const equipped = itemIndex === 4 || itemIndex === 5 ? quantity > 1 && level >= 2 : false;
+
+    const category = itemIndex < 4 ? "foods" : itemIndex < 8 ? "toys" : "medicine";
+    const target =
+      category === "foods" ? foods : category === "toys" ? toys : medicine;
+
+    target[itemId] = {
+      itemId,
+      quantity,
+      equipped,
+      updatedAt: now,
+      metadata: {
+        source: "demo",
+        index: itemIndex,
+      },
+      ...(itemId === "teddy" || itemId === "kite" ? { durability: 70 + (index % 20), maxDurability: 100 } : {}),
+    };
+  });
+
+  return {
+    categories: {
+      foods,
+      toys,
+      medicine,
+      decoration: {},
+      special: {},
+    },
+    updatedAt: now,
+    version: 1 + (index % 6),
+  };
+}
+
+function buildPetState(index, fullName) {
+  const petTypeId = PET_TYPES[index % PET_TYPES.length];
+  const level = 1 + (index % 20);
+  const exp = 15 + ((index * 29) % 240);
+  const hunger = 45 + (index % 45);
+  const happiness = 50 + ((index * 7) % 40);
+  const energy = 40 + ((index * 11) % 50);
+  const health = 55 + ((index * 5) % 35);
+  const createdAt = new Date(Date.now() - ((index % 12) * 86400000)).toISOString();
+
+  return {
+    petTypeId,
+    petName: `${fullName.split(" ")[1] || "Pet"} ${index + 1}`,
+    level,
+    exp,
+    hunger,
+    happiness,
+    energy,
+    health,
+    status: "active",
+    createdAt,
+    updatedAt: createdAt,
+    lastUpdateAt: createdAt,
+    lastLoginAt: createdAt,
+    lastActionAt: createdAt,
+    lastFeedAt: new Date(Date.now() - ((index % 4) * 3600000)).toISOString(),
+    lastPlayAt: new Date(Date.now() - ((index % 5) * 5400000)).toISOString(),
+    lastSleepAt: "",
+    selectedAt: createdAt,
+    version: 1,
+  };
+}
+
+function buildLearningPathState(userId, studentIndex, classroom) {
+  const seasonId = season1.id;
+  const mountain = season1.mountains[studentIndex % season1.mountains.length];
+  const checkpoint = mountain.checkpoints[Math.min(6, 1 + (studentIndex % 5))];
+  const completedCheckpoints = mountain.checkpoints.slice(0, 1 + (studentIndex % 3)).map((item) => item.id);
+  const rewardedXu = 70 + (studentIndex % 8) * 35;
+  const rewardedExp = 100 + (studentIndex % 8) * 25;
+  const badgeIds = studentIndex % 3 === 0 ? [mountain.badge.id] : [];
+  const now = nowIso();
+
+  return {
+    userId,
+    seasonId,
+    mountainId: mountain.id,
+    checkpointId: checkpoint.id,
+    currentCheckpointId: checkpoint.id,
+    currentSeason: seasonId,
+    currentMountain: mountain.id,
+    currentCheckpoint: checkpoint.id,
+    progress: {
+      currentCheckpointId: checkpoint.id,
+      currentCheckpoint: checkpoint.id,
+      completedCheckpoints,
+      completedMountains: studentIndex % 4 === 0 ? [mountain.id] : [],
+    },
+    rewards: {
+      xu: rewardedXu,
+      exp: rewardedExp,
+      badges: badgeIds,
+    },
+    limits: {
+      dailyCheckpointCount: studentIndex % 3,
+      weeklySummitCount: studentIndex % 2,
+      lastResetDate: now.slice(0, 10),
+      lastResetWeek: `${now.slice(0, 4)}-W${String(1 + (studentIndex % 52)).padStart(2, "0")}`,
+      lastCheckpointCompletedAt: new Date(Date.now() - (studentIndex % 6) * 86400000).toISOString(),
+      lastSummitCompletedAt: studentIndex % 4 === 0 ? new Date(Date.now() - 86400000).toISOString() : "",
+    },
+    wallet: {
+      eduCoin: 120 + (studentIndex % 12) * 30,
+    },
+    updatedAt: now,
+  };
+}
+
+function buildQuizQuestions(topic, seedIndex) {
+  const grade = String(topic.grade || "").trim();
+  const subject = String(topic.subject || "").trim();
+  const topicName = String(topic.title || topic.name || topic.topicName || "").trim();
+  const questions = [];
+
+  for (let index = 0; index < 10; index += 1) {
+    const base = seedIndex * 10 + index + 1;
+
+    if (subject === "math") {
+      const a = 2 + ((base * 3) % 15);
+      const b = 2 + ((base * 5) % 13);
+      const answer = a + b;
+      questions.push({
+        id: `q${index + 1}`,
+        question: `Lớp ${grade}: ${a} + ${b} bằng bao nhiêu?`,
+        options: [
+          { label: "A", text: String(answer), correct: true },
+          { label: "B", text: String(answer + 1), correct: false },
+          { label: "C", text: String(Math.max(0, answer - 1)), correct: false },
+          { label: "D", text: String(answer + 3), correct: false },
+        ],
+        correctAnswer: "A",
+      });
+      continue;
+    }
+
+    if (subject === "english") {
+      const options = [
+        `${topicName} lesson`,
+        `${topicName} book`,
+        `${topicName} desk`,
+        `${topicName} bag`,
+      ];
+      questions.push({
+        id: `q${index + 1}`,
+        question: `Which phrase matches the topic "${topicName}"?`,
+        options: options.map((text, optionIndex) => ({
+          label: String.fromCharCode(65 + optionIndex),
+          text,
+          correct: optionIndex === 0,
+        })),
+        correctAnswer: "A",
+      });
+      continue;
+    }
+
+    if (subject === "vietnamese") {
+      questions.push({
+        id: `q${index + 1}`,
+        question: `Từ nào phù hợp nhất với chủ đề "${topicName}"?`,
+        options: [
+          { label: "A", text: `Đúng ${topicName}`, correct: true },
+          { label: "B", text: `Sai ${topicName}`, correct: false },
+          { label: "C", text: `Gần ${topicName}`, correct: false },
+          { label: "D", text: `Khác ${topicName}`, correct: false },
+        ],
+        correctAnswer: "A",
+      });
+      continue;
+    }
+
+    if (subject === "science") {
+      questions.push({
+        id: `q${index + 1}`,
+        question: `Trong chủ đề "${topicName}", đâu là mô tả đúng nhất?`,
+        options: [
+          { label: "A", text: `Hiểu đúng về ${topicName}`, correct: true },
+          { label: "B", text: `Chọn ngẫu nhiên`, correct: false },
+          { label: "C", text: `Không liên quan`, correct: false },
+          { label: "D", text: `Sai nội dung`, correct: false },
+        ],
+        correctAnswer: "A",
+      });
+      continue;
+    }
+
+    if (subject === "history") {
+      questions.push({
+        id: `q${index + 1}`,
+        question: `Sự kiện nào gắn với chủ đề "${topicName}"?`,
+        options: [
+          { label: "A", text: `Sự kiện chính của ${topicName}`, correct: true },
+          { label: "B", text: `Sự kiện phụ`, correct: false },
+          { label: "C", text: `Không phải lịch sử`, correct: false },
+          { label: "D", text: `Tình huống khác`, correct: false },
+        ],
+        correctAnswer: "A",
+      });
+      continue;
+    }
+
+    questions.push({
+      id: `q${index + 1}`,
+      question: `Địa danh nào đúng với chủ đề "${topicName}"?`,
+      options: [
+        { label: "A", text: `Địa danh ${topicName}`, correct: true },
+        { label: "B", text: "Phương án B", correct: false },
+        { label: "C", text: "Phương án C", correct: false },
+        { label: "D", text: "Phương án D", correct: false },
+      ],
+      correctAnswer: "A",
+    });
+  }
+
+  return questions;
+}
+
+function buildAssignmentQuestions(topic, seedIndex) {
+  const questions = buildQuizQuestions(topic, seedIndex);
+  return questions.map((question) => ({
+    ...question,
+    options: question.options.map((option) => option.text),
+    correctAnswer: question.options[0]?.text || "",
+    correctAnswerIndex: 0,
+  }));
+}
+
+async function docExists(ref) {
+  const snapshot = await ref.get();
+  return snapshot.exists;
+}
+
+async function ensureDoc(ref, data) {
+  const exists = await docExists(ref);
+  if (exists) {
+    return false;
+  }
+
+  await ref.set(data, { merge: false });
+  return true;
+}
+
+async function fetchExistingUsers() {
+  const snapshot = await db.collection("users").get();
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    uid: doc.id,
+    ...(doc.data() || {}),
+  }));
+}
+
+function buildDesiredRoster() {
+  const roster = [];
+
+  for (let index = 0; index < USER_COUNT.teacher; index += 1) {
+    const fullName = buildVietnameseFullName("teacher", index);
+    roster.push({
+      role: "teacher",
+      index,
+      fullName,
+      username: `demo-gv-${slugify(fullName)}-${String(index + 1).padStart(2, "0")}`,
+      email: buildEmail(`demo-gv-${slugify(fullName)}-${String(index + 1).padStart(2, "0")}`),
+      gender: buildGender(index, "teacher"),
+      school: `Trường Tiểu học Demo ${String.fromCharCode(65 + (index % 5))}`,
+      className: "",
+      hobby: index % 2 === 0 ? "Đọc sách" : "Âm nhạc",
+      dream: index % 2 === 0 ? "Giúp học sinh tự tin học tập" : "Xây dựng lớp học vui vẻ",
+      phone: `09${String(10000000 + index * 12345).slice(-8)}`,
+      address: `Quận ${1 + (index % 12)}, TP. Hồ Chí Minh`,
+      note: "Tài khoản demo giáo viên",
+      password: "Demo@12345",
+      stats: buildTeacherStats(index),
+    });
+  }
+
+  for (let index = 0; index < USER_COUNT.student; index += 1) {
+    const fullName = buildVietnameseFullName("student", index);
+    roster.push({
+      role: "student",
+      index,
+      fullName,
+      username: `demo-hs-${slugify(fullName)}-${String(index + 1).padStart(3, "0")}`,
+      email: buildEmail(`demo-hs-${slugify(fullName)}-${String(index + 1).padStart(3, "0")}`),
+      gender: buildGender(index, "student"),
+      school: `Trường Tiểu học Demo ${String.fromCharCode(65 + (index % 5))}`,
+      className: "",
+      hobby: index % 3 === 0 ? "Vẽ tranh" : index % 3 === 1 ? "Bóng đá" : "Đọc truyện",
+      dream: index % 2 === 0 ? "Học giỏi Toán" : "Trở thành lớp trưởng",
+      phone: `09${String(20000000 + index * 2345).slice(-8)}`,
+      address: `Phường ${1 + (index % 10)}, TP. Hà Nội`,
+      note: "Tài khoản demo học sinh",
+      password: "Demo@12345",
+      stats: buildStudentStats(index, Math.floor(index / 7)),
+    });
+  }
+
+  return roster;
+}
+
+function buildClassPlan(teachers) {
+  const classPlan = [];
+
+  teachers.forEach((teacher, teacherIndex) => {
+    const firstPair = GRADE_SUBJECT_PAIRS[(teacherIndex * 2) % GRADE_SUBJECT_PAIRS.length];
+    const secondPair = GRADE_SUBJECT_PAIRS[(teacherIndex * 2 + 1) % GRADE_SUBJECT_PAIRS.length];
+
+    classPlan.push({
+      classId: `demo-class-${String(teacherIndex + 1).padStart(2, "0")}-a`,
+      teacher,
+      section: "A",
+      grade: firstPair[0],
+      subject: firstPair[1],
+    });
+
+    classPlan.push({
+      classId: `demo-class-${String(teacherIndex + 1).padStart(2, "0")}-b`,
+      teacher,
+      section: "B",
+      grade: secondPair[0],
+      subject: secondPair[1],
+    });
+  });
+
+  return classPlan;
+}
+
+function buildClassDoc(classroom, teacher, classIndex) {
+  const gradeLabel = `Lớp ${classroom.grade}${classroom.section}`;
+  const classCode = `DM${hashText(classroom.classId, 6).toUpperCase()}`;
+  const createdAt = new Date(Date.now() - classIndex * 86400000).toISOString();
+
+  return {
+    id: classroom.classId,
+    name: `${gradeLabel} - ${teacher.fullName}`,
+    className: `${gradeLabel} - ${teacher.fullName}`,
+    description: `Lớp demo ${gradeLabel.toLowerCase()} môn ${classroom.subject}`,
+    teacherId: teacher.uid,
+    teacherName: teacher.fullName,
+    teacherUsername: teacher.username,
+    classCode,
+    level: classroom.grade,
+    grade: classroom.grade,
+    subject: classroom.subject,
+    studentCount: 0,
+    students: [],
+    studentIds: [],
+    members: [],
+    assignmentIds: [],
+    createdAt,
+    updatedAt: createdAt,
+  };
+}
+
+function selectTopicForClass(classroom, topics) {
+  const matchingTopics = topics.filter(
+    (topic) => String(topic.grade || "").trim() === String(classroom.grade).trim() &&
+      String(topic.subject || "").trim() === String(classroom.subject).trim(),
+  );
+
+  return matchingTopics.length > 0
+    ? matchingTopics[0]
+    : topics[(Number(classroom.grade) + classroom.subject.length) % topics.length];
+}
+
+function buildQuizPayload(topic, seedIndex) {
+  const grade = String(topic.grade || "").trim();
+  const subject = String(topic.subject || "").trim();
+  const topicId = String(topic.topicId || "").trim();
+  const topicName = String(topic.title || topic.name || "").trim();
+  const questions = buildQuizQuestions(topic, seedIndex);
+
+  return {
+    id: buildVersionQuizId({ grade, subject, topicId, versionId: "v1" }),
+    grade,
+    subject,
+    topicId,
+    topicName,
+    topicDescription: String(topic.description || "").trim(),
+    questions,
+    source: "demo-seed",
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  };
+}
+
+function buildRewardReceipt(userId, source, amount, createdAt) {
+  return {
+    userId,
+    amount,
+    source,
+    createdAt,
+    updatedAt: createdAt,
+  };
+}
+
+function buildWrongAnswers(userId, quiz, score, studentIndex) {
+  const wrongQuestions = quiz.questions
+    .slice(0, 3)
+    .map((question, questionIndex) => {
+      const wrongOption = question.options[1];
+
+      return {
+        questionIndex,
+        question: question.question,
+        correctAnswer: "A",
+        userAnswer: "B",
+        correctAnswerText: question.options[0].text,
+        userAnswerText: wrongOption.text,
+      };
+    });
+
+  const createdAt = new Date(Date.now() - studentIndex * 3600000).toISOString();
+
+  return {
+    id: userId,
+    userId,
+    quizId: quiz.id,
+    wrongCount: wrongQuestions.length,
+    wrongQuestions,
+    totalQuestions: quiz.questions.length,
+    correctAnswers: Math.max(0, quiz.questions.length - wrongQuestions.length),
+    score,
+    createdAt,
+    updatedAt: createdAt,
+  };
+}
+
+function buildCoachCache(userId, progressItems, score, topic) {
+  const bestTopics = progressItems.slice(0, 2).map((item) => ({
+    topicId: item.topicId,
+    topicName: item.topicName,
+    accuracy: item.accuracy,
+    totalAnswered: item.totalAnswered,
+  }));
+
+  const weakTopics = [...progressItems]
+    .sort((left, right) => left.accuracy - right.accuracy)
+    .slice(0, 2)
+    .map((item) => ({
+      topicId: item.topicId,
+      topicName: item.topicName,
+      accuracy: item.accuracy,
+      totalAnswered: item.totalAnswered,
+    }));
+
+  const averageAccuracy = progressItems.length
+    ? Math.round(progressItems.reduce((sum, item) => sum + item.accuracy, 0) / progressItems.length)
+    : score;
+
+  const analysis = {
+    strengths: `Học sinh có tiến bộ tốt ở ${bestTopics[0]?.topicName || topic.topicName}.`,
+    weaknesses: `Cần luyện thêm ở ${weakTopics[0]?.topicName || topic.topicName}.`,
+    advice: "Duy trì nhịp học đều và làm thêm bài luyện tập ngắn mỗi ngày.",
+    focusTopic: weakTopics[0]?.topicName || topic.topicName,
+    focusTopicId: weakTopics[0]?.topicId || topic.topicId,
+    focusTopicName: weakTopics[0]?.topicName || topic.topicName,
+  };
+
+  const signature = progressItems
+    .map((item) => `${item.topicId}:${item.totalAnswered}:${item.totalCorrect}:${item.percentage}:${item.updatedAt}`)
+    .sort()
+    .join("|");
+  const now = nowIso();
+
+  return {
+    userId,
+    cacheRevision: 0,
+    analysis,
+    averageAccuracy,
+    coachLevel:
+      averageAccuracy >= 90
+        ? "Xuất sắc"
+        : averageAccuracy >= 75
+          ? "Tốt"
+          : averageAccuracy >= 60
+            ? "Đang tiến bộ"
+            : "Cần luyện thêm",
+    bestTopics,
+    weakTopics,
+    focusTopicId: analysis.focusTopicId,
+    focusTopicName: analysis.focusTopicName,
+    signature,
+    cachedAt: now,
+    updatedAt: now,
+  };
+}
+
+function buildAiUsageLog(userId, topicId, createdAt) {
+  return {
+    userId,
+    feature: "coach",
+    action: "analyze",
+    success: true,
+    topicId,
+    createdAt,
+    updatedAt: createdAt,
+  };
+}
+
+function buildBattleSession(userId, quiz, studentIndex, topicId) {
+  const createdAt = new Date(Date.now() - (studentIndex % 10) * 86400000).toISOString();
+  const answers = quiz.questions.map((question, index) => ({
+    questionIndex: index,
+    selected: index % 4 === 0 ? "A" : "B",
+    correct: index % 4 === 0,
+    correctAnswer: "A",
+    bossHP: Math.max(0, 100 - index * 8),
+    playerHP: Math.max(0, 6 - Math.floor(index / 3)),
+    combo: index % 4 === 0 ? index + 1 : 0,
+    answeredAt: createdAt,
+  }));
+  const correctAnswers = answers.filter((answer) => answer.correct).length;
+  const accuracy = Math.round((correctAnswers / quiz.questions.length) * 100);
+
+  return {
+    sessionId: `demo-battle-${hashText(userId, 10)}-${studentIndex}`,
+    userId,
+    topicId,
+    quizId: quiz.id,
+    currentQuestionIndex: quiz.questions.length,
+    bossHP: Math.max(0, 100 - correctAnswers * 10),
+    playerHP: Math.max(0, 6 - Math.max(0, quiz.questions.length - correctAnswers)),
+    combo: Math.min(7, correctAnswers),
+    hintRemaining: 1 + (studentIndex % 3),
+    answers,
+    status: "completed",
+    rewardStatus: "rewarded",
+    rewardSummary: {
+      xpAwarded: 100 + (studentIndex % 5) * 10,
+      coinAwarded: 60 + (studentIndex % 4) * 8,
+      accuracy,
+      rank: accuracy >= 90 ? "3 Sao" : accuracy >= 70 ? "2 Sao" : "1 Sao",
+      rankStars: accuracy >= 90 ? 3 : accuracy >= 70 ? 2 : 1,
+      victory: accuracy >= 60,
+      correctAnswers,
+      totalQuestions: quiz.questions.length,
+      maxCombo: Math.max(1, correctAnswers - 1),
+      battleStatus: "completed",
+      rewardStatus: "rewarded",
+      userExpAfter: 0,
+      userCoinAfter: 0,
+    },
+    rewardedAt: createdAt,
+    startedAt: createdAt,
+    completedAt: createdAt,
+    createdAt,
+    updatedAt: createdAt,
+  };
+}
+
+async function main() {
+  const existingUsers = await fetchExistingUsers();
+  const existingUsernames = new Set(
+    existingUsers.map((user) => String(user.username || "").trim().toLowerCase()).filter(Boolean),
+  );
+  const existingDemoUsers = existingUsers.filter((user) =>
+    String(user.username || "").trim().toLowerCase().startsWith("demo-"),
+  );
+  const existingDemoStudents = existingDemoUsers.filter((user) => String(user.role || "") === "student").length;
+  const existingDemoTeachers = existingDemoUsers.filter((user) => String(user.role || "") === "teacher").length;
+  const roster = buildDesiredRoster();
+  const studentsToCreate = roster.filter((user) => user.role === "student").slice(existingDemoStudents);
+  const teachersToCreate = roster.filter((user) => user.role === "teacher").slice(existingDemoTeachers);
+  const studentRecords = [];
+  const teacherRecords = [];
+  const userByUsername = new Map(existingUsers.map((user) => [String(user.username || "").trim().toLowerCase(), user]));
+
+  console.log("[seed-demo] existing demo users", {
+    students: existingDemoStudents,
+    teachers: existingDemoTeachers,
+  });
+
+  for (const payload of [...teachersToCreate, ...studentsToCreate]) {
+    const username = String(payload.username || "").trim().toLowerCase();
+    if (userByUsername.has(username)) {
+      const existing = userByUsername.get(username);
+      if (payload.role === "teacher") {
+        teacherRecords.push(existing);
+      } else {
+        studentRecords.push(existing);
+      }
+      continue;
+    }
+
+    const fullName = payload.fullName;
+    const gender = payload.gender;
+    const created = await createUser({
+      username: payload.username,
+      password: await bcrypt.hash(payload.password, 10),
+      role: payload.role,
+      fullName,
+      gender,
+      email: payload.email,
+      school: payload.school,
+      className: payload.className,
+      hobby: payload.hobby,
+      dream: payload.dream,
+      phone: payload.phone,
+      address: payload.address,
+      note: payload.note,
+      avatar: buildAvatar(payload.role, gender),
+      userCode: `${payload.role === "teacher" ? "GV" : "HS"}${hashText(payload.username, 6).toUpperCase()}`,
+      stats: payload.stats,
+      subjects: payload.role === "student" ? [] : [],
+      classTags: [],
+      activityLogs: payload.role === "student" ? [] : [],
+    });
+
+    const record = {
+      ...payload,
+      uid: created.uid,
+      id: created.uid,
+      avatar: buildAvatar(payload.role, gender),
+      createdAt: created.createdAt,
+      updatedAt: created.updatedAt,
+    };
+
+    if (payload.role === "teacher") {
+      teacherRecords.push(record);
+    } else {
+      studentRecords.push(record);
+    }
+
+    userByUsername.set(username, record);
+  }
+
+  const teacherMap = new Map(
+    teacherRecords.map((teacher) => [String(teacher.username || "").trim().toLowerCase(), teacher]),
+  );
+  const orderedTeachers = roster.filter((user) => user.role === "teacher").map((teacher) =>
+    teacherMap.get(String(teacher.username || "").trim().toLowerCase()) || teacher,
+  ).slice(0, USER_COUNT.teacher);
+
+  const orderedStudents = roster.filter((user) => user.role === "student").map((student) =>
+    userByUsername.get(String(student.username || "").trim().toLowerCase()) || student,
+  ).slice(0, USER_COUNT.student);
+
+  const studentChunks = [];
+  for (let index = 0; index < orderedStudents.length; index += 7) {
+    studentChunks.push(orderedStudents.slice(index, index + 7));
+  }
+
+  const classPlan = buildClassPlan(orderedTeachers);
+  const topics = readTopicsFile().filter((topic) => topic.grade && topic.subject);
+  const classDocs = [];
+  const quizDocs = [];
+
+  for (let classIndex = 0; classIndex < classPlan.length; classIndex += 1) {
+    const classroom = classPlan[classIndex];
+    const teacher = classroom.teacher;
+    const classRef = db.collection("classes").doc(classroom.classId);
+    const classDoc = buildClassDoc(classroom, teacher, classIndex);
+    const students = studentChunks[classIndex] || [];
+    const saved = await ensureDoc(classRef, classDoc);
+    const effectiveClassDoc = saved ? classDoc : { id: classroom.classId, ...(await classRef.get()).data() };
+
+    classDocs.push(effectiveClassDoc);
+
+    if (saved) {
+      console.log(`[seed-demo] class created ${classroom.classId}`);
+    }
+
+    for (const student of students) {
+      if (!student?.uid) {
+        continue;
+      }
+
+      await joinClass({
+        classCode: effectiveClassDoc.classCode,
+        user: {
+          uid: student.uid,
+          userId: student.uid,
+        },
+      });
+
+      await updateUserById(student.uid, {
+        className: effectiveClassDoc.name,
+        classTags: [effectiveClassDoc.name],
+        classTagNames: [effectiveClassDoc.name],
+        subjects: buildSubjectsForStudent(classroom),
+        stats: {
+          ...(student.stats || {}),
+          level: Math.max(1, Number(student.stats?.level || 1)),
+        },
+      });
+    }
+
+    const topic = selectTopicForClass(classroom, topics);
+    const quizRootId = buildQuizDocId(topic.grade, topic.subject, topic.topicId);
+    const quizRootRef = db.collection("quizzes").doc(quizRootId);
+
+    if (!(await docExists(quizRootRef))) {
+      const quizPayload = buildQuizPayload(topic, classIndex);
+      const quizRoot = {
+        id: quizRootId,
+        grade: quizPayload.grade,
+        subject: quizPayload.subject,
+        topicId: quizPayload.topicId,
+        topicName: quizPayload.topicName,
+        topicDescription: quizPayload.topicDescription,
+        latestVersionId: "v1",
+        versionCount: 1,
+        hasVersions: true,
+        createdAt: quizPayload.createdAt,
+        updatedAt: quizPayload.updatedAt,
+      };
+
+      await quizRootRef.set(quizRoot, { merge: false });
+
+      await quizRootRef.collection("versions").doc("v1").set(
+        {
+          versionId: "v1",
+          versionNumber: 1,
+          data: {
+            ...quizPayload,
+            id: buildVersionQuizId({
+              grade: quizPayload.grade,
+              subject: quizPayload.subject,
+              topicId: quizPayload.topicId,
+              versionId: "v1",
+            }),
+            versionId: "v1",
+            versionNumber: 1,
+          },
+          createdAt: quizPayload.createdAt,
+          updatedAt: quizPayload.updatedAt,
+        },
+        { merge: false },
+      );
+
+      quizDocs.push(quizPayload);
+      console.log(`[seed-demo] quiz created ${quizRootId}`);
+    }
+
+    for (let assignmentIndex = 0; assignmentIndex < ASSIGNMENTS_PER_CLASS; assignmentIndex += 1) {
+      const assignmentId = `${classroom.classId}-assignment-${assignmentIndex + 1}`;
+      const assignmentRef = db.collection("assignments").doc(assignmentId);
+
+      if (!(await docExists(assignmentRef))) {
+        const assignmentQuestions = buildAssignmentQuestions(topic, classIndex + assignmentIndex);
+        const createdAt = new Date(Date.now() - (classIndex * 2 + assignmentIndex) * 86400000).toISOString();
+        const assignmentData = {
+          id: assignmentId,
+          classId: classroom.classId,
+          classCode: effectiveClassDoc.classCode,
+          className: effectiveClassDoc.name,
+          teacherId: teacher.uid,
+          teacherName: teacher.fullName,
+          title: `Bài tập ${assignmentIndex + 1} - ${topic.title}`,
+          description: `Luyện tập theo chủ đề ${topic.title} của lớp ${classroom.grade}${classroom.section}.`,
+          dueDate: new Date(Date.now() + 86400000 * (7 + assignmentIndex)).toISOString(),
+          subject: classroom.subject,
+          questions: assignmentQuestions,
+          totalQuestions: assignmentQuestions.length,
+          questionCount: assignmentQuestions.length,
+          status: "active",
+          createdAt,
+          updatedAt: createdAt,
+        };
+
+        await assignmentRef.set(assignmentData, { merge: false });
+        await db.collection("classes").doc(classroom.classId).collection("assignments").doc(assignmentId).set(assignmentData, { merge: false });
+        await db.collection("classes").doc(classroom.classId).set(
+          {
+            assignmentIds: admin.firestore.FieldValue.arrayUnion(assignmentId),
+            updatedAt: createdAt,
+          },
+          { merge: true },
+        );
+        console.log(`[seed-demo] assignment created ${assignmentId}`);
+      }
+
+      const assignmentSnapshot = await assignmentRef.get();
+      const assignmentData = assignmentSnapshot.data() || {};
+      const submissionStudents = students.slice(0, SUBMISSIONS_PER_ASSIGNMENT);
+
+      for (let studentOffset = 0; studentOffset < submissionStudents.length; studentOffset += 1) {
+        const student = submissionStudents[studentOffset];
+        if (!student?.uid) {
+          continue;
+        }
+
+        const submissionId = `${assignmentId}_${student.uid}`;
+        const submissionRef = db.collection("assignment_submissions").doc(submissionId);
+        if (await docExists(submissionRef)) {
+          continue;
+        }
+
+        const answers = (assignmentData.questions || []).map((question, questionIndex) => ({
+          questionIndex,
+          selected: questionIndex % 3 === 0 ? "A" : questionIndex % 3 === 1 ? "B" : "A",
+        }));
+
+        const gradeScore = Math.max(6, 10 - ((classIndex + assignmentIndex + studentOffset) % 4));
+        const correctCount = Math.round((gradeScore / 10) * (assignmentData.questions?.length || 10));
+        const wrongCount = Math.max(0, (assignmentData.questions?.length || 10) - correctCount);
+        const submittedAt = new Date(Date.now() - (studentOffset + assignmentIndex + classIndex) * 43200000).toISOString();
+        const submissionData = {
+          id: submissionId,
+          assignmentId,
+          classId: classroom.classId,
+          studentId: student.uid,
+          answers,
+          submittedAt,
+          gradedAt: submittedAt,
+          status: "graded",
+          score: Number((gradeScore / 1).toFixed(1)),
+          correctCount,
+          wrongCount,
+          totalQuestions: assignmentData.questions?.length || 10,
+        };
+
+        await submissionRef.set(submissionData, { merge: false });
+      }
+    }
+  }
+
+  const userProgressCollection = db.collection("user_progress");
+  const learningPathCollection = db.collection("learningPathProgress");
+  const coachCacheCollection = db.collection("coach_analysis_cache");
+  const wrongAnswersCollection = db.collection("wrong_answers");
+  const aiUsageCollection = db.collection("ai_usage_logs");
+  const rewardReceiptCollection = db.collection("user_reward_receipts");
+  const rewardLedgerCollection = db.collection("rewardLedger");
+  const battleSessionCollection = db.collection("battle_sessions");
+
+  for (let index = 0; index < orderedStudents.length; index += 1) {
+    const student = orderedStudents[index];
+    const className = String(student.className || "").trim();
+    const classDoc = classDocs[index % classDocs.length];
+    const classTopicCandidates = topics.filter(
+      (topic) => String(topic.grade || "").trim() === String(classDoc.grade).trim() &&
+        String(topic.subject || "").trim() === String(classDoc.subject).trim(),
+    );
+    const topicPool = classTopicCandidates.length > 0 ? classTopicCandidates : topics;
+    const progressTopics = topicPool.slice(0, 4);
+    const quizTopic = selectTopicForClass(classDoc, topics);
+    const quizId = buildVersionQuizId({
+      grade: quizTopic.grade,
+      subject: quizTopic.subject,
+      topicId: quizTopic.topicId,
+      versionId: "v1",
+    });
+
+    const progressDoc = learningPathCollection.doc(student.uid);
+    if (!(await docExists(progressDoc))) {
+      await progressDoc.set(buildLearningPathState(student.uid, index, classDoc), { merge: false });
+    }
+
+    const currentProgress = await progressDoc.get();
+    const progressState = currentProgress.data() || {};
+    const progressItems = progressTopics.map((topic, topicIndex) => {
+      const totalAnswered = 10 + index + topicIndex * 3;
+      const totalCorrect = Math.max(1, totalAnswered - ((index + topicIndex) % 4) - 1);
+      const percentage = Math.round((totalCorrect / totalAnswered) * 100);
+      const updatedAt = new Date(Date.now() - (topicIndex + (index % 5)) * 86400000).toISOString();
+
+      return {
+        userId: student.uid,
+        topicId: topic.topicId,
+        grade: topic.grade,
+        subject: topic.subject,
+        totalAnswered,
+        totalCorrect,
+        percentage,
+        accuracyUpdatedAt: updatedAt,
+        updatedAt,
+        lastVersionUsed: "v1",
+        history: ["v1"],
+      };
+    });
+
+    for (const progressItem of progressItems) {
+      const ref = userProgressCollection.doc(student.uid).collection("topics").doc(progressItem.topicId);
+      if (!(await docExists(ref))) {
+        await ref.set(progressItem, { merge: false });
+      }
+    }
+
+    const activityLogs = buildActivityLogs(student.uid, progressTopics, quizId, 8.8 - (index % 3) * 0.4, 3);
+    const rewards = {
+      badges: index % 4 === 0 ? [BADGE_POOL[index % BADGE_POOL.length]] : BADGE_POOL.slice(0, index % 3),
+      lastRewardAt: new Date(Date.now() - index * 43200000).toISOString(),
+    };
+    const studentStats = {
+      ...(student.stats || {}),
+      level: Math.max(1, Number(student.stats?.level || 1)),
+      exp: Math.max(0, Number(student.stats?.exp || 0)),
+      streak: Math.max(0, Number(student.stats?.streak || 0)),
+      lastStudyDate: student.stats?.lastStudyDate || nowIso(),
+      eduCoin: Math.max(0, Number(student.stats?.eduCoin || 0)),
+      eduCoins: Math.max(0, Number(student.stats?.eduCoin || 0)),
+      averageScore: Number((7.1 + (index % 8) * 0.3).toFixed(1)),
+    };
+
+    await updateUserById(student.uid, {
+      stats: studentStats,
+      rewards,
+      activityLogs,
+      selectedPetId: PET_TYPES[index % PET_TYPES.length],
+      lastActiveAt: nowIso(),
+      lastLoginAt: nowIso(),
+      updatedAt: nowIso(),
+    });
+
+    const existingQuiz = await db.collection("quizzes").doc(buildQuizDocId(quizTopic.grade, quizTopic.subject, quizTopic.topicId)).get();
+    const quizData = existingQuiz.exists
+      ? {
+          id: buildVersionQuizId({
+            grade: quizTopic.grade,
+            subject: quizTopic.subject,
+            topicId: quizTopic.topicId,
+            versionId: "v1",
+          }),
+          ...(existingQuiz.data() || {}),
+        }
+      : buildQuizPayload(quizTopic, index);
+
+    const wrongAnswers = buildWrongAnswers(student.uid, {
+      id: quizData.id || quizId,
+      questions: buildQuizQuestions(quizTopic, index),
+    }, 58, index);
+
+    if (!(await docExists(wrongAnswersCollection.doc(student.uid)))) {
+      await wrongAnswersCollection.doc(student.uid).set(wrongAnswers, { merge: false });
+    }
+
+    const coachCache = buildCoachCache(student.uid, progressItems, 78, quizTopic);
+    if (!(await docExists(coachCacheCollection.doc(student.uid)))) {
+      await coachCacheCollection.doc(student.uid).set(coachCache, { merge: false });
+    }
+
+    const aiUsageLog = buildAiUsageLog(student.uid, progressTopics[0]?.topicId || quizTopic.topicId, nowIso());
+    if (!(await docExists(aiUsageCollection.doc(`${student.uid}-${index}`)))) {
+      await aiUsageCollection.doc(`${student.uid}-${index}`).set(aiUsageLog, { merge: false });
+    }
+
+    const rewardSources = [
+      buildRewardReceipt(student.uid, "dailyLogin", 3, nowIso()),
+      buildRewardReceipt(student.uid, "assignment", 20 + (index % 5), nowIso()),
+    ];
+
+    for (let receiptIndex = 0; receiptIndex < rewardSources.length; receiptIndex += 1) {
+      const receipt = rewardSources[receiptIndex];
+      const receiptRef = rewardReceiptCollection.doc(`${student.uid}-${receipt.source}-${receiptIndex}`);
+      if (!(await docExists(receiptRef))) {
+        await receiptRef.set(receipt, { merge: false });
+      }
+
+      const ledgerKey = `${receipt.source}:${student.uid}:${receiptIndex}`;
+      const ledgerRef = rewardLedgerCollection.doc(sha1Text(ledgerKey));
+      if (!(await docExists(ledgerRef))) {
+        await ledgerRef.set(
+          {
+            userId: student.uid,
+            sourceType: receipt.source,
+            sourceId: `${student.uid}:${receiptIndex}`,
+            ruleKey: receipt.source,
+            idempotencyKey: ledgerKey,
+            reward: {
+              key: receipt.source,
+              title: receipt.source === "dailyLogin" ? "Đăng nhập hằng ngày" : "Hoàn thành bài tập",
+              coin: receipt.amount,
+              petExp: receipt.source === "dailyLogin" ? 1 : 5,
+              petHappiness: receipt.source === "dailyLogin" ? 1 : 3,
+              petHealth: 0,
+              petEnergy: 0,
+              petHunger: 0,
+              icon: receipt.source === "dailyLogin" ? "login" : "assignment",
+              badges: [],
+              sourceType: receipt.source,
+              sourceId: `${student.uid}:${receiptIndex}`,
+            },
+            response: {
+              statusCode: 200,
+              message: "Nhận thưởng thành công",
+              data: {
+                reward: {
+                  title: receipt.source === "dailyLogin" ? "Đăng nhập hằng ngày" : "Hoàn thành bài tập",
+                  coin: receipt.amount,
+                },
+                wallet: {
+                  eduCoin: Number(studentStats.eduCoin || 0) + receipt.amount,
+                },
+              },
+              popupEvents: [],
+              animationEvents: [],
+              meta: {
+                sourceType: receipt.source,
+                sourceId: `${student.uid}:${receiptIndex}`,
+                ruleKey: receipt.source,
+              },
+            },
+            createdAt: receipt.createdAt,
+          },
+          { merge: false },
+        );
+      }
+    }
+
+    const battleSession = buildBattleSession(student.uid, {
+      id: quizId,
+      questions: buildQuizQuestions(quizTopic, index),
+    }, index, quizTopic.topicId);
+    const battleSessionRef = battleSessionCollection.doc(battleSession.sessionId);
+    if (!(await docExists(battleSessionRef))) {
+      await battleSessionRef.set(battleSession, { merge: false });
+    }
+
+    const petStateRef = db.collection("users").doc(student.uid).collection("pet").doc("state");
+    if (!(await docExists(petStateRef))) {
+      await petStateRef.set(buildPetState(index, student.fullName), { merge: false });
+    }
+
+    const inventoryStateRef = db.collection("users").doc(student.uid).collection("inventory").doc("state");
+    if (!(await docExists(inventoryStateRef))) {
+      await inventoryStateRef.set(buildInventoryState(index, studentStats.level), { merge: false });
+    }
+
+    const petRequestsRef = db.collection("users").doc(student.uid).collection("petRequests").doc(hashText(`${student.uid}:select`, 12));
+    if (!(await docExists(petRequestsRef))) {
+      await petRequestsRef.set({
+        action: "select",
+        response: null,
+        processedAt: nowIso(),
+      }, { merge: false });
+    }
+
+    const inventoryTxRef = db.collection("users").doc(student.uid).collection("inventoryTransactions").doc(hashText(`${student.uid}:seed`, 12));
+    if (!(await docExists(inventoryTxRef))) {
+      await inventoryTxRef.set({
+        action: "seed",
+        createdAt: nowIso(),
+        response: null,
+      }, { merge: false });
+    }
+
+    const shopTxRef = db.collection("users").doc(student.uid).collection("shopTransactions").doc(hashText(`${student.uid}:shop`, 12));
+    if (!(await docExists(shopTxRef))) {
+      await shopTxRef.set({
+        action: "seed",
+        createdAt: nowIso(),
+        response: null,
+      }, { merge: false });
+    }
+
+    await recordLearningActivity(student.uid, {
+      sourceType: "quiz",
+      sourceId: quizId,
+      idempotencyKey: `${student.uid}:seed-activity`,
+      topicId: quizTopic.topicId,
+      quizId,
+      startedAt: new Date(Date.now() - 5400000).toISOString(),
+      completedAt: nowIso(),
+      score: 8.6 - (index % 3) * 0.2,
+      accuracy: 84 + (index % 10),
+      totalQuestions: 10,
+      correctAnswers: 8 + (index % 2),
+      wrongAnswers: 2 - (index % 2),
+      studyMinutes: 24 + (index % 6) * 8,
+    }).catch(() => null);
+
+    await updateUserById(student.uid, {
+      className,
+      classTags: [className].filter(Boolean),
+      classTagNames: [className].filter(Boolean),
+      activityLogs,
+      rewards,
+      stats: studentStats,
+      pet: {
+        selectedPetId: PET_TYPES[index % PET_TYPES.length],
+      },
+    }).catch(() => null);
+  }
+
+  console.log("[seed-demo] done", {
+    teachers: USER_COUNT.teacher,
+    students: USER_COUNT.student,
+    classes: classDocs.length,
+    assignments: classDocs.length * ASSIGNMENTS_PER_CLASS,
+    quizzes: quizDocs.length,
+  });
+}
+
+main().catch((error) => {
+  console.error("[seed-demo] failed", error);
+  process.exitCode = 1;
+});
