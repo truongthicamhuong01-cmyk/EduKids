@@ -12,6 +12,12 @@ const { season1 } = require("../src/services/learningPathData");
 const { recordLearningActivity } = require("../src/services/progressService");
 
 const nowIso = () => new Date().toISOString();
+const DEMO_MARKER = "seed-demo-data";
+const DEMO_ADDRESS = "Xã Sơn Cẩm Hà, thành phố Đà Nẵng";
+const DEMO_SCHOOL = "Trường Tiểu học Nguyễn Bá Ngọc";
+const DEMO_USERNAME_PREFIXES = ["demo-hs-", "demo-gv-"];
+const DEMO_CLASS_PREFIX = "demo-class-";
+const DEMO_EMAIL_SUFFIX = "@edukids.demo";
 
 const USER_COUNT = {
   student: 140,
@@ -126,7 +132,7 @@ const TEACHER_GIVENS = [
   "Đức",
 ];
 
-const PET_TYPES = ["horse", "elephant", "cat", "dog"];
+const PET_TYPES = ["horse", "elephant"];
 const BADGE_POOL = ["badge_star", "badge_math", "badge_reading", "badge_pet", "badge_path", "badge_bonus"];
 const INVENTORY_ITEMS = [
   "biscuit",
@@ -214,6 +220,160 @@ async function safeUpdate(ref, data, options = {}) {
   return ref.update(payload, options);
 }
 
+async function deleteDocumentTree(ref) {
+  if (!ref) {
+    return;
+  }
+
+  let subcollections = [];
+
+  if (typeof ref.listCollections === "function") {
+    subcollections = await ref.listCollections().catch(() => []);
+  }
+
+  for (const collection of subcollections) {
+    const snapshot = await collection.get().catch(() => null);
+    if (!snapshot) {
+      continue;
+    }
+
+    for (const doc of snapshot.docs) {
+      await deleteDocumentTree(doc.ref);
+    }
+  }
+
+  await ref.delete().catch(() => null);
+}
+
+async function deleteQueryResults(query) {
+  const snapshot = await query.get().catch(() => null);
+  if (!snapshot || snapshot.empty) {
+    return;
+  }
+
+  for (const doc of snapshot.docs) {
+    await deleteDocumentTree(doc.ref);
+  }
+}
+
+function chunkArray(items, size = 10) {
+  const chunks = [];
+
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+
+  return chunks;
+}
+
+function isDemoUsername(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return DEMO_USERNAME_PREFIXES.some((prefix) => normalized.startsWith(prefix));
+}
+
+function isDemoEmail(value) {
+  return String(value || "").trim().toLowerCase().endsWith(DEMO_EMAIL_SUFFIX);
+}
+
+function isDemoClassId(value) {
+  return String(value || "").trim().toLowerCase().startsWith(DEMO_CLASS_PREFIX);
+}
+
+function isDemoUserRecord(user) {
+  return (
+    String(user?.seedSource || "") === DEMO_MARKER ||
+    isDemoUsername(user?.username) ||
+    isDemoEmail(user?.email)
+  );
+}
+
+function buildDemoQuizIds(classPlan, topics) {
+  return classPlan
+    .map((classroom) => selectTopicForClass(classroom, topics))
+    .filter(Boolean)
+    .map((topic) => buildQuizDocId(topic.grade, topic.subject, topic.topicId));
+}
+
+async function cleanupDemoQuizDoc(quizRootRef) {
+  const rootSnapshot = await quizRootRef.get().catch(() => null);
+  if (!rootSnapshot || !rootSnapshot.exists) {
+    return;
+  }
+
+  const rootData = rootSnapshot.data() || {};
+  const versionSnapshot = await quizRootRef.collection("versions").doc("v1").get().catch(() => null);
+  const versionData = versionSnapshot && versionSnapshot.exists ? versionSnapshot.data() || {} : {};
+  const payloadSource = versionData?.data?.source || rootData.source;
+  const hasDemoMarker = String(rootData.seedSource || "") === DEMO_MARKER || String(versionData?.data?.seedSource || "") === DEMO_MARKER;
+
+  if (hasDemoMarker || payloadSource === "demo-seed") {
+    await deleteDocumentTree(quizRootRef);
+  }
+}
+
+async function cleanupPreviousDemoData(existingUsers, classPlan, topics) {
+  const demoUsers = existingUsers.filter(isDemoUserRecord);
+  const demoUserIds = demoUsers.map((user) => String(user.uid || user.id || "").trim()).filter(Boolean);
+  const demoClassIds = classPlan.map((classroom) => classroom.classId).filter(Boolean);
+  const demoQuizIds = buildDemoQuizIds(classPlan, topics);
+
+  for (const userId of demoUserIds) {
+    await deleteDocumentTree(db.collection("users").doc(userId));
+    await deleteDocumentTree(db.collection("learningPathProgress").doc(userId));
+    await deleteDocumentTree(db.collection("coach_analysis_cache").doc(userId));
+    await deleteDocumentTree(db.collection("wrong_answers").doc(userId));
+    await deleteDocumentTree(db.collection("user_reward_receipts").doc(userId));
+  }
+
+  for (const classId of demoClassIds) {
+    await deleteDocumentTree(db.collection("classes").doc(classId));
+    await deleteDocumentTree(db.collection("assignments").doc(`${classId}-assignment-1`));
+    await deleteDocumentTree(db.collection("assignments").doc(`${classId}-assignment-2`));
+  }
+
+  for (const quizId of demoQuizIds) {
+    await cleanupDemoQuizDoc(db.collection("quizzes").doc(quizId));
+  }
+
+  for (const userChunk of chunkArray(demoUserIds, 10)) {
+    if (userChunk.length === 0) {
+      continue;
+    }
+
+    await deleteQueryResults(db.collection("assignment_submissions").where("studentId", "in", userChunk));
+    await deleteQueryResults(db.collection("battle_sessions").where("userId", "in", userChunk));
+    await deleteQueryResults(db.collection("ai_usage_logs").where("userId", "in", userChunk));
+    await deleteQueryResults(db.collection("user_reward_receipts").where("userId", "in", userChunk));
+    await deleteQueryResults(db.collection("rewardLedger").where("userId", "in", userChunk));
+  }
+
+  for (const classChunk of chunkArray(demoClassIds, 10)) {
+    if (classChunk.length === 0) {
+      continue;
+    }
+
+    await deleteQueryResults(db.collection("assignment_submissions").where("classId", "in", classChunk));
+    await deleteQueryResults(db.collection("assignments").where("classId", "in", classChunk));
+  }
+
+  const userProgressRoot = db.collection("user_progress");
+  for (const userId of demoUserIds) {
+    await deleteDocumentTree(userProgressRoot.doc(userId));
+  }
+
+  const rewardReceiptQuery = db.collection("user_reward_receipts").where("seedSource", "==", DEMO_MARKER);
+  await deleteQueryResults(rewardReceiptQuery);
+
+  const rewardLedgerQuery = db.collection("rewardLedger").where("seedSource", "==", DEMO_MARKER);
+  await deleteQueryResults(rewardLedgerQuery);
+
+  const battleQuery = db.collection("battle_sessions").where("seedSource", "==", DEMO_MARKER);
+  await deleteQueryResults(battleQuery);
+
+  const aiUsageQuery = db.collection("ai_usage_logs").where("seedSource", "==", DEMO_MARKER);
+  await deleteQueryResults(aiUsageQuery);
+}
+
 function pickByIndex(list, index, offset = 0) {
   if (!Array.isArray(list) || list.length === 0) {
     return "";
@@ -235,18 +395,19 @@ function uniqueValue(base, usedValues, suffixSeed = "") {
   return candidate;
 }
 
-function buildVietnameseFullName(role, index) {
+function buildVietnameseFullName(role, index, gender) {
   const surname = pickByIndex(SURNAMES, index, role === "teacher" ? 2 : 0);
+  const suffix = gender === "female" ? "đẹp gái" : "đẹp trai";
 
   if (role === "teacher") {
     const middle = pickByIndex(TEACHER_MIDDLES, index, Math.floor(index / TEACHER_MIDDLES.length));
     const given = pickByIndex(TEACHER_GIVENS, index, Math.floor(index / TEACHER_GIVENS.length));
-    return `${surname} ${middle} ${given}`;
+    return `${surname} ${middle} ${given} ${suffix}`;
   }
 
   const middle = pickByIndex(STUDENT_MIDDLES, index, Math.floor(index / STUDENT_MIDDLES.length));
   const given = pickByIndex(STUDENT_GIVENS, index, Math.floor(index / STUDENT_GIVENS.length));
-  return `${surname} ${middle} ${given}`;
+  return `${surname} ${middle} ${given} ${suffix}`;
 }
 
 function buildUsername(role, fullName, index, existingUsernames, usedUsernames) {
@@ -372,6 +533,7 @@ function buildInventoryState(index, level) {
   });
 
   return {
+    seedSource: DEMO_MARKER,
     categories: {
       foods,
       toys,
@@ -395,6 +557,7 @@ function buildPetState(index, fullName) {
   const createdAt = new Date(Date.now() - ((index % 12) * 86400000)).toISOString();
 
   return {
+    seedSource: DEMO_MARKER,
     petTypeId,
     petName: `${fullName.split(" ")[1] || "Pet"} ${index + 1}`,
     level,
@@ -428,6 +591,7 @@ function buildLearningPathState(userId, studentIndex, classroom) {
   const now = nowIso();
 
   return {
+    seedSource: DEMO_MARKER,
     userId,
     seasonId,
     mountainId: mountain.id,
@@ -608,20 +772,21 @@ function buildDesiredRoster() {
   const roster = [];
 
   for (let index = 0; index < USER_COUNT.teacher; index += 1) {
-    const fullName = buildVietnameseFullName("teacher", index);
+    const gender = buildGender(index, "teacher");
+    const fullName = buildVietnameseFullName("teacher", index, gender);
     roster.push({
       role: "teacher",
       index,
       fullName,
       username: `demo-gv-${slugify(fullName)}-${String(index + 1).padStart(2, "0")}`,
       email: buildEmail(`demo-gv-${slugify(fullName)}-${String(index + 1).padStart(2, "0")}`),
-      gender: buildGender(index, "teacher"),
-      school: `Trường Tiểu học Demo ${String.fromCharCode(65 + (index % 5))}`,
+      gender,
+      school: DEMO_SCHOOL,
       className: "",
       hobby: index % 2 === 0 ? "Đọc sách" : "Âm nhạc",
       dream: index % 2 === 0 ? "Giúp học sinh tự tin học tập" : "Xây dựng lớp học vui vẻ",
-      phone: `09${String(10000000 + index * 12345).slice(-8)}`,
-      address: `Quận ${1 + (index % 12)}, TP. Hồ Chí Minh`,
+      phone: "",
+      address: DEMO_ADDRESS,
       note: "Tài khoản demo giáo viên",
       password: "Demo@12345",
       stats: buildTeacherStats(index),
@@ -629,20 +794,21 @@ function buildDesiredRoster() {
   }
 
   for (let index = 0; index < USER_COUNT.student; index += 1) {
-    const fullName = buildVietnameseFullName("student", index);
+    const gender = buildGender(index, "student");
+    const fullName = buildVietnameseFullName("student", index, gender);
     roster.push({
       role: "student",
       index,
       fullName,
       username: `demo-hs-${slugify(fullName)}-${String(index + 1).padStart(3, "0")}`,
       email: buildEmail(`demo-hs-${slugify(fullName)}-${String(index + 1).padStart(3, "0")}`),
-      gender: buildGender(index, "student"),
-      school: `Trường Tiểu học Demo ${String.fromCharCode(65 + (index % 5))}`,
+      gender,
+      school: DEMO_SCHOOL,
       className: "",
       hobby: index % 3 === 0 ? "Vẽ tranh" : index % 3 === 1 ? "Bóng đá" : "Đọc truyện",
       dream: index % 2 === 0 ? "Học giỏi Toán" : "Trở thành lớp trưởng",
-      phone: `09${String(20000000 + index * 2345).slice(-8)}`,
-      address: `Phường ${1 + (index % 10)}, TP. Hà Nội`,
+      phone: "",
+      address: DEMO_ADDRESS,
       note: "Tài khoản demo học sinh",
       password: "Demo@12345",
       stats: buildStudentStats(index, Math.floor(index / 7)),
@@ -685,6 +851,7 @@ function buildClassDoc(classroom, teacher, classIndex) {
   const createdAt = new Date(Date.now() - classIndex * 86400000).toISOString();
 
   return {
+    seedSource: DEMO_MARKER,
     id: classroom.classId,
     name: `${gradeLabel} - ${teacher.fullName}`,
     className: `${gradeLabel} - ${teacher.fullName}`,
@@ -725,6 +892,7 @@ function buildQuizPayload(topic, seedIndex) {
   const questions = buildQuizQuestions(topic, seedIndex);
 
   return {
+    seedSource: DEMO_MARKER,
     id: buildVersionQuizId({ grade, subject, topicId, versionId: "v1" }),
     grade,
     subject,
@@ -740,6 +908,7 @@ function buildQuizPayload(topic, seedIndex) {
 
 function buildRewardReceipt(userId, source, amount, createdAt) {
   return {
+    seedSource: DEMO_MARKER,
     userId,
     amount,
     source,
@@ -767,6 +936,7 @@ function buildWrongAnswers(userId, quiz, score, studentIndex) {
   const createdAt = new Date(Date.now() - studentIndex * 3600000).toISOString();
 
   return {
+    seedSource: DEMO_MARKER,
     id: userId,
     userId,
     quizId: quiz.id,
@@ -821,6 +991,7 @@ function buildCoachCache(userId, progressItems, score, topic) {
   const now = nowIso();
 
   return {
+    seedSource: DEMO_MARKER,
     userId,
     cacheRevision: 0,
     analysis,
@@ -845,6 +1016,7 @@ function buildCoachCache(userId, progressItems, score, topic) {
 
 function buildAiUsageLog(userId, topicId, createdAt) {
   return {
+    seedSource: DEMO_MARKER,
     userId,
     feature: "coach",
     action: "analyze",
@@ -871,6 +1043,7 @@ function buildBattleSession(userId, quiz, studentIndex, topicId) {
   const accuracy = Math.round((correctAnswers / quiz.questions.length) * 100);
 
   return {
+    seedSource: DEMO_MARKER,
     sessionId: `demo-battle-${hashText(userId, 10)}-${studentIndex}`,
     userId,
     topicId,
@@ -907,36 +1080,69 @@ function buildBattleSession(userId, quiz, studentIndex, topicId) {
 }
 
 async function main() {
-  const existingUsers = await fetchExistingUsers();
-  const existingUsernames = new Set(
-    existingUsers.map((user) => String(user.username || "").trim().toLowerCase()).filter(Boolean),
-  );
-  const existingDemoUsers = existingUsers.filter((user) =>
-    String(user.username || "").trim().toLowerCase().startsWith("demo-"),
-  );
-  const existingDemoStudents = existingDemoUsers.filter((user) => String(user.role || "") === "student").length;
-  const existingDemoTeachers = existingDemoUsers.filter((user) => String(user.role || "") === "teacher").length;
   const roster = buildDesiredRoster();
-  const studentsToCreate = roster.filter((user) => user.role === "student").slice(existingDemoStudents);
-  const teachersToCreate = roster.filter((user) => user.role === "teacher").slice(existingDemoTeachers);
+  const teachers = roster.filter((user) => user.role === "teacher");
+  const topics = readTopicsFile().filter((topic) => topic.grade && topic.subject);
+  const classPlanPreview = buildClassPlan(teachers);
+  const existingUsersBeforeCleanup = await fetchExistingUsers();
+  await cleanupPreviousDemoData(existingUsersBeforeCleanup, classPlanPreview, topics);
+  const existingUsers = await fetchExistingUsers();
+  const studentsToCreate = roster.filter((user) => user.role === "student");
+  const teachersToCreate = teachers;
   const studentRecords = [];
   const teacherRecords = [];
   const userByUsername = new Map(existingUsers.map((user) => [String(user.username || "").trim().toLowerCase(), user]));
 
   console.log("[seed-demo] existing demo users", {
-    students: existingDemoStudents,
-    teachers: existingDemoTeachers,
+    students: existingUsers.filter((user) => isDemoUserRecord(user) && String(user.role || "") === "student").length,
+    teachers: existingUsers.filter((user) => isDemoUserRecord(user) && String(user.role || "") === "teacher").length,
   });
 
   for (const payload of [...teachersToCreate, ...studentsToCreate]) {
     const username = String(payload.username || "").trim().toLowerCase();
     if (userByUsername.has(username)) {
       const existing = userByUsername.get(username);
-      if (payload.role === "teacher") {
-        teacherRecords.push(existing);
-      } else {
-        studentRecords.push(existing);
+      const record = {
+        ...payload,
+        uid: existing.uid || existing.id || payload.username,
+        id: existing.uid || existing.id || payload.username,
+        avatar: buildAvatar(payload.role, payload.gender),
+        createdAt: existing.createdAt || nowIso(),
+        updatedAt: nowIso(),
+        seedSource: DEMO_MARKER,
+      };
+
+      if (isDemoUserRecord(existing)) {
+        await updateUserById(record.uid, cleanForFirestore({
+          seedSource: DEMO_MARKER,
+          username: payload.username,
+          role: payload.role,
+          fullName: payload.fullName,
+          gender: payload.gender,
+          email: payload.email,
+          school: payload.school,
+          className: payload.className,
+          hobby: payload.hobby,
+          dream: payload.dream,
+          phone: payload.phone,
+          address: payload.address,
+          note: payload.note,
+          avatar: buildAvatar(payload.role, payload.gender),
+          userCode: `${payload.role === "teacher" ? "GV" : "HS"}${hashText(payload.username, 6).toUpperCase()}`,
+          stats: payload.stats,
+          subjects: [],
+          classTags: [],
+          activityLogs: [],
+        }));
       }
+
+      if (payload.role === "teacher") {
+        teacherRecords.push(record);
+      } else {
+        studentRecords.push(record);
+      }
+
+      userByUsername.set(username, record);
       continue;
     }
 
@@ -946,6 +1152,7 @@ async function main() {
       username: payload.username,
       password: await bcrypt.hash(payload.password, 10),
       role: payload.role,
+      seedSource: DEMO_MARKER,
       fullName,
       gender,
       email: payload.email,
@@ -971,6 +1178,7 @@ async function main() {
       avatar: buildAvatar(payload.role, gender),
       createdAt: created.createdAt,
       updatedAt: created.updatedAt,
+      seedSource: DEMO_MARKER,
     };
 
     if (payload.role === "teacher") {
@@ -999,7 +1207,6 @@ async function main() {
   }
 
   const classPlan = buildClassPlan(orderedTeachers);
-  const topics = readTopicsFile().filter((topic) => topic.grade && topic.subject);
   const classDocs = [];
   const quizDocs = [];
 
@@ -1009,12 +1216,19 @@ async function main() {
     const classRef = db.collection("classes").doc(classroom.classId);
     const classDoc = buildClassDoc(classroom, teacher, classIndex);
     const students = studentChunks[classIndex] || [];
-    const saved = await ensureDoc(classRef, classDoc);
-    const effectiveClassDoc = saved ? classDoc : { id: classroom.classId, ...(await classRef.get()).data() };
+    const classSnapshot = await classRef.get();
+    const classData = classSnapshot.data() || {};
+    const shouldSeedClass = !classSnapshot.exists || isDemoClassId(classroom.classId) || String(classData.seedSource || "") === DEMO_MARKER;
+
+    if (shouldSeedClass) {
+      await safeSet(classRef, classDoc, { merge: false });
+    }
+
+    const effectiveClassDoc = shouldSeedClass ? classDoc : { id: classroom.classId, ...classData };
 
     classDocs.push(effectiveClassDoc);
 
-    if (saved) {
+    if (shouldSeedClass) {
       console.log(`[seed-demo] class created ${classroom.classId}`);
     }
 
@@ -1031,7 +1245,8 @@ async function main() {
         },
       });
 
-      await updateUserById(student.uid, {
+      await updateUserById(student.uid, cleanForFirestore({
+        seedSource: DEMO_MARKER,
         className: effectiveClassDoc.name,
         classTags: [effectiveClassDoc.name],
         classTagNames: [effectiveClassDoc.name],
@@ -1040,16 +1255,20 @@ async function main() {
           ...(student.stats || {}),
           level: Math.max(1, Number(student.stats?.level || 1)),
         },
-      });
+      }));
     }
 
     const topic = selectTopicForClass(classroom, topics);
     const quizRootId = buildQuizDocId(topic.grade, topic.subject, topic.topicId);
     const quizRootRef = db.collection("quizzes").doc(quizRootId);
+    const quizRootSnapshot = await quizRootRef.get();
+    const quizRootData = quizRootSnapshot.data() || {};
+    const shouldSeedQuiz = !quizRootSnapshot.exists || String(quizRootData.seedSource || "") === DEMO_MARKER;
 
-    if (!(await docExists(quizRootRef))) {
+    if (shouldSeedQuiz) {
       const quizPayload = buildQuizPayload(topic, classIndex);
       const quizRoot = {
+        seedSource: DEMO_MARKER,
         id: quizRootId,
         grade: quizPayload.grade,
         subject: quizPayload.subject,
@@ -1071,6 +1290,7 @@ async function main() {
           versionId: "v1",
           versionNumber: 1,
           data: {
+            seedSource: DEMO_MARKER,
             ...quizPayload,
             id: buildVersionQuizId({
               grade: quizPayload.grade,
@@ -1095,10 +1315,11 @@ async function main() {
       const assignmentId = `${classroom.classId}-assignment-${assignmentIndex + 1}`;
       const assignmentRef = db.collection("assignments").doc(assignmentId);
 
-      if (!(await docExists(assignmentRef))) {
+      if (false && !(await docExists(assignmentRef))) {
         const assignmentQuestions = buildAssignmentQuestions(topic, classIndex + assignmentIndex);
         const createdAt = new Date(Date.now() - (classIndex * 2 + assignmentIndex) * 86400000).toISOString();
         const assignmentData = {
+          seedSource: DEMO_MARKER,
           id: assignmentId,
           classId: classroom.classId,
           classCode: effectiveClassDoc.classCode,
@@ -1141,8 +1362,60 @@ async function main() {
         console.log(`[seed-demo] assignment created ${assignmentId}`);
       }
 
-      const assignmentSnapshot = await assignmentRef.get();
-      const assignmentData = assignmentSnapshot.data() || {};
+      let assignmentSnapshot = await assignmentRef.get();
+      let assignmentData = assignmentSnapshot.data() || {};
+      const shouldSeedAssignment =
+        !assignmentSnapshot.exists ||
+        isDemoClassId(classroom.classId) ||
+        String(assignmentData.seedSource || "") === DEMO_MARKER;
+
+      if (shouldSeedAssignment) {
+        const assignmentQuestions = buildAssignmentQuestions(topic, classIndex + assignmentIndex);
+        const createdAt = new Date(Date.now() - (classIndex * 2 + assignmentIndex) * 86400000).toISOString();
+        assignmentData = {
+          seedSource: DEMO_MARKER,
+          id: assignmentId,
+          classId: classroom.classId,
+          classCode: effectiveClassDoc.classCode,
+          className: effectiveClassDoc.name,
+          teacherId: teacher.uid,
+          teacherName: teacher.fullName,
+          title: `Bài tập ${assignmentIndex + 1} - ${topic.title}`,
+          description: `Luyện tập theo chủ đề ${topic.title} của lớp ${classroom.grade}${classroom.section}.`,
+          dueDate: new Date(Date.now() + 86400000 * (7 + assignmentIndex)).toISOString(),
+          subject: classroom.subject,
+          questions: assignmentQuestions,
+          totalQuestions: assignmentQuestions.length,
+          questionCount: assignmentQuestions.length,
+          status: "active",
+          createdAt,
+          updatedAt: createdAt,
+        };
+
+        await safeSet(assignmentRef, assignmentData, { merge: false });
+        await safeSet(
+          db.collection("classes").doc(classroom.classId).collection("assignments").doc(assignmentId),
+          assignmentData,
+          { merge: false },
+        );
+        const nextAssignmentIds = Array.from(
+          new Set([
+            ...(Array.isArray(effectiveClassDoc.assignmentIds) ? effectiveClassDoc.assignmentIds : []),
+            assignmentId,
+          ]),
+        );
+        await safeSet(
+          db.collection("classes").doc(classroom.classId),
+          {
+            ...effectiveClassDoc,
+            seedSource: DEMO_MARKER,
+            assignmentIds: nextAssignmentIds,
+            updatedAt: createdAt,
+          },
+          { merge: false },
+        );
+        console.log(`[seed-demo] assignment created ${assignmentId}`);
+      }
       const submissionStudents = students.slice(0, SUBMISSIONS_PER_ASSIGNMENT);
 
       for (let studentOffset = 0; studentOffset < submissionStudents.length; studentOffset += 1) {
@@ -1153,9 +1426,6 @@ async function main() {
 
         const submissionId = `${assignmentId}_${student.uid}`;
         const submissionRef = db.collection("assignment_submissions").doc(submissionId);
-        if (await docExists(submissionRef)) {
-          continue;
-        }
 
         const answers = (assignmentData.questions || []).map((question, questionIndex) => ({
           questionIndex,
@@ -1167,6 +1437,7 @@ async function main() {
         const wrongCount = Math.max(0, (assignmentData.questions?.length || 10) - correctCount);
         const submittedAt = new Date(Date.now() - (studentOffset + assignmentIndex + classIndex) * 43200000).toISOString();
         const submissionData = {
+          seedSource: DEMO_MARKER,
           id: submissionId,
           assignmentId,
           classId: classroom.classId,
@@ -1214,9 +1485,7 @@ async function main() {
     });
 
     const progressDoc = learningPathCollection.doc(student.uid);
-    if (!(await docExists(progressDoc))) {
-      await safeSet(progressDoc, buildLearningPathState(student.uid, index, classDoc), { merge: false });
-    }
+    await safeSet(progressDoc, buildLearningPathState(student.uid, index, classDoc), { merge: false });
 
     const currentProgress = await progressDoc.get();
     const progressState = currentProgress.data() || {};
@@ -1227,6 +1496,7 @@ async function main() {
       const updatedAt = new Date(Date.now() - (topicIndex + (index % 5)) * 86400000).toISOString();
 
       return {
+        seedSource: DEMO_MARKER,
         userId: student.uid,
         topicId: topic.topicId,
         grade: topic.grade,
@@ -1243,9 +1513,7 @@ async function main() {
 
     for (const progressItem of progressItems) {
       const ref = userProgressCollection.doc(student.uid).collection("topics").doc(progressItem.topicId);
-      if (!(await docExists(ref))) {
-        await safeSet(ref, progressItem, { merge: false });
-      }
+      await safeSet(ref, progressItem, { merge: false });
     }
 
     const activityLogs = buildActivityLogs(student.uid, progressTopics, quizId, 8.8 - (index % 3) * 0.4, 3);
@@ -1265,6 +1533,7 @@ async function main() {
     };
 
     await updateUserById(student.uid, cleanForFirestore({
+      seedSource: DEMO_MARKER,
       stats: studentStats,
       rewards,
       activityLogs,
@@ -1292,19 +1561,13 @@ async function main() {
       questions: buildQuizQuestions(quizTopic, index),
     }, 58, index);
 
-    if (!(await docExists(wrongAnswersCollection.doc(student.uid)))) {
-      await safeSet(wrongAnswersCollection.doc(student.uid), wrongAnswers, { merge: false });
-    }
+    await safeSet(wrongAnswersCollection.doc(student.uid), wrongAnswers, { merge: false });
 
     const coachCache = buildCoachCache(student.uid, progressItems, 78, quizTopic);
-    if (!(await docExists(coachCacheCollection.doc(student.uid)))) {
-      await safeSet(coachCacheCollection.doc(student.uid), coachCache, { merge: false });
-    }
+    await safeSet(coachCacheCollection.doc(student.uid), coachCache, { merge: false });
 
     const aiUsageLog = buildAiUsageLog(student.uid, progressTopics[0]?.topicId || quizTopic.topicId, nowIso());
-    if (!(await docExists(aiUsageCollection.doc(`${student.uid}-${index}`)))) {
-      await safeSet(aiUsageCollection.doc(`${student.uid}-${index}`), aiUsageLog, { merge: false });
-    }
+    await safeSet(aiUsageCollection.doc(`${student.uid}-${index}`), aiUsageLog, { merge: false });
 
     const rewardSources = [
       buildRewardReceipt(student.uid, "dailyLogin", 3, nowIso()),
@@ -1314,16 +1577,14 @@ async function main() {
     for (let receiptIndex = 0; receiptIndex < rewardSources.length; receiptIndex += 1) {
       const receipt = rewardSources[receiptIndex];
       const receiptRef = rewardReceiptCollection.doc(`${student.uid}-${receipt.source}-${receiptIndex}`);
-      if (!(await docExists(receiptRef))) {
-        await safeSet(receiptRef, receipt, { merge: false });
-      }
+      await safeSet(receiptRef, receipt, { merge: false });
 
       const ledgerKey = `${receipt.source}:${student.uid}:${receiptIndex}`;
       const ledgerRef = rewardLedgerCollection.doc(sha1Text(ledgerKey));
-      if (!(await docExists(ledgerRef))) {
-        await safeSet(
-          ledgerRef,
-          {
+      await safeSet(
+        ledgerRef,
+        {
+            seedSource: DEMO_MARKER,
             userId: student.uid,
             sourceType: receipt.source,
             sourceId: `${student.uid}:${receiptIndex}`,
@@ -1365,9 +1626,8 @@ async function main() {
             },
             createdAt: receipt.createdAt,
           },
-          { merge: false },
-        );
-      }
+        { merge: false },
+      );
     }
 
     const battleSession = buildBattleSession(student.uid, {
@@ -1375,46 +1635,37 @@ async function main() {
       questions: buildQuizQuestions(quizTopic, index),
     }, index, quizTopic.topicId);
     const battleSessionRef = battleSessionCollection.doc(battleSession.sessionId);
-    if (!(await docExists(battleSessionRef))) {
-      await safeSet(battleSessionRef, battleSession, { merge: false });
-    }
+    await safeSet(battleSessionRef, battleSession, { merge: false });
 
     const petStateRef = db.collection("users").doc(student.uid).collection("pet").doc("state");
-    if (!(await docExists(petStateRef))) {
-      await safeSet(petStateRef, buildPetState(index, student.fullName), { merge: false });
-    }
+    await safeSet(petStateRef, buildPetState(index, student.fullName), { merge: false });
 
     const inventoryStateRef = db.collection("users").doc(student.uid).collection("inventory").doc("state");
-    if (!(await docExists(inventoryStateRef))) {
-      await safeSet(inventoryStateRef, buildInventoryState(index, studentStats.level), { merge: false });
-    }
+    await safeSet(inventoryStateRef, buildInventoryState(index, studentStats.level), { merge: false });
 
     const petRequestsRef = db.collection("users").doc(student.uid).collection("petRequests").doc(hashText(`${student.uid}:select`, 12));
-    if (!(await docExists(petRequestsRef))) {
-      await safeSet(petRequestsRef, {
-        action: "select",
-        response: null,
-        processedAt: nowIso(),
-      }, { merge: false });
-    }
+    await safeSet(petRequestsRef, {
+      seedSource: DEMO_MARKER,
+      action: "select",
+      response: null,
+      processedAt: nowIso(),
+    }, { merge: false });
 
     const inventoryTxRef = db.collection("users").doc(student.uid).collection("inventoryTransactions").doc(hashText(`${student.uid}:seed`, 12));
-    if (!(await docExists(inventoryTxRef))) {
-      await safeSet(inventoryTxRef, {
-        action: "seed",
-        createdAt: nowIso(),
-        response: null,
-      }, { merge: false });
-    }
+    await safeSet(inventoryTxRef, {
+      seedSource: DEMO_MARKER,
+      action: "seed",
+      createdAt: nowIso(),
+      response: null,
+    }, { merge: false });
 
     const shopTxRef = db.collection("users").doc(student.uid).collection("shopTransactions").doc(hashText(`${student.uid}:shop`, 12));
-    if (!(await docExists(shopTxRef))) {
-      await safeSet(shopTxRef, {
-        action: "seed",
-        createdAt: nowIso(),
-        response: null,
-      }, { merge: false });
-    }
+    await safeSet(shopTxRef, {
+      seedSource: DEMO_MARKER,
+      action: "seed",
+      createdAt: nowIso(),
+      response: null,
+    }, { merge: false });
 
     await recordLearningActivity(student.uid, {
       sourceType: "quiz",
@@ -1433,6 +1684,7 @@ async function main() {
     }).catch(() => null);
 
     await updateUserById(student.uid, cleanForFirestore({
+      seedSource: DEMO_MARKER,
       className,
       classTags: [className].filter(Boolean),
       classTagNames: [className].filter(Boolean),
