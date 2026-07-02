@@ -15141,6 +15141,10 @@ function normalizeAssignmentAnswerPayload(value, questionIndex = null) {
               : null,
       selected: String(
         value.selected ??
+          value.selectedAnswer ??
+          value.studentAnswer ??
+          value.userAnswer ??
+          value.chosenAnswer ??
           value.answer ??
           value.value ??
           value.choice ??
@@ -15541,6 +15545,7 @@ function normalizeTeacherAssignmentSubmissionRecord(submission) {
     classId: String(submission.classId || "").trim(),
     studentId: String(submission.studentId || "").trim(),
     studentName: String(submission.studentName || "").trim(),
+    answers: Array.isArray(submission.answers) ? submission.answers : [],
     submittedAt: submission.submittedAt || "",
     score: submission.score ?? null,
     correctCount: Number.isFinite(Number(submission.correctCount))
@@ -15814,6 +15819,10 @@ function normalizeTeacherSubmissionAnswerValue(answer) {
 
   return String(
     answer.selected ??
+      answer.selectedAnswer ??
+      answer.studentAnswer ??
+      answer.userAnswer ??
+      answer.chosenAnswer ??
       answer.answer ??
       answer.correctAnswer ??
       answer.value ??

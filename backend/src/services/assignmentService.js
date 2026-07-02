@@ -129,6 +129,10 @@ function normalizeSubmissionAnswer(answer) {
 
   return normalizeScoringText(
     answer.selected ??
+      answer.selectedAnswer ??
+      answer.studentAnswer ??
+      answer.userAnswer ??
+      answer.chosenAnswer ??
       answer.answer ??
       answer.correctAnswer ??
       answer.value ??

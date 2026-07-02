@@ -304,6 +304,7 @@ const getAssignmentSubmissions = asyncHandler(async (req, res) => {
     score: submission.score ?? null,
     correctCount: submission.correctCount ?? null,
     wrongCount: submission.wrongCount ?? null,
+    answers: Array.isArray(submission.answers) ? submission.answers : [],
     submittedAt: submission.submittedAt || "",
   }));
 
