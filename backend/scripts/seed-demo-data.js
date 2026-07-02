@@ -166,6 +166,54 @@ function sha1Text(value) {
   return crypto.createHash("sha1").update(String(value || "")).digest("hex");
 }
 
+function isPlainObject(value) {
+  return Boolean(value) && Object.prototype.toString.call(value) === "[object Object]";
+}
+
+function pruneUndefined(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => pruneUndefined(item))
+      .filter((item) => item !== undefined);
+  }
+
+  if (isPlainObject(value)) {
+    const next = {};
+
+    Object.entries(value).forEach(([key, item]) => {
+      if (typeof item === "undefined") {
+        return;
+      }
+
+      const sanitized = pruneUndefined(item);
+
+      if (typeof sanitized === "undefined") {
+        return;
+      }
+
+      next[key] = sanitized;
+    });
+
+    return next;
+  }
+
+  return value;
+}
+
+function cleanForFirestore(value) {
+  return pruneUndefined(value);
+}
+
+async function safeSet(ref, data, options = { merge: false }) {
+  const payload = cleanForFirestore(data);
+  return ref.set(payload, options);
+}
+
+async function safeUpdate(ref, data, options = {}) {
+  const payload = cleanForFirestore(data);
+  return ref.update(payload, options);
+}
+
 function pickByIndex(list, index, offset = 0) {
   if (!Array.isArray(list) || list.length === 0) {
     return "";
@@ -543,7 +591,7 @@ async function ensureDoc(ref, data) {
     return false;
   }
 
-  await ref.set(data, { merge: false });
+  await safeSet(ref, data, { merge: false });
   return true;
 }
 
@@ -754,13 +802,16 @@ function buildCoachCache(userId, progressItems, score, topic) {
     ? Math.round(progressItems.reduce((sum, item) => sum + item.accuracy, 0) / progressItems.length)
     : score;
 
+  const topicLabel = topic.topicName || topic.title || topic.topicId || "";
+  const focusTopicName = weakTopics[0]?.topicName || topicLabel;
+  const focusTopicId = weakTopics[0]?.topicId || topic.topicId || "";
   const analysis = {
-    strengths: `Học sinh có tiến bộ tốt ở ${bestTopics[0]?.topicName || topic.topicName}.`,
-    weaknesses: `Cần luyện thêm ở ${weakTopics[0]?.topicName || topic.topicName}.`,
+    strengths: `Học sinh có tiến bộ tốt ở ${bestTopics[0]?.topicName || topicLabel}.`,
+    weaknesses: `Cần luyện thêm ở ${weakTopics[0]?.topicName || topicLabel}.`,
     advice: "Duy trì nhịp học đều và làm thêm bài luyện tập ngắn mỗi ngày.",
-    focusTopic: weakTopics[0]?.topicName || topic.topicName,
-    focusTopicId: weakTopics[0]?.topicId || topic.topicId,
-    focusTopicName: weakTopics[0]?.topicName || topic.topicName,
+    focusTopic: focusTopicName,
+    focusTopicId,
+    focusTopicName,
   };
 
   const signature = progressItems
@@ -784,8 +835,8 @@ function buildCoachCache(userId, progressItems, score, topic) {
             : "Cần luyện thêm",
     bestTopics,
     weakTopics,
-    focusTopicId: analysis.focusTopicId,
-    focusTopicName: analysis.focusTopicName,
+    focusTopicId,
+    focusTopicName,
     signature,
     cachedAt: now,
     updatedAt: now,
@@ -891,7 +942,7 @@ async function main() {
 
     const fullName = payload.fullName;
     const gender = payload.gender;
-    const created = await createUser({
+    const created = await createUser(cleanForFirestore({
       username: payload.username,
       password: await bcrypt.hash(payload.password, 10),
       role: payload.role,
@@ -911,7 +962,7 @@ async function main() {
       subjects: payload.role === "student" ? [] : [],
       classTags: [],
       activityLogs: payload.role === "student" ? [] : [],
-    });
+    }));
 
     const record = {
       ...payload,
@@ -1012,9 +1063,10 @@ async function main() {
         updatedAt: quizPayload.updatedAt,
       };
 
-      await quizRootRef.set(quizRoot, { merge: false });
+      await safeSet(quizRootRef, quizRoot, { merge: false });
 
-      await quizRootRef.collection("versions").doc("v1").set(
+      await safeSet(
+        quizRootRef.collection("versions").doc("v1"),
         {
           versionId: "v1",
           versionNumber: 1,
@@ -1065,14 +1117,26 @@ async function main() {
           updatedAt: createdAt,
         };
 
-        await assignmentRef.set(assignmentData, { merge: false });
-        await db.collection("classes").doc(classroom.classId).collection("assignments").doc(assignmentId).set(assignmentData, { merge: false });
-        await db.collection("classes").doc(classroom.classId).set(
+        await safeSet(assignmentRef, assignmentData, { merge: false });
+        await safeSet(
+          db.collection("classes").doc(classroom.classId).collection("assignments").doc(assignmentId),
+          assignmentData,
+          { merge: false },
+        );
+        const nextAssignmentIds = Array.from(
+          new Set([
+            ...(Array.isArray(effectiveClassDoc.assignmentIds) ? effectiveClassDoc.assignmentIds : []),
+            assignmentId,
+          ]),
+        );
+        await safeSet(
+          db.collection("classes").doc(classroom.classId),
           {
-            assignmentIds: admin.firestore.FieldValue.arrayUnion(assignmentId),
+            ...effectiveClassDoc,
+            assignmentIds: nextAssignmentIds,
             updatedAt: createdAt,
           },
-          { merge: true },
+          { merge: false },
         );
         console.log(`[seed-demo] assignment created ${assignmentId}`);
       }
@@ -1117,7 +1181,7 @@ async function main() {
           totalQuestions: assignmentData.questions?.length || 10,
         };
 
-        await submissionRef.set(submissionData, { merge: false });
+        await safeSet(submissionRef, submissionData, { merge: false });
       }
     }
   }
@@ -1151,7 +1215,7 @@ async function main() {
 
     const progressDoc = learningPathCollection.doc(student.uid);
     if (!(await docExists(progressDoc))) {
-      await progressDoc.set(buildLearningPathState(student.uid, index, classDoc), { merge: false });
+      await safeSet(progressDoc, buildLearningPathState(student.uid, index, classDoc), { merge: false });
     }
 
     const currentProgress = await progressDoc.get();
@@ -1180,7 +1244,7 @@ async function main() {
     for (const progressItem of progressItems) {
       const ref = userProgressCollection.doc(student.uid).collection("topics").doc(progressItem.topicId);
       if (!(await docExists(ref))) {
-        await ref.set(progressItem, { merge: false });
+        await safeSet(ref, progressItem, { merge: false });
       }
     }
 
@@ -1200,7 +1264,7 @@ async function main() {
       averageScore: Number((7.1 + (index % 8) * 0.3).toFixed(1)),
     };
 
-    await updateUserById(student.uid, {
+    await updateUserById(student.uid, cleanForFirestore({
       stats: studentStats,
       rewards,
       activityLogs,
@@ -1208,7 +1272,7 @@ async function main() {
       lastActiveAt: nowIso(),
       lastLoginAt: nowIso(),
       updatedAt: nowIso(),
-    });
+    }));
 
     const existingQuiz = await db.collection("quizzes").doc(buildQuizDocId(quizTopic.grade, quizTopic.subject, quizTopic.topicId)).get();
     const quizData = existingQuiz.exists
@@ -1229,17 +1293,17 @@ async function main() {
     }, 58, index);
 
     if (!(await docExists(wrongAnswersCollection.doc(student.uid)))) {
-      await wrongAnswersCollection.doc(student.uid).set(wrongAnswers, { merge: false });
+      await safeSet(wrongAnswersCollection.doc(student.uid), wrongAnswers, { merge: false });
     }
 
     const coachCache = buildCoachCache(student.uid, progressItems, 78, quizTopic);
     if (!(await docExists(coachCacheCollection.doc(student.uid)))) {
-      await coachCacheCollection.doc(student.uid).set(coachCache, { merge: false });
+      await safeSet(coachCacheCollection.doc(student.uid), coachCache, { merge: false });
     }
 
     const aiUsageLog = buildAiUsageLog(student.uid, progressTopics[0]?.topicId || quizTopic.topicId, nowIso());
     if (!(await docExists(aiUsageCollection.doc(`${student.uid}-${index}`)))) {
-      await aiUsageCollection.doc(`${student.uid}-${index}`).set(aiUsageLog, { merge: false });
+      await safeSet(aiUsageCollection.doc(`${student.uid}-${index}`), aiUsageLog, { merge: false });
     }
 
     const rewardSources = [
@@ -1251,13 +1315,14 @@ async function main() {
       const receipt = rewardSources[receiptIndex];
       const receiptRef = rewardReceiptCollection.doc(`${student.uid}-${receipt.source}-${receiptIndex}`);
       if (!(await docExists(receiptRef))) {
-        await receiptRef.set(receipt, { merge: false });
+        await safeSet(receiptRef, receipt, { merge: false });
       }
 
       const ledgerKey = `${receipt.source}:${student.uid}:${receiptIndex}`;
       const ledgerRef = rewardLedgerCollection.doc(sha1Text(ledgerKey));
       if (!(await docExists(ledgerRef))) {
-        await ledgerRef.set(
+        await safeSet(
+          ledgerRef,
           {
             userId: student.uid,
             sourceType: receipt.source,
@@ -1311,22 +1376,22 @@ async function main() {
     }, index, quizTopic.topicId);
     const battleSessionRef = battleSessionCollection.doc(battleSession.sessionId);
     if (!(await docExists(battleSessionRef))) {
-      await battleSessionRef.set(battleSession, { merge: false });
+      await safeSet(battleSessionRef, battleSession, { merge: false });
     }
 
     const petStateRef = db.collection("users").doc(student.uid).collection("pet").doc("state");
     if (!(await docExists(petStateRef))) {
-      await petStateRef.set(buildPetState(index, student.fullName), { merge: false });
+      await safeSet(petStateRef, buildPetState(index, student.fullName), { merge: false });
     }
 
     const inventoryStateRef = db.collection("users").doc(student.uid).collection("inventory").doc("state");
     if (!(await docExists(inventoryStateRef))) {
-      await inventoryStateRef.set(buildInventoryState(index, studentStats.level), { merge: false });
+      await safeSet(inventoryStateRef, buildInventoryState(index, studentStats.level), { merge: false });
     }
 
     const petRequestsRef = db.collection("users").doc(student.uid).collection("petRequests").doc(hashText(`${student.uid}:select`, 12));
     if (!(await docExists(petRequestsRef))) {
-      await petRequestsRef.set({
+      await safeSet(petRequestsRef, {
         action: "select",
         response: null,
         processedAt: nowIso(),
@@ -1335,7 +1400,7 @@ async function main() {
 
     const inventoryTxRef = db.collection("users").doc(student.uid).collection("inventoryTransactions").doc(hashText(`${student.uid}:seed`, 12));
     if (!(await docExists(inventoryTxRef))) {
-      await inventoryTxRef.set({
+      await safeSet(inventoryTxRef, {
         action: "seed",
         createdAt: nowIso(),
         response: null,
@@ -1344,7 +1409,7 @@ async function main() {
 
     const shopTxRef = db.collection("users").doc(student.uid).collection("shopTransactions").doc(hashText(`${student.uid}:shop`, 12));
     if (!(await docExists(shopTxRef))) {
-      await shopTxRef.set({
+      await safeSet(shopTxRef, {
         action: "seed",
         createdAt: nowIso(),
         response: null,
@@ -1367,7 +1432,7 @@ async function main() {
       studyMinutes: 24 + (index % 6) * 8,
     }).catch(() => null);
 
-    await updateUserById(student.uid, {
+    await updateUserById(student.uid, cleanForFirestore({
       className,
       classTags: [className].filter(Boolean),
       classTagNames: [className].filter(Boolean),
@@ -1377,7 +1442,7 @@ async function main() {
       pet: {
         selectedPetId: PET_TYPES[index % PET_TYPES.length],
       },
-    }).catch(() => null);
+    })).catch(() => null);
   }
 
   console.log("[seed-demo] done", {
