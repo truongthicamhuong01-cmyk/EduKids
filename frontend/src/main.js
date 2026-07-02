@@ -7536,28 +7536,63 @@ async function syncStudentRecentWrongAnswers(profile) {
   });
 }
 
+function getStudentHomeAssignmentsRoot() {
+  return document.querySelector("[data-student-home-assignments]");
+}
+
 function renderStudentHomeAssignments(assignments) {
-  const titleNodes = Array.from(
-    document.querySelectorAll("[data-student-home-assignment-title]"),
-  );
-  const statusNodes = Array.from(
-    document.querySelectorAll("[data-student-home-assignment-status]"),
-  );
+  const root = getStudentHomeAssignmentsRoot();
+
+  if (!root) {
+    return;
+  }
+
   const selectedAssignments = Array.isArray(assignments) ? assignments : [];
 
-  titleNodes.forEach((node, index) => {
-    const assignment = selectedAssignments[index];
-    node.textContent = assignment ? assignment.title : "--";
-  });
+  if (selectedAssignments.length === 0) {
+    root.innerHTML = `
+      <div class="home-assignment-empty assignment-empty">
+        <h3>Chưa có bài tập được giao</h3>
+        <p>Giáo viên sẽ giao bài tập mới cho lớp của bạn khi có nội dung phù hợp.</p>
+      </div>
+    `;
+    return;
+  }
 
-  statusNodes.forEach((node, index) => {
-    const assignment = selectedAssignments[index];
-    const statusKey = assignment ? assignment.statusKey : "pending";
-    node.textContent = assignment
-      ? getAssignmentHomeStatusLabel(statusKey)
-      : "Chưa làm";
-    node.className = getAssignmentHomeStatusClass(statusKey);
-  });
+  root.innerHTML = selectedAssignments
+    .map((assignment) => {
+      const statusKey = assignment?.statusKey || getAssignmentHomeStatus(assignment);
+      const statusLabel = getAssignmentHomeStatusLabel(statusKey);
+      const statusClass = getAssignmentHomeStatusClass(statusKey);
+      const dueDateText = assignment?.dueDate
+        ? `Hạn nộp: ${formatAssignmentDate(assignment.dueDate)}`
+        : "Chưa có hạn nộp";
+      const classLabel =
+        assignment?.className ||
+        studentAssignmentClassState.classes.find(
+          (classroom) => classroom.id === assignment?.classId,
+        )?.name ||
+        studentAssignmentClassState.classes.find(
+          (classroom) => classroom.id === assignment?.classId,
+        )?.className ||
+        assignment?.classId ||
+        "Lớp học";
+
+      return `
+        <article class="home-assignment-item" data-student-home-assignment-id="${escapeHtml(assignment.id || "")}">
+          <div class="home-assignment-copy">
+            <h4>${escapeHtml(assignment.title || "Bài tập")}</h4>
+            <p>${escapeHtml(classLabel)}</p>
+            <small>${escapeHtml(dueDateText)}</small>
+          </div>
+
+          <span class="${escapeHtml(statusClass)}">
+            ${escapeHtml(statusLabel)}
+          </span>
+        </article>
+      `;
+    })
+    .join("");
 }
 
 async function syncStudentHomeAssignments(profile) {
@@ -15942,10 +15977,26 @@ function getTeacherSubmissionAnswerByIndex(
   return matchedIndex || null;
 }
 
+function formatTeacherAssignmentQuestionPoint(totalQuestions) {
+  const normalizedTotalQuestions = Number(totalQuestions);
+
+  if (!Number.isFinite(normalizedTotalQuestions) || normalizedTotalQuestions <= 0) {
+    return 0;
+  }
+
+  const rawPoint = 10 / normalizedTotalQuestions;
+  const roundedPoint = Number(rawPoint.toFixed(2));
+
+  return Number.isFinite(roundedPoint) ? roundedPoint : 0;
+}
+
 function buildTeacherSubmissionQuestionReviews(assignment, submission) {
   const questions = Array.isArray(assignment?.questions)
     ? assignment.questions
     : [];
+  const pointPerCorrectQuestion = formatTeacherAssignmentQuestionPoint(
+    assignment?.totalQuestions || questions.length,
+  );
 
   return questions.map((question, questionIndex) => {
     const answer = getTeacherSubmissionAnswerByIndex(
@@ -15977,7 +16028,7 @@ function buildTeacherSubmissionQuestionReviews(assignment, submission) {
       studentAnswerText,
       correctAnswerText,
       isCorrect,
-      pointText: isCorrect ? "1 điểm" : "0 điểm",
+      pointText: isCorrect ? `${String(pointPerCorrectQuestion)} điểm` : "0 điểm",
       resultLabel: isCorrect ? "✓ Chính xác" : "✗ Sai",
       resultClass: isCorrect ? "is-correct" : "is-wrong",
     };
