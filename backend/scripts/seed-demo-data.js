@@ -242,6 +242,17 @@ async function deleteDocument(ref) {
   await ref.delete().catch(() => null);
 }
 
+async function deleteRefsInBatches(refs, batchSize = 400) {
+  const validRefs = refs.filter(Boolean);
+
+  for (let index = 0; index < validRefs.length; index += batchSize) {
+    const batch = db.batch();
+    const chunk = validRefs.slice(index, index + batchSize);
+    chunk.forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  }
+}
+
 async function deleteQueryResults(query) {
   const snapshot = await query.get().catch(() => null);
   if (!snapshot || snapshot.empty) {
@@ -309,82 +320,164 @@ async function cleanupDemoQuizDoc(quizRootRef) {
   }
 }
 
-async function cleanupPreviousDemoData(existingUsers, classPlan, topics) {
-  const demoUsers = existingUsers.filter(isDemoUserRecord);
-  const demoUserIds = demoUsers.map((user) => String(user.uid || user.id || "").trim()).filter(Boolean);
-  const demoClassIds = classPlan.map((classroom) => classroom.classId).filter(Boolean);
-  const demoQuizIds = buildDemoQuizIds(classPlan, topics);
+async function cleanupPreviousDemoData(existingUsers, roster, topics) {
+  const existingByUsername = new Map(
+    existingUsers.map((user) => [String(user.username || "").trim().toLowerCase(), user]),
+  );
+  const orderedTeachers = roster
+    .filter((user) => user.role === "teacher")
+    .map((teacher) => existingByUsername.get(String(teacher.username || "").trim().toLowerCase()))
+    .filter(Boolean);
+  const orderedStudents = roster
+    .filter((user) => user.role === "student")
+    .map((student) => existingByUsername.get(String(student.username || "").trim().toLowerCase()))
+    .filter(Boolean);
+  const classPlan = buildClassPlan(orderedTeachers);
+  const studentChunks = chunkArray(orderedStudents, 7);
 
-  for (const userId of demoUserIds) {
-    await Promise.all([
-      deleteDocument(db.collection("users").doc(userId)),
-      deleteDocument(db.collection("learningPathProgress").doc(userId)),
-      deleteDocument(db.collection("coach_analysis_cache").doc(userId)),
-      deleteDocument(db.collection("wrong_answers").doc(userId)),
-      deleteDocument(db.collection("user_reward_receipts").doc(userId)),
-    ]);
+  const step = async (label, refs) => {
+    const filteredRefs = refs.filter(Boolean);
+    console.log(`[seed-demo] Cleanup ${label} started`, { count: filteredRefs.length });
+    await deleteRefsInBatches(filteredRefs);
+    console.log(`[seed-demo] Cleanup ${label} completed`, { count: filteredRefs.length });
+  };
 
-    await Promise.all([
-      deleteQueryResults(db.collection("user_progress").doc(userId).collection("topics")),
-      deleteQueryResults(db.collection("users").doc(userId).collection("pet")),
-      deleteQueryResults(db.collection("users").doc(userId).collection("inventory")),
-      deleteQueryResults(db.collection("users").doc(userId).collection("petRequests")),
-      deleteQueryResults(db.collection("users").doc(userId).collection("inventoryTransactions")),
-      deleteQueryResults(db.collection("users").doc(userId).collection("shopTransactions")),
-    ]);
-  }
+  const usersRefs = [];
+  const learningPathRefs = [];
+  const coachCacheRefs = [];
+  const wrongAnswerRefs = [];
+  const userMetaRefs = [];
+  const battleSessionRefs = [];
+  const aiUsageRefs = [];
+  const rewardReceiptRefs = [];
+  const rewardLedgerRefs = [];
+  const classRefs = [];
+  const assignmentRefs = [];
+  const submissionRefs = [];
+  const userProgressRefs = [];
+  const quizRefs = [];
 
-  for (const classId of demoClassIds) {
-    await Promise.all([
-      deleteDocument(db.collection("classes").doc(classId)),
-      deleteDocument(db.collection("classes").doc(classId).collection("assignments").doc(`${classId}-assignment-1`)),
-      deleteDocument(db.collection("classes").doc(classId).collection("assignments").doc(`${classId}-assignment-2`)),
-      deleteDocument(db.collection("assignments").doc(`${classId}-assignment-1`)),
-      deleteDocument(db.collection("assignments").doc(`${classId}-assignment-2`)),
-    ]);
-  }
+  for (let index = 0; index < orderedStudents.length; index += 1) {
+    const student = orderedStudents[index];
+    const uid = String(student.uid || student.id || "").trim();
 
-  for (const quizId of demoQuizIds) {
-    await cleanupDemoQuizDoc(db.collection("quizzes").doc(quizId));
-  }
-
-  for (const userChunk of chunkArray(demoUserIds, 10)) {
-    if (userChunk.length === 0) {
+    if (!uid) {
       continue;
     }
 
-    await deleteQueryResults(db.collection("assignment_submissions").where("studentId", "in", userChunk));
-    await deleteQueryResults(db.collection("battle_sessions").where("userId", "in", userChunk));
-    await deleteQueryResults(db.collection("ai_usage_logs").where("userId", "in", userChunk));
-    await deleteQueryResults(db.collection("user_reward_receipts").where("userId", "in", userChunk));
-    await deleteQueryResults(db.collection("rewardLedger").where("userId", "in", userChunk));
+    usersRefs.push(
+      db.collection("users").doc(uid),
+    );
+    learningPathRefs.push(
+      db.collection("learningPathProgress").doc(uid),
+    );
+    coachCacheRefs.push(
+      db.collection("coach_analysis_cache").doc(uid),
+    );
+    wrongAnswerRefs.push(
+      db.collection("wrong_answers").doc(uid),
+    );
+
+    userMetaRefs.push(
+      db.collection("users").doc(uid).collection("pet").doc("state"),
+      db.collection("users").doc(uid).collection("inventory").doc("state"),
+      db.collection("users").doc(uid).collection("petRequests").doc(hashText(`${uid}:select`, 12)),
+      db.collection("users").doc(uid).collection("inventoryTransactions").doc(hashText(`${uid}:seed`, 12)),
+      db.collection("users").doc(uid).collection("shopTransactions").doc(hashText(`${uid}:shop`, 12)),
+    );
+
+    battleSessionRefs.push(db.collection("battle_sessions").doc(`demo-battle-${hashText(uid, 10)}-${index}`));
+    aiUsageRefs.push(db.collection("ai_usage_logs").doc(`${uid}-${index}`));
+    rewardReceiptRefs.push(
+      db.collection("user_reward_receipts").doc(`${uid}-dailyLogin-0`),
+      db.collection("user_reward_receipts").doc(`${uid}-assignment-1`),
+    );
+    rewardLedgerRefs.push(
+      db.collection("rewardLedger").doc(sha1Text(`dailyLogin:${uid}:0`)),
+      db.collection("rewardLedger").doc(sha1Text(`assignment:${uid}:1`)),
+    );
   }
 
-  for (const classChunk of chunkArray(demoClassIds, 10)) {
-    if (classChunk.length === 0) {
-      continue;
+  for (let classIndex = 0; classIndex < classPlan.length; classIndex += 1) {
+    const classroom = classPlan[classIndex];
+    const classId = String(classroom.classId || "").trim();
+    const students = studentChunks[classIndex] || [];
+    const topicCandidates = getClassTopicCandidates(classroom, topics);
+    const topicPool = topicCandidates.length > 0 ? topicCandidates : topics;
+    const progressTopics = topicPool.slice(0, 4);
+    const quizTopic = selectTopicForClass(classroom, topics);
+    const quizId = buildQuizDocId(quizTopic.grade, quizTopic.subject, quizTopic.topicId);
+    const quizRootRef = db.collection("quizzes").doc(quizId);
+    const quizVersionRef = quizRootRef.collection("versions").doc("v1");
+
+    classRefs.push(db.collection("classes").doc(classId));
+    assignmentRefs.push(
+      db.collection("classes").doc(classId).collection("assignments").doc(`${classId}-assignment-1`),
+      db.collection("classes").doc(classId).collection("assignments").doc(`${classId}-assignment-2`),
+      db.collection("assignments").doc(`${classId}-assignment-1`),
+      db.collection("assignments").doc(`${classId}-assignment-2`),
+    );
+
+    for (let studentOffset = 0; studentOffset < students.length; studentOffset += 1) {
+      const student = students[studentOffset];
+      const uid = String(student.uid || student.id || "").trim();
+
+      if (!uid) {
+        continue;
+      }
+
+      const assignmentIds = [
+        `${classId}-assignment-1`,
+        `${classId}-assignment-2`,
+      ];
+
+      assignmentIds.forEach((assignmentId) => {
+        submissionRefs.push(db.collection("assignment_submissions").doc(`${assignmentId}_${uid}`));
+      });
+
+      progressTopics.forEach((topic) => {
+        userProgressRefs.push(db.collection("user_progress").doc(uid).collection("topics").doc(topic.topicId));
+      });
     }
 
-    await deleteQueryResults(db.collection("assignment_submissions").where("classId", "in", classChunk));
-    await deleteQueryResults(db.collection("assignments").where("classId", "in", classChunk));
+    const rootSnapshot = await quizRootRef.get().catch(() => null);
+    const hasDemoQuiz = rootSnapshot && rootSnapshot.exists && String(rootSnapshot.data()?.seedSource || "") === DEMO_MARKER;
+    if (hasDemoQuiz) {
+      quizRefs.push(quizVersionRef, quizRootRef);
+    }
   }
 
-  const userProgressRoot = db.collection("user_progress");
-  for (const userId of demoUserIds) {
-    await deleteQueryResults(userProgressRoot.doc(userId).collection("topics"));
-  }
+  console.log("[seed-demo] Cleanup plan prepared", {
+    users: usersRefs.length,
+    learningPathProgress: learningPathRefs.length,
+    coachAnalysisCache: coachCacheRefs.length,
+    wrongAnswers: wrongAnswerRefs.length,
+    userMeta: userMetaRefs.length,
+    battleSessions: battleSessionRefs.length,
+    aiUsageLogs: aiUsageRefs.length,
+    userRewardReceipts: rewardReceiptRefs.length,
+    rewardLedger: rewardLedgerRefs.length,
+    classes: classRefs.length,
+    assignments: assignmentRefs.length,
+    submissions: submissionRefs.length,
+    userProgress: userProgressRefs.length,
+    quizzes: quizRefs.length,
+  });
 
-  const rewardReceiptQuery = db.collection("user_reward_receipts").where("seedSource", "==", DEMO_MARKER);
-  await deleteQueryResults(rewardReceiptQuery);
-
-  const rewardLedgerQuery = db.collection("rewardLedger").where("seedSource", "==", DEMO_MARKER);
-  await deleteQueryResults(rewardLedgerQuery);
-
-  const battleQuery = db.collection("battle_sessions").where("seedSource", "==", DEMO_MARKER);
-  await deleteQueryResults(battleQuery);
-
-  const aiUsageQuery = db.collection("ai_usage_logs").where("seedSource", "==", DEMO_MARKER);
-  await deleteQueryResults(aiUsageQuery);
+  await step("users", usersRefs);
+  await step("learningPathProgress", learningPathRefs);
+  await step("coach_analysis_cache", coachCacheRefs);
+  await step("wrong_answers", wrongAnswerRefs);
+  await step("user meta", userMetaRefs);
+  await step("battle_sessions", battleSessionRefs);
+  await step("ai_usage_logs", aiUsageRefs);
+  await step("user_reward_receipts", rewardReceiptRefs);
+  await step("rewardLedger", rewardLedgerRefs);
+  await step("classes", classRefs);
+  await step("assignments", assignmentRefs);
+  await step("submissions", submissionRefs);
+  await step("user_progress", userProgressRefs);
+  await step("quizzes", quizRefs);
 }
 
 function pickByIndex(list, index, offset = 0) {
@@ -1143,13 +1236,12 @@ async function main() {
   const teachers = roster.filter((user) => user.role === "teacher");
   const topics = readTopicsFile().filter((topic) => topic.grade && topic.subject);
   console.log("[seed-demo] Firestore ready");
-  const classPlanPreview = buildClassPlan(teachers);
   console.log("[seed-demo] Loading existing users");
   const existingUsersBeforeCleanup = await withTimeout(fetchExistingUsers(), 2 * 60 * 1000, "fetchExistingUsers(before cleanup)");
   console.log("[seed-demo] Existing users loaded");
   console.log("[seed-demo] Cleanup started");
   await withTimeout(
-    cleanupPreviousDemoData(existingUsersBeforeCleanup, classPlanPreview, topics),
+    cleanupPreviousDemoData(existingUsersBeforeCleanup, roster, topics),
     10 * 60 * 1000,
     "cleanupPreviousDemoData",
   );
