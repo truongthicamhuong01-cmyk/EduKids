@@ -9,7 +9,6 @@ const { createAssignment, createSubmission } = require("../src/services/assignme
 const { createQuizVersion, buildVersionQuizId } = require("../src/services/quizVersionService");
 const { buildQuizDocId, readTopicsFile } = require("../src/services/aiService");
 const { season1 } = require("../src/services/learningPathData");
-const { recordLearningActivity } = require("../src/services/progressService");
 
 const nowIso = () => new Date().toISOString();
 const DEMO_MARKER = "seed-demo-data";
@@ -1093,6 +1092,36 @@ function buildBattleSession(userId, quiz, studentIndex, topicId) {
   };
 }
 
+function getClassTopicCandidates(classDoc, topics) {
+  return topics.filter(
+    (topic) => String(topic.grade || "").trim() === String(classDoc.grade).trim() &&
+      String(topic.subject || "").trim() === String(classDoc.subject).trim(),
+  );
+}
+
+async function getCachedQuizData(quizDataCache, quizTopic, seedIndex) {
+  const quizKey = buildQuizDocId(quizTopic.grade, quizTopic.subject, quizTopic.topicId);
+  if (quizDataCache.has(quizKey)) {
+    return quizDataCache.get(quizKey);
+  }
+
+  const snapshot = await db.collection("quizzes").doc(quizKey).get();
+  const quizData = snapshot.exists
+    ? {
+        id: buildVersionQuizId({
+          grade: quizTopic.grade,
+          subject: quizTopic.subject,
+          topicId: quizTopic.topicId,
+          versionId: "v1",
+        }),
+        ...(snapshot.data() || {}),
+      }
+    : buildQuizPayload(quizTopic, seedIndex);
+
+  quizDataCache.set(quizKey, quizData);
+  return quizData;
+}
+
 async function closeAdminApps() {
   const apps = Array.isArray(admin.apps) ? admin.apps : [];
 
@@ -1516,16 +1545,15 @@ async function main() {
   const rewardReceiptCollection = db.collection("user_reward_receipts");
   const rewardLedgerCollection = db.collection("rewardLedger");
   const battleSessionCollection = db.collection("battle_sessions");
+  const quizDataCache = new Map();
+  let enrichmentCompleted = 0;
   console.log("[seed-demo] Student enrichment started");
 
   for (let index = 0; index < orderedStudents.length; index += 1) {
     const student = orderedStudents[index];
     const className = String(student.className || "").trim();
     const classDoc = classDocs[index % classDocs.length];
-    const classTopicCandidates = topics.filter(
-      (topic) => String(topic.grade || "").trim() === String(classDoc.grade).trim() &&
-        String(topic.subject || "").trim() === String(classDoc.subject).trim(),
-    );
+    const classTopicCandidates = getClassTopicCandidates(classDoc, topics);
     const topicPool = classTopicCandidates.length > 0 ? classTopicCandidates : topics;
     const progressTopics = topicPool.slice(0, 4);
     const quizTopic = selectTopicForClass(classDoc, topics);
@@ -1535,12 +1563,10 @@ async function main() {
       topicId: quizTopic.topicId,
       versionId: "v1",
     });
-
+    const userRef = db.collection("users").doc(student.uid);
+    const batch = db.batch();
     const progressDoc = learningPathCollection.doc(student.uid);
-    await safeSet(progressDoc, buildLearningPathState(student.uid, index, classDoc), { merge: false });
-
-    const currentProgress = await progressDoc.get();
-    const progressState = currentProgress.data() || {};
+    batch.set(progressDoc, buildLearningPathState(student.uid, index, classDoc), { merge: false });
     const progressItems = progressTopics.map((topic, topicIndex) => {
       const totalAnswered = 10 + index + topicIndex * 3;
       const totalCorrect = Math.max(1, totalAnswered - ((index + topicIndex) % 4) - 1);
@@ -1565,7 +1591,7 @@ async function main() {
 
     for (const progressItem of progressItems) {
       const ref = userProgressCollection.doc(student.uid).collection("topics").doc(progressItem.topicId);
-      await safeSet(ref, progressItem, { merge: false });
+      batch.set(ref, progressItem, { merge: false });
     }
 
     const activityLogs = buildActivityLogs(student.uid, progressTopics, quizId, 8.8 - (index % 3) * 0.4, 3);
@@ -1584,42 +1610,19 @@ async function main() {
       averageScore: Number((7.1 + (index % 8) * 0.3).toFixed(1)),
     };
 
-    await updateUserById(student.uid, cleanForFirestore({
-      seedSource: DEMO_MARKER,
-      stats: studentStats,
-      rewards,
-      activityLogs,
-      selectedPetId: PET_TYPES[index % PET_TYPES.length],
-      lastActiveAt: nowIso(),
-      lastLoginAt: nowIso(),
-      updatedAt: nowIso(),
-    }));
-
-    const existingQuiz = await db.collection("quizzes").doc(buildQuizDocId(quizTopic.grade, quizTopic.subject, quizTopic.topicId)).get();
-    const quizData = existingQuiz.exists
-      ? {
-          id: buildVersionQuizId({
-            grade: quizTopic.grade,
-            subject: quizTopic.subject,
-            topicId: quizTopic.topicId,
-            versionId: "v1",
-          }),
-          ...(existingQuiz.data() || {}),
-        }
-      : buildQuizPayload(quizTopic, index);
+    const quizData = await getCachedQuizData(quizDataCache, quizTopic, index);
 
     const wrongAnswers = buildWrongAnswers(student.uid, {
       id: quizData.id || quizId,
       questions: buildQuizQuestions(quizTopic, index),
     }, 58, index);
-
-    await safeSet(wrongAnswersCollection.doc(student.uid), wrongAnswers, { merge: false });
+    batch.set(wrongAnswersCollection.doc(student.uid), wrongAnswers, { merge: false });
 
     const coachCache = buildCoachCache(student.uid, progressItems, 78, quizTopic);
-    await safeSet(coachCacheCollection.doc(student.uid), coachCache, { merge: false });
+    batch.set(coachCacheCollection.doc(student.uid), coachCache, { merge: false });
 
     const aiUsageLog = buildAiUsageLog(student.uid, progressTopics[0]?.topicId || quizTopic.topicId, nowIso());
-    await safeSet(aiUsageCollection.doc(`${student.uid}-${index}`), aiUsageLog, { merge: false });
+    batch.set(aiUsageCollection.doc(`${student.uid}-${index}`), aiUsageLog, { merge: false });
 
     const rewardSources = [
       buildRewardReceipt(student.uid, "dailyLogin", 3, nowIso()),
@@ -1629,55 +1632,55 @@ async function main() {
     for (let receiptIndex = 0; receiptIndex < rewardSources.length; receiptIndex += 1) {
       const receipt = rewardSources[receiptIndex];
       const receiptRef = rewardReceiptCollection.doc(`${student.uid}-${receipt.source}-${receiptIndex}`);
-      await safeSet(receiptRef, receipt, { merge: false });
+      batch.set(receiptRef, receipt, { merge: false });
 
       const ledgerKey = `${receipt.source}:${student.uid}:${receiptIndex}`;
       const ledgerRef = rewardLedgerCollection.doc(sha1Text(ledgerKey));
-      await safeSet(
+      batch.set(
         ledgerRef,
         {
-            seedSource: DEMO_MARKER,
-            userId: student.uid,
+          seedSource: DEMO_MARKER,
+          userId: student.uid,
+          sourceType: receipt.source,
+          sourceId: `${student.uid}:${receiptIndex}`,
+          ruleKey: receipt.source,
+          idempotencyKey: ledgerKey,
+          reward: {
+            key: receipt.source,
+            title: receipt.source === "dailyLogin" ? "Đăng nhập hằng ngày" : "Hoàn thành bài tập",
+            coin: receipt.amount,
+            petExp: receipt.source === "dailyLogin" ? 1 : 5,
+            petHappiness: receipt.source === "dailyLogin" ? 1 : 3,
+            petHealth: 0,
+            petEnergy: 0,
+            petHunger: 0,
+            icon: receipt.source === "dailyLogin" ? "login" : "assignment",
+            badges: [],
             sourceType: receipt.source,
             sourceId: `${student.uid}:${receiptIndex}`,
-            ruleKey: receipt.source,
-            idempotencyKey: ledgerKey,
-            reward: {
-              key: receipt.source,
-              title: receipt.source === "dailyLogin" ? "Đăng nhập hằng ngày" : "Hoàn thành bài tập",
-              coin: receipt.amount,
-              petExp: receipt.source === "dailyLogin" ? 1 : 5,
-              petHappiness: receipt.source === "dailyLogin" ? 1 : 3,
-              petHealth: 0,
-              petEnergy: 0,
-              petHunger: 0,
-              icon: receipt.source === "dailyLogin" ? "login" : "assignment",
-              badges: [],
+          },
+          response: {
+            statusCode: 200,
+            message: "Nhận thưởng thành công",
+            data: {
+              reward: {
+                title: receipt.source === "dailyLogin" ? "Đăng nhập hằng ngày" : "Hoàn thành bài tập",
+                coin: receipt.amount,
+              },
+              wallet: {
+                eduCoin: Number(studentStats.eduCoin || 0) + receipt.amount,
+              },
+            },
+            popupEvents: [],
+            animationEvents: [],
+            meta: {
               sourceType: receipt.source,
               sourceId: `${student.uid}:${receiptIndex}`,
+              ruleKey: receipt.source,
             },
-            response: {
-              statusCode: 200,
-              message: "Nhận thưởng thành công",
-              data: {
-                reward: {
-                  title: receipt.source === "dailyLogin" ? "Đăng nhập hằng ngày" : "Hoàn thành bài tập",
-                  coin: receipt.amount,
-                },
-                wallet: {
-                  eduCoin: Number(studentStats.eduCoin || 0) + receipt.amount,
-                },
-              },
-              popupEvents: [],
-              animationEvents: [],
-              meta: {
-                sourceType: receipt.source,
-                sourceId: `${student.uid}:${receiptIndex}`,
-                ruleKey: receipt.source,
-              },
-            },
-            createdAt: receipt.createdAt,
           },
+          createdAt: receipt.createdAt,
+        },
         { merge: false },
       );
     }
@@ -1686,56 +1689,31 @@ async function main() {
       id: quizId,
       questions: buildQuizQuestions(quizTopic, index),
     }, index, quizTopic.topicId);
-    const battleSessionRef = battleSessionCollection.doc(battleSession.sessionId);
-    await safeSet(battleSessionRef, battleSession, { merge: false });
+    batch.set(battleSessionCollection.doc(battleSession.sessionId), battleSession, { merge: false });
 
-    const petStateRef = db.collection("users").doc(student.uid).collection("pet").doc("state");
-    await safeSet(petStateRef, buildPetState(index, student.fullName), { merge: false });
-
-    const inventoryStateRef = db.collection("users").doc(student.uid).collection("inventory").doc("state");
-    await safeSet(inventoryStateRef, buildInventoryState(index, studentStats.level), { merge: false });
-
-    const petRequestsRef = db.collection("users").doc(student.uid).collection("petRequests").doc(hashText(`${student.uid}:select`, 12));
-    await safeSet(petRequestsRef, {
+    batch.set(db.collection("users").doc(student.uid).collection("pet").doc("state"), buildPetState(index, student.fullName), { merge: false });
+    batch.set(db.collection("users").doc(student.uid).collection("inventory").doc("state"), buildInventoryState(index, studentStats.level), { merge: false });
+    batch.set(db.collection("users").doc(student.uid).collection("petRequests").doc(hashText(`${student.uid}:select`, 12)), {
       seedSource: DEMO_MARKER,
       action: "select",
       response: null,
       processedAt: nowIso(),
     }, { merge: false });
-
-    const inventoryTxRef = db.collection("users").doc(student.uid).collection("inventoryTransactions").doc(hashText(`${student.uid}:seed`, 12));
-    await safeSet(inventoryTxRef, {
+    batch.set(db.collection("users").doc(student.uid).collection("inventoryTransactions").doc(hashText(`${student.uid}:seed`, 12)), {
+      seedSource: DEMO_MARKER,
+      action: "seed",
+      createdAt: nowIso(),
+      response: null,
+    }, { merge: false });
+    batch.set(db.collection("users").doc(student.uid).collection("shopTransactions").doc(hashText(`${student.uid}:shop`, 12)), {
       seedSource: DEMO_MARKER,
       action: "seed",
       createdAt: nowIso(),
       response: null,
     }, { merge: false });
 
-    const shopTxRef = db.collection("users").doc(student.uid).collection("shopTransactions").doc(hashText(`${student.uid}:shop`, 12));
-    await safeSet(shopTxRef, {
-      seedSource: DEMO_MARKER,
-      action: "seed",
-      createdAt: nowIso(),
-      response: null,
-    }, { merge: false });
-
-    await recordLearningActivity(student.uid, {
-      sourceType: "quiz",
-      sourceId: quizId,
-      idempotencyKey: `${student.uid}:seed-activity`,
-      topicId: quizTopic.topicId,
-      quizId,
-      startedAt: new Date(Date.now() - 5400000).toISOString(),
-      completedAt: nowIso(),
-      score: 8.6 - (index % 3) * 0.2,
-      accuracy: 84 + (index % 10),
-      totalQuestions: 10,
-      correctAnswers: 8 + (index % 2),
-      wrongAnswers: 2 - (index % 2),
-      studyMinutes: 24 + (index % 6) * 8,
-    }).catch(() => null);
-
-    await updateUserById(student.uid, cleanForFirestore({
+    const studentUpdateAt = nowIso();
+    batch.set(userRef, cleanForFirestore({
       seedSource: DEMO_MARKER,
       className,
       classTags: [className].filter(Boolean),
@@ -1743,10 +1721,21 @@ async function main() {
       activityLogs,
       rewards,
       stats: studentStats,
+      selectedPetId: PET_TYPES[index % PET_TYPES.length],
       pet: {
         selectedPetId: PET_TYPES[index % PET_TYPES.length],
       },
-    })).catch(() => null);
+      lastActiveAt: studentUpdateAt,
+      lastLoginAt: studentUpdateAt,
+      updatedAt: studentUpdateAt,
+    }), { merge: true });
+
+    await batch.commit();
+
+    enrichmentCompleted += 1;
+    if (enrichmentCompleted % 10 === 0 || enrichmentCompleted === orderedStudents.length) {
+      console.log(`[seed-demo] Student enrichment ${enrichmentCompleted}/${orderedStudents.length}`);
+    }
   }
 
   console.log("[seed-demo] Student enrichment completed");
