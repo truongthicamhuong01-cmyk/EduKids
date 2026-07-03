@@ -138,6 +138,7 @@ import { API_BASE_URL } from "../config.js";
       note: profile.note || "",
       createdAt: profile.createdAt || "",
       updatedAt: profile.updatedAt || profile.createdAt || "",
+      lastUsernameChangeAt: profile.lastUsernameChangeAt || null,
       stats,
       subjects: Array.isArray(profile.subjects) ? profile.subjects : [],
       classTags,

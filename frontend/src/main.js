@@ -8789,8 +8789,59 @@ async function ensureProfileLoaded(pageId) {
   }
 }
 
+const USERNAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const USERNAME_CHANGE_DAY_MS = 24 * 60 * 60 * 1000;
+
+function parseDateValue(value) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date;
+}
+
+function getUsernameChangeState(profile) {
+  const lastChange = parseDateValue(profile?.lastUsernameChangeAt);
+
+  if (!lastChange) {
+    return {
+      canChange: true,
+      message: "",
+      remainingDays: 0,
+    };
+  }
+
+  const elapsed = Date.now() - lastChange.getTime();
+
+  if (elapsed >= USERNAME_CHANGE_COOLDOWN_MS) {
+    return {
+      canChange: true,
+      message: "",
+      remainingDays: 0,
+    };
+  }
+
+  const remainingDays = Math.max(
+    1,
+    Math.ceil((USERNAME_CHANGE_COOLDOWN_MS - elapsed) / USERNAME_CHANGE_DAY_MS),
+  );
+
+  return {
+    canChange: false,
+    remainingDays,
+    message: `Bạn chỉ có thể thay đổi tên đăng nhập 7 ngày một lần. Bạn có thể đổi tên đăng nhập sau ${remainingDays} ngày nữa.`,
+  };
+}
+
 function buildProfileEditModal(profile) {
   const isTeacher = profile?.role === "teacher";
+  const usernameChangeState = getUsernameChangeState(profile);
   const title = isTeacher
     ? "Chỉnh sửa hồ sơ giáo viên"
     : "Chỉnh sửa hồ sơ học sinh";
@@ -8863,7 +8914,12 @@ function buildProfileEditModal(profile) {
           </div>
           <div class="profile-edit-field">
             <label for="profile-username">Tên đăng nhập</label>
-            <input id="profile-username" name="username" type="text" value="${escapeHtml(profile?.username || "")}" placeholder="Nhập tên đăng nhập" />
+            <input id="profile-username" name="username" type="text" value="${escapeHtml(profile?.username || "")}" placeholder="Nhập tên đăng nhập" ${usernameChangeState.canChange ? "" : 'disabled aria-disabled="true"'} />
+            ${
+              usernameChangeState.canChange
+                ? ""
+                : `<p class="profile-edit-help">${escapeHtml(usernameChangeState.message)}</p>`
+            }
           </div>
           <div class="profile-edit-field">
             <label for="profile-role">Vai trò</label>
@@ -8977,11 +9033,15 @@ async function openProfileEditModal() {
       }
 
       const formData = new FormData(form);
+      const usernameChangeState = getUsernameChangeState(profile);
       const payload = {
         name: String(formData.get("name") || "").trim(),
-        username: String(formData.get("username") || "").trim(),
         gender: String(formData.get("gender") || "").trim(),
       };
+
+      if (usernameChangeState.canChange) {
+        payload.username = String(formData.get("username") || "").trim();
+      }
 
       if (profile.role === "teacher") {
         payload.school = String(formData.get("school") || "").trim();
@@ -8997,16 +9057,32 @@ async function openProfileEditModal() {
 
       const updatedProfile =
         await window.EduKidsProfileService.updateCurrentProfile(payload);
+      const sessionProfile = {
+        ...updatedProfile,
+      };
 
-      profileState.current = updatedProfile;
+      delete sessionProfile.usernameChangeBlocked;
+      delete sessionProfile.usernameChangeMessage;
+
+      profileState.current = sessionProfile;
       profileState.error = null;
-      bootstrapState.currentUser = updatedProfile;
-      window.EduKidsCurrentUser = updatedProfile;
+      bootstrapState.currentUser = sessionProfile;
+      window.EduKidsCurrentUser = sessionProfile;
       saveAuthSession(
-        updatedProfile,
+        sessionProfile,
         localStorage.getItem("authToken") || localStorage.getItem("token"),
       );
-      renderProfileView(updatedProfile);
+      renderProfileView(sessionProfile);
+
+      if (updatedProfile?.usernameChangeBlocked) {
+        if (feedback) {
+          feedback.textContent =
+            updatedProfile.usernameChangeMessage ||
+            "Bạn chỉ có thể thay đổi tên đăng nhập 7 ngày một lần.";
+        }
+        return;
+      }
+
       closeModal();
     } catch (error) {
       if (feedback) {
@@ -24134,6 +24210,7 @@ function renderLoginScreen() {
 
 function renderRegisterScreen() {
   const draft = authDrafts.register;
+  const showClassField = draft.role === "student";
 
   return `
     <section class="auth-shell">
@@ -24215,14 +24292,18 @@ function renderRegisterScreen() {
               ],
             })}
 
-            ${renderTextField({
-              id: "register-class",
-              name: "className",
-              label: "Lớp (nếu là học sinh)",
-              placeholder: "Chọn lớp",
-              value: draft.className,
-              autocomplete: "off",
-            })}
+            ${
+              showClassField
+                ? renderTextField({
+                    id: "register-class",
+                    name: "className",
+                    label: "Lớp (nếu là học sinh)",
+                    placeholder: "Chọn lớp",
+                    value: draft.className,
+                    autocomplete: "off",
+                  })
+                : ""
+            }
 
             ${renderTextField({
               id: "register-school",
@@ -24443,6 +24524,22 @@ function setSelectedChoice(form, groupName, value) {
   const view = form.dataset.view;
 
   updateAuthDraft(view, groupName, value);
+
+  if (view === "register" && groupName === "role") {
+    if (value === "teacher") {
+      authDrafts.register.className = "";
+    }
+
+    const authRoot = getAuthRoot();
+
+    if (authRoot) {
+      authRoot.removeAttribute("data-rendered-mode");
+    }
+
+    renderAuthScreen("register");
+    return;
+  }
+
   setFieldError(form, groupName, "");
 }
 
@@ -24810,7 +24907,7 @@ async function handleRegisterSubmit(form) {
   const confirmPassword = form.elements.confirmPassword?.value;
   const role = form.elements.role?.value;
   const gender = form.elements.gender?.value;
-  const className = form.elements.className?.value.trim();
+  const className = role === "student" ? form.elements.className?.value.trim() : "";
   const school = form.elements.school?.value.trim();
 
   let hasError = false;
@@ -24904,7 +25001,7 @@ async function handleRegisterSubmit(form) {
       fullName: name,
       gender,
       school,
-      className,
+      ...(role === "student" ? { className } : {}),
     });
 
     authDrafts.login.username = username;

@@ -23,6 +23,20 @@ const register = asyncHandler(async (req, res) => {
   const phone = normalizeString(req.body.phone);
   const address = normalizeString(req.body.address);
   const note = normalizeString(req.body.note);
+  const registrationPayload = {
+    username,
+    password,
+    role,
+    fullName,
+    gender,
+    email,
+    school,
+    hobby,
+    dream,
+    phone,
+    address,
+    note,
+  };
 
   if (!username || !password || !role || !fullName || !gender) {
     throw new ApiError(400, "username, password, role, fullName, and gender are required");
@@ -59,19 +73,8 @@ const register = asyncHandler(async (req, res) => {
   }
 
   const result = await registerUser({
-    username,
-    password,
-    role,
-    fullName,
-    gender,
-    email,
-    school,
-    className,
-    hobby,
-    dream,
-    phone,
-    address,
-    note,
+    ...registrationPayload,
+    ...(role === "student" ? { className } : {}),
   });
 
   console.log("[EduKids][authController] register success", {

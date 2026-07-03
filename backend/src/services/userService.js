@@ -114,6 +114,22 @@ function getFormattedTimestamp(value) {
   return new Date(value).toISOString();
 }
 
+function getOptionalFormattedTimestamp(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value.toDate === "function") {
+    return value.toDate().toISOString();
+  }
+
+  return new Date(value).toISOString();
+}
+
 function mapUserDoc(doc) {
   if (!doc || !doc.exists) {
     return null;
@@ -157,6 +173,7 @@ function mapUserDoc(doc) {
     avatar: normalizeAvatarFilename(data.avatar || ""),
     createdAt: getFormattedTimestamp(data.createdAt),
     updatedAt: getFormattedTimestamp(data.updatedAt || data.createdAt),
+    lastUsernameChangeAt: getOptionalFormattedTimestamp(data.lastUsernameChangeAt),
     school: data.school || "",
     className: data.className || "",
     hobby: data.hobby || "",
@@ -292,6 +309,7 @@ async function createUser(userData) {
     phone: userData.phone || "",
     address: userData.address || "",
     note: userData.note || "",
+    lastUsernameChangeAt: userData.lastUsernameChangeAt || null,
     stats: normalizeStats(role, userData.stats),
     subjects: Array.isArray(userData.subjects) ? userData.subjects : getDefaultSubjects(role),
     classTags: Array.isArray(userData.classTags) ? userData.classTags : [],

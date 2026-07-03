@@ -6,8 +6,43 @@ const { ensureUserCode, findUserById, updateUserById } = require("../services/us
 const { updateUserStreak } = require("../services/progressService");
 const { getRecentWrongAnswersByUserId } = require("../services/quizGradeService");
 
+const USERNAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 function getCurrentUid(req) {
   return req.user?.uid || req.user?.userId || null;
+}
+
+function getValidDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date;
+}
+
+function getUsernameCooldownMessage(lastUsernameChangeAt) {
+  const lastChangeDate = getValidDate(lastUsernameChangeAt);
+
+  if (!lastChangeDate) {
+    return null;
+  }
+
+  const elapsed = Date.now() - lastChangeDate.getTime();
+
+  if (elapsed >= USERNAME_CHANGE_COOLDOWN_MS) {
+    return null;
+  }
+
+  const remainingDays = Math.max(1, Math.ceil((USERNAME_CHANGE_COOLDOWN_MS - elapsed) / DAY_MS));
+
+  return `Bạn chỉ có thể thay đổi tên đăng nhập 7 ngày một lần. Bạn có thể đổi tên đăng nhập sau ${remainingDays} ngày nữa.`;
 }
 
 const me = asyncHandler(async (req, res) => {
@@ -55,6 +90,8 @@ const updateMe = asyncHandler(async (req, res) => {
 
   const updates = {};
   const rawBody = req.body || {};
+  let usernameChangeBlocked = false;
+  let usernameChangeMessage = "";
 
   if (typeof rawBody.name === "string") {
     updates.name = normalizeString(rawBody.name);
@@ -65,7 +102,20 @@ const updateMe = asyncHandler(async (req, res) => {
   }
 
   if (typeof rawBody.username === "string") {
-    updates.username = normalizeString(rawBody.username);
+    const nextUsername = normalizeString(rawBody.username);
+    const currentUsername = normalizeString(currentUser.username);
+
+    if (nextUsername !== currentUsername) {
+      const cooldownMessage = getUsernameCooldownMessage(currentUser.lastUsernameChangeAt);
+
+      if (cooldownMessage) {
+        usernameChangeBlocked = true;
+        usernameChangeMessage = cooldownMessage;
+      } else {
+        updates.username = nextUsername;
+        updates.lastUsernameChangeAt = new Date().toISOString();
+      }
+    }
   }
 
   if (typeof rawBody.gender === "string") {
@@ -100,7 +150,11 @@ const updateMe = asyncHandler(async (req, res) => {
 
   const result = await updateUserById(uid, updates);
 
-  return successResponse(res, 200, "User profile updated successfully", result);
+  return successResponse(res, 200, "User profile updated successfully", {
+    ...result,
+    usernameChangeBlocked,
+    usernameChangeMessage,
+  });
 });
 
 module.exports = {

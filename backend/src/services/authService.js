@@ -26,6 +26,7 @@ function buildAuthUserPayload(user) {
     gender: user.gender,
     avatar: user.avatar || getDefaultAvatar(user.role, user.gender),
     createdAt: user.createdAt,
+    lastUsernameChangeAt: user.lastUsernameChangeAt || null,
     school: user.school,
     className: user.className,
     hobby: user.hobby,

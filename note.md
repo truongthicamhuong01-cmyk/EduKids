@@ -10,7 +10,4 @@ cd frontend
 npm run build
 firebase deploy --only hosting
 
-todo:
-- Làm animation lên trạm
-- Làm thời gian thay đổi tên, tên đăng nhập
 ```
