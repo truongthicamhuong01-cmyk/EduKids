@@ -58,8 +58,8 @@ const me = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User document not found");
   }
 
-  const userWithCode = await ensureUserCode(uid, user);
-  const updatedUser = await updateUserStreak(uid).catch(() => userWithCode);
+  await ensureUserCode(uid, user);
+  const updatedUser = await updateUserStreak(uid);
   const recentWrongAnswers = await getRecentWrongAnswersByUserId(uid).catch(() => null);
   const profileWithWrongAnswers = {
     ...updatedUser,

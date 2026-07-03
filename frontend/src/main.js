@@ -25025,6 +25025,10 @@ async function handleLoginSubmit(form) {
     authDrafts.login.username = username;
     authDrafts.login.role = role;
 
+    await syncStudentAchievementBadges(authUser).catch((error) => {
+      console.warn("[EduKids][auth] prefetch learning path state failed", error);
+    });
+
     setFeedbackMessage(
       form,
       "Đăng nhập thành công. Đang chuyển vào hệ thống",

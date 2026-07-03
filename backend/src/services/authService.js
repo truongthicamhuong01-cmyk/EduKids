@@ -9,6 +9,7 @@ const {
   getDefaultAvatar,
 } = require("./userService");
 const { updateUserStreak } = require("./progressService");
+const { getLearningPathState } = require("./learningPathService");
 const { getLocalDateKey } = require("../utils/dateUtils");
 const { rewardDailyLogin } = require("./rewardService");
 
@@ -96,14 +97,14 @@ async function loginUser({ username, password }) {
   }
 
   const normalizedUser = await ensureUserCode(user.uid, user);
-  const streakUpdatedUser = await updateUserStreak(normalizedUser.uid).catch(
-    () => normalizedUser,
-  );
+  const streakUpdatedUser = await updateUserStreak(normalizedUser.uid);
   await rewardDailyLogin({
     userId: normalizedUser.uid,
     sourceId: getLocalDateKey(),
     idempotencyKey: `daily-login:${normalizedUser.uid}:${getLocalDateKey()}`,
-  }).catch(() => null);
+  });
+
+  await getLearningPathState(normalizedUser.uid);
 
   const token = jwt.sign(
     {
