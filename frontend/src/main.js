@@ -657,7 +657,9 @@ function isAdminRoute() {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
-function getPublicRouteViewForPathname(pathname = window.location?.pathname || "") {
+function getPublicRouteViewForPathname(
+  pathname = window.location?.pathname || "",
+) {
   const normalizedPathname = String(pathname || "").replace(/\/+$/, "") || "/";
 
   if (normalizedPathname === "/register") {
@@ -5940,10 +5942,7 @@ async function syncSidebarProfile() {
   try {
     let resolvedProfile = profile;
 
-    if (window.EduKidsProfileService?.fetchCurrentProfile) {
-      resolvedProfile =
-        await window.EduKidsProfileService.fetchCurrentProfile();
-    }
+    resolvedProfile = (await fetchAndCacheCurrentProfile()) || profile;
 
     if (resolvedProfile) {
       // Refresh the shared user source once here; Pet and Learning Path read from it and can otherwise keep a stale 0 coin session.
@@ -6164,8 +6163,11 @@ function goBackPage() {
 
 const profileState = {
   current: null,
+  currentKey: "",
   loading: false,
   error: null,
+  loadPromise: null,
+  needsRefresh: false,
 };
 
 const studentProgressCache = new Map();
@@ -6188,6 +6190,67 @@ function getProfilePageRoot(pageType) {
   }
 
   return document.querySelector(`[data-profile-page="${pageType}"]`);
+}
+
+function getProfileCacheKey(profile) {
+  return String(profile?.uid || profile?.userId || profile?.id || "").trim();
+}
+
+function syncProfileCache(profile, { markFresh = true } = {}) {
+  if (!profile) {
+    profileState.current = null;
+    profileState.currentKey = "";
+    profileState.error = null;
+    profileState.needsRefresh = false;
+    return null;
+  }
+
+  profileState.current = profile;
+  profileState.currentKey = getProfileCacheKey(profile);
+  profileState.error = null;
+  profileState.needsRefresh = !markFresh;
+  return profileState.current;
+}
+
+function getCachedProfileForCurrentUser() {
+  const profile = profileState.current;
+
+  if (!profile) {
+    return null;
+  }
+
+  const activeProfileKey = getProfileCacheKey(getCurrentAuthUser());
+  const cachedProfileKey = profileState.currentKey || getProfileCacheKey(profile);
+
+  if (!activeProfileKey || activeProfileKey !== cachedProfileKey) {
+    return null;
+  }
+
+  return profile;
+}
+
+async function fetchAndCacheCurrentProfile({ forceRefresh = false } = {}) {
+  const request = window.EduKidsProfileService?.fetchCurrentProfile;
+
+  if (typeof request !== "function") {
+    return null;
+  }
+
+  if (profileState.loadPromise && !forceRefresh) {
+    return profileState.loadPromise;
+  }
+
+  const loadPromise = request()
+    .then((profile) => syncProfileCache(profile, { markFresh: true }))
+    .finally(() => {
+      if (profileState.loadPromise === loadPromise) {
+        profileState.loadPromise = null;
+      }
+    });
+
+  profileState.loadPromise = loadPromise;
+
+  return loadPromise;
 }
 
 function getAICoachRoot() {
@@ -7561,7 +7624,8 @@ function renderStudentHomeAssignments(assignments) {
 
   root.innerHTML = selectedAssignments
     .map((assignment) => {
-      const statusKey = assignment?.statusKey || getAssignmentHomeStatus(assignment);
+      const statusKey =
+        assignment?.statusKey || getAssignmentHomeStatus(assignment);
       const statusLabel = getAssignmentHomeStatusLabel(statusKey);
       const statusClass = getAssignmentHomeStatusClass(statusKey);
       const dueDateText = assignment?.dueDate
@@ -8316,6 +8380,7 @@ function applyLatestCurrentUser(profile) {
 
   bootstrapState.currentUser = normalizedProfile;
   window.EduKidsCurrentUser = normalizedProfile;
+  syncProfileCache(normalizedProfile, { markFresh: true });
   studentRecentWrongAnswersCache.clear();
   saveAuthSession(
     normalizedProfile,
@@ -8702,7 +8767,7 @@ async function syncStudentProgress(profile) {
     const currentKey = getStudentActivityCacheKey(profileState.current);
 
     if (currentKey === cacheKey) {
-      profileState.current = resolvedProfile;
+      syncProfileCache(resolvedProfile, { markFresh: true });
     }
   }
 
@@ -8723,7 +8788,7 @@ async function syncStudentProgress(profile) {
 function renderProfileView(profile) {
   const profileType = profile?.role === "teacher" ? "teacher" : "student";
 
-  profileState.current = profile;
+  syncProfileCache(profile, { markFresh: true });
 
   if (profileType === "teacher") {
     renderTeacherProfile(profile);
@@ -8754,11 +8819,26 @@ function renderProfileError(profileType, message) {
   setSidebarCardsLoading(false);
 }
 
-async function ensureProfileLoaded(pageId) {
+async function ensureProfileLoaded(pageId, { forceRefresh = false } = {}) {
   const profileType = getProfilePageType(pageId);
 
   if (!profileType) {
     return;
+  }
+
+  const cachedProfile = getCachedProfileForCurrentUser();
+
+  if (cachedProfile && !profileState.needsRefresh && !forceRefresh) {
+    renderProfileView(cachedProfile);
+    return cachedProfile;
+  }
+
+  if (profileState.loadPromise && !profileState.needsRefresh && !forceRefresh) {
+    const pendingProfile = await profileState.loadPromise;
+    if (pendingProfile) {
+      renderProfileView(pendingProfile);
+      return pendingProfile;
+    }
   }
 
   try {
@@ -8767,14 +8847,15 @@ async function ensureProfileLoaded(pageId) {
     applyProfileSkeleton(profileType, true);
     setSidebarCardsLoading(true);
 
-    const profile = await window.EduKidsProfileService.fetchCurrentProfile();
+    const loadPromise = fetchAndCacheCurrentProfile({ forceRefresh });
+    const profile = await loadPromise;
 
     if (!profile) {
       throw new Error("Không tìm thấy hồ sơ người dùng.");
     }
 
-    profileState.current = profile;
     profileState.error = null;
+    profileState.needsRefresh = false;
     // Keep the global user snapshot and every coin-aware screen in sync with the fresh profile.
     applyLatestCurrentUser(profile);
     renderProfileView(profile);
@@ -8974,7 +9055,7 @@ async function openProfileEditModal() {
   if (!profile?.userCode && window.EduKidsProfileService?.fetchCurrentProfile) {
     try {
       profile = await window.EduKidsProfileService.fetchCurrentProfile();
-      profileState.current = profile;
+      syncProfileCache(profile, { markFresh: true });
     } catch (error) {
       console.warn(error?.message || "Không thể tải hồ sơ.");
       return;
@@ -9064,7 +9145,7 @@ async function openProfileEditModal() {
       delete sessionProfile.usernameChangeBlocked;
       delete sessionProfile.usernameChangeMessage;
 
-      profileState.current = sessionProfile;
+      syncProfileCache(sessionProfile, { markFresh: true });
       profileState.error = null;
       bootstrapState.currentUser = sessionProfile;
       window.EduKidsCurrentUser = sessionProfile;
@@ -9224,7 +9305,7 @@ async function openAppReviewModal() {
   if (!profile?.userCode && window.EduKidsProfileService?.fetchCurrentProfile) {
     try {
       profile = await window.EduKidsProfileService.fetchCurrentProfile();
-      profileState.current = profile;
+      syncProfileCache(profile, { markFresh: true });
     } catch (error) {
       console.warn(error?.message || "Không thể tải hồ sơ để đánh giá.");
       showToast(error?.message || "Không thể tải hồ sơ để đánh giá.", "error");
@@ -16056,7 +16137,10 @@ function getTeacherSubmissionAnswerByIndex(
 function formatTeacherAssignmentQuestionPoint(totalQuestions) {
   const normalizedTotalQuestions = Number(totalQuestions);
 
-  if (!Number.isFinite(normalizedTotalQuestions) || normalizedTotalQuestions <= 0) {
+  if (
+    !Number.isFinite(normalizedTotalQuestions) ||
+    normalizedTotalQuestions <= 0
+  ) {
     return 0;
   }
 
@@ -16104,7 +16188,9 @@ function buildTeacherSubmissionQuestionReviews(assignment, submission) {
       studentAnswerText,
       correctAnswerText,
       isCorrect,
-      pointText: isCorrect ? `${String(pointPerCorrectQuestion)} điểm` : "0 điểm",
+      pointText: isCorrect
+        ? `${String(pointPerCorrectQuestion)} điểm`
+        : "0 điểm",
       resultLabel: isCorrect ? "✓ Chính xác" : "✗ Sai",
       resultClass: isCorrect ? "is-correct" : "is-wrong",
     };
@@ -23420,6 +23506,7 @@ function handleLogout() {
   setAdminPassword("");
   window.EduKidsCurrentUser = null;
   resetPetModuleState();
+  syncProfileCache(null);
 
   const authRoot = getAuthContainer();
 
@@ -24297,7 +24384,7 @@ function renderRegisterScreen() {
                 ? renderTextField({
                     id: "register-class",
                     name: "className",
-                    label: "Lớp (nếu là học sinh)",
+                    label: "Lớp",
                     placeholder: "Chọn lớp",
                     value: draft.className,
                     autocomplete: "off",
@@ -24907,7 +24994,8 @@ async function handleRegisterSubmit(form) {
   const confirmPassword = form.elements.confirmPassword?.value;
   const role = form.elements.role?.value;
   const gender = form.elements.gender?.value;
-  const className = role === "student" ? form.elements.className?.value.trim() : "";
+  const className =
+    role === "student" ? form.elements.className?.value.trim() : "";
   const school = form.elements.school?.value.trim();
 
   let hasError = false;
@@ -25344,6 +25432,7 @@ function initApp(user) {
     bootstrapState.initializedUid !== identityKey
   ) {
     resetPetModuleState();
+    syncProfileCache(null);
   }
 
   bootstrapState.initializedUid = identityKey;

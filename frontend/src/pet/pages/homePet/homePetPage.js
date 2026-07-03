@@ -858,9 +858,13 @@ export function createHomePetPage({ store, petApi } = {}) {
   }
 
   function syncFromStore(snapshot = {}) {
-    // Khi Home đã được khởi tạo xong và đang ẩn, bỏ qua mọi update từ store.
-    // Điều này ngăn Home tự render lại trong lúc các màn khác đang load dữ liệu.
-    if (state.initialized && !state.visible) {
+    const petPage = root.closest(".page");
+    const petPageIsActive =
+      petPage instanceof HTMLElement && petPage.classList.contains("active");
+
+    // Chỉ bỏ qua update khi Home đang ẩn và route Pet không còn active.
+    // Nếu Pet vẫn đang active mà dữ liệu đến trễ sau bootstrap, Home phải render lại.
+    if (state.initialized && !state.visible && !petPageIsActive) {
       return;
     }
 
