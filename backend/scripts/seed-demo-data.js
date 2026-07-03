@@ -236,6 +236,14 @@ async function safeUpdate(ref, data, options = {}) {
   return ref.update(payload, options);
 }
 
+function safeBatchSet(batch, ref, data, options = { merge: false }) {
+  return batch.set(ref, cleanForFirestore(data), options);
+}
+
+function safeBatchUpdate(batch, ref, data, options = {}) {
+  return batch.update(ref, cleanForFirestore(data), options);
+}
+
 async function withTimeout(promise, ms, label) {
   let timer;
   const timeout = new Promise((_, reject) => {
@@ -312,6 +320,10 @@ function uniqueStrings(values) {
         .filter(Boolean),
     ),
   );
+}
+
+function getTopicLabel(topic, fallback = "Chủ đề") {
+  return String(topic?.title || topic?.name || topic?.topicName || fallback).trim() || fallback;
 }
 
 function isDemoUserRecord(user) {
@@ -762,7 +774,7 @@ function buildLearningPathState(userId, studentIndex, classroom) {
 function buildQuizQuestions(topic, seedIndex) {
   const grade = String(topic.grade || "").trim();
   const subject = String(topic.subject || "").trim();
-  const topicName = String(topic.title || topic.name || topic.topicName || "").trim();
+  const topicName = getTopicLabel(topic);
   const questions = [];
 
   for (let index = 0; index < 10; index += 1) {
@@ -1034,7 +1046,7 @@ function buildQuizPayload(topic, seedIndex) {
   const grade = String(topic.grade || "").trim();
   const subject = String(topic.subject || "").trim();
   const topicId = String(topic.topicId || "").trim();
-  const topicName = String(topic.title || topic.name || "").trim();
+  const topicName = getTopicLabel(topic);
   const questions = buildQuizQuestions(topic, seedIndex);
 
   return {
@@ -1097,9 +1109,10 @@ function buildWrongAnswers(userId, quiz, score, studentIndex) {
 }
 
 function buildCoachCache(userId, progressItems, score, topic) {
+  const topicLabel = getTopicLabel(topic);
   const bestTopics = progressItems.slice(0, 2).map((item) => ({
-    topicId: item.topicId,
-    topicName: item.topicName,
+    topicId: item.topicId || "",
+    topicName: getTopicLabel(item, topicLabel),
     accuracy: item.accuracy,
     totalAnswered: item.totalAnswered,
   }));
@@ -1108,8 +1121,8 @@ function buildCoachCache(userId, progressItems, score, topic) {
     .sort((left, right) => left.accuracy - right.accuracy)
     .slice(0, 2)
     .map((item) => ({
-      topicId: item.topicId,
-      topicName: item.topicName,
+      topicId: item.topicId || "",
+      topicName: getTopicLabel(item, topicLabel),
       accuracy: item.accuracy,
       totalAnswered: item.totalAnswered,
     }));
@@ -1118,7 +1131,6 @@ function buildCoachCache(userId, progressItems, score, topic) {
     ? Math.round(progressItems.reduce((sum, item) => sum + item.accuracy, 0) / progressItems.length)
     : score;
 
-  const topicLabel = topic.topicName || topic.title || topic.topicId || "";
   const focusTopicName = weakTopics[0]?.topicName || topicLabel;
   const focusTopicId = weakTopics[0]?.topicId || topic.topicId || "";
   const analysis = {
@@ -1450,14 +1462,14 @@ async function main() {
     const membershipTimestamp = nowIso();
     const membershipBatch = db.batch();
 
-    membershipBatch.set(classRef, cleanForFirestore({
+    safeBatchSet(membershipBatch, classRef, {
       ...effectiveClassDoc,
       students: classStudentIds,
       studentIds: classStudentIds,
       members: classStudentIds,
       studentCount: classStudentIds.length,
       updatedAt: membershipTimestamp,
-    }), { merge: true });
+    }, { merge: true });
 
     for (const student of students) {
       if (!student?.uid) {
@@ -1474,11 +1486,11 @@ async function main() {
         classroom.classId,
       ]);
 
-      membershipBatch.set(studentUserRef, cleanForFirestore({
+      safeBatchSet(membershipBatch, studentUserRef, {
         classIds: nextClassIds,
         joinedClasses: nextJoinedClasses,
         updatedAt: membershipTimestamp,
-      }), { merge: true });
+      }, { merge: true });
     }
 
     await membershipBatch.commit();
@@ -1724,7 +1736,7 @@ async function main() {
     const userRef = db.collection("users").doc(student.uid);
     const batch = db.batch();
     const progressDoc = learningPathCollection.doc(student.uid);
-    batch.set(progressDoc, buildLearningPathState(student.uid, index, classDoc), { merge: false });
+    safeBatchSet(batch, progressDoc, buildLearningPathState(student.uid, index, classDoc), { merge: false });
     const progressItems = progressTopics.map((topic, topicIndex) => {
       const totalAnswered = 10 + index + topicIndex * 3;
       const totalCorrect = Math.max(1, totalAnswered - ((index + topicIndex) % 4) - 1);
@@ -1749,7 +1761,7 @@ async function main() {
 
     for (const progressItem of progressItems) {
       const ref = userProgressCollection.doc(student.uid).collection("topics").doc(progressItem.topicId);
-      batch.set(ref, progressItem, { merge: false });
+      safeBatchSet(batch, ref, progressItem, { merge: false });
     }
 
     const activityLogs = buildActivityLogs(student.uid, progressTopics, quizId, 8.8 - (index % 3) * 0.4, 3);
@@ -1774,13 +1786,13 @@ async function main() {
       id: quizData.id || quizId,
       questions: buildQuizQuestions(quizTopic, index),
     }, 58, index);
-    batch.set(wrongAnswersCollection.doc(student.uid), wrongAnswers, { merge: false });
+    safeBatchSet(batch, wrongAnswersCollection.doc(student.uid), wrongAnswers, { merge: false });
 
     const coachCache = buildCoachCache(student.uid, progressItems, 78, quizTopic);
-    batch.set(coachCacheCollection.doc(student.uid), coachCache, { merge: false });
+    safeBatchSet(batch, coachCacheCollection.doc(student.uid), coachCache, { merge: false });
 
     const aiUsageLog = buildAiUsageLog(student.uid, progressTopics[0]?.topicId || quizTopic.topicId, nowIso());
-    batch.set(aiUsageCollection.doc(`${student.uid}-${index}`), aiUsageLog, { merge: false });
+    safeBatchSet(batch, aiUsageCollection.doc(`${student.uid}-${index}`), aiUsageLog, { merge: false });
 
     const rewardSources = [
       buildRewardReceipt(student.uid, "dailyLogin", 3, nowIso()),
@@ -1790,11 +1802,12 @@ async function main() {
     for (let receiptIndex = 0; receiptIndex < rewardSources.length; receiptIndex += 1) {
       const receipt = rewardSources[receiptIndex];
       const receiptRef = rewardReceiptCollection.doc(`${student.uid}-${receipt.source}-${receiptIndex}`);
-      batch.set(receiptRef, receipt, { merge: false });
+      safeBatchSet(batch, receiptRef, receipt, { merge: false });
 
       const ledgerKey = `${receipt.source}:${student.uid}:${receiptIndex}`;
       const ledgerRef = rewardLedgerCollection.doc(sha1Text(ledgerKey));
-      batch.set(
+      safeBatchSet(
+        batch,
         ledgerRef,
         {
           seedSource: DEMO_MARKER,
@@ -1847,23 +1860,23 @@ async function main() {
       id: quizId,
       questions: buildQuizQuestions(quizTopic, index),
     }, index, quizTopic.topicId);
-    batch.set(battleSessionCollection.doc(battleSession.sessionId), battleSession, { merge: false });
+    safeBatchSet(batch, battleSessionCollection.doc(battleSession.sessionId), battleSession, { merge: false });
 
-    batch.set(db.collection("users").doc(student.uid).collection("pet").doc("state"), buildPetState(index, student.fullName), { merge: false });
-    batch.set(db.collection("users").doc(student.uid).collection("inventory").doc("state"), buildInventoryState(index, studentStats.level), { merge: false });
-    batch.set(db.collection("users").doc(student.uid).collection("petRequests").doc(hashText(`${student.uid}:select`, 12)), {
+    safeBatchSet(batch, db.collection("users").doc(student.uid).collection("pet").doc("state"), buildPetState(index, student.fullName), { merge: false });
+    safeBatchSet(batch, db.collection("users").doc(student.uid).collection("inventory").doc("state"), buildInventoryState(index, studentStats.level), { merge: false });
+    safeBatchSet(batch, db.collection("users").doc(student.uid).collection("petRequests").doc(hashText(`${student.uid}:select`, 12)), {
       seedSource: DEMO_MARKER,
       action: "select",
       response: null,
       processedAt: nowIso(),
     }, { merge: false });
-    batch.set(db.collection("users").doc(student.uid).collection("inventoryTransactions").doc(hashText(`${student.uid}:seed`, 12)), {
+    safeBatchSet(batch, db.collection("users").doc(student.uid).collection("inventoryTransactions").doc(hashText(`${student.uid}:seed`, 12)), {
       seedSource: DEMO_MARKER,
       action: "seed",
       createdAt: nowIso(),
       response: null,
     }, { merge: false });
-    batch.set(db.collection("users").doc(student.uid).collection("shopTransactions").doc(hashText(`${student.uid}:shop`, 12)), {
+    safeBatchSet(batch, db.collection("users").doc(student.uid).collection("shopTransactions").doc(hashText(`${student.uid}:shop`, 12)), {
       seedSource: DEMO_MARKER,
       action: "seed",
       createdAt: nowIso(),
@@ -1871,7 +1884,7 @@ async function main() {
     }, { merge: false });
 
     const studentUpdateAt = nowIso();
-    batch.set(userRef, cleanForFirestore({
+    safeBatchSet(batch, userRef, {
       seedSource: DEMO_MARKER,
       className,
       classTags: [className].filter(Boolean),
@@ -1886,7 +1899,7 @@ async function main() {
       lastActiveAt: studentUpdateAt,
       lastLoginAt: studentUpdateAt,
       updatedAt: studentUpdateAt,
-    }), { merge: true });
+    }, { merge: true });
 
     await batch.commit();
 
