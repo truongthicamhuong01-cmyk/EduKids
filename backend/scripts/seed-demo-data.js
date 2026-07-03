@@ -4,7 +4,6 @@ const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const { admin, db } = require("../src/firebase");
 const { createUser, updateUserById } = require("../src/services/userService");
-const { joinClass } = require("../src/services/classService");
 const { createAssignment, createSubmission } = require("../src/services/assignmentService");
 const { createQuizVersion, buildVersionQuizId } = require("../src/services/quizVersionService");
 const { buildQuizDocId, readTopicsFile } = require("../src/services/aiService");
@@ -29,6 +28,24 @@ const ROLE_PREFIX = {
 };
 
 const SUBJECTS = ["math", "english", "vietnamese", "science", "history", "geography"];
+const SUBJECT_LABELS = {
+  math: "Toán",
+  english: "Tiếng Anh",
+  vietnamese: "Tiếng Việt",
+  science: "Khoa học",
+  history: "Lịch sử",
+  geography: "Địa lý",
+};
+const ASSIGNMENT_TITLE_TEMPLATES = [
+  "Ôn tập {subject}",
+  "Luyện tập {subject}",
+  "Bài tập {subject}",
+  "Thực hành {subject}",
+  "Củng cố kiến thức {subject}",
+  "Rèn luyện {subject}",
+  "Kiểm tra nhanh {subject}",
+  "Bài luyện tập {subject}",
+];
 const GRADE_SUBJECT_PAIRS = [
   ["1", "math"],
   ["1", "english"],
@@ -285,6 +302,16 @@ function isDemoEmail(value) {
 
 function isDemoClassId(value) {
   return String(value || "").trim().toLowerCase().startsWith(DEMO_CLASS_PREFIX);
+}
+
+function uniqueStrings(values) {
+  return Array.from(
+    new Set(
+      (Array.isArray(values) ? values : [])
+        .map((value) => String(value || "").trim())
+        .filter(Boolean),
+    ),
+  );
 }
 
 function isDemoUserRecord(user) {
@@ -955,15 +982,17 @@ function buildClassDoc(classroom, teacher, classIndex) {
   const gradeLabel = `Lớp ${classroom.grade}${classroom.section}`;
   const classCode = `DM${hashText(classroom.classId, 6).toUpperCase()}`;
   const createdAt = new Date(Date.now() - classIndex * 86400000).toISOString();
+  const teacherName = String(teacher.fullName || "").trim();
+  const subjectLabel = SUBJECT_LABELS[classroom.subject] || classroom.subject;
 
   return {
     seedSource: DEMO_MARKER,
     id: classroom.classId,
-    name: `${gradeLabel} - ${teacher.fullName}`,
-    className: `${gradeLabel} - ${teacher.fullName}`,
-    description: `Lớp demo ${gradeLabel.toLowerCase()} môn ${classroom.subject}`,
+    name: `Lớp học của ${teacherName}`,
+    className: `Lớp học của ${teacherName}`,
+    description: `Lớp học của ${teacherName} phụ trách ${subjectLabel}`,
     teacherId: teacher.uid,
-    teacherName: teacher.fullName,
+    teacherName,
     teacherUsername: teacher.username,
     classCode,
     level: classroom.grade,
@@ -988,6 +1017,17 @@ function selectTopicForClass(classroom, topics) {
   return matchingTopics.length > 0
     ? matchingTopics[0]
     : topics[(Number(classroom.grade) + classroom.subject.length) % topics.length];
+}
+
+function buildAssignmentTitle(subject, seedIndex) {
+  const subjectLabel = SUBJECT_LABELS[subject] || subject;
+  const template = ASSIGNMENT_TITLE_TEMPLATES[seedIndex % ASSIGNMENT_TITLE_TEMPLATES.length];
+  return template.replace("{subject}", subjectLabel);
+}
+
+function buildAssignmentDescription(subject, classroom) {
+  const subjectLabel = SUBJECT_LABELS[subject] || subject;
+  return `Luyện tập ${subjectLabel} cho lớp ${classroom.grade}${classroom.section}.`;
 }
 
 function buildQuizPayload(topic, seedIndex) {
@@ -1377,6 +1417,7 @@ async function main() {
   const classDocs = [];
   const quizDocs = [];
   console.log("[seed-demo] Class seeding started");
+  console.log("[seed-demo] Join classes started");
 
   for (let classIndex = 0; classIndex < classPlan.length; classIndex += 1) {
     const classroom = classPlan[classIndex];
@@ -1400,31 +1441,48 @@ async function main() {
       console.log(`[seed-demo] class created ${classroom.classId}`);
     }
 
+    const classStudentIds = uniqueStrings([
+      ...(Array.isArray(effectiveClassDoc.students) ? effectiveClassDoc.students : []),
+      ...(Array.isArray(effectiveClassDoc.studentIds) ? effectiveClassDoc.studentIds : []),
+      ...(Array.isArray(effectiveClassDoc.members) ? effectiveClassDoc.members : []),
+      ...students.map((student) => String(student.uid || student.id || "").trim()).filter(Boolean),
+    ]);
+    const membershipTimestamp = nowIso();
+    const membershipBatch = db.batch();
+
+    membershipBatch.set(classRef, cleanForFirestore({
+      ...effectiveClassDoc,
+      students: classStudentIds,
+      studentIds: classStudentIds,
+      members: classStudentIds,
+      studentCount: classStudentIds.length,
+      updatedAt: membershipTimestamp,
+    }), { merge: true });
+
     for (const student of students) {
       if (!student?.uid) {
         continue;
       }
 
-      await joinClass({
-        classCode: effectiveClassDoc.classCode,
-        user: {
-          uid: student.uid,
-          userId: student.uid,
-        },
-      });
+      const studentUserRef = db.collection("users").doc(student.uid);
+      const nextClassIds = uniqueStrings([
+        ...(Array.isArray(student.classIds) ? student.classIds : []),
+        classroom.classId,
+      ]);
+      const nextJoinedClasses = uniqueStrings([
+        ...(Array.isArray(student.joinedClasses) ? student.joinedClasses : []),
+        classroom.classId,
+      ]);
 
-      await updateUserById(student.uid, cleanForFirestore({
-        seedSource: DEMO_MARKER,
-        className: effectiveClassDoc.name,
-        classTags: [effectiveClassDoc.name],
-        classTagNames: [effectiveClassDoc.name],
-        subjects: buildSubjectsForStudent(classroom),
-        stats: {
-          ...(student.stats || {}),
-          level: Math.max(1, Number(student.stats?.level || 1)),
-        },
-      }));
+      membershipBatch.set(studentUserRef, cleanForFirestore({
+        classIds: nextClassIds,
+        joinedClasses: nextJoinedClasses,
+        updatedAt: membershipTimestamp,
+      }), { merge: true });
     }
+
+    await membershipBatch.commit();
+    console.log(`[seed-demo] Join classes completed ${classIndex + 1}/${classPlan.length}`);
 
     const topic = selectTopicForClass(classroom, topics);
     const quizRootId = buildQuizDocId(topic.grade, topic.subject, topic.topicId);
@@ -1494,8 +1552,8 @@ async function main() {
           className: effectiveClassDoc.name,
           teacherId: teacher.uid,
           teacherName: teacher.fullName,
-          title: `Bài tập ${assignmentIndex + 1} - ${topic.title}`,
-          description: `Luyện tập theo chủ đề ${topic.title} của lớp ${classroom.grade}${classroom.section}.`,
+          title: buildAssignmentTitle(classroom.subject, classIndex + assignmentIndex),
+          description: buildAssignmentDescription(classroom.subject, classroom),
           dueDate: new Date(Date.now() + 86400000 * (7 + assignmentIndex)).toISOString(),
           subject: classroom.subject,
           questions: assignmentQuestions,
@@ -1522,6 +1580,10 @@ async function main() {
           db.collection("classes").doc(classroom.classId),
           {
             ...effectiveClassDoc,
+            students: classStudentIds,
+            studentIds: classStudentIds,
+            members: classStudentIds,
+            studentCount: classStudentIds.length,
             assignmentIds: nextAssignmentIds,
             updatedAt: createdAt,
           },
@@ -1548,8 +1610,8 @@ async function main() {
           className: effectiveClassDoc.name,
           teacherId: teacher.uid,
           teacherName: teacher.fullName,
-          title: `Bài tập ${assignmentIndex + 1} - ${topic.title}`,
-          description: `Luyện tập theo chủ đề ${topic.title} của lớp ${classroom.grade}${classroom.section}.`,
+          title: buildAssignmentTitle(classroom.subject, classIndex + assignmentIndex),
+          description: buildAssignmentDescription(classroom.subject, classroom),
           dueDate: new Date(Date.now() + 86400000 * (7 + assignmentIndex)).toISOString(),
           subject: classroom.subject,
           questions: assignmentQuestions,
@@ -1576,6 +1638,10 @@ async function main() {
           db.collection("classes").doc(classroom.classId),
           {
             ...effectiveClassDoc,
+            students: classStudentIds,
+            studentIds: classStudentIds,
+            members: classStudentIds,
+            studentCount: classStudentIds.length,
             seedSource: DEMO_MARKER,
             assignmentIds: nextAssignmentIds,
             updatedAt: createdAt,
