@@ -9735,6 +9735,16 @@ function normalizeQuizText(value) {
   return String(value || "").trim();
 }
 
+function normalizeQuizQuestionDisplayText(value) {
+  const text = normalizeQuizText(value);
+
+  if (!text) {
+    return "";
+  }
+
+  return text.replace(/^Lớp\s*1\s*:\s*/i, "").trim();
+}
+
 function getInitialStudentQuizGrade() {
   const profile = getCurrentAuthUser();
   const className = normalizeQuizText(profile?.className);
@@ -13061,7 +13071,7 @@ function renderStudentQuizScreen() {
     Boolean(currentQuestion);
   const hiddenOptionSet = getBossBattleHiddenOptionSet();
   const questionPrompt =
-    currentQuestion?.question ||
+    normalizeQuizQuestionDisplayText(currentQuestion?.question) ||
     (renderBattleStatus === "victory"
       ? "Victory đang chờ hiển thị."
       : renderBattleStatus === "defeat"
@@ -13649,8 +13659,8 @@ function buildBossBattleWrongReviewQuestionsFromStoredData(
       return {
         questionIndex,
         question:
-          normalizeQuizText(question?.question) ||
-          normalizeQuizText(entry?.question) ||
+          normalizeQuizQuestionDisplayText(question?.question) ||
+          normalizeQuizQuestionDisplayText(entry?.question) ||
           `Câu ${questionIndex + 1}`,
         options,
         userAnswer: selectedAnswer,
@@ -23715,6 +23725,10 @@ function getInstallAppButtons() {
   return document.querySelectorAll("[data-install-app-btn]");
 }
 
+function getInstallAppFabButton() {
+  return document.querySelector(".install-app-fab[data-install-app-btn]");
+}
+
 function syncInstallAppButtons() {
   if (typeof document === "undefined") {
     return;
@@ -23723,6 +23737,14 @@ function syncInstallAppButtons() {
   const installed = pwaInstallState.installed || isAppInstalled();
   const supported = pwaInstallState.supported;
   const hasPrompt = Boolean(deferredInstallPrompt);
+  const installFabButton = getInstallAppFabButton();
+  const hasVisibleInlineInstallButton = Array.from(getInstallAppButtons()).some(
+    (button) =>
+      button &&
+      button !== installFabButton &&
+      !button.hidden &&
+      button.getClientRects().length > 0,
+  );
 
   getInstallAppButtons().forEach((button) => {
     if (!button) {
@@ -23767,6 +23789,38 @@ function syncInstallAppButtons() {
     button.title = "Xem hướng dẫn cài đặt ứng dụng";
     button.setAttribute("aria-label", "Xem hướng dẫn cài đặt ứng dụng");
   });
+
+  if (installFabButton) {
+    const shouldShowFab =
+      supported && hasPrompt && !installed && !hasVisibleInlineInstallButton;
+    installFabButton.hidden = !shouldShowFab;
+    installFabButton.disabled = installed;
+    installFabButton.dataset.installState = installed
+      ? "installed"
+      : supported
+        ? hasPrompt
+          ? "ready"
+          : "pending"
+        : "unsupported";
+    installFabButton.title = installed
+      ? "Ứng dụng đã được cài đặt"
+      : hasPrompt
+        ? "Cài đặt ứng dụng EduKids"
+        : "Xem hướng dẫn cài đặt ứng dụng";
+    installFabButton.setAttribute(
+      "aria-label",
+      installed
+        ? "Ứng dụng đã được cài đặt"
+        : hasPrompt
+          ? "Cài đặt ứng dụng EduKids"
+          : "Xem hướng dẫn cài đặt ứng dụng",
+    );
+    if (installed) {
+      installFabButton.setAttribute("aria-disabled", "true");
+    } else {
+      installFabButton.removeAttribute("aria-disabled");
+    }
+  }
 }
 
 async function handleInstallAppRequest() {
@@ -23785,12 +23839,14 @@ async function handleInstallAppRequest() {
     return;
   }
 
-  deferredInstallPrompt = null;
-  syncInstallAppButtons();
-
   try {
-    installPrompt.prompt();
-    await installPrompt.userChoice;
+    if (typeof installPrompt.prompt === "function") {
+      await installPrompt.prompt();
+    }
+
+    if (installPrompt.userChoice) {
+      await installPrompt.userChoice;
+    }
   } catch (error) {
     console.warn("[EduKids][pwa] install prompt failed", error);
   } finally {
@@ -23894,9 +23950,18 @@ function bindPwaInstallEventsOnce() {
   pwaInstallState.installed = isAppInstalled();
   syncInstallAppButtons();
   window.addEventListener("beforeinstallprompt", (event) => {
+    const appShell = getAppShell();
+    const canShowCustomInstallUi =
+      appShell instanceof HTMLElement && !appShell.hidden;
+
+    pwaInstallState.supported = true;
+
+    if (!canShowCustomInstallUi) {
+      return;
+    }
+
     event.preventDefault();
     deferredInstallPrompt = event;
-    pwaInstallState.supported = true;
     pwaInstallState.installed = isAppInstalled();
     syncInstallAppButtons();
   });
