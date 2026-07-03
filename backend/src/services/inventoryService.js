@@ -12,7 +12,7 @@ const { readConfigDoc } = require("../repositories/gameConfigRepository");
 const { getPetState, savePetState, runTransaction } = require("../repositories/petRepository");
 const { applyItemEffectsToPet } = require("./petItemEffectService");
 const { buildPetRuntimeState, stripDerivedPetFields } = require("./petDecayService");
-const { clampStats, toNumber } = require("./petMathService");
+const { canFeedPet, clampStats, toNumber } = require("./petMathService");
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -517,6 +517,7 @@ async function useItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
     const hydratedInventory = hydrateInventoryDurability(inventory, catalog);
     const petState = await getPetState(normalizedUid, transaction);
     const normalizedQuantity = isToyItem(itemConfig) ? 1 : quantity;
+    const isFoodItem = ["food", "foods"].includes(normalizeCategoryKey(itemConfig.category));
     const blockedBySleep =
       petState &&
       Boolean(petState.isSleeping) &&
@@ -590,6 +591,16 @@ async function useItem({ uid, body = {}, requestId = "", idempotencyKey = "" }) 
       }
 
       return response;
+    }
+
+    if (isFoodItem && petState && !canFeedPet(petState)) {
+      if (hydratedInventory.changed) {
+        await saveInventoryState(normalizedUid, hydratedInventory.state, transaction);
+      }
+
+      throw new ApiError(400, "Thú cưng đã no.", PET_ERROR_CODES.PET_TOO_FULL, {
+        itemId,
+      });
     }
 
     const nextInventory = useItemFromInventory(hydratedInventory.state, itemConfig, normalizedQuantity);

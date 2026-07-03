@@ -750,6 +750,9 @@ export function createFeedPage({ store, petApi, shopApi, inventoryApi } = {}) {
       render(store?.getState?.() || {});
     } catch (error) {
       const normalized = normalizeError(error);
+      if (normalized.errorCode === "PET_TOO_FULL") {
+        showBubble(normalized.message || "Thú cưng đã no.");
+      }
       showError(normalized.message);
     } finally {
       setLoadingItemId("");

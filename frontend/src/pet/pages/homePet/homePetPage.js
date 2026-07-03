@@ -745,6 +745,11 @@ export function createHomePetPage({ store, petApi } = {}) {
     }
 
     if (actionName === "feed") {
+      if (Number(currentPet.hunger || 0) >= 100) {
+        showBubble("Thú cưng đã no.");
+        return;
+      }
+
       window.dispatchEvent(
         new CustomEvent("edukids:pet:feed-requested", {
           detail: { source: "home-pet" },

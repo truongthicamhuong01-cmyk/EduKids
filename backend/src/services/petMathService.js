@@ -5,6 +5,7 @@
  * File liên quan: src/services/petDecayService.js, src/services/petService.js
  */
 const { PET_MOOD_PRIORITY } = require("../constants/petConstants");
+const FEED_HUNGER_LIMIT = 100;
 
 function toNumber(value, fallback = 0) {
   const parsed = Number(value);
@@ -27,6 +28,10 @@ function clampStats(stats = {}, limits = {}) {
     energy: clamp(stats.energy, minValue, maxValue),
     health: clamp(stats.health, minValue, maxValue),
   };
+}
+
+function canFeedPet(petState = {}) {
+  return toNumber(petState.hunger, 0) < FEED_HUNGER_LIMIT;
 }
 
 function normalizeLevelConfig(levelConfig = {}) {
@@ -193,6 +198,7 @@ module.exports = {
   calculateEvolutionStage,
   calculateLevelState,
   calculateMood,
+  canFeedPet,
   clamp,
   clampStats,
   getExpRequirementForLevel,

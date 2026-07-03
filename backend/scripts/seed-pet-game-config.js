@@ -22,7 +22,6 @@ const petBalance = {
   actions: {
     feed: {
       cooldownSeconds: 120,
-      minHungerToAllow: 95,
       hungerIncrease: 18,
       happinessIncrease: 2,
       healthIncrease: 1,

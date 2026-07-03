@@ -19,7 +19,7 @@ const {
 } = require("../repositories/petRepository");
 const { getGameConfigBundle } = require("../repositories/gameConfigRepository");
 const { useItem: useInventoryItem } = require("./inventoryService");
-const { calculateMood, toNumber } = require("./petMathService");
+const { calculateMood, canFeedPet, toNumber } = require("./petMathService");
 const {
   applyPetDecay,
   applyPetMutation,
@@ -309,7 +309,7 @@ function buildPetResponse(petState, configs, extra = {}) {
   const minStatValue = toNumber(petBalance.statLimits?.minValue, 0);
   const normalizedPet = buildRuntimePetState(petState, configs, new Date());
 
-  const canFeed = normalizedPet.hunger < maxStatValue;
+  const canFeed = canFeedPet(normalizedPet);
   const canPlay =
     normalizedPet.energy >
     toNumber(petBalance.actions?.play?.minEnergyToAllow, 0);
@@ -501,13 +501,9 @@ function validateActionGate(
     actionConfig.maxEnergyToAllow,
     maxStatValue,
   );
-  const minHungerToFeed = toNumber(actionConfig.minHungerToAllow, maxStatValue);
 
-  if (
-    actionName === PET_ACTIONS.FEED &&
-    toNumber(petState.hunger, 0) >= minHungerToFeed
-  ) {
-    throw new ApiError(400, "Pet đã no rồi", PET_ERROR_CODES.PET_TOO_FULL, {
+  if (actionName === PET_ACTIONS.FEED && !canFeedPet(petState)) {
+    throw new ApiError(400, "Thú cưng đã no.", PET_ERROR_CODES.PET_TOO_FULL, {
       actionName,
       hunger: petState.hunger,
     });
