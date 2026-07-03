@@ -97,14 +97,21 @@ async function loginUser({ username, password }) {
   }
 
   const normalizedUser = await ensureUserCode(user.uid, user);
-  const streakUpdatedUser = await updateUserStreak(normalizedUser.uid);
-  await rewardDailyLogin({
-    userId: normalizedUser.uid,
-    sourceId: getLocalDateKey(),
-    idempotencyKey: `daily-login:${normalizedUser.uid}:${getLocalDateKey()}`,
-  });
+  const normalizedRole = String(normalizedUser.role || "").trim().toLowerCase();
+  const isStudent = normalizedRole === "student";
+  const sessionUser = isStudent
+    ? await updateUserStreak(normalizedUser.uid)
+    : normalizedUser;
 
-  await getLearningPathState(normalizedUser.uid);
+  if (isStudent) {
+    await rewardDailyLogin({
+      userId: normalizedUser.uid,
+      sourceId: getLocalDateKey(),
+      idempotencyKey: `daily-login:${normalizedUser.uid}:${getLocalDateKey()}`,
+    });
+
+    await getLearningPathState(normalizedUser.uid);
+  }
 
   const token = jwt.sign(
     {
@@ -121,7 +128,7 @@ async function loginUser({ username, password }) {
 
   return {
     user: buildAuthUserPayload({
-      ...streakUpdatedUser,
+      ...sessionUser,
       password: hashedPassword,
     }),
     token,
