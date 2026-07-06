@@ -16,10 +16,10 @@
     },
     maintenance: {
       enabled: false,
-      message: "Hệ thống đang bảo trì, vui lòng quay lại sau.",
+      message: "Hệ thống đang bảo trì, vui lòng quay lại sau nhé.",
     },
     systemInfo: {
-      version: "2.0.0",
+      version: "1.0.0",
       firebaseProjectId: "",
       updatedAt: "",
     },

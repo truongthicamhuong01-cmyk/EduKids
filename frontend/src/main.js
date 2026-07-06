@@ -4770,7 +4770,7 @@ function getSystemSettingsMaintenance() {
 function getSystemSettingsInfo() {
   return (
     getSystemSettingsData()?.systemInfo || {
-      version: "2.0.0",
+      version: "1.0.0",
       firebaseProjectId: "",
       updatedAt: "",
     }
@@ -4882,7 +4882,7 @@ function syncSystemSettingsUi(settings = null) {
   const updatedAtNode = getAdminSettingsInfoNode("updatedAt");
 
   if (versionNode) {
-    versionNode.textContent = info.version || "2.0.0";
+    versionNode.textContent = info.version || "1.0.0";
   }
 
   if (firebaseNode) {

@@ -73,7 +73,9 @@
 
   function isSuccessStatus(status) {
     const normalized = normalizeText(status).toLowerCase();
-    return normalized === "success" || normalized === "ok" || normalized === "passed";
+    return (
+      normalized === "success" || normalized === "ok" || normalized === "passed"
+    );
   }
 
   function normalizeLog(doc) {
@@ -82,7 +84,9 @@
       id: normalizeText(doc?.id || data.id),
       feature: normalizeText(data.feature || data.module || ""),
       action: normalizeText(data.action || ""),
-      status: normalizeText(data.status || data.result || "").toLowerCase() || "success",
+      status:
+        normalizeText(data.status || data.result || "").toLowerCase() ||
+        "success",
       success:
         typeof data.success === "boolean"
           ? data.success
@@ -90,9 +94,18 @@
       userId: normalizeText(data.userId || data.uid || ""),
       role: normalizeText(data.role || ""),
       message: normalizeText(data.message || data.error || ""),
-      createdAt: data.createdAt || data.timestamp || data.usedAt || data.occurredAt || "",
+      createdAt:
+        data.createdAt ||
+        data.timestamp ||
+        data.usedAt ||
+        data.occurredAt ||
+        "",
       createdAtValue: getTimestampValue(
-        data.createdAt || data.timestamp || data.usedAt || data.occurredAt || "",
+        data.createdAt ||
+          data.timestamp ||
+          data.usedAt ||
+          data.occurredAt ||
+          "",
       ),
       meta: data.meta || {},
     };
@@ -142,7 +155,10 @@
         ...(doc.data() || {}),
       }));
     } catch (error) {
-      console.warn(`[EduKids][admin-ai] Failed to load ${collectionName}:`, error);
+      console.warn(
+        `[EduKids][admin-ai] Failed to load ${collectionName}:`,
+        error,
+      );
       return [];
     }
   }
@@ -169,7 +185,7 @@
           message: "Hệ thống đang bảo trì, vui lòng quay lại sau.",
         },
         systemInfo: {
-          version: "2.0.0",
+          version: "1.0.0",
           firebaseProjectId: "",
           updatedAt: "",
         },
@@ -178,7 +194,10 @@
     }
 
     try {
-      const snapshot = await firestore.collection(AI_SETTINGS_COLLECTION).doc(AI_SETTINGS_DOC_ID).get();
+      const snapshot = await firestore
+        .collection(AI_SETTINGS_COLLECTION)
+        .doc(AI_SETTINGS_DOC_ID)
+        .get();
 
       if (!snapshot.exists) {
         return {
@@ -199,7 +218,7 @@
             message: "Hệ thống đang bảo trì, vui lòng quay lại sau.",
           },
           systemInfo: {
-            version: "2.0.0",
+            version: "1.0.0",
             firebaseProjectId: "",
             updatedAt: "",
           },
@@ -211,8 +230,14 @@
 
       return {
         registration: {
-          studentEnabled: normalizeBoolean(data.registration?.studentEnabled, true),
-          teacherEnabled: normalizeBoolean(data.registration?.teacherEnabled, true),
+          studentEnabled: normalizeBoolean(
+            data.registration?.studentEnabled,
+            true,
+          ),
+          teacherEnabled: normalizeBoolean(
+            data.registration?.teacherEnabled,
+            true,
+          ),
         },
         aiCoachEnabled: normalizeBoolean(
           data.aiCoachEnabled,
@@ -229,27 +254,41 @@
           data.ai?.assignmentEnabled ?? data.aiAssignmentEnabled !== false,
         ),
         ai: {
-          coachEnabled: normalizeBoolean(data.ai?.coachEnabled, data.aiCoachEnabled !== false),
-          assignmentEnabled: normalizeBoolean(data.ai?.assignmentEnabled, data.aiAssignmentEnabled !== false),
+          coachEnabled: normalizeBoolean(
+            data.ai?.coachEnabled,
+            data.aiCoachEnabled !== false,
+          ),
+          assignmentEnabled: normalizeBoolean(
+            data.ai?.assignmentEnabled,
+            data.aiAssignmentEnabled !== false,
+          ),
           learningAnalysisEnabled: normalizeBoolean(
             data.ai?.learningAnalysisEnabled,
-            data.aiTopicLearningEnabled !== false && data.aiLearningAnalysisEnabled !== false,
+            data.aiTopicLearningEnabled !== false &&
+              data.aiLearningAnalysisEnabled !== false,
           ),
         },
         maintenance: {
           enabled: normalizeBoolean(data.maintenance?.enabled, false),
           message:
-            normalizeText(data.maintenance?.message || data.maintenanceMessage) ||
-            "Hệ thống đang bảo trì, vui lòng quay lại sau.",
+            normalizeText(
+              data.maintenance?.message || data.maintenanceMessage,
+            ) || "Hệ thống đang bảo trì, vui lòng quay lại sau.",
         },
         systemInfo: {
-          version: normalizeText(data.systemInfo?.version || data.version || "2.0.0") || "2.0.0",
+          version:
+            normalizeText(
+              data.systemInfo?.version || data.version || "1.0.0",
+            ) || "1.0.0",
           firebaseProjectId: normalizeText(
             data.systemInfo?.firebaseProjectId || data.firebaseProjectId || "",
           ),
-          updatedAt: normalizeText(data.systemInfo?.updatedAt || data.updatedAt || ""),
+          updatedAt: normalizeText(
+            data.systemInfo?.updatedAt || data.updatedAt || "",
+          ),
         },
-        cacheRevision: Number(data.cacheRevision ?? data.ai?.cacheRevision) || 0,
+        cacheRevision:
+          Number(data.cacheRevision ?? data.ai?.cacheRevision) || 0,
         updatedAt: data.updatedAt || "",
         updatedBy: normalizeText(data.updatedBy || ""),
       };
@@ -273,7 +312,7 @@
           message: "Hệ thống đang bảo trì, vui lòng quay lại sau.",
         },
         systemInfo: {
-          version: "2.0.0",
+          version: "1.0.0",
           firebaseProjectId: "",
           updatedAt: "",
         },
@@ -312,9 +351,9 @@
           ? updates.aiTopicLearningEnabled
           : typeof updates.aiLearningAnalysisEnabled === "boolean"
             ? updates.aiLearningAnalysisEnabled
-          : typeof updates.ai?.learningAnalysisEnabled === "boolean"
-            ? updates.ai.learningAnalysisEnabled
-            : current.aiTopicLearningEnabled,
+            : typeof updates.ai?.learningAnalysisEnabled === "boolean"
+              ? updates.ai.learningAnalysisEnabled
+              : current.aiTopicLearningEnabled,
       aiAssignmentEnabled:
         typeof updates.aiAssignmentEnabled === "boolean"
           ? updates.aiAssignmentEnabled
@@ -347,25 +386,35 @@
             ? updates.maintenance.enabled
             : current.maintenance.enabled,
         message:
-          normalizeText(updates.maintenance?.message) || current.maintenance.message,
+          normalizeText(updates.maintenance?.message) ||
+          current.maintenance.message,
       },
       systemInfo: {
-        version: normalizeText(updates.systemInfo?.version || current.systemInfo.version) || "2.0.0",
-        firebaseProjectId:
-          normalizeText(updates.systemInfo?.firebaseProjectId || current.systemInfo.firebaseProjectId),
-        updatedAt: normalizeText(updates.systemInfo?.updatedAt || current.systemInfo.updatedAt),
+        version:
+          normalizeText(
+            updates.systemInfo?.version || current.systemInfo.version,
+          ) || "1.0.0",
+        firebaseProjectId: normalizeText(
+          updates.systemInfo?.firebaseProjectId ||
+            current.systemInfo.firebaseProjectId,
+        ),
+        updatedAt: normalizeText(
+          updates.systemInfo?.updatedAt || current.systemInfo.updatedAt,
+        ),
       },
-      cacheRevision:
-        Number.isFinite(Number(updates.cacheRevision))
-          ? Number(updates.cacheRevision)
-          : current.cacheRevision,
+      cacheRevision: Number.isFinite(Number(updates.cacheRevision))
+        ? Number(updates.cacheRevision)
+        : current.cacheRevision,
       updatedAt: new Date().toISOString(),
       updatedBy: normalizeText(updates.updatedBy || ""),
     };
 
-    await firestore.collection(AI_SETTINGS_COLLECTION).doc(AI_SETTINGS_DOC_ID).set(payload, {
-      merge: true,
-    });
+    await firestore
+      .collection(AI_SETTINGS_COLLECTION)
+      .doc(AI_SETTINGS_DOC_ID)
+      .set(payload, {
+        merge: true,
+      });
 
     return payload;
   }
@@ -481,7 +530,10 @@
   }
 
   async function fetchAiDashboardData() {
-    const [settings, logs] = await Promise.all([fetchAiSettings(), fetchAiUsageLogs()]);
+    const [settings, logs] = await Promise.all([
+      fetchAiSettings(),
+      fetchAiUsageLogs(),
+    ]);
     const now = new Date();
     const todayKey = toIsoDateKey(startOfTodayLocal());
     const monthStart = startOfMonthLocal().getTime();
@@ -493,7 +545,10 @@
 
     const monthLogs = logs.filter((log) => log.createdAtValue >= monthStart);
     const successCount = logs.filter((log) => Boolean(log.success)).length;
-    const successRate = logs.length > 0 ? Number(((successCount / logs.length) * 100).toFixed(1)) : 0;
+    const successRate =
+      logs.length > 0
+        ? Number(((successCount / logs.length) * 100).toFixed(1))
+        : 0;
 
     return {
       settings,

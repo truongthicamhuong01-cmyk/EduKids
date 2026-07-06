@@ -22,7 +22,7 @@ const DEFAULT_SETTINGS = {
     message: "Hệ thống đang bảo trì, vui lòng quay lại sau.",
   },
   systemInfo: {
-    version: "2.0.0",
+    version: "1.0.0",
     firebaseProjectId: process.env.FIREBASE_PROJECT_ID || "",
     updatedAt: "",
   },
@@ -41,10 +41,13 @@ function normalizeText(value) {
 
 function normalizeSettings(data = {}, fallback = DEFAULT_SETTINGS) {
   const source = data && typeof data === "object" ? data : {};
-  const fallbackSettings = fallback && typeof fallback === "object" ? fallback : DEFAULT_SETTINGS;
+  const fallbackSettings =
+    fallback && typeof fallback === "object" ? fallback : DEFAULT_SETTINGS;
   const aiCoachEnabled = normalizeBoolean(
     source.aiCoachEnabled,
-    source.ai?.coachEnabled ?? source.aiCoachEnabled ?? fallbackSettings.aiCoachEnabled,
+    source.ai?.coachEnabled ??
+      source.aiCoachEnabled ??
+      fallbackSettings.aiCoachEnabled,
   );
   const aiTopicLearningEnabled = normalizeBoolean(
     source.aiTopicLearningEnabled,
@@ -55,15 +58,21 @@ function normalizeSettings(data = {}, fallback = DEFAULT_SETTINGS) {
   );
   const aiAssignmentEnabled = normalizeBoolean(
     source.aiAssignmentEnabled,
-    source.ai?.assignmentEnabled ?? source.aiAssignmentEnabled ?? fallbackSettings.aiAssignmentEnabled,
+    source.ai?.assignmentEnabled ??
+      source.aiAssignmentEnabled ??
+      fallbackSettings.aiAssignmentEnabled,
   );
 
   return {
     registration: {
-      studentEnabled:
-        normalizeBoolean(source.registration?.studentEnabled, fallbackSettings.registration.studentEnabled),
-      teacherEnabled:
-        normalizeBoolean(source.registration?.teacherEnabled, fallbackSettings.registration.teacherEnabled),
+      studentEnabled: normalizeBoolean(
+        source.registration?.studentEnabled,
+        fallbackSettings.registration.studentEnabled,
+      ),
+      teacherEnabled: normalizeBoolean(
+        source.registration?.teacherEnabled,
+        fallbackSettings.registration.teacherEnabled,
+      ),
     },
     ai: {
       coachEnabled: aiCoachEnabled,
@@ -74,8 +83,10 @@ function normalizeSettings(data = {}, fallback = DEFAULT_SETTINGS) {
     aiTopicLearningEnabled,
     aiAssignmentEnabled,
     maintenance: {
-      enabled:
-        normalizeBoolean(source.maintenance?.enabled, fallbackSettings.maintenance.enabled),
+      enabled: normalizeBoolean(
+        source.maintenance?.enabled,
+        fallbackSettings.maintenance.enabled,
+      ),
       message: normalizeText(
         source.maintenance?.message ||
           source.maintenanceMessage ||
@@ -83,19 +94,25 @@ function normalizeSettings(data = {}, fallback = DEFAULT_SETTINGS) {
       ),
     },
     systemInfo: {
-      version: normalizeText(
-        source.systemInfo?.version || source.version || fallbackSettings.systemInfo.version,
-      ) || fallbackSettings.systemInfo.version,
+      version:
+        normalizeText(
+          source.systemInfo?.version ||
+            source.version ||
+            fallbackSettings.systemInfo.version,
+        ) || fallbackSettings.systemInfo.version,
       firebaseProjectId: normalizeText(
         source.systemInfo?.firebaseProjectId ||
           source.firebaseProjectId ||
           fallbackSettings.systemInfo.firebaseProjectId,
       ),
       updatedAt: normalizeText(
-        source.systemInfo?.updatedAt || source.updatedAt || fallbackSettings.systemInfo.updatedAt,
+        source.systemInfo?.updatedAt ||
+          source.updatedAt ||
+          fallbackSettings.systemInfo.updatedAt,
       ),
     },
-    cacheRevision: Number(source.cacheRevision ?? fallbackSettings.cacheRevision) || 0,
+    cacheRevision:
+      Number(source.cacheRevision ?? fallbackSettings.cacheRevision) || 0,
     updatedAt: normalizeText(source.updatedAt || fallbackSettings.updatedAt),
     updatedBy: normalizeText(source.updatedBy || fallbackSettings.updatedBy),
   };
@@ -107,8 +124,12 @@ async function readDocument(ref) {
 }
 
 async function readSystemSettings() {
-  const currentDoc = await readDocument(SETTINGS_COLLECTION.doc(SETTINGS_DOC_ID)).catch(() => null);
-  const legacyAiDoc = await readDocument(LEGACY_AI_COLLECTION.doc(LEGACY_AI_DOC_ID)).catch(() => null);
+  const currentDoc = await readDocument(
+    SETTINGS_COLLECTION.doc(SETTINGS_DOC_ID),
+  ).catch(() => null);
+  const legacyAiDoc = await readDocument(
+    LEGACY_AI_COLLECTION.doc(LEGACY_AI_DOC_ID),
+  ).catch(() => null);
 
   const merged = {
     ...DEFAULT_SETTINGS,
@@ -172,9 +193,9 @@ async function updateSystemSettings(updates = {}, actor = "") {
           ? updates.aiTopicLearningEnabled
           : typeof updates.aiLearningAnalysisEnabled === "boolean"
             ? updates.aiLearningAnalysisEnabled
-          : typeof updates.ai?.learningAnalysisEnabled === "boolean"
-            ? updates.ai.learningAnalysisEnabled
-            : current.aiTopicLearningEnabled,
+            : typeof updates.ai?.learningAnalysisEnabled === "boolean"
+              ? updates.ai.learningAnalysisEnabled
+              : current.aiTopicLearningEnabled,
       aiAssignmentEnabled:
         typeof updates.aiAssignmentEnabled === "boolean"
           ? updates.aiAssignmentEnabled
